@@ -123,11 +123,13 @@ u32 reverse_cmap_lookup(const std::string& font_file, u16 glyph_id) {
         const Glyph* g = otf.glyph(base_glyph);
         if (!g) continue;
 
-        auto add_variants = [&](const Variants& vars) {
+        // Copy to local variable to avoid capturing structured binding (C++20 extension)
+        u32 base_cp = base_unicode;
+        auto add_variants = [&rmap, base_cp](const Variants& vars) {
             for (u16 j = 0; j < vars.count(); j++) {
                 u16 var_glyph = vars[j];
                 if (rmap.find(var_glyph) == rmap.end()) {
-                    rmap[var_glyph] = base_unicode;
+                    rmap[var_glyph] = base_cp;
                 }
             }
         };
