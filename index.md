@@ -1,0 +1,184 @@
+# gridmicrotex
+
+Render LaTeX math expressions as native R **grid** graphics objects,
+with no external LaTeX installation required.
+
+gridmicrotex embeds the
+[MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ layout engine to
+parse LaTeX, compute the full box model, and produce
+resolution-independent vector output (paths, lines, rectangles) that
+works on any R graphics device.
+
+## Disclaimer
+
+**A note on development**: This package was developed as a proof of
+concept exploring AI-assisted package creation. The architecture and
+specification were designed by me, and the the core C++ integration (via
+[MicroTeX](https://github.com/NanoMichael/MicroTeX)) was facilitated
+largely by AI, with my review and oversight of the final output. I’m
+sharing it because it works and I hope others find it useful.
+Contributions, bug reports, and improvements from the community are very
+welcome.
+
+## Installation
+
+Install the development version from GitHub:
+
+``` r
+# install.packages("pak")
+pak::pak("adayim/gridmicrotex")
+```
+
+## Examples
+
+``` r
+library(gridmicrotex)
+library(grid)
+
+grid.newpage()
+grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", fontsize = 30)
+```
+
+![](reference/figures/README-example-basic-1.png)
+
+### Composing with other grobs
+
+The grob can be placed alongside other grid objects:
+
+``` r
+g <- latex_grob("\\frac{a}{b}", fontsize = 30)
+grid.newpage()
+# A blue box behind the formula
+grid.rect(
+  x = 0.5, y = 0.5,
+  width = grobWidth(g) + unit(10, "bigpts"),
+  height = grobHeight(g) + unit(10, "bigpts"),
+  gp = gpar(fill = "#e8f0fe", col = "#4285f4", lwd = 2)
+)
+
+# The formula itself
+grid.draw(g)
+```
+
+![](reference/figures/README-example-compose-1.png)
+
+### Multiple expressions
+
+``` r
+exprs <- c(
+  "E = mc^{2}",
+  "e^{i\\pi} + 1 = 0",
+  "\\nabla \\times \\vec{E} = -\\frac{\\partial \\vec{B}}{\\partial t}",
+  "\\binom{n}{k} = \\frac{n!}{k!(n-k)!}"
+)
+
+grid.newpage()
+for (i in seq_along(exprs)) {
+  grid.latex(
+    exprs[i],
+    x = unit(0.5, "npc"),
+    y = unit(1 - i / (length(exprs) + 1), "npc"),
+    fontsize = 28
+  )
+}
+```
+
+![](reference/figures/README-example-multiple-1.png)
+
+### Mixed text and math
+
+Use `\text{}` to embed regular text within math expressions:
+
+``` r
+grid.newpage()
+grid.latex(
+  "f(x) = \\begin{cases} x^2 & \\text{if } x \\geq 0 \\\\ -x & \\text{otherwise} \\end{cases}",
+  fontsize = 26
+)
+```
+
+![](reference/figures/README-example-mixed-definition-1.png)
+
+## CJK and multilingual text
+
+Non-math text via `\text{}` supports CJK and other scripts. Font
+settings from `gp` (`fontfamily`, `fontface`) apply to text only — math
+rendering always uses the selected math font:
+
+``` r
+grid.newpage()
+grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2", fontsize = 24,
+           gp = gpar(fontfamily = "sans"))
+```
+
+![](reference/figures/README-example-mixed-cjk-math-1.png)
+
+## ggplot2 integration
+
+Use
+[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
+to place LaTeX labels at data coordinates, and
+[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
+for LaTeX-rendered axis titles:
+
+``` r
+library(ggplot2)
+#> Warning: package 'ggplot2' was built under R version 4.5.2
+
+df <- data.frame(x = 1:3, y = 1:3,
+                 eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
+ggplot(df, aes(x, y, label = eq)) + 
+  geom_latex() +
+  labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
+  theme(axis.title.x = element_latex())
+```
+
+![](reference/figures/README-example-ggplot2-geom-1.png)
+
+ggplot2 is a soft dependency — the core functions work without it. See
+[`vignette("ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md)
+for more examples.
+
+## Features
+
+- Full LaTeX math: fractions, roots, integrals, matrices, Greek,
+  accents, extensible delimiters
+- Two bundled math fonts: Latin Modern Math, XITS Math
+- Color support: `\textcolor{}`, `\color{}`
+- Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
+- CJK/multilingual text in `\text{}`
+- ggplot2 geom, annotation, and theme element (S7-compatible with
+  ggplot2 \>= 4.0)
+- Resolution-independent vector output on all R devices
+- No external LaTeX installation required
+
+## Comparison
+
+| Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
+|:-----------------|:---------------:|:-------------------:|:-------:|:-------------:|
+| `tikzDevice`     |       Yes       |         No          |   Yes   |     Full      |
+| `latex2exp`      |       No        |         Yes         |   Yes   |    Limited    |
+| `plotmath`       |       No        |         Yes         |   Yes   |    Limited    |
+| **gridmicrotex** |     **No**      |       **Yes**       | **Yes** |   **Broad**   |
+
+## How it works
+
+1.  Your LaTeX string is parsed by MicroTeX’s C++ engine into a TeX box
+    model
+2.  A custom `Graphics2D` recorder captures every draw operation (glyph
+    paths, lines, rectangles) with exact coordinates
+3.  The layout crosses the C++/R boundary as a data frame
+4.  R converts each record into native grid primitives (`pathGrob`,
+    `segmentsGrob`, `rectGrob`)
+5.  The result is a `gTree` that renders on any device at any resolution
+
+All math glyphs are rendered as filled vector paths from the bundled
+Latin Modern Math font, so output is crisp at any size and fully
+resolution-independent.
+
+Make sure to use
+[`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html),
+`svglite::svglite()` or
+[`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) for
+best results, as some older devices may not support the full range of
+path operations.
