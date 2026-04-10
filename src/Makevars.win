@@ -1,0 +1,82 @@
+CXX_STD = CXX17
+
+MICROTEX_DIR = MicroTeX/lib
+
+MICROTEX_SOURCES = \
+	$(MICROTEX_DIR)/atom/atom.cpp \
+	$(MICROTEX_DIR)/atom/atom_basic.cpp \
+	$(MICROTEX_DIR)/atom/atom_char.cpp \
+	$(MICROTEX_DIR)/atom/atom_misc.cpp \
+	$(MICROTEX_DIR)/atom/atom_matrix.cpp \
+	$(MICROTEX_DIR)/atom/atom_row.cpp \
+	$(MICROTEX_DIR)/atom/atom_space.cpp \
+	$(MICROTEX_DIR)/atom/atom_stack.cpp \
+	$(MICROTEX_DIR)/atom/atom_accent.cpp \
+	$(MICROTEX_DIR)/atom/atom_scripts.cpp \
+	$(MICROTEX_DIR)/atom/atom_vrow.cpp \
+	$(MICROTEX_DIR)/atom/atom_operator.cpp \
+	$(MICROTEX_DIR)/atom/atom_zstack.cpp \
+	$(MICROTEX_DIR)/atom/atom_sideset.cpp \
+	$(MICROTEX_DIR)/atom/atom_font.cpp \
+	$(MICROTEX_DIR)/atom/atom_delim.cpp \
+	$(MICROTEX_DIR)/atom/atom_root.cpp \
+	$(MICROTEX_DIR)/atom/atom_frac.cpp \
+	$(MICROTEX_DIR)/atom/atom_fence.cpp \
+	$(MICROTEX_DIR)/atom/atom_box.cpp \
+	$(MICROTEX_DIR)/atom/atom_text.cpp \
+	$(MICROTEX_DIR)/atom/colors_def.cpp \
+	$(MICROTEX_DIR)/box/box.cpp \
+	$(MICROTEX_DIR)/box/box_factory.cpp \
+	$(MICROTEX_DIR)/box/box_group.cpp \
+	$(MICROTEX_DIR)/box/box_single.cpp \
+	$(MICROTEX_DIR)/core/split.cpp \
+	$(MICROTEX_DIR)/core/formula.cpp \
+	$(MICROTEX_DIR)/core/formula_def.cpp \
+	$(MICROTEX_DIR)/core/glue.cpp \
+	$(MICROTEX_DIR)/core/localized_num.cpp \
+	$(MICROTEX_DIR)/core/parser.cpp \
+	$(MICROTEX_DIR)/core/debug_config.cpp \
+	$(MICROTEX_DIR)/macro/macro.cpp \
+	$(MICROTEX_DIR)/macro/macro_def.cpp \
+	$(MICROTEX_DIR)/macro/macro_misc.cpp \
+	$(MICROTEX_DIR)/macro/macro_scripts.cpp \
+	$(MICROTEX_DIR)/macro/macro_accent.cpp \
+	$(MICROTEX_DIR)/macro/macro_colors.cpp \
+	$(MICROTEX_DIR)/macro/macro_space.cpp \
+	$(MICROTEX_DIR)/macro/macro_delims.cpp \
+	$(MICROTEX_DIR)/macro/macro_frac.cpp \
+	$(MICROTEX_DIR)/macro/macro_styles.cpp \
+	$(MICROTEX_DIR)/macro/macro_fonts.cpp \
+	$(MICROTEX_DIR)/env/env.cpp \
+	$(MICROTEX_DIR)/env/units.cpp \
+	$(MICROTEX_DIR)/utils/string_utils.cpp \
+	$(MICROTEX_DIR)/utils/utf.cpp \
+	$(MICROTEX_DIR)/utils/utils.cpp \
+	$(MICROTEX_DIR)/otf/clm.cpp \
+	$(MICROTEX_DIR)/otf/fontsense.cpp \
+	$(MICROTEX_DIR)/otf/glyph.cpp \
+	$(MICROTEX_DIR)/otf/otf.cpp \
+	$(MICROTEX_DIR)/otf/path.cpp \
+	$(MICROTEX_DIR)/unimath/font_src.cpp \
+	$(MICROTEX_DIR)/unimath/math_type.cpp \
+	$(MICROTEX_DIR)/unimath/uni_char.cpp \
+	$(MICROTEX_DIR)/unimath/uni_font.cpp \
+	$(MICROTEX_DIR)/unimath/uni_symbol.cpp \
+	$(MICROTEX_DIR)/graphic/font_style.cpp \
+	$(MICROTEX_DIR)/graphic/graphic_basic.cpp \
+	$(MICROTEX_DIR)/graphic/graphic.cpp \
+	$(MICROTEX_DIR)/render/render.cpp \
+	$(MICROTEX_DIR)/render/builder.cpp \
+	$(MICROTEX_DIR)/microtex.cpp
+
+MICROTEX_OBJECTS = $(MICROTEX_SOURCES:.cpp=.o)
+
+PKG_CPPFLAGS = -I. -I$(MICROTEX_DIR) \
+	-DGLYPH_RENDER_TYPE=0 \
+	-include microtexconfig.h
+
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
+
+OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o $(MICROTEX_OBJECTS)

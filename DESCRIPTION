@@ -1,0 +1,37 @@
+Package: gridmicrotex
+Title: Native LaTeX Math Rendering for Grid Graphics
+Version: 0.1.0
+Authors@R:
+    person("Alim", "Dayim", role = c("aut", "cre"),
+           email = "ad938@cam.ac.uk")
+Description: Renders LaTeX math equations as native R grid graphics objects
+    (grobs) using the MicroTeX C++ library as the layout engine. Produces
+    resolution-independent vector output that works on any R graphics device,
+    with no external LaTeX installation required.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+SystemRequirements: C++17
+LinkingTo:
+    Rcpp
+Imports:
+    grDevices,
+    grid,
+    Rcpp
+Suggests:
+    ggplot2 (>= 4.0.0),
+    knitr,
+    pkgdown,
+    ragg,
+    rmarkdown,
+    S7,
+    showtext,
+    sysfonts,
+    systemfonts,
+    testthat (>= 3.0.0),
+    vdiffr
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+URL: https://github.com/adayim/gridmicrotex, https://adayim.github.io/gridmicrotex/
+BugReports: https://github.com/adayim/gridmicrotex/issues

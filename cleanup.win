@@ -1,0 +1,4 @@
+#!/bin/sh
+# Remove compiled object files from vendored MicroTeX sources (Windows)
+find src/MicroTeX -name "*.o" -delete 2>/dev/null
+rm -f src/*.o src/*.dll

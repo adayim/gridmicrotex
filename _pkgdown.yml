@@ -1,0 +1,41 @@
+url: https://adayim.github.io/gridmicrotex/
+template:
+  bootstrap: 5
+
+navbar:
+  structure:
+    left: [intro, reference, articles]
+    right: [search, github]
+
+reference:
+  - title: Core rendering
+    desc: Create and draw LaTeX math as grid grobs
+    contents:
+      - latex_grob
+      - grid.latex
+      - latex_dims
+
+  - title: ggplot2 integration
+    desc: Use LaTeX in ggplot2 plots
+    contents:
+      - geom_latex
+      - annotate_latex
+      - element_latex
+
+  - title: Font management
+    desc: Load and configure math and text fonts
+    contents:
+      - available_math_fonts
+      - load_font
+      - set_main_font
+      - main_font_families
+      - check_fonts
+      - set_math_font
+
+articles:
+  - title: Getting started
+    contents:
+      - introduction
+  - title: ggplot2
+    contents:
+      - ggplot2-integration

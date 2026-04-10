@@ -1,0 +1,16 @@
+.Rproj.user
+.Rhistory
+.RData
+.httr-oauth
+.DS_Store
+.quarto
+mytest/*
+README.html
+src/*.o
+src/*.so
+src/*.dll
+src/MicroTeX/lib/**/*.o
+
+docs
+/doc/
+/Meta/
