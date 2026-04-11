@@ -1,28 +1,29 @@
-test_that("annotate_latex() creates a ggplot2 layer", {
+test_that("annotate('latex') creates a ggplot2 layer", {
   skip_if_not_installed("ggplot2")
 
-  layer <- annotate_latex(x = 2, y = 3, label = "x^2 + y^2", fontsize = 12)
+  layer <- ggplot2::annotate("latex", x = 2, y = 3, label = "x^2 + y^2", size = 12)
   expect_true(inherits(layer, "LayerInstance") || inherits(layer, "Layer"))
 })
 
-test_that("annotate_latex() renders on a plot without error", {
+test_that("annotate('latex') renders on a plot without error", {
   skip_if_not_installed("ggplot2")
 
   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
     ggplot2::geom_point() +
-    annotate_latex(x = 4, y = 30, label = "\\hat{y} = \\beta_0 + \\beta_1 x",
-                   fontsize = 12)
+    ggplot2::annotate("latex", x = 4, y = 30,
+                      label = "\\hat{y} = \\beta_0 + \\beta_1 x",
+                      size = 12)
   tmp <- tempfile(fileext = ".png")
   on.exit(unlink(tmp), add = TRUE)
   expect_no_error(ggplot2::ggsave(tmp, p, width = 6, height = 4, dpi = 72))
 })
 
-test_that("annotate_latex() colour parameter works", {
+test_that("annotate('latex') colour parameter works", {
   skip_if_not_installed("ggplot2")
 
   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
     ggplot2::geom_point() +
-    annotate_latex(x = 4, y = 30, label = "x^2", colour = "red")
+    ggplot2::annotate("latex", x = 4, y = 30, label = "x^2", colour = "red")
   tmp <- tempfile(fileext = ".png")
   on.exit(unlink(tmp), add = TRUE)
   expect_no_error(ggplot2::ggsave(tmp, p, width = 6, height = 4, dpi = 72))

@@ -56,6 +56,11 @@
 #'     eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i")
 #'   )
 #'   ggplot(df, aes(x, y, label = eq)) + geom_latex()
+#'
+#'   # Use annotate() for single annotations (no legend, no data frame needed)
+#'   ggplot(mtcars, aes(wt, mpg)) + geom_point() +
+#'     annotate("latex", x = 4, y = 30,
+#'              label = "\\hat{y} = \\beta_0 + \\beta_1 x")
 #' }
 #' }
 geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
@@ -98,68 +103,6 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
 #' @usage NULL
 #' @export
 GeomLatex <- NULL
-
-# --------------------------------------------------------------------------
-# annotate_latex() — Convenience wrapper for single LaTeX annotations
-# --------------------------------------------------------------------------
-
-#' Add a single LaTeX annotation to a ggplot
-#'
-#' A convenience wrapper around \code{geom_latex()} for adding a single LaTeX
-#' math annotation at a specific position. This avoids the need to create a
-#' one-row data frame manually.
-#'
-#' @param x,y Numeric position in data coordinates.
-#' @param label LaTeX math string.
-#' @param fontsize Font size in points (default: 11).
-#' @param colour,color Text colour (default: \code{"black"}).
-#' @param hjust,vjust Horizontal/vertical justification, 0--1 (default: 0.5).
-#' @param angle Rotation angle in degrees (default: 0).
-#' @param alpha Transparency, 0--1 (default: 1).
-#' @param math_font Name of the math font to use.
-#' @param ... Additional arguments passed to \code{\link{geom_latex}}.
-#'
-#' @return A ggplot2 layer.
-#' @export
-#'
-#' @examples
-#' \donttest{
-#' if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'   library(ggplot2)
-#'   ggplot(mtcars, aes(wt, mpg)) + geom_point() +
-#'     annotate_latex(4, 30, "\\hat{y} = \\beta_0 + \\beta_1 x", fontsize = 12)
-#' }
-#' }
-annotate_latex <- function(x, y, label, fontsize = 11, colour = "black",
-                           color = colour, hjust = 0.5, vjust = 0.5,
-                           angle = 0, alpha = 1, math_font = "", ...) {
-  if (!requireNamespace("ggplot2", quietly = TRUE)) {
-    stop("Package 'ggplot2' is required for annotate_latex(). ",
-         "Please install it with install.packages('ggplot2').",
-         call. = FALSE)
-  }
-
-  df <- data.frame(
-    x = x, y = y, label = label,
-    size = fontsize, colour = color,
-    hjust = hjust, vjust = vjust,
-    angle = angle, alpha = alpha,
-    stringsAsFactors = FALSE
-  )
-
-  geom_latex(
-    data = df,
-    mapping = ggplot2::aes(
-      x = x, y = y, label = label,
-      size = size, colour = colour,
-      hjust = hjust, vjust = vjust,
-      angle = angle, alpha = alpha
-    ),
-    inherit.aes = FALSE,
-    math_font = math_font,
-    ...
-  )
-}
 
 # --------------------------------------------------------------------------
 # element_latex() — A custom ggplot2 theme element (S7)

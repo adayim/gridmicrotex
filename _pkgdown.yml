@@ -19,7 +19,6 @@ reference:
     desc: Use LaTeX in ggplot2 plots
     contents:
       - geom_latex
-      - annotate_latex
       - element_latex
 
   - title: Font management
