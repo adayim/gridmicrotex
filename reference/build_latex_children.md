@@ -1,7 +1,7 @@
 # Build grid children from a MicroTeX layout data.frame
 
 Converts each row of the layout data.frame into the appropriate grid
-grob (pathGrob, segmentsGrob, rectGrob, textGrob).
+grob (pathGrob, segmentsGrob, rectGrob, textGrob, glyphGrob).
 
 ## Usage
 
@@ -9,6 +9,7 @@ grob (pathGrob, segmentsGrob, rectGrob, textGrob).
 build_latex_children(
   layout_df,
   total_h,
+  depth = 0,
   text_gp = NULL,
   render_mode = "typeface"
 )
@@ -24,6 +25,10 @@ build_latex_children(
 
   Total height of the formula (height + depth) in bigpts.
 
+- depth:
+
+  Depth below the baseline in bigpts (default 0).
+
 - text_gp:
 
   Optional [`gpar`](https://rdrr.io/r/grid/gpar.html) for text grobs
@@ -32,7 +37,7 @@ build_latex_children(
 - render_mode:
 
   Character string: `"path"` or `"typeface"`. In typeface mode, glyph
-  records are rendered as `textGrob`s.
+  records are rendered via `glyphGrob`.
 
 ## Value
 

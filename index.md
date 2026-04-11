@@ -143,7 +143,8 @@ for more examples.
 
 - Full LaTeX math: fractions, roots, integrals, matrices, Greek,
   accents, extensible delimiters
-- Two bundled math fonts: Latin Modern Math, XITS Math
+- Three bundled math fonts: Latin Modern Math, XITS Math, TeX Gyre
+  DejaVu Math
 - Color support: `\textcolor{}`, `\color{}`
 - Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
 - CJK/multilingual text in `\text{}`
@@ -157,6 +158,8 @@ for more examples.
 | Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
 |:-----------------|:---------------:|:-------------------:|:-------:|:-------------:|
 | `tikzDevice`     |       Yes       |         No          |   Yes   |     Full      |
+| `xdvir`          |       Yes       |         No          |   Yes   |     Full      |
+| `latexpdf`       |       Yes       |         No          |   Yes   | Full (tables) |
 | `latex2exp`      |       No        |         Yes         |   Yes   |    Limited    |
 | `plotmath`       |       No        |         Yes         |   Yes   |    Limited    |
 | **gridmicrotex** |     **No**      |       **Yes**       | **Yes** |   **Broad**   |
@@ -182,3 +185,37 @@ Make sure to use
 [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) for
 best results, as some older devices may not support the full range of
 path operations.
+
+## Graphics backend
+
+The default graphics device on Windows (`windows()`) and macOS
+([`quartz()`](https://rdrr.io/r/grDevices/quartz.html)) may not find the
+bundled math fonts, producing warnings like:
+
+``` R
+font family not found in Windows font database
+```
+
+To avoid this, switch to a modern graphics backend that uses
+[systemfonts](https://CRAN.R-project.org/package=systemfonts) for font
+resolution:
+
+``` r
+# For knitr / R Markdown — add to your setup chunk:
+knitr::opts_chunk$set(dev = "ragg_png")
+
+# For interactive use:
+options(device = function(...) ragg::agg_png(tempfile(fileext = ".png"), ...))
+```
+
+Recommended backends:
+
+| Backend                                                            | Format | Package                                               |
+|:-------------------------------------------------------------------|:-------|:------------------------------------------------------|
+| [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG    | [ragg](https://CRAN.R-project.org/package=ragg)       |
+| `svglite::svglite()`                                               | SVG    | [svglite](https://CRAN.R-project.org/package=svglite) |
+| [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF    | Base R (Cairo build)                                  |
+
+Alternatively, use `render_mode = "path"` to bypass font lookup entirely
+— glyphs are drawn as vector paths, which works on all devices but
+produces non-selectable text in PDF/SVG.

@@ -20,5 +20,6 @@ A character vector of math font names.
 
 ``` r
 available_math_fonts()
-#> [1] "LatinModernMath-Regular" "STIX Two Math"          
+#> [1] "LatinModernMath-Regular"   "TeXGyreDejaVuMath-Regular"
+#> [3] "XITS Math"                
 ```

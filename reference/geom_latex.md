@@ -104,7 +104,7 @@ geom_latex(
 
 - math_font:
 
-  Name of the math font to use (e.g., `"stix"`).
+  Name of the math font to use (e.g., `"xits"`).
 
 - line_space:
 

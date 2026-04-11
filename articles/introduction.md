@@ -18,7 +18,8 @@ graphics device at any resolution.
   …)
 - Full math support: fractions, roots, integrals, matrices, Greek
   letters, accents, delimiters, and more
-- Multiple math fonts (Latin Modern Math, STIX Two Math)
+- Multiple math fonts (Latin Modern Math, XITS Math, TeX Gyre DejaVu
+  Math)
 - Color support via `\textcolor{}`
 - ggplot2 integration with
   [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
@@ -78,8 +79,8 @@ grid.latex(
 
 ## Math fonts
 
-The package bundles Latin Modern Math (default) and STIX Two Math. For
-most users, the easiest workflow is:
+The package bundles Latin Modern Math (default), XITS Math, and TeX Gyre
+DejaVu Math. For most users, the easiest workflow is:
 
 1.  List available math fonts with
     [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
@@ -89,11 +90,12 @@ most users, the easiest workflow is:
 
 ``` r
 available_math_fonts()
-#> [1] "LatinModernMath-Regular" "STIX Two Math"
+#> [1] "LatinModernMath-Regular"   "TeXGyreDejaVuMath-Regular"
+#> [3] "XITS Math"
 ```
 
 ``` r
-set_math_font("stix")
+set_math_font("xits")
 grid::grid.newpage()
 grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
 ```
@@ -115,7 +117,7 @@ grid::pushViewport(grid::viewport(layout.pos.row = 1))
 grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
 grid::upViewport()
 grid::pushViewport(grid::viewport(layout.pos.row = 2))
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "stix")
+grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "xits")
 grid::upViewport(2)
 ```
 
@@ -362,6 +364,40 @@ sufficient.
 | Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
 |:-----------------|:---------------:|:-------------------:|:-------:|:-------------:|
 | `tikzDevice`     |       Yes       |         No          |   Yes   |     Full      |
+| `xdvir`          |       Yes       |         No          |   Yes   |     Full      |
+| `latexpdf`       |       Yes       |         No          |   Yes   | Full (tables) |
 | `latex2exp`      |       No        |         Yes         |   Yes   |    Limited    |
 | `plotmath`       |       No        |         Yes         |   Yes   |    Limited    |
 | **gridmicrotex** |     **No**      |       **Yes**       | **Yes** |   **Broad**   |
+
+## Graphics backend
+
+The default graphics device on Windows (`windows()`) and macOS
+([`quartz()`](https://rdrr.io/r/grDevices/quartz.html)) may not find the
+bundled math fonts, producing warnings like:
+
+    font family not found in Windows font database
+
+To avoid this, switch to a modern graphics backend that uses
+[systemfonts](https://CRAN.R-project.org/package=systemfonts) for font
+resolution:
+
+``` r
+# For knitr / R Markdown --- add to your setup chunk:
+knitr::opts_chunk$set(dev = "ragg_png")
+
+# For interactive use:
+options(device = function(...) ragg::agg_png(tempfile(fileext = ".png"), ...))
+```
+
+Recommended backends:
+
+| Backend                                                            | Format | Package                                               |
+|:-------------------------------------------------------------------|:-------|:------------------------------------------------------|
+| [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG    | [ragg](https://CRAN.R-project.org/package=ragg)       |
+| `svglite::svglite()`                                               | SVG    | [svglite](https://CRAN.R-project.org/package=svglite) |
+| [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF    | Base R (Cairo build)                                  |
+
+Alternatively, use `render_mode = "path"` to bypass font lookup entirely
+— glyphs are drawn as vector paths, which works on all devices but
+produces non-selectable text in PDF/SVG.

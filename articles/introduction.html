@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -78,7 +78,8 @@ embedded</li>
 SVG, …)</li>
 <li>Full math support: fractions, roots, integrals, matrices, Greek
 letters, accents, delimiters, and more</li>
-<li>Multiple math fonts (Latin Modern Math, STIX Two Math)</li>
+<li>Multiple math fonts (Latin Modern Math, XITS Math, TeX Gyre DejaVu
+Math)</li>
 <li>Color support via <code>\textcolor{}</code>
 </li>
 <li>ggplot2 integration with <code><a href="../reference/geom_latex.html">geom_latex()</a></code> and
@@ -130,8 +131,8 @@ grob:</p>
 <div class="section level2">
 <h2 id="math-fonts">Math fonts<a class="anchor" aria-label="anchor" href="#math-fonts"></a>
 </h2>
-<p>The package bundles Latin Modern Math (default) and STIX Two Math.
-For most users, the easiest workflow is:</p>
+<p>The package bundles Latin Modern Math (default), XITS Math, and TeX
+Gyre DejaVu Math. For most users, the easiest workflow is:</p>
 <ol style="list-style-type: decimal">
 <li>List available math fonts with
 <code><a href="../reference/available_math_fonts.html">available_math_fonts()</a></code>
@@ -142,9 +143,10 @@ For most users, the easiest workflow is:</p>
 </ol>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/available_math_fonts.html">available_math_fonts</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "LatinModernMath-Regular" "STIX Two Math"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "LatinModernMath-Regular"   "TeXGyreDejaVuMath-Regular"</span></span>
+<span><span class="co">#&gt; [3] "XITS Math"</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/set_math_font.html">set_math_font</a></span><span class="op">(</span><span class="st">"stix"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/set_math_font.html">set_math_font</a></span><span class="op">(</span><span class="st">"xits"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-default-1.png" class="r-plt" alt="" width="50%"></p>
@@ -161,7 +163,7 @@ For most users, the easiest workflow is:</p>
 <span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, math_font <span class="op">=</span> <span class="st">"stix"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, math_font <span class="op">=</span> <span class="st">"xits"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-1.png" class="r-plt" alt="" width="50%"></p>
 <p>Use <code><a href="../reference/available_math_fonts.html">available_math_fonts()</a></code> to list loaded fonts and
@@ -424,6 +426,20 @@ sufficient.</p>
 <td align="center">Full</td>
 </tr>
 <tr class="even">
+<td align="left"><code>xdvir</code></td>
+<td align="center">Yes</td>
+<td align="center">No</td>
+<td align="center">Yes</td>
+<td align="center">Full</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>latexpdf</code></td>
+<td align="center">Yes</td>
+<td align="center">No</td>
+<td align="center">Yes</td>
+<td align="center">Full (tables)</td>
+</tr>
+<tr class="even">
 <td align="left"><code>latex2exp</code></td>
 <td align="center">No</td>
 <td align="center">Yes</td>
@@ -446,6 +462,55 @@ sufficient.</p>
 </tr>
 </tbody>
 </table>
+</div>
+<div class="section level2">
+<h2 id="graphics-backend">Graphics backend<a class="anchor" aria-label="anchor" href="#graphics-backend"></a>
+</h2>
+<p>The default graphics device on Windows (<code>windows()</code>) and
+macOS (<code><a href="https://rdrr.io/r/grDevices/quartz.html" class="external-link">quartz()</a></code>) may not find the bundled math fonts,
+producing warnings like:</p>
+<pre><code>font family not found in Windows font database</code></pre>
+<p>To avoid this, switch to a modern graphics backend that uses <a href="https://CRAN.R-project.org/package=systemfonts" class="external-link">systemfonts</a>
+for font resolution:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># For knitr / R Markdown --- add to your setup chunk:</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html" class="external-link">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>dev <span class="op">=</span> <span class="st">"ragg_png"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># For interactive use:</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>device <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu">ragg</span><span class="fu">::</span><span class="fu"><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">agg_png</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Recommended backends:</p>
+<table class="table">
+<colgroup>
+<col width="42%">
+<col width="14%">
+<col width="42%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Backend</th>
+<th align="left">Format</th>
+<th align="left">Package</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code></td>
+<td align="left">PNG</td>
+<td align="left"><a href="https://CRAN.R-project.org/package=ragg" class="external-link">ragg</a></td>
+</tr>
+<tr class="even">
+<td align="left"><code>svglite::svglite()</code></td>
+<td align="left">SVG</td>
+<td align="left"><a href="https://CRAN.R-project.org/package=svglite" class="external-link">svglite</a></td>
+</tr>
+<tr class="odd">
+<td align="left"><code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code></td>
+<td align="left">PDF</td>
+<td align="left">Base R (Cairo build)</td>
+</tr>
+</tbody>
+</table>
+<p>Alternatively, use <code>render_mode = "path"</code> to bypass font
+lookup entirely — glyphs are drawn as vector paths, which works on all
+devices but produces non-selectable text in PDF/SVG.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

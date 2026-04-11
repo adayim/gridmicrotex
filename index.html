@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -162,7 +162,7 @@
 </h2>
 <ul>
 <li>Full LaTeX math: fractions, roots, integrals, matrices, Greek, accents, extensible delimiters</li>
-<li>Two bundled math fonts: Latin Modern Math, XITS Math</li>
+<li>Three bundled math fonts: Latin Modern Math, XITS Math, TeX Gyre DejaVu Math</li>
 <li>Color support: <code>\textcolor{}</code>, <code>\color{}</code>
 </li>
 <li>Font variants: <code>\mathbb{}</code>, <code>\mathcal{}</code>, <code>\mathfrak{}</code>
@@ -201,6 +201,20 @@
 <td align="center">Full</td>
 </tr>
 <tr class="even">
+<td align="left"><code>xdvir</code></td>
+<td align="center">Yes</td>
+<td align="center">No</td>
+<td align="center">Yes</td>
+<td align="center">Full</td>
+</tr>
+<tr class="odd">
+<td align="left"><code>latexpdf</code></td>
+<td align="center">Yes</td>
+<td align="center">No</td>
+<td align="center">Yes</td>
+<td align="center">Full (tables)</td>
+</tr>
+<tr class="even">
 <td align="left"><code>latex2exp</code></td>
 <td align="center">No</td>
 <td align="center">Yes</td>
@@ -236,6 +250,50 @@
 </ol>
 <p>All math glyphs are rendered as filled vector paths from the bundled Latin Modern Math font, so output is crisp at any size and fully resolution-independent.</p>
 <p>Make sure to use <code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code>, <code>svglite::svglite()</code> or <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code> for best results, as some older devices may not support the full range of path operations.</p>
+</div>
+<div class="section level2">
+<h2 id="graphics-backend">Graphics backend<a class="anchor" aria-label="anchor" href="#graphics-backend"></a>
+</h2>
+<p>The default graphics device on Windows (<code>windows()</code>) and macOS (<code><a href="https://rdrr.io/r/grDevices/quartz.html" class="external-link">quartz()</a></code>) may not find the bundled math fonts, producing warnings like:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>font family not found <span class="cf">in</span> Windows font database</span></code></pre></div>
+<p>To avoid this, switch to a modern graphics backend that uses <a href="https://CRAN.R-project.org/package=systemfonts" class="external-link">systemfonts</a> for font resolution:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># For knitr / R Markdown — add to your setup chunk:</span></span>
+<span><span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html" class="external-link">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>dev <span class="op">=</span> <span class="st">"ragg_png"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># For interactive use:</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>device <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu">ragg</span><span class="fu">::</span><span class="fu"><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">agg_png</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Recommended backends:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Backend</th>
+<th align="left">Format</th>
+<th align="left">Package</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left"><code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code></td>
+<td align="left">PNG</td>
+<td align="left"><a href="https://CRAN.R-project.org/package=ragg" class="external-link">ragg</a></td>
+</tr>
+<tr class="even">
+<td align="left"><code>svglite::svglite()</code></td>
+<td align="left">SVG</td>
+<td align="left"><a href="https://CRAN.R-project.org/package=svglite" class="external-link">svglite</a></td>
+</tr>
+<tr class="odd">
+<td align="left"><code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code></td>
+<td align="left">PDF</td>
+<td align="left">Base R (Cairo build)</td>
+</tr>
+</tbody>
+</table>
+<p>Alternatively, use <code>render_mode = "path"</code> to bypass font lookup entirely — glyphs are drawn as vector paths, which works on all devices but produces non-selectable text in PDF/SVG.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
