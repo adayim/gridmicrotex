@@ -1,8 +1,5 @@
 #include "graphic_recorder.h"
 
-// Defined in init.cpp — external linkage
-microtex::u32 reverse_cmap_lookup(const std::string& font_file, microtex::u16 glyph_id);
-
 namespace microtex {
 
 Graphics2D_Recorder::Graphics2D_Recorder() = default;
@@ -78,11 +75,10 @@ void Graphics2D_Recorder::drawGlyph(u16 glyph, float x, float y) {
     rec.font_size = _currentFontSize * this->sx();
     rec.col = _currentColor;
 
-    // Capture font file and reverse-lookup codepoint for typeface mode
+    // Capture the font file path for glyphGrob rendering
     auto* fr = dynamic_cast<Font_R*>(_currentFont.get());
     if (fr && !fr->fontFile.empty()) {
         rec.font_file = fr->fontFile;
-        rec.codepoint = reverse_cmap_lookup(fr->fontFile, glyph);
     }
 
     _records.push_back(std::move(rec));

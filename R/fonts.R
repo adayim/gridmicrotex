@@ -2,13 +2,14 @@
 .font_aliases <- c(
   "latinmodern" = "LatinModernMath-Regular",
   "lm"          = "LatinModernMath-Regular",
-  "stix"        = "STIX Two Math",
-  "stixtwo"     = "STIX Two Math"
+  "xits"        = "XITS Math",
+  "dejavu"      = "TeXGyreDejaVuMath-Regular",
+  "texgyre"     = "TeXGyreDejaVuMath-Regular"
 )
 
 #' Resolve a math font name
 #'
-#' Translates short aliases (e.g., \code{"stix"}, \code{"lm"}) to the
+#' Translates short aliases (e.g., \code{"xits"}, \code{"lm"}) to the
 #' full MicroTeX font name. Validates that the font is loaded.
 #'
 #' @param name Font name or alias. Empty string uses the default font.
@@ -68,7 +69,7 @@ available_math_fonts <- function() {
 #' Use \code{\link{load_font}} only when you need to add a custom font
 #' that is not already loaded.
 #'
-#' @param name Math font name or alias (e.g., \code{"lm"}, \code{"stix"}).
+#' @param name Math font name or alias (e.g., \code{"lm"}, \code{"xits"}).
 #' @return Invisibly returns \code{TRUE} on success.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}},
 #'   \code{\link{load_font}}
@@ -76,8 +77,8 @@ available_math_fonts <- function() {
 #'
 #' @examples
 #' \donttest{
-#'   # Switch default math font to STIX Two Math (if loaded)
-#'   set_math_font("stix")
+#'   # Switch default math font to XITS Math (if loaded)
+#'   set_math_font("xits")
 #' }
 set_math_font <- function(name) {
   if (!microtex_is_inited()) {
@@ -285,7 +286,8 @@ check_fonts <- function() {
   pkg <- "gridmicrotex"
   bundled <- list(
     "Latin Modern Math" = c("latinmodern-math.clm2", "latinmodern-math.otf"),
-    "STIX Two Math" = c("STIXTwoMath-Regular.clm2", "STIXTwoMath-Regular.otf")
+    "XITS Math" = c("XITSMath-Regular.clm2", "XITSMath-Regular.otf"),
+    "TeX Gyre DejaVu Math" = c("texgyredejavu-math.clm2", "texgyredejavu-math.otf")
   )
   message("Bundled font files:")
   for (nm in names(bundled)) {

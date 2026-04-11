@@ -1,6 +1,6 @@
 Package: gridmicrotex
 Title: Native LaTeX Math Rendering for Grid Graphics
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Alim", "Dayim", role = c("aut", "cre"),
            email = "ad938@cam.ac.uk")
@@ -13,6 +13,8 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 SystemRequirements: C++17
+Depends:
+    R (>= 4.2.0)
 LinkingTo:
     Rcpp
 Imports:
@@ -26,9 +28,6 @@ Suggests:
     ragg,
     rmarkdown,
     S7,
-    showtext,
-    sysfonts,
-    systemfonts,
     testthat (>= 3.0.0),
     vdiffr
 VignetteBuilder: knitr

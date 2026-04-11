@@ -35,7 +35,7 @@ Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.}
 
 \item{fontsize}{Base font size in points (default: 20).}
 
-\item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
+\item{math_font}{Name of the math font to use (e.g., \code{"xits"}).
 Use \code{""} (default) for the default Latin Modern Math font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
 

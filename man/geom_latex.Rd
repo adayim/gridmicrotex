@@ -74,7 +74,7 @@ to use \code{position_jitter()}, give the position as \code{"jitter"}.
 \item{fontsize}{Default font size in points. Overridden by the \code{size}
 aesthetic if mapped.}
 
-\item{math_font}{Name of the math font to use (e.g., \code{"stix"}).}
+\item{math_font}{Name of the math font to use (e.g., \code{"xits"}).}
 
 \item{line_space}{Inter-line spacing in big points for multi-line
 formulas (default: 10).}

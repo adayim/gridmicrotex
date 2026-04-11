@@ -3,142 +3,10 @@
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
 #include "unimath/font_src.h"
-#include "unimath/uni_font.h"
-#include "otf/otf.h"
-#include "utils/utils.h"
 
-#include <unordered_map>
 #include <string>
 
 using namespace microtex;
-
-// --- Reverse cmap: glyph_id → Unicode codepoint, keyed by font file ---
-// Built at font load time by reading the CLM binary cmap section directly.
-static std::unordered_map<std::string,
-                          std::unordered_map<u16, u32>> g_reverse_cmap;
-
-// Read the cmap from a CLM file and build glyph→unicode reverse map.
-// CLM binary format: 'c','l','m', u16 major, u8 minor, then readMeta:
-//   null-terminated name, null-terminated family,
-//   u8 isMathFont, u16 style, u16 em, u16 xHeight, u16 ascent, u16 descent,
-//   u16 count, then count × (u32 unicode, u16 glyphId)
-static void build_reverse_cmap_from_clm(const std::string& font_file,
-                                         const std::string& clm_path) {
-    FILE* f = fopen(clm_path.c_str(), "rb");
-    if (!f) return;
-
-    auto read_u8 = [&]() -> uint8_t {
-        uint8_t v = 0;
-        if (fread(&v, 1, 1, f) != 1) return 0;
-        return v;
-    };
-    auto read_u16 = [&]() -> uint16_t {
-        uint8_t buf[2];
-        if (fread(buf, 1, 2, f) != 2) return 0;
-        return (static_cast<uint16_t>(buf[0]) << 8) | buf[1];
-    };
-    auto read_u32 = [&]() -> uint32_t {
-        uint8_t buf[4];
-        if (fread(buf, 1, 4, f) != 4) return 0;
-        return (static_cast<uint32_t>(buf[0]) << 24) |
-               (static_cast<uint32_t>(buf[1]) << 16) |
-               (static_cast<uint32_t>(buf[2]) << 8) |
-               buf[3];
-    };
-    auto skip_string = [&]() {
-        // Read null-terminated string
-        int ch;
-        do { ch = fgetc(f); } while (ch != 0 && ch != EOF);
-    };
-
-    // Header: 'c','l','m', u16 ver, u8 minor
-    read_u8(); read_u8(); read_u8(); // magic
-    read_u16();  // major version
-    read_u8();   // minor version
-
-    // Meta: name, family (null-terminated strings)
-    skip_string(); // name
-    skip_string(); // family
-
-    // u8 isMathFont, u16 style, u16 em, u16 xHeight, u16 ascent, u16 descent
-    read_u8();   // isMathFont
-    read_u16();  // style
-    read_u16();  // em
-    read_u16();  // xHeight
-    read_u16();  // ascent
-    read_u16();  // descent
-
-    // cmap: u16 count, then count × (u32 unicode, u16 glyphId)
-    uint16_t count = read_u16();
-    auto& rmap = g_reverse_cmap[font_file];
-    for (uint16_t i = 0; i < count; i++) {
-        uint32_t unicode = read_u32();
-        uint16_t glyph = read_u16();
-        // Keep first (lowest) codepoint for each glyph
-        if (rmap.find(glyph) == rmap.end()) {
-            rmap[glyph] = unicode;
-        }
-    }
-
-    fclose(f);
-}
-
-// External linkage — also used by graphic_recorder.cpp
-u32 reverse_cmap_lookup(const std::string& font_file, u16 glyph_id) {
-    auto it = g_reverse_cmap.find(font_file);
-    if (it == g_reverse_cmap.end()) return 0;
-    auto git = it->second.find(glyph_id);
-    if (git == it->second.end()) return 0;
-    return git->second;
-}
-
-// Supplement the reverse cmap by walking math glyph variants (ssty, vert, horiz).
-// Many glyphs used at script/scriptscript sizes are variants of base glyphs and
-// have no direct cmap entries.  This maps them back to their base unicode.
-[[maybe_unused]] static void supplement_reverse_cmap_from_otf(const std::string& font_file) {
-    auto it = g_reverse_cmap.find(font_file);
-    if (it == g_reverse_cmap.end()) return;
-
-    auto& rmap = it->second;
-
-    // Find the OtfFont matching this font_file by scanning all loaded fonts
-    const Otf* otf_ptr = nullptr;
-    for (i32 id = 0; ; id++) {
-        auto otfFont = FontContext::getFont(id);
-        if (!otfFont) break;
-        if (otfFont->fontFile == font_file) {
-            otf_ptr = &otfFont->otf();
-            break;
-        }
-    }
-    if (!otf_ptr) return;
-
-    const Otf& otf = *otf_ptr;
-
-    // Snapshot current base glyph→unicode pairs (we'll modify rmap in-place)
-    std::vector<std::pair<u16, u32>> bases(rmap.begin(), rmap.end());
-
-    // For each base glyph with a cmap entry, walk its math variants
-    for (auto& [base_glyph, base_unicode] : bases) {
-        const Glyph* g = otf.glyph(base_glyph);
-        if (!g) continue;
-
-        // Copy to local variable to avoid capturing structured binding (C++20 extension)
-        u32 base_cp = base_unicode;
-        auto add_variants = [&rmap, base_cp](const Variants& vars) {
-            for (u16 j = 0; j < vars.count(); j++) {
-                u16 var_glyph = vars[j];
-                if (rmap.find(var_glyph) == rmap.end()) {
-                    rmap[var_glyph] = base_cp;
-                }
-            }
-        };
-
-        add_variants(g->math().scriptsVariants());
-        add_variants(g->math().verticalVariants());
-        add_variants(g->math().horizontalVariants());
-    }
-}
 
 // --- Global R callback for text measurement ---
 // When set, TextLayout_R::getBounds() calls this R function to get
@@ -295,12 +163,6 @@ void microtex_init(std::string clm_path, std::string otf_path) {
         MicroTeX::setRenderGlyphUsePath(true);
     }
 
-    // Build direct glyph->Unicode reverse cmap for typeface mode.
-    // Keep this map strict (no variant backfilling): stretchy/script-size
-    // glyph variants do not correspond to unique Unicode codepoints.
-    // These are handled by an R-side path fallback pass.
-    build_reverse_cmap_from_clm(otf_path, clm_path);
-
     s_initialized = true;
 }
 
@@ -315,9 +177,6 @@ void microtex_add_font(std::string clm_path, std::string otf_path) {
         auto meta = MicroTeX::addFont(fontSrc);
         if (!meta.isValid()) {
             Rcpp::warning("Failed to load font from: " + clm_path);
-        } else {
-            // Build direct reverse cmap for this font too.
-            build_reverse_cmap_from_clm(otf_path, clm_path);
         }
     } catch (const std::exception& e) {
         Rcpp::warning(std::string("Font load failed: ") + e.what());
@@ -340,7 +199,6 @@ bool microtex_set_default_math_font(std::string name) {
 void microtex_release() {
     if (!s_initialized) return;
     MicroTeX::release();
-    g_reverse_cmap.clear();
     s_initialized = false;
 }
 

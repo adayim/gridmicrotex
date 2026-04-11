@@ -12,7 +12,7 @@
 #' @param fontsize Base font size in points (default: 20).
 #' @param rot Rotation angle in degrees, counter-clockwise (default: 0).
 #'   Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.
-#' @param math_font Name of the math font to use (e.g., \code{"stix"}).
+#' @param math_font Name of the math font to use (e.g., \code{"xits"}).
 #'   Use \code{""} (default) for the default Latin Modern Math font.
 #'   See \code{\link{available_math_fonts}} for loaded fonts.
 #' @param line_space Numeric inter-line spacing in big points for
@@ -113,9 +113,9 @@ latex_grob <- function(tex,
     use_path = (render_mode == "path")
   )
 
-  # Keep a full path-mode layout in typeface mode so we can:
-  # 1) replace unmappable variant glyphs, and
-  # 2) safely fall back on devices that cannot render these Unicode glyphs.
+  # Keep a full path-mode layout in typeface mode so we can
+  # safely fall back on devices that cannot render glyphs (e.g. pdf(),
+  # windows(), quartz()).
   path_layout <- NULL
   if (render_mode == "typeface") {
     path_layout <- parse_latex_cpp(
@@ -126,16 +126,6 @@ latex_grob <- function(tex,
       max_width = max_width,
       math_font = math_font,
       use_path = TRUE
-    )
-  }
-
-  # In typeface mode, some glyph variants (e.g. stretched radicals,
-  # script-size alternates) have no direct Unicode codepoint. Keep those
-  # rows visually correct by replacing only those glyphs with path records.
-  if (render_mode == "typeface") {
-    layout <- .add_typeface_path_fallback(
-      layout = layout,
-      path_layout = path_layout
     )
   }
 
@@ -176,87 +166,16 @@ latex_grob <- function(tex,
 }
 
 
-# Replace unmappable typeface glyph rows with path rows from a path parse.
-# This preserves visual fidelity for stretchy/script variants while keeping
-# directly-mappable glyphs as selectable text.
-.add_typeface_path_fallback <- function(layout, path_layout) {
-  if (is.null(path_layout)) {
-    return(layout)
-  }
-
-  # Fallback triggers for glyph rows that either:
-  # 1) do not have a reversible Unicode mapping, or
-  # 2) do not carry source font metadata for reliable family resolution.
-  fallback_idx <- which(
-    layout$type == "glyph" & (
-      is.na(layout$text) | layout$text == "" |
-      is.na(layout$font_file) | layout$font_file == ""
-    )
-  )
-  if (length(fallback_idx) == 0) {
-    return(layout)
-  }
-
-  glyph_rows <- which(layout$type == "glyph")
-  path_rows <- which(path_layout$type == "path")
-  if (length(glyph_rows) == 0 || length(path_rows) == 0) {
-    return(layout)
-  }
-
-  if (length(path_rows) < length(glyph_rows)) {
-    warning(
-      "Typeface fallback skipped for some glyphs: path record count is smaller than glyph count.",
-      call. = FALSE
-    )
-    return(layout)
-  }
-
-  glyph_ord <- match(fallback_idx, glyph_rows)
-  src_rows <- path_rows[glyph_ord]
-
-  for (k in seq_along(fallback_idx)) {
-    dst <- fallback_idx[k]
-    src <- src_rows[k]
-
-    layout$type[dst] <- "path"
-    layout$x[dst] <- NA_real_
-    layout$y[dst] <- NA_real_
-    layout$glyph[dst] <- NA_integer_
-    layout$font_size[dst] <- NA_real_
-    layout$x2[dst] <- NA_real_
-    layout$y2[dst] <- NA_real_
-    layout$width[dst] <- NA_real_
-    layout$height[dst] <- NA_real_
-    layout$lwd[dst] <- NA_real_
-    layout$text[dst] <- NA_character_
-    layout$font_style[dst] <- NA_integer_
-    layout$codepoint[dst] <- NA_integer_
-    layout$font_file[dst] <- NA_character_
-    layout$path[[dst]] <- path_layout$path[[src]]
-  }
-
-  layout
-}
-
-
-# Base pdf()/postscript() devices and native platform devices (windows(),
-# quartz()) cannot reliably render the Unicode math glyph stream used by
-# typeface mode. The platform devices use OS font databases (GDI / Core Text)
-# rather than systemfonts, so bundled math fonts are not found.
-# Fall back to path on those devices.
+# Check whether the current graphics device supports rendering glyphGrob
+# objects via the dev->glyph() graphics engine interface (R >= 4.3).
+# Uses dev.capabilities()$glyphs when a device is open; returns TRUE
+# when no device is open (layout-only / measurement context).
 .device_supports_typeface_glyphs <- function() {
   cur <- grDevices::dev.cur()
-  if (cur == 1L) return(TRUE)
+  if (cur == 1L) return(TRUE)  # null device (no drawing)
 
-  dl <- grDevices::dev.list()
-  if (is.null(dl)) return(TRUE)
-
-  idx <- which(dl == cur)
-  if (!length(idx)) return(TRUE)
-
-  dev_name <- tolower(names(dl)[idx[1]])
-  !(dev_name %in% c("pdf", "postscript", "pictex", "xfig",
-                     "windows", "quartz", "quartz_off_screen"))
+  caps <- grDevices::dev.capabilities()
+  isTRUE(caps[["glyphs"]])
 }
 
 #' @method makeContent latexgrob
@@ -282,6 +201,7 @@ makeContent.latexgrob <- function(x) {
 
   children <- build_latex_children(
     layout_df, x$total_h,
+    depth = x$bbox_d %||% 0,
     text_gp = x$text_gp,
     render_mode = render_mode
   )

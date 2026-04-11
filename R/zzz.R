@@ -14,10 +14,16 @@
   .onLoad_ggplot2()
 
   # Load additional bundled math fonts
-  stix_clm <- system.file("fonts", "STIXTwoMath-Regular.clm2", package = pkgname)
-  stix_otf <- system.file("fonts", "STIXTwoMath-Regular.otf", package = pkgname)
-  if (nchar(stix_clm) > 0 && nchar(stix_otf) > 0) {
-    microtex_add_font(stix_clm, stix_otf)
+  xits_clm <- system.file("fonts", "XITSMath-Regular.clm2", package = pkgname)
+  xits_otf <- system.file("fonts", "XITSMath-Regular.otf", package = pkgname)
+  if (nchar(xits_clm) > 0 && nchar(xits_otf) > 0) {
+    microtex_add_font(xits_clm, xits_otf)
+  }
+
+  dv_clm <- system.file("fonts", "texgyredejavu-math.clm2", package = pkgname)
+  dv_otf <- system.file("fonts", "texgyredejavu-math.otf", package = pkgname)
+  if (nchar(dv_clm) > 0 && nchar(dv_otf) > 0) {
+    microtex_add_font(dv_clm, dv_otf)
   }
 }
 

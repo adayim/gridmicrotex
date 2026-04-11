@@ -1,49 +1,30 @@
-test_that("available_math_fonts returns loaded fonts", {
+test_that("math fonts load, resolve aliases, and render", {
+  # available_math_fonts lists bundled fonts
   fonts <- available_math_fonts()
-  expect_true(is.character(fonts))
-  expect_true(length(fonts) >= 1)
   expect_true("LatinModernMath-Regular" %in% fonts)
-})
+  expect_true("XITS Math" %in% fonts)
+  expect_true("TeXGyreDejaVuMath-Regular" %in% fonts)
 
-test_that("STIX Two Math is loaded", {
-  fonts <- available_math_fonts()
-  expect_true("STIX Two Math" %in% fonts)
-})
+  # resolve_math_font aliases (case-insensitive)
+  expect_equal(gridmicrotex:::resolve_math_font("xits"), "XITS Math")
+  expect_equal(gridmicrotex:::resolve_math_font("dejavu"), "TeXGyreDejaVuMath-Regular")
+  expect_equal(gridmicrotex:::resolve_math_font("texgyre"), "TeXGyreDejaVuMath-Regular")
+  expect_equal(gridmicrotex:::resolve_math_font("LM"), "LatinModernMath-Regular")
+  expect_error(gridmicrotex:::resolve_math_font("nonexistent"), "not found")
 
-test_that("font alias 'stix' resolves correctly", {
-  resolved <- gridmicrotex:::resolve_math_font("stix")
-  expect_equal(resolved, "STIX Two Math")
-})
+  # set_math_font with alias + error cases
+  expect_true(set_math_font("xits"))
+  expect_error(set_math_font(""), "provide a math font")
 
-test_that("font alias 'lm' resolves correctly", {
-  resolved <- gridmicrotex:::resolve_math_font("lm")
-  expect_equal(resolved, "LatinModernMath-Regular")
-})
-
-test_that("empty font name resolves to default", {
-  resolved <- gridmicrotex:::resolve_math_font("")
-  expect_equal(resolved, "")
-})
-
-test_that("invalid font name throws error", {
-  expect_error(
-    gridmicrotex:::resolve_math_font("nonexistent"),
-    "not found"
-  )
-})
-
-test_that("rendering with STIX Two Math works", {
-  g <- latex_grob("\\frac{a}{b}", fontsize = 20, math_font = "stix")
-  expect_s3_class(g, "latexgrob")
-  g2 <- grid::makeContent(g)
-  expect_true(length(g2$children) > 0)
-})
-
-test_that("rendering with Latin Modern works via alias", {
-  g <- latex_grob("\\frac{a}{b}", fontsize = 20, math_font = "lm")
+  # Rendering with a specific math font
+  g <- latex_grob("\\frac{a}{b}", fontsize = 20, math_font = "xits")
   expect_s3_class(g, "latexgrob")
 })
 
-test_that("check_fonts runs without error", {
-  expect_message(check_fonts(), "Loaded math fonts")
+test_that("font family/face mapping works", {
+  expect_equal(gridmicrotex:::resolve_font_family("cmr"), "serif")
+  expect_equal(gridmicrotex:::resolve_font_family("unknown_font"), "serif")
+  expect_equal(gridmicrotex:::resolve_font_face(1), "bold")
+  expect_equal(gridmicrotex:::resolve_font_face(3), "bold.italic")
+  expect_equal(gridmicrotex:::resolve_font_face(99), "plain")
 })

@@ -7,6 +7,7 @@
 build_latex_children(
   layout_df,
   total_h,
+  depth = 0,
   text_gp = NULL,
   render_mode = "typeface"
 )
@@ -16,17 +17,19 @@ build_latex_children(
 
 \item{total_h}{Total height of the formula (height + depth) in bigpts.}
 
+\item{depth}{Depth below the baseline in bigpts (default 0).}
+
 \item{text_gp}{Optional \code{\link[grid]{gpar}} for text grobs
 (from \code{\\text\{\}} blocks). Controls fontfamily and fontface.}
 
 \item{render_mode}{Character string: \code{"path"} or \code{"typeface"}.
-In typeface mode, glyph records are rendered as \code{textGrob}s.}
+In typeface mode, glyph records are rendered via \code{glyphGrob}.}
 }
 \value{
 A \code{grid::gList} of child grobs.
 }
 \description{
 Converts each row of the layout data.frame into the appropriate
-grid grob (pathGrob, segmentsGrob, rectGrob, textGrob).
+grid grob (pathGrob, segmentsGrob, rectGrob, textGrob, glyphGrob).
 }
 \keyword{internal}

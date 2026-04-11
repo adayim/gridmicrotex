@@ -7,7 +7,7 @@
 set_math_font(name)
 }
 \arguments{
-\item{name}{Math font name or alias (e.g., \code{"lm"}, \code{"stix"}).}
+\item{name}{Math font name or alias (e.g., \code{"lm"}, \code{"xits"}).}
 }
 \value{
 Invisibly returns \code{TRUE} on success.
@@ -24,8 +24,8 @@ that is not already loaded.
 }
 \examples{
 \donttest{
-  # Switch default math font to STIX Two Math (if loaded)
-  set_math_font("stix")
+  # Switch default math font to XITS Math (if loaded)
+  set_math_font("xits")
 }
 }
 \seealso{

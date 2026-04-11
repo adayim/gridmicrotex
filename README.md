@@ -148,7 +148,8 @@ ggplot2 is a soft dependency — the core functions work without it. See
 
 - Full LaTeX math: fractions, roots, integrals, matrices, Greek,
   accents, extensible delimiters
-- Two bundled math fonts: Latin Modern Math, XITS Math
+- Three bundled math fonts: Latin Modern Math, XITS Math, TeX Gyre
+  DejaVu Math
 - Color support: `\textcolor{}`, `\color{}`
 - Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
 - CJK/multilingual text in `\text{}`

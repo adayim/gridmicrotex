@@ -142,7 +142,7 @@ See `vignette("ggplot2-integration")` for more examples.
 
 - Full LaTeX math: fractions, roots, integrals, matrices, Greek, accents,
   extensible delimiters
-- Two bundled math fonts: Latin Modern Math, XITS Math
+- Three bundled math fonts: Latin Modern Math, XITS Math, TeX Gyre DejaVu Math
 - Color support: `\textcolor{}`, `\color{}`
 - Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
 - CJK/multilingual text in `\text{}`

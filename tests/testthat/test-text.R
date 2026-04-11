@@ -1,15 +1,25 @@
-test_that("\\text{} command renders upright text", {
-  layout <- gridmicrotex:::parse_latex_cpp("\\text{if } x > 0")
-  expect_true(nrow(layout) > 0)
+# --- text/CJK parsing ---
+
+test_that("text and CJK parsing produces correct layout records", {
+  # Latin \text{} renders via math font paths, not TEXT records
+  layout_latin <- parse_latex_cpp("\\text{Hello}", text_size = 20)
+  expect_false("text" %in% layout_latin$type)
+  expect_true("path" %in% layout_latin$type)
+
+  # CJK uses text records; mixed math+CJK produces both types
+  layout_mix <- parse_latex_cpp("x^2 + \\text{\u4F60\u597D}", text_size = 20)
+  expect_true("text" %in% layout_mix$type)
+  expect_true("path" %in% layout_mix$type)
+  text_rows <- layout_mix[layout_mix$type == "text", ]
+  expect_false(is.na(text_rows$font_size[1]))
 })
 
-test_that("mixed math and text renders", {
-  layout <- gridmicrotex:::parse_latex_cpp("f(x) = \\text{max}(0, x)")
-  expect_true(nrow(layout) > 0)
-})
+# --- latex_grob with CJK ---
 
-test_that("text command produces valid gTree", {
-  g <- latex_grob("\\text{if } x > 0", fontsize = 20, render_mode = "path")
-  g2 <- grid::makeContent(g)
-  expect_true(length(g2$children) > 0)
+test_that("latex_grob with CJK text renders and stores fontfamily", {
+  g <- latex_grob("x + \\text{\u4F60\u597D}",
+                  fontsize = 20,
+                  gp = grid::gpar(fontfamily = "sans"))
+  expect_s3_class(g, "latexgrob")
+  expect_equal(g$text_gp$fontfamily, "sans")
 })

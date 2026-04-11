@@ -1,17 +1,19 @@
 #' Build grid children from a MicroTeX layout data.frame
 #'
 #' Converts each row of the layout data.frame into the appropriate
-#' grid grob (pathGrob, segmentsGrob, rectGrob, textGrob).
+#' grid grob (pathGrob, segmentsGrob, rectGrob, textGrob, glyphGrob).
 #'
 #' @param layout_df Data.frame returned by \code{parse_latex_cpp()}.
 #' @param total_h Total height of the formula (height + depth) in bigpts.
+#' @param depth Depth below the baseline in bigpts (default 0).
 #' @param text_gp Optional \code{\link[grid]{gpar}} for text grobs
 #'   (from \code{\\text\{\}} blocks). Controls fontfamily and fontface.
 #' @param render_mode Character string: \code{"path"} or \code{"typeface"}.
-#'   In typeface mode, glyph records are rendered as \code{textGrob}s.
+#'   In typeface mode, glyph records are rendered via \code{glyphGrob}.
 #' @return A \code{grid::gList} of child grobs.
 #' @keywords internal
-build_latex_children <- function(layout_df, total_h, text_gp = NULL,
+build_latex_children <- function(layout_df, total_h, depth = 0,
+                                 text_gp = NULL,
                                  render_mode = "typeface") {
   children <- grid::gList()
   n <- nrow(layout_df)
@@ -20,6 +22,14 @@ build_latex_children <- function(layout_df, total_h, text_gp = NULL,
   # MicroTeX line widths are in bigpts (1/72 inch) but R's lwd unit is
   # 1/96 inch, so scale by 96/72 = 4/3 to get correct stroke widths.
   lwd_scale <- 96 / 72
+
+  # Collect glyph records for batched glyphGrob creation (typeface mode)
+  glyph_ids <- integer(0)
+  glyph_x <- numeric(0)
+  glyph_y <- numeric(0)
+  glyph_sizes <- numeric(0)
+  glyph_cols <- character(0)
+  glyph_fonts <- character(0)
 
   for (i in seq_len(n)) {
     row <- layout_df[i, ]
@@ -120,38 +130,34 @@ build_latex_children <- function(layout_df, total_h, text_gp = NULL,
         }
       },
       "glyph" = {
-        # Typeface mode: render glyph as a native textGrob using the
-        # Unicode codepoint so text is selectable in PDF/SVG output.
+        # Typeface mode: collect glyph data for batched glyphGrob.
         if (render_mode == "typeface") {
-          label <- row$text
-          if (!is.na(label) && nzchar(label)) {
-            # Resolve font family from the font file path
-            font_file <- row$font_file
-            glyph_family <- if (!is.na(font_file) && nzchar(font_file)) {
-              .resolve_glyph_font_family(font_file)
-            } else {
-              ""
-            }
-            tgp <- grid::gpar(
-              fontsize = row$font_size,
-              col = row$color
-            )
-            if (nzchar(glyph_family)) {
-              tgp$fontfamily <- glyph_family
-            }
-            children <- grid::gList(children, grid::textGrob(
-              label = label,
-              x = grid::unit(row$x, "bigpts"),
-              y = grid::unit(total_h - row$y, "bigpts"),
-              just = c("left", "bottom"),
-              gp = tgp,
-              name = paste0("glyph.", i)
-            ))
+          font_file <- row$font_file
+          glyph_id <- row$glyph
+          if (!is.na(font_file) && nzchar(font_file) &&
+              !is.na(glyph_id)) {
+            glyph_ids <- c(glyph_ids, glyph_id)
+            glyph_x <- c(glyph_x, row$x)
+            glyph_y <- c(glyph_y, total_h - row$y)
+            glyph_sizes <- c(glyph_sizes, row$font_size)
+            glyph_cols <- c(glyph_cols, row$color)
+            glyph_fonts <- c(glyph_fonts, font_file)
           }
         }
         # In path mode, glyphs are rendered as path records (no action needed)
       }
     )
+  }
+
+  # Build a single batched glyphGrob for all typeface-mode glyphs
+  if (length(glyph_ids) > 0) {
+    glyph_grob <- .build_glyph_grob(
+      glyph_ids, glyph_x, glyph_y, glyph_sizes,
+      glyph_cols, glyph_fonts, depth = depth
+    )
+    if (!is.null(glyph_grob)) {
+      children <- grid::gList(children, glyph_grob)
+    }
   }
 
   children
@@ -287,93 +293,94 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
   else "plain"
 }
 
-# Cache of font file -> R family name mappings
+# Cache of font file -> glyphFont objects
 .glyph_font_cache <- new.env(parent = emptyenv())
 
-#' Resolve an OTF font file path to an R font family name
+#' Get or create a glyphFont object for a font file
 #'
-#' Looks up the font's actual family name from the system font database
-#' (via \pkg{systemfonts}). If the font is installed, the real family
-#' name (e.g., \code{"Latin Modern Math"}) is used so that all R graphics
-#' devices recognise it. Falls back to registering the font via
-#' \pkg{systemfonts} and/or \pkg{sysfonts} + \pkg{showtext}.
+#' Caches \code{grDevices::glyphFont()} objects keyed by file path
+#' so that repeated calls for the same font file reuse the same object.
 #'
 #' @param font_file Absolute path to the OTF/TTF font file.
-#' @return Character string giving the R font family name.
+#' @return A \code{glyphFont} object.
 #' @keywords internal
-.resolve_glyph_font_family <- function(font_file) {
+.get_glyph_font <- function(font_file) {
   cached <- .glyph_font_cache[[font_file]]
   if (!is.null(cached)) return(cached)
 
-  if (!file.exists(font_file)) {
-    family_name <- tools::file_path_sans_ext(basename(font_file))
-    .glyph_font_cache[[font_file]] <- family_name
-    return(family_name)
-  }
+  gf <- grDevices::glyphFont(
+    file = font_file,
+    index = 0L,
+    family = tools::file_path_sans_ext(basename(font_file)),
+    weight = 400,
+    style = "normal"
+  )
+  .glyph_font_cache[[font_file]] <- gf
+  gf
+}
 
-  # Try to find the font's real family name from the system font database
-  family_name <- NULL
-  if (requireNamespace("systemfonts", quietly = TRUE)) {
-    tryCatch({
-      sys_fonts <- systemfonts::system_fonts()
-      # First try exact path match (normalised)
-      norm <- function(p) tolower(normalizePath(p, winslash = "/", mustWork = FALSE))
-      match_idx <- which(norm(sys_fonts$path) == norm(font_file))
-      # If no path match, try matching by filename (the font may be
-      # installed in a system directory different from the package path)
-      if (length(match_idx) == 0) {
-        match_idx <- which(tolower(basename(sys_fonts$path)) ==
-                           tolower(basename(font_file)))
-      }
-      if (length(match_idx) > 0) {
-        family_name <- sys_fonts$family[match_idx[1]]
-      }
-    }, error = function(e) NULL)
-  }
+#' Build a single batched glyphGrob from collected glyph data
+#'
+#' Creates a \code{grid::glyphGrob} containing all math glyphs,
+#' using \code{grDevices::glyphInfo()} to describe glyph IDs, positions,
+#' sizes, colors, and fonts. Each unique font file becomes an entry
+#' in the \code{glyphFontList}.
+#'
+#' @param ids Integer vector of glyph IDs.
+#' @param x,y Numeric vectors of glyph positions (already y-flipped, in bigpts).
+#' @param sizes Numeric vector of font sizes.
+#' @param cols Character vector of colors.
+#' @param font_files Character vector of font file paths.
+#' @param depth Depth below the baseline in bigpts (default 0).
+#' @return A \code{grid::glyphGrob} or \code{NULL}.
+#' @keywords internal
+.build_glyph_grob <- function(ids, x, y, sizes, cols, font_files, depth = 0) {
+  n <- length(ids)
+  if (n == 0) return(NULL)
 
-  # Fall back to filename-derived name
-  if (is.null(family_name) || !nzchar(family_name)) {
-    family_name <- tools::file_path_sans_ext(basename(font_file))
-  }
+  # Build font list from unique font files
+  unique_fonts <- unique(font_files)
+  font_list_args <- lapply(unique_fonts, .get_glyph_font)
+  font_list <- do.call(grDevices::glyphFontList, font_list_args)
 
-  registered <- FALSE
+  # Map each glyph to its font index (1-based)
+  font_idx <- match(font_files, unique_fonts)
 
-  # Register via systemfonts (works with ragg, svglite devices)
-  if (requireNamespace("systemfonts", quietly = TRUE)) {
-    tryCatch({
-      systemfonts::register_font(name = family_name, plain = font_file)
-      registered <- TRUE
-    }, error = function(e) NULL)
-  }
+  # Glyph positions are in bigpts within the formula's coordinate system.
+  # Set anchors at origin so positions map 1:1 to viewport coordinates.
+  w <- if (n > 1) max(x) - min(x) else max(sizes)
+  h <- if (n > 1) max(y) - min(y) else max(sizes)
 
-  # Register via sysfonts so the font is available if the user has
+  # Anchor points for positioning (see Paul Murrell, 2023,
+  # "Rendering Typeset Glyphs in R Graphics").
+  # "bottom" = 0 (the lowest glyph y-offset), "baseline" = depth
+  # above the bottom (the TeX baseline), "centre" half-way up.
+  baseline_y <- depth  # depth is distance from baseline to bottom
+  centre_y <- h / 2
 
-  # showtext enabled.  Do NOT call showtext::showtext_auto() here:
-  # enabling showtext globally forces all text to be rendered as paths,
-  # which breaks native text output on systemfonts-based devices
-  # (svglite, ragg).
-  if (requireNamespace("sysfonts", quietly = TRUE)) {
-    tryCatch({
-      existing <- sysfonts::font_families()
-      if (!(family_name %in% existing)) {
-        sysfonts::font_add(family = family_name, regular = font_file)
-      }
-      registered <- TRUE
-    }, error = function(e) NULL)
-  }
+  info <- grDevices::glyphInfo(
+    id = as.integer(ids),
+    x = x,
+    y = y,
+    font = as.integer(font_idx),
+    size = sizes,
+    fontList = font_list,
+    width = w,
+    height = h,
+    hAnchor = grDevices::glyphAnchor(0, label = "left"),
+    vAnchor = grDevices::glyphAnchor(
+      c(0, baseline_y, centre_y),
+      label = c("bottom", "baseline", "centre")
+    ),
+    col = cols
+  )
 
-  if (!registered) {
-    warning(
-      "Font '", family_name, "' could not be registered with R. ",
-      "Typeface mode requires either:\n",
-      "  - systemfonts + a compatible device (ragg::agg_png, svglite), or\n",
-      "  - sysfonts + showtext for standard R devices.\n",
-      "Install with: install.packages(c('systemfonts', 'ragg'))\n",
-      "          or: install.packages(c('sysfonts', 'showtext'))",
-      call. = FALSE
-    )
-  }
-
-  .glyph_font_cache[[font_file]] <- family_name
-  family_name
+  grid::glyphGrob(
+    info,
+    x = grid::unit(0, "bigpts"),
+    y = grid::unit(0, "bigpts"),
+    hjust = "left",
+    vjust = "bottom",
+    name = "glyphs"
+  )
 }

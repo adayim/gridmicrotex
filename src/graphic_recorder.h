@@ -25,7 +25,7 @@ public:
 // One recorded draw operation
 struct DrawRecord {
     enum Type { GLYPH, LINE, RECT, FILL_RECT, ROUND_RECT, FILL_ROUND_RECT, PATH, TEXT };
-    Type type;
+    Type type = GLYPH;
 
     // For GLYPH
     float x = 0, y = 0;
@@ -48,8 +48,8 @@ struct DrawRecord {
     // For PATH: stored as a list of segments
     struct PathSegment {
         enum Cmd { MOVE, LINE_TO, CUBIC, QUAD, CLOSE };
-        Cmd cmd;
-        float coords[6];
+        Cmd cmd = MOVE;
+        float coords[6] = {};
     };
     std::vector<PathSegment> path_segments;
 };
