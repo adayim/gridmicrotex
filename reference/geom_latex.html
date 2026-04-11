@@ -33,7 +33,7 @@ vector output."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>A ggplot2 geom for LaTeX math labels</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.0/R/ggplot2-integration.R" class="external-link"><code>R/ggplot2-integration.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/ggplot2-integration.R" class="external-link"><code>R/ggplot2-integration.R</code></a></small>
       <div class="d-none name"><code>geom_latex.Rd</code></div>
     </div>
 
@@ -201,6 +201,11 @@ are in bold):</p><ul><li><p><strong><code>x</code></strong></p></li>
 <span class="r-in"><span>    eq <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"x^2"</span>, <span class="st">"\\frac{a}{b}"</span>, <span class="st">"\\sum_{i=1}^n x_i"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, label <span class="op">=</span> <span class="va">eq</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu">geom_latex</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span>  <span class="co"># Use annotate() for single annotations (no legend, no data frame needed)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"latex"</span>, x <span class="op">=</span> <span class="fl">4</span>, y <span class="op">=</span> <span class="fl">30</span>,</span></span>
+<span class="r-in"><span>             label <span class="op">=</span> <span class="st">"\\hat{y} = \\beta_0 + \\beta_1 x"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="geom_latex-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>

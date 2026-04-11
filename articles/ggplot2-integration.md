@@ -49,7 +49,9 @@ ggplot(df, aes(x, y, label = eq, colour = col, size = c(14, 18, 14))) +
 ### Adding equation annotations to a scatter plot
 
 A common use case is annotating a regression fit with the model
-equation.
+equation. Use `annotate("latex", ...)` for single annotations — it
+delegates to `GeomLatex` internally but avoids creating a data frame and
+automatically hides the legend.
 
 ``` r
 fit <- lm(mpg ~ wt, data = mtcars)
@@ -63,11 +65,7 @@ eq_label <- sprintf("\\hat{y} = %s %s x, \\quad R^2 = %s",
 ggplot(mtcars, aes(wt, mpg)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE) +
-  geom_latex(
-    data = data.frame(x = 4, y = 30, label = eq_label),
-    aes(x, y, label = label),
-    fontsize = 12
-  ) +
+  annotate("latex", x = 4, y = 30, label = eq_label, size = 12) +
   theme_minimal()
 #> `geom_smooth()` using formula = 'y ~ x'
 ```

@@ -17,8 +17,6 @@ Use LaTeX in ggplot2 plots
 
 - [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
   : A ggplot2 geom for LaTeX math labels
-- [`annotate_latex()`](https://adayim.github.io/gridmicrotex/reference/annotate_latex.md)
-  : Add a single LaTeX annotation to a ggplot
 - [`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
   : A ggplot2 theme element for LaTeX text
 
