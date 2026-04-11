@@ -162,6 +162,8 @@ ggplot2 is a soft dependency — the core functions work without it. See
 | Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
 |:-----------------|:---------------:|:-------------------:|:-------:|:-------------:|
 | `tikzDevice`     |       Yes       |         No          |   Yes   |     Full      |
+| `xdvir`          |       Yes       |         No          |   Yes   |     Full      |
+| `latexpdf`       |       Yes       |         No          |   Yes   | Full (tables) |
 | `latex2exp`      |       No        |         Yes         |   Yes   |    Limited    |
 | `plotmath`       |       No        |         Yes         |   Yes   |    Limited    |
 | **gridmicrotex** |     **No**      |       **Yes**       | **Yes** |   **Broad**   |
@@ -184,3 +186,35 @@ resolution-independent.
 Make sure to use `ragg::agg_png()`, `svglite::svglite()` or
 `grDevices::cairo_pdf()` for best results, as some older devices may not
 support the full range of path operations.
+
+## Graphics backend
+
+The default graphics device on Windows (`windows()`) and macOS
+(`quartz()`) may not find the bundled math fonts, producing warnings
+like:
+
+    font family not found in Windows font database
+
+To avoid this, switch to a modern graphics backend that uses
+[systemfonts](https://CRAN.R-project.org/package=systemfonts) for font
+resolution:
+
+``` r
+# For knitr / R Markdown — add to your setup chunk:
+knitr::opts_chunk$set(dev = "ragg_png")
+
+# For interactive use:
+options(device = function(...) ragg::agg_png(tempfile(fileext = ".png"), ...))
+```
+
+Recommended backends:
+
+| Backend | Format | Package |
+|:---|:---|:---|
+| `ragg::agg_png()` | PNG | [ragg](https://CRAN.R-project.org/package=ragg) |
+| `svglite::svglite()` | SVG | [svglite](https://CRAN.R-project.org/package=svglite) |
+| `grDevices::cairo_pdf()` | PDF | Base R (Cairo build) |
+
+Alternatively, use `render_mode = "path"` to bypass font lookup entirely
+— glyphs are drawn as vector paths, which works on all devices but
+produces non-selectable text in PDF/SVG.

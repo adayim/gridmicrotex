@@ -239,8 +239,11 @@ latex_grob <- function(tex,
 }
 
 
-# Base pdf()/postscript() devices cannot reliably render the Unicode math
-# glyph stream used by typeface mode. Fall back to path on those devices.
+# Base pdf()/postscript() devices and native platform devices (windows(),
+# quartz()) cannot reliably render the Unicode math glyph stream used by
+# typeface mode. The platform devices use OS font databases (GDI / Core Text)
+# rather than systemfonts, so bundled math fonts are not found.
+# Fall back to path on those devices.
 .device_supports_typeface_glyphs <- function() {
   cur <- grDevices::dev.cur()
   if (cur == 1L) return(TRUE)
@@ -252,7 +255,8 @@ latex_grob <- function(tex,
   if (!length(idx)) return(TRUE)
 
   dev_name <- tolower(names(dl)[idx[1]])
-  !(dev_name %in% c("pdf", "postscript", "pictex", "xfig"))
+  !(dev_name %in% c("pdf", "postscript", "pictex", "xfig",
+                     "windows", "quartz", "quartz_off_screen"))
 }
 
 #' @method makeContent latexgrob
@@ -268,8 +272,8 @@ makeContent.latexgrob <- function(x) {
       warning(
         paste0(
           "Current graphics device does not support typeface glyph rendering; ",
-          "falling back to path mode. For embedded/selectable math text in PDF, ",
-          "use grDevices::cairo_pdf()."
+          "falling back to path mode. Use ragg::agg_png(), svglite::svglite(), ",
+          "or grDevices::cairo_pdf() for selectable math text."
         ),
         call. = FALSE
       )
