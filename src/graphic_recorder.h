@@ -32,7 +32,6 @@ struct DrawRecord {
     u16 glyph_id = 0;
     float font_size = 0;
     color col = black;
-    u32 codepoint = 0;          // Unicode codepoint (from reverse cmap, 0 if unknown)
     std::string font_file;      // OTF font file path (for typeface mode)
 
     // For TEXT (non-math text from \text{}, etc.)

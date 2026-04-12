@@ -280,9 +280,11 @@ grid.latex <- function(tex, ...) {
 #'
 #' @examples
 #' latex_dims("\\frac{a}{b}")
-latex_dims <- function(tex, fontsize = 20, line_space = 10, max_width = 0,
+latex_dims <- function(tex, fontsize = 20, math_font = "",
+                       line_space = 10, max_width = 0,
                        render_mode = c("typeface", "path")) {
   render_mode <- match.arg(render_mode)
+  math_font <- resolve_math_font(math_font)
   measurer <- .make_text_measurer(grid::gpar())
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
@@ -290,6 +292,7 @@ latex_dims <- function(tex, fontsize = 20, line_space = 10, max_width = 0,
   layout <- parse_latex_cpp(tex, text_size = fontsize,
                             line_space = line_space,
                             max_width = max_width,
+                            math_font = math_font,
                             use_path = (render_mode == "path"))
   list(
     width    = grid::unit(attr(layout, "bbox_width"), "bigpts"),

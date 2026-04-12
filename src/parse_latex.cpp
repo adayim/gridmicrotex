@@ -6,6 +6,11 @@
 using namespace microtex;
 using namespace Rcpp;
 
+// RAII guard: restores the global render-mode flag on scope exit
+struct RenderModeGuard {
+    ~RenderModeGuard() { MicroTeX::setRenderGlyphUsePath(true); }
+};
+
 // Helper: convert ARGB color to R hex string "#RRGGBB" or "#RRGGBBAA"
 static std::string color_to_hex(color c) {
     char buf[10];
@@ -19,27 +24,6 @@ static std::string color_to_hex(color c) {
         snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", r, g, b, a);
     }
     return std::string(buf);
-}
-
-// Helper: encode a Unicode codepoint as UTF-8
-static std::string codepoint_to_utf8(uint32_t cp) {
-    std::string s;
-    if (cp < 0x80) {
-        s += static_cast<char>(cp);
-    } else if (cp < 0x800) {
-        s += static_cast<char>(0xC0 | (cp >> 6));
-        s += static_cast<char>(0x80 | (cp & 0x3F));
-    } else if (cp < 0x10000) {
-        s += static_cast<char>(0xE0 | (cp >> 12));
-        s += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
-        s += static_cast<char>(0x80 | (cp & 0x3F));
-    } else if (cp < 0x110000) {
-        s += static_cast<char>(0xF0 | (cp >> 18));
-        s += static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
-        s += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
-        s += static_cast<char>(0x80 | (cp & 0x3F));
-    }
-    return s;
 }
 
 // [[Rcpp::export]]
@@ -56,7 +40,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
     }
 
-    // Toggle glyph rendering mode
+    // Toggle glyph rendering mode (guard restores default on any exit)
+    RenderModeGuard render_guard;
     MicroTeX::setRenderGlyphUsePath(use_path);
 
     // Decode foreground color
@@ -129,13 +114,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 w_col[i] = NA_REAL;
                 h_col[i] = NA_REAL;
                 lwd_col[i] = NA_REAL;
-                if (rec.codepoint > 0) {
-                    text_col[i] = codepoint_to_utf8(rec.codepoint);
-                    codepoint_col[i] = static_cast<int>(rec.codepoint);
-                } else {
-                    text_col[i] = NA_STRING;
-                    codepoint_col[i] = NA_INTEGER;
-                }
+                text_col[i] = NA_STRING;
+                codepoint_col[i] = NA_INTEGER;
                 if (!rec.font_file.empty()) {
                     font_file_col[i] = rec.font_file;
                 } else {
@@ -277,9 +257,6 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 break;
         }
     }
-
-    // Restore default path mode
-    MicroTeX::setRenderGlyphUsePath(true);
 
     Rcpp::List result = Rcpp::List::create(
         Named("type") = type_col,

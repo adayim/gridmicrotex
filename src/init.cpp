@@ -213,13 +213,6 @@ std::string microtex_version() {
 }
 
 // [[Rcpp::export]]
-void microtex_set_render_path(bool use_path) {
-    if (s_initialized) {
-        MicroTeX::setRenderGlyphUsePath(use_path);
-    }
-}
-
-// [[Rcpp::export]]
 bool microtex_set_default_main_font(std::string family) {
     if (!s_initialized) return false;
     return MicroTeX::setDefaultMainFont(family);

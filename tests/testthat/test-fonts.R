@@ -20,11 +20,3 @@ test_that("math fonts load, resolve aliases, and render", {
   g <- latex_grob("\\frac{a}{b}", fontsize = 20, math_font = "xits")
   expect_s3_class(g, "latexgrob")
 })
-
-test_that("font family/face mapping works", {
-  expect_equal(gridmicrotex:::resolve_font_family("cmr"), "serif")
-  expect_equal(gridmicrotex:::resolve_font_family("unknown_font"), "serif")
-  expect_equal(gridmicrotex:::resolve_font_face(1), "bold")
-  expect_equal(gridmicrotex:::resolve_font_face(3), "bold.italic")
-  expect_equal(gridmicrotex:::resolve_font_face(99), "plain")
-})

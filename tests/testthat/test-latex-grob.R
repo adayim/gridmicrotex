@@ -74,3 +74,26 @@ test_that("device support detection and typeface fallback work", {
     "falling back to path mode"
   )
 })
+
+# --- edge cases: empty and invalid input ---
+
+test_that("latex_grob handles empty input", {
+  expect_error(latex_grob(""))
+})
+
+test_that("latex_grob handles invalid LaTeX commands gracefully", {
+  # MicroTeX silently ignores unknown commands; verify it doesn't crash
+  g <- latex_grob("\\notavalidcommand{x}")
+  expect_s3_class(g, "latexgrob")
+})
+
+test_that("latex_dims respects math_font parameter", {
+  dims_lm   <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "lm")
+  dims_xits <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "xits")
+  w_lm   <- grid::convertWidth(dims_lm$width, "bigpts", valueOnly = TRUE)
+  w_xits <- grid::convertWidth(dims_xits$width, "bigpts", valueOnly = TRUE)
+  # Different fonts should produce different (but both positive) widths
+  expect_true(w_lm > 0)
+  expect_true(w_xits > 0)
+  expect_false(w_lm == w_xits)
+})

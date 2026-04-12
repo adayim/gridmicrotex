@@ -37,10 +37,6 @@ microtex_version <- function() {
     .Call(`_gridmicrotex_microtex_version`)
 }
 
-microtex_set_render_path <- function(use_path) {
-    invisible(.Call(`_gridmicrotex_microtex_set_render_path`, use_path))
-}
-
 microtex_set_default_main_font <- function(family) {
     .Call(`_gridmicrotex_microtex_set_default_main_font`, family)
 }

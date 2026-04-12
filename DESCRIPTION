@@ -24,7 +24,6 @@ Imports:
 Suggests:
     ggplot2 (>= 4.0.0),
     knitr,
-    pkgdown,
     ragg,
     rmarkdown,
     S7,

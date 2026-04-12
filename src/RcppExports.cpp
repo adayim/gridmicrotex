@@ -101,16 +101,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// microtex_set_render_path
-void microtex_set_render_path(bool use_path);
-RcppExport SEXP _gridmicrotex_microtex_set_render_path(SEXP use_pathSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bool >::type use_path(use_pathSEXP);
-    microtex_set_render_path(use_path);
-    return R_NilValue;
-END_RCPP
-}
 // microtex_set_default_main_font
 bool microtex_set_default_main_font(std::string family);
 RcppExport SEXP _gridmicrotex_microtex_set_default_main_font(SEXP familySEXP) {
@@ -161,7 +151,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_microtex_release", (DL_FUNC) &_gridmicrotex_microtex_release, 0},
     {"_gridmicrotex_microtex_is_inited", (DL_FUNC) &_gridmicrotex_microtex_is_inited, 0},
     {"_gridmicrotex_microtex_version", (DL_FUNC) &_gridmicrotex_microtex_version, 0},
-    {"_gridmicrotex_microtex_set_render_path", (DL_FUNC) &_gridmicrotex_microtex_set_render_path, 1},
     {"_gridmicrotex_microtex_set_default_main_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_main_font, 1},
     {"_gridmicrotex_microtex_main_font_families", (DL_FUNC) &_gridmicrotex_microtex_main_font_families, 0},
     {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 8},

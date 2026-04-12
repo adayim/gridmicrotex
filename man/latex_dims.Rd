@@ -7,6 +7,7 @@
 latex_dims(
   tex,
   fontsize = 20,
+  math_font = "",
   line_space = 10,
   max_width = 0,
   render_mode = c("typeface", "path")
@@ -16,6 +17,10 @@ latex_dims(
 \item{tex}{Character string of LaTeX math code.}
 
 \item{fontsize}{Base font size in points (default: 20).}
+
+\item{math_font}{Name of the math font to use (e.g., \code{"xits"}).
+Use \code{""} (default) for the default Latin Modern Math font.
+See \code{\link{available_math_fonts}} for loaded fonts.}
 
 \item{line_space}{Numeric inter-line spacing in big points for
 multi-line formulas (e.g., \code{\\\\}, \code{\\begin\{array\}}).
