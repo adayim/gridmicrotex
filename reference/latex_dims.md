@@ -8,6 +8,7 @@ Get dimensions of a LaTeX expression
 latex_dims(
   tex,
   fontsize = 20,
+  math_font = "",
   line_space = 10,
   max_width = 0,
   render_mode = c("typeface", "path")
@@ -23,6 +24,13 @@ latex_dims(
 - fontsize:
 
   Base font size in points (default: 20).
+
+- math_font:
+
+  Name of the math font to use (e.g., `"xits"`). Use `""` (default) for
+  the default Latin Modern Math font. See
+  [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
+  for loaded fonts.
 
 - line_space:
 

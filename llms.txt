@@ -13,7 +13,7 @@ works on any R graphics device.
 
 **A note on development**: This package was developed as a proof of
 concept exploring AI-assisted package creation. The architecture and
-specification were designed by me, and the the core C++ integration (via
+specification were designed by me, and the core C++ integration (via
 [MicroTeX](https://github.com/NanoMichael/MicroTeX)) was facilitated
 largely by AI, with my review and oversight of the final output. I’m
 sharing it because it works and I hope others find it useful.
@@ -123,7 +123,6 @@ for LaTeX-rendered axis titles:
 
 ``` r
 library(ggplot2)
-#> Warning: package 'ggplot2' was built under R version 4.5.2
 
 df <- data.frame(x = 1:3, y = 1:3,
                  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
@@ -175,9 +174,13 @@ for more examples.
     `segmentsGrob`, `rectGrob`)
 5.  The result is a `gTree` that renders on any device at any resolution
 
-All math glyphs are rendered as filled vector paths from the bundled
-Latin Modern Math font, so output is crisp at any size and fully
-resolution-independent.
+By default, math glyphs are rendered in typeface mode as native text
+using the selected math font, which keeps PDF/SVG output selectable and
+searchable on devices with font embedding support.
+
+When `render_mode = "path"` is used (or when automatic fallback is
+triggered on unsupported devices), glyphs are drawn as filled vector
+paths for consistent rendering everywhere.
 
 Make sure to use
 [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html),
