@@ -8,6 +8,10 @@ supports standard grid queries such as
 [`grobX()`](https://rdrr.io/r/grid/grobX.html), and
 [`grobY()`](https://rdrr.io/r/grid/grobX.html).
 
+A convenience wrapper that creates a `latex_grob` and immediately draws
+it on the current device via
+[`grid.draw`](https://rdrr.io/r/grid/grid.draw.html).
+
 ## Usage
 
 ``` r
@@ -27,6 +31,8 @@ latex_grob(
   name = NULL,
   gp = grid::gpar()
 )
+
+grid.latex(tex, ...)
 ```
 
 ## Arguments
@@ -98,21 +104,27 @@ latex_grob(
   formula. Individual elements can still be overridden with
   `\textcolor{}` in the LaTeX string.
 
-  Font-related parameters (`fontfamily`, `fontface`) apply only to
-  non-math text rendered via `\text{}` and `\mbox{}`, not to math
-  symbols (which always use the selected math font). For standard Latin
-  characters, MicroTeX uses its own internal font metrics for layout.
-  For characters not in the math font, R's font metrics are used
-  automatically via a callback. Packages like showtext can be used to
-  make additional fonts available to R.
+  Font-related parameters (`fontfamily`, `fontface`) control the
+  appearance of text inside `\text{}` and `\mbox{}`. For example,
+  `gpar(fontfamily = "serif")` renders `\text{Hello}` in R's serif font
+  family. Any font available to R's graphics system can be used (base
+  families like `"sans"`, `"serif"`, `"mono"`, or fonts registered via
+  showtext / systemfonts). Math symbols always use the selected math
+  font.
+
+- ...:
+
+  Additional arguments passed to `latex_grob`.
 
 ## Value
 
 A `grid` grob of class `"latexgrob"`.
 
+Invisibly returns the grob.
+
 ## See also
 
-[`grid.latex`](https://adayim.github.io/gridmicrotex/reference/grid.latex.md),
+`grid.latex`,
 [`latex_dims`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md),
 [`geom_latex`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md),
 [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
@@ -129,6 +141,9 @@ A `grid` grob of class `"latexgrob"`.
 
   # Rotated formula
   grid::grid.draw(latex_grob("x^{2} + y^{2}", fontsize = 24, rot = 45))
+# }
+# \donttest{
+  grid.latex("x^{2} + y^{2} = z^{2}")
 
 # }
 ```

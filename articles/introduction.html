@@ -78,8 +78,8 @@ embedded</li>
 SVG, …)</li>
 <li>Full math support: fractions, roots, integrals, matrices, Greek
 letters, accents, delimiters, and more</li>
-<li>Multiple math fonts (Latin Modern Math, XITS Math, TeX Gyre DejaVu
-Math)</li>
+<li>Multiple math fonts (Latin Modern Math, XITS Math, Garamond Math,
+TeX Gyre DejaVu Math)</li>
 <li>Color support via <code>\textcolor{}</code>
 </li>
 <li>ggplot2 integration with <code><a href="../reference/geom_latex.html">geom_latex()</a></code> and
@@ -98,10 +98,10 @@ grob:</p>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/basic-1.png" class="r-plt" alt="" width="50%"></p>
-<p>For quick rendering, use <code><a href="../reference/grid.latex.html">grid.latex()</a></code>:</p>
+<p>For quick rendering, use <code><a href="../reference/latex_grob.html">grid.latex()</a></code>:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\sum_{i=1}^{n} x_i^2"</span>, fontsize <span class="op">=</span> <span class="fl">28</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\sum_{i=1}^{n} x_i^2"</span>, fontsize <span class="op">=</span> <span class="fl">28</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/quick-1.png" class="r-plt" alt="" width="50%"></p>
 </div>
 <div class="section level2">
@@ -111,8 +111,8 @@ grob:</p>
 <code>hjust</code>, and <code>vjust</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.7</span>, hjust <span class="op">=</span> <span class="fl">0</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"F = ma"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.3</span>, hjust <span class="op">=</span> <span class="fl">0</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.7</span>, hjust <span class="op">=</span> <span class="fl">0</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"F = ma"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.3</span>, hjust <span class="op">=</span> <span class="fl">0</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/positioning-1.png" class="r-plt" alt="" width="50%"></p>
 </div>
 <div class="section level2">
@@ -122,7 +122,7 @@ grob:</p>
 <code>\textcolor{}</code> within the LaTeX:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">"\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma"</span>,</span>
 <span>  fontsize <span class="op">=</span> <span class="fl">28</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -143,12 +143,12 @@ Gyre DejaVu Math. For most users, the easiest workflow is:</p>
 </ol>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/available_math_fonts.html">available_math_fonts</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "LatinModernMath-Regular"   "TeXGyreDejaVuMath-Regular"</span></span>
-<span><span class="co">#&gt; [3] "XITS Math"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "Garamond-Math"             "LatinModernMath-Regular"  </span></span>
+<span><span class="co">#&gt; [3] "TeXGyreDejaVuMath-Regular" "XITS Math"</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/set_math_font.html">set_math_font</a></span><span class="op">(</span><span class="st">"xits"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-default-1.png" class="r-plt" alt="" width="50%"></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
@@ -160,10 +160,10 @@ Gyre DejaVu Math. For most users, the easiest workflow is:</p>
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.layout.html" class="external-link">grid.layout</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, math_font <span class="op">=</span> <span class="st">"xits"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, math_font <span class="op">=</span> <span class="st">"xits"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-1.png" class="r-plt" alt="" width="50%"></p>
 <p>Use <code><a href="../reference/available_math_fonts.html">available_math_fonts()</a></code> to list loaded fonts and
@@ -199,10 +199,10 @@ or searchable.</p></li>
 </ul>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default typeface mode (selectable text in PDF/SVG)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Explicit path mode (works everywhere, but text is not selectable)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, render_mode <span class="op">=</span> <span class="st">"path"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, render_mode <span class="op">=</span> <span class="st">"path"</span><span class="op">)</span></span></code></pre></div>
 <blockquote>
 <p><strong>Important: Do not use <code><a href="https://rdrr.io/pkg/showtext/man/showtext_auto.html" class="external-link">showtext::showtext_auto()</a></code>
 with typeface mode.</strong> The <a href="https://CRAN.R-project.org/package=showtext" class="external-link">showtext</a> package
@@ -214,7 +214,7 @@ embedding. If you need showtext for other parts of your plot, disable it
 before drawing LaTeX formulas:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">showtext</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/showtext/man/showtext_auto.html" class="external-link">showtext_auto</a></span><span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>  <span class="co"># typeface mode works correctly</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>  <span class="co"># typeface mode works correctly</span></span></code></pre></div>
 </blockquote>
 </div>
 </div>
@@ -242,13 +242,63 @@ expression:</p>
 <div class="section level2">
 <h2 id="text-rendering-and-cjk-support">Text rendering and CJK support<a class="anchor" aria-label="anchor" href="#text-rendering-and-cjk-support"></a>
 </h2>
-<p>Non-math text inside <code>\text{}</code> is rendered as a standard
-<code>textGrob</code>. Characters not in the math font (such as CJK) are
-rendered using the font specified in <code>gp$fontfamily</code>:</p>
+<p>Text inside <code>\text{}</code> and <code>\mbox{}</code> is rendered
+using R’s standard text-rendering system. This means
+<code>gp$fontfamily</code> controls the font for <strong>all</strong>
+text content — Latin letters, CJK characters, Cyrillic, and any other
+script your R graphics device supports:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="st">"x^2 + \\text{你好}"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"x^2 + \\text{你好}"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/cjk-1.png" class="r-plt" alt="" width="50%"></p>
+<p>Any font available to R works: base families like
+<code>"sans"</code>, <code>"serif"</code>, <code>"mono"</code>, or fonts
+registered via <strong>showtext</strong> /
+<strong>systemfonts</strong>.</p>
+<div class="section level3">
+<h3 id="font-pairing">Font pairing<a class="anchor" aria-label="anchor" href="#font-pairing"></a>
+</h3>
+<p>The bundled math fonts have different styles. For a consistent look,
+pair them with a matching <code>fontfamily</code>:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Math font</th>
+<th>Style</th>
+<th>Suggested <code>fontfamily</code>
+</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Latin Modern Math (<code>"lm"</code>)</td>
+<td>Serif</td>
+<td><code>"serif"</code></td>
+</tr>
+<tr class="even">
+<td>XITS Math (<code>"xits"</code>)</td>
+<td>Serif</td>
+<td><code>"serif"</code></td>
+</tr>
+<tr class="odd">
+<td>Garamond Math (<code>"garamond"</code>)</td>
+<td>Serif</td>
+<td><code>"serif"</code></td>
+</tr>
+<tr class="even">
+<td>TeX Gyre DejaVu Math (<code>"dejavu"</code>)</td>
+<td>Sans-serif</td>
+<td><code>"sans"</code></td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
+<span>  <span class="st">"\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0"</span>,</span>
+<span>  fontsize <span class="op">=</span> <span class="fl">20</span>, math_font <span class="op">=</span> <span class="st">"dejavu"</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="introduction_files/figure-html/font-pairing-1.png" class="r-plt" alt="" width="70%"></p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="supported-latex">Supported LaTeX<a class="anchor" aria-label="anchor" href="#supported-latex"></a>
@@ -260,9 +310,9 @@ does not attempt to replace a full LaTeX installation.</p>
 <div class="section level3">
 <h3 id="complicated-examples">Complicated examples<a class="anchor" aria-label="anchor" href="#complicated-examples"></a>
 </h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
 <span>      <span class="st">"\\begin{array}{l}"</span>,</span>
 <span>      <span class="st">"  \\forall\\varepsilon\\in\\mathbb{R}_+^*\\ \\exists\\eta&gt;0"</span>,</span>
 <span>      <span class="st">"\\ |x-x_0|\\leq\\eta\\Longrightarrow|f(x)-f(x_0)|\\leq\\varepsilon\\\\"</span>,</span>
@@ -281,10 +331,10 @@ does not attempt to replace a full LaTeX installation.</p>
 <span>      <span class="st">"\\end{array}"</span></span>
 <span><span class="op">)</span>, fontsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/complex-formula-1.png" class="r-plt" alt="" width="60%"></p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">"</span></span>
 <span><span class="st">  \\newcolumntype{s}{&gt;{\\color{#1234B6}}c}</span></span>
 <span><span class="st">\\begin{array}{|c|c|c|s|}</span></span>
@@ -308,9 +358,9 @@ does not attempt to replace a full LaTeX installation.</p>
 <span>  fontsize <span class="op">=</span> <span class="fl">22</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/table-multicolumn-1.png" class="r-plt" alt="" width="60%"></p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/grid.latex.html">grid.latex</a></span><span class="op">(</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">"\\definecolor{gris}{gray}{0.9}</span></span>
 <span><span class="st">\\definecolor{noir}{rgb}{0,0,0}</span></span>
 <span><span class="st">\\definecolor{bleu}{rgb}{0,0,1}</span></span>
@@ -472,7 +522,7 @@ producing warnings like:</p>
 <pre><code>font family not found in Windows font database</code></pre>
 <p>To avoid this, switch to a modern graphics backend that uses <a href="https://CRAN.R-project.org/package=systemfonts" class="external-link">systemfonts</a>
 for font resolution:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># For knitr / R Markdown --- add to your setup chunk:</span></span>
 <span><span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html" class="external-link">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>dev <span class="op">=</span> <span class="st">"ragg_png"</span><span class="op">)</span></span>
 <span></span>

@@ -18,8 +18,8 @@ graphics device at any resolution.
   …)
 - Full math support: fractions, roots, integrals, matrices, Greek
   letters, accents, delimiters, and more
-- Multiple math fonts (Latin Modern Math, XITS Math, TeX Gyre DejaVu
-  Math)
+- Multiple math fonts (Latin Modern Math, XITS Math, Garamond Math, TeX
+  Gyre DejaVu Math)
 - Color support via `\textcolor{}`
 - ggplot2 integration with
   [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
@@ -42,7 +42,7 @@ grid::grid.draw(g)
 ![](introduction_files/figure-html/basic-1.png)
 
 For quick rendering, use
-[`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/grid.latex.md):
+[`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md):
 
 ``` r
 grid::grid.newpage()
@@ -90,8 +90,8 @@ DejaVu Math. For most users, the easiest workflow is:
 
 ``` r
 available_math_fonts()
-#> [1] "LatinModernMath-Regular"   "TeXGyreDejaVuMath-Regular"
-#> [3] "XITS Math"
+#> [1] "Garamond-Math"             "LatinModernMath-Regular"  
+#> [3] "TeXGyreDejaVuMath-Regular" "XITS Math"
 ```
 
 ``` r
@@ -213,9 +213,10 @@ This is useful for layout calculations and ensuring labels fit.
 
 ## Text rendering and CJK support
 
-Non-math text inside `\text{}` is rendered as a standard `textGrob`.
-Characters not in the math font (such as CJK) are rendered using the
-font specified in `gp$fontfamily`:
+Text inside `\text{}` and `\mbox{}` is rendered using R’s standard
+text-rendering system. This means `gp$fontfamily` controls the font for
+**all** text content — Latin letters, CJK characters, Cyrillic, and any
+other script your R graphics device supports:
 
 ``` r
 grid::grid.newpage()
@@ -223,6 +224,32 @@ grid.latex("x^2 + \\text{你好}", fontsize = 24, gp = grid::gpar(fontfamily = "
 ```
 
 ![](introduction_files/figure-html/cjk-1.png)
+
+Any font available to R works: base families like `"sans"`, `"serif"`,
+`"mono"`, or fonts registered via **showtext** / **systemfonts**.
+
+### Font pairing
+
+The bundled math fonts have different styles. For a consistent look,
+pair them with a matching `fontfamily`:
+
+| Math font                         | Style      | Suggested `fontfamily` |
+|-----------------------------------|------------|------------------------|
+| Latin Modern Math (`"lm"`)        | Serif      | `"serif"`              |
+| XITS Math (`"xits"`)              | Serif      | `"serif"`              |
+| Garamond Math (`"garamond"`)      | Serif      | `"serif"`              |
+| TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"`               |
+
+``` r
+grid::grid.newpage()
+grid.latex(
+  "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",
+  fontsize = 20, math_font = "dejavu",
+  gp = grid::gpar(fontfamily = "sans")
+)
+```
+
+![](introduction_files/figure-html/font-pairing-1.png)
 
 ## Supported LaTeX
 

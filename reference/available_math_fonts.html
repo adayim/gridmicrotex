@@ -40,7 +40,7 @@ latex_grob and grid.latex."></head><body>
     <div class="ref-description section level2">
     <p>Returns the names of all math fonts currently loaded by MicroTeX.
 These names can be passed to the <code>math_font</code> parameter of
-<code><a href="latex_grob.html">latex_grob</a></code> and <code><a href="grid.latex.html">grid.latex</a></code>.</p>
+<code><a href="latex_grob.html">latex_grob</a></code> and <code><a href="latex_grob.html">grid.latex</a></code>.</p>
     </div>
 
     <div class="section level2">
@@ -52,12 +52,19 @@ These names can be passed to the <code>math_font</code> parameter of
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A character vector of math font names.</p>
     </div>
+    <div class="section level2">
+    <h2 id="font-pairing">Font pairing<a class="anchor" aria-label="anchor" href="#font-pairing"></a></h2>
+
+
+<p>The bundled math fonts have different styles. For a consistent look,
+pair them with a matching <code>fontfamily</code> in <code>gp</code>:</p>
+<table class="table table"><tr><td><strong>Math font</strong></td><td><strong>Style</strong></td><td><strong>Suggested text font</strong></td></tr><tr><td>Latin Modern Math (<code>"lm"</code>)</td><td>Serif</td><td><code>"serif"</code></td></tr><tr><td>XITS Math (<code>"xits"</code>)</td><td>Serif</td><td><code>"serif"</code></td></tr><tr><td>Garamond Math (<code>"garamond"</code>)</td><td>Serif</td><td><code>"serif"</code></td></tr><tr><td>TeX Gyre DejaVu Math (<code>"dejavu"</code>)</td><td>Sans-serif</td><td><code>"sans"</code></td></tr></table></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">available_math_fonts</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "LatinModernMath-Regular"   "TeXGyreDejaVuMath-Regular"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "XITS Math"                </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Garamond-Math"             "LatinModernMath-Regular"  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "TeXGyreDejaVuMath-Regular" "XITS Math"                </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

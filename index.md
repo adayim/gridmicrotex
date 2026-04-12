@@ -142,8 +142,12 @@ for more examples.
 
 - Full LaTeX math: fractions, roots, integrals, matrices, Greek,
   accents, extensible delimiters
-- Three bundled math fonts: Latin Modern Math, XITS Math, TeX Gyre
-  DejaVu Math
+- Four bundled math fonts: Latin Modern Math, XITS Math, Garamond Math,
+  TeX Gyre DejaVu Math
+  - Latin Modern, XITS & Garamond are serif — pair with
+    `gpar(fontfamily = "serif")`
+  - TeX Gyre DejaVu is sans-serif — pair with
+    `gpar(fontfamily = "sans")`
 - Color support: `\textcolor{}`, `\color{}`
 - Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
 - CJK/multilingual text in `\text{}`

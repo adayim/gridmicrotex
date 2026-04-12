@@ -1,10 +1,8 @@
 # Load a font file into MicroTeX
 
 Loads an OTF/TTF font into MicroTeX's internal font registry. The font
-can then be used as a math font (via the `math_font` parameter of
-[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md))
-or as a main text font for layout (via
-[`set_main_font`](https://adayim.github.io/gridmicrotex/reference/set_main_font.md)).
+can then be used as a math font via the `math_font` parameter of
+[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 ## Usage
 
@@ -31,26 +29,18 @@ Invisibly returns `NULL`.
 For standard usage, supply only `otf_path`. The package handles the
 remaining font loading details internally.
 
-## Font availability in R
+## Text fonts
 
-This function loads the font into MicroTeX's C++ layout engine only. It
-does **not** make the font available to R's graphics system. To render
-`\text{}` content in a specific font, set
-`gp = gpar(fontfamily = "...")` in
-[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
-Packages like showtext or systemfonts can be used to make additional
-fonts available to R's graphics devices.
-
-For most workflows, prefer choosing from built-in/loaded math fonts with
-[`set_math_font`](https://adayim.github.io/gridmicrotex/reference/set_math_font.md)
-and
-[`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md).
-Use `load_font()` only for custom fonts.
+Text inside `\text{}` is rendered using R's standard text-rendering
+system. Control the font with `gp = gpar(fontfamily = "...")` in
+[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+— no font loading required. This function is only needed for adding
+custom **math** fonts.
 
 ## See also
 
-[`set_main_font`](https://adayim.github.io/gridmicrotex/reference/set_main_font.md),
 [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md),
+[`set_math_font`](https://adayim.github.io/gridmicrotex/reference/set_math_font.md),
 [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
 
 ## Examples
