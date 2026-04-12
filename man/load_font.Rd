@@ -17,26 +17,20 @@ Invisibly returns \code{NULL}.
 }
 \description{
 Loads an OTF/TTF font into MicroTeX's internal font registry. The font
-can then be used as a math font (via the \code{math_font} parameter of
-\code{\link{latex_grob}}) or as a main text font for layout (via
-\code{\link{set_main_font}}).
+can then be used as a math font via the \code{math_font} parameter of
+\code{\link{latex_grob}}.
 }
 \details{
 For standard usage, supply only \code{otf_path}. The package handles
 the remaining font loading details internally.
 }
-\section{Font availability in R}{
+\section{Text fonts}{
 
-This function loads the font into MicroTeX's C++ layout engine only.
-It does \strong{not} make the font available to R's graphics system.
-To render \code{\\text\{\}} content in a specific font, set
-\code{gp = gpar(fontfamily = "...")} in \code{\link{latex_grob}}.
-Packages like \pkg{showtext} or \pkg{systemfonts} can be used to
-make additional fonts available to R's graphics devices.
-
-For most workflows, prefer choosing from built-in/loaded math fonts
-with \code{\link{set_math_font}} and \code{\link{available_math_fonts}}.
-Use \code{load_font()} only for custom fonts.
+Text inside \code{\\text\{\}} is rendered using R's standard
+text-rendering system. Control the font with
+\code{gp = gpar(fontfamily = "...")} in \code{\link{latex_grob}} ---
+no font loading required. This function is only needed for adding
+custom \strong{math} fonts.
 }
 
 \examples{
@@ -46,6 +40,6 @@ Use \code{load_font()} only for custom fonts.
 }
 }
 \seealso{
-\code{\link{set_main_font}}, \code{\link{available_math_fonts}},
+\code{\link{available_math_fonts}}, \code{\link{set_math_font}},
 \code{\link{latex_grob}}
 }

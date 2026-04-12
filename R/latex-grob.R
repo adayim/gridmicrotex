@@ -36,14 +36,14 @@
 #'   for the formula. Individual elements can still be overridden with
 #'   \code{\\textcolor\{\}} in the LaTeX string.
 #'
-#'   Font-related parameters (\code{fontfamily}, \code{fontface}) apply
-#'   only to non-math text rendered via \code{\\text\{\}} and
-#'   \code{\\mbox\{\}}, not to math symbols (which always use the
-#'   selected math font). For standard Latin characters, MicroTeX uses
-#'   its own internal font metrics for layout. For characters not in the
-#'   math font, R's font metrics are used automatically via a callback.
-#'   Packages like \pkg{showtext} can be used to make additional fonts
-#'   available to R.
+#'   Font-related parameters (\code{fontfamily}, \code{fontface}) control
+#'   the appearance of text inside \code{\\text\{\}} and \code{\\mbox\{\}}.
+#'   For example, \code{gpar(fontfamily = "serif")} renders
+#'   \code{\\text\{Hello\}} in R's serif font family.
+#'   Any font available to R's graphics system can be used (base families
+#'   like \code{"sans"}, \code{"serif"}, \code{"mono"}, or fonts
+#'   registered via \pkg{showtext} / \pkg{systemfonts}).
+#'   Math symbols always use the selected math font.
 #'
 #' @return A \code{grid} grob of class \code{"latexgrob"}.
 #' @seealso \code{\link{grid.latex}}, \code{\link{latex_dims}},
@@ -255,10 +255,14 @@ yDetails.latexgrob <- function(x, theta) {
 
 #' Draw LaTeX directly to the current device
 #'
+#' A convenience wrapper that creates a \code{\link{latex_grob}} and
+#' immediately draws it on the current device via
+#' \code{\link[grid]{grid.draw}}.
+#'
 #' @param tex Character string of LaTeX math code.
 #' @param ... Additional arguments passed to \code{\link{latex_grob}}.
 #' @return Invisibly returns the grob.
-#' @seealso \code{\link{latex_grob}}, \code{\link{latex_dims}}
+#' @rdname latex_grob
 #' @export
 #'
 #' @examples

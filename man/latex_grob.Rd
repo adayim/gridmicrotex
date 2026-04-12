@@ -2,6 +2,7 @@
 % Please edit documentation in R/latex-grob.R
 \name{latex_grob}
 \alias{latex_grob}
+\alias{grid.latex}
 \title{Create a grid grob from a LaTeX expression}
 \usage{
 latex_grob(
@@ -20,6 +21,8 @@ latex_grob(
   name = NULL,
   gp = grid::gpar()
 )
+
+grid.latex(tex, ...)
 }
 \arguments{
 \item{tex}{Character string of LaTeX math code.}
@@ -64,23 +67,31 @@ Use \code{gpar(col = "red")} to set the default foreground color
 for the formula. Individual elements can still be overridden with
 \code{\\textcolor\{\}} in the LaTeX string.
 
-Font-related parameters (\code{fontfamily}, \code{fontface}) apply
-only to non-math text rendered via \code{\\text\{\}} and
-\code{\\mbox\{\}}, not to math symbols (which always use the
-selected math font). For standard Latin characters, MicroTeX uses
-its own internal font metrics for layout. For characters not in the
-math font, R's font metrics are used automatically via a callback.
-Packages like \pkg{showtext} can be used to make additional fonts
-available to R.}
+Font-related parameters (\code{fontfamily}, \code{fontface}) control
+the appearance of text inside \code{\\text\{\}} and \code{\\mbox\{\}}.
+For example, \code{gpar(fontfamily = "serif")} renders
+\code{\\text\{Hello\}} in R's serif font family.
+Any font available to R's graphics system can be used (base families
+like \code{"sans"}, \code{"serif"}, \code{"mono"}, or fonts
+registered via \pkg{showtext} / \pkg{systemfonts}).
+Math symbols always use the selected math font.}
+
+\item{...}{Additional arguments passed to \code{\link{latex_grob}}.}
 }
 \value{
 A \code{grid} grob of class \code{"latexgrob"}.
+
+Invisibly returns the grob.
 }
 \description{
 Parses a LaTeX math expression and returns a grid grob object
 that renders the formula using native grid graphics primitives.
 The grob supports standard grid queries such as \code{grobWidth()},
 \code{grobHeight()}, \code{grobX()}, and \code{grobY()}.
+
+A convenience wrapper that creates a \code{\link{latex_grob}} and
+immediately draws it on the current device via
+\code{\link[grid]{grid.draw}}.
 }
 \examples{
 \donttest{
@@ -92,6 +103,9 @@ The grob supports standard grid queries such as \code{grobWidth()},
 
   # Rotated formula
   grid::grid.draw(latex_grob("x^{2} + y^{2}", fontsize = 24, rot = 45))
+}
+\donttest{
+  grid.latex("x^{2} + y^{2} = z^{2}")
 }
 }
 \seealso{

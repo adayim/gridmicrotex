@@ -14,6 +14,20 @@ Returns the names of all math fonts currently loaded by MicroTeX.
 These names can be passed to the \code{math_font} parameter of
 \code{\link{latex_grob}} and \code{\link{grid.latex}}.
 }
+\section{Font pairing}{
+
+The bundled math fonts have different styles. For a consistent look,
+pair them with a matching \code{fontfamily} in \code{gp}:
+
+\tabular{lll}{
+\strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
+Latin Modern Math (\code{"lm"}) \tab Serif  \tab \code{"serif"} \cr
+XITS Math (\code{"xits"})       \tab Serif  \tab \code{"serif"} \cr
+Garamond Math (\code{"garamond"}) \tab Serif  \tab \code{"serif"} \cr
+TeX Gyre DejaVu Math (\code{"dejavu"}) \tab Sans-serif \tab \code{"sans"} \cr
+}
+}
+
 \examples{
 available_math_fonts()
 }

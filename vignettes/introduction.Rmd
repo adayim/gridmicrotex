@@ -32,7 +32,7 @@ on any R graphics device at any resolution.
 - Resolution-independent vector output on all R devices (PNG, PDF, SVG, ...)
 - Full math support: fractions, roots, integrals, matrices, Greek letters,
   accents, delimiters, and more
-- Multiple math fonts (Latin Modern Math, XITS Math, TeX Gyre DejaVu Math)
+- Multiple math fonts (Latin Modern Math, XITS Math, Garamond Math, TeX Gyre DejaVu Math)
 - Color support via `\textcolor{}`
 - ggplot2 integration with `geom_latex()` and `element_latex()`
 - CJK and multilingual text in `\text{}` blocks
@@ -178,13 +178,38 @@ This is useful for layout calculations and ensuring labels fit.
 
 ## Text rendering and CJK support
 
-Non-math text inside `\text{}` is rendered as a standard `textGrob`.
-Characters not in the math font (such as CJK) are rendered using the
-font specified in `gp$fontfamily`:
+Text inside `\text{}` and `\mbox{}` is rendered using R's standard
+text-rendering system. This means `gp$fontfamily` controls the font for
+**all** text content --- Latin letters, CJK characters, Cyrillic, and any
+other script your R graphics device supports:
 
 ```{r cjk, fig.height = 0.8, fig.width = 2.5, out.width="50%"}
 grid::grid.newpage()
 grid.latex("x^2 + \\text{你好}", fontsize = 24, gp = grid::gpar(fontfamily = "sans"))
+```
+
+Any font available to R works: base families like `"sans"`, `"serif"`,
+`"mono"`, or fonts registered via **showtext** / **systemfonts**.
+
+### Font pairing
+
+The bundled math fonts have different styles. For a consistent look,
+pair them with a matching `fontfamily`:
+
+| Math font | Style | Suggested `fontfamily` |
+|-----------|-------|------------------------|
+| Latin Modern Math (`"lm"`) | Serif | `"serif"` |
+| XITS Math (`"xits"`) | Serif | `"serif"` |
+| Garamond Math (`"garamond"`) | Serif | `"serif"` |
+| TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"` |
+
+```{r font-pairing, fig.height = 1, fig.width = 6, out.width="70%"}
+grid::grid.newpage()
+grid.latex(
+  "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",
+  fontsize = 20, math_font = "dejavu",
+  gp = grid::gpar(fontfamily = "sans")
+)
 ```
 
 ## Supported LaTeX

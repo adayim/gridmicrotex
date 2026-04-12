@@ -25,6 +25,12 @@
   if (nchar(dv_clm) > 0 && nchar(dv_otf) > 0) {
     microtex_add_font(dv_clm, dv_otf)
   }
+
+  gm_clm <- system.file("fonts", "Garamond-Math.clm2", package = pkgname)
+  gm_otf <- system.file("fonts", "Garamond-Math.otf", package = pkgname)
+  if (nchar(gm_clm) > 0 && nchar(gm_otf) > 0) {
+    microtex_add_font(gm_clm, gm_otf)
+  }
 }
 
 .onUnload <- function(libpath) {

@@ -14,3 +14,4 @@ src/MicroTeX/lib/**/*.o
 docs
 /doc/
 /Meta/
+debug_*

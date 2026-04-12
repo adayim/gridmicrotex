@@ -26,8 +26,6 @@ reference:
     contents:
       - available_math_fonts
       - load_font
-      - set_main_font
-      - main_font_families
       - check_fonts
       - set_math_font
 

@@ -4,7 +4,8 @@
   "lm"          = "LatinModernMath-Regular",
   "xits"        = "XITS Math",
   "dejavu"      = "TeXGyreDejaVuMath-Regular",
-  "texgyre"     = "TeXGyreDejaVuMath-Regular"
+  "texgyre"     = "TeXGyreDejaVuMath-Regular",
+  "garamond"    = "Garamond-Math"
 )
 
 #' Resolve a math font name
@@ -49,6 +50,18 @@ resolve_math_font <- function(name) {
 #' Returns the names of all math fonts currently loaded by MicroTeX.
 #' These names can be passed to the \code{math_font} parameter of
 #' \code{\link{latex_grob}} and \code{\link{grid.latex}}.
+#'
+#' @section Font pairing:
+#' The bundled math fonts have different styles. For a consistent look,
+#' pair them with a matching \code{fontfamily} in \code{gp}:
+#'
+#' \tabular{lll}{
+#'   \strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
+#'   Latin Modern Math (\code{"lm"}) \tab Serif  \tab \code{"serif"} \cr
+#'   XITS Math (\code{"xits"})       \tab Serif  \tab \code{"serif"} \cr
+#'   Garamond Math (\code{"garamond"}) \tab Serif  \tab \code{"serif"} \cr
+#'   TeX Gyre DejaVu Math (\code{"dejavu"}) \tab Sans-serif \tab \code{"sans"} \cr
+#' }
 #'
 #' @return A character vector of math font names.
 #' @export
@@ -105,100 +118,27 @@ set_math_font <- function(name) {
   invisible(TRUE)
 }
 
-#' Set the default main (text) font for MicroTeX layout
-#'
-#' Sets the font family that MicroTeX's internal layout engine uses when
-#' computing the bounding box and position of non-math text (e.g.,
-#' content inside \code{\\text\{\}}, \code{\\mbox\{\}}). The font must
-#' have been previously loaded via \code{\link{load_font}}.
-#'
-#' @section Two-layer font system:
-#' gridmicrotex uses two independent font systems:
-#'
-#' \describe{
-#'   \item{\strong{MicroTeX (C++ layout engine)}}{
-#'     Controls \emph{where} text is positioned and how much space it
-#'     occupies in the formula. Changed via \code{set_main_font()}.
-#'   }
-#'   \item{\strong{R grid (rendering)}}{
-#'     Controls \emph{what the text looks like} on screen or in output.
-#'     Uses system fonts available to R. Set via the \code{gp} parameter
-#'     of \code{\link{latex_grob}} (e.g.,
-#'     \code{gp = gpar(fontfamily = "serif")}).
-#'   }
-#' }
-#'
-#' When \code{gp$fontfamily} is set in \code{\link{latex_grob}}, the
-#' package automatically queries R's font metrics for characters that
-#' are not present in the loaded math font. For standard Latin text,
-#' MicroTeX uses its own internal font metrics for layout, which closely
-#' match typical system fonts.
-#'
-#' In most cases, you do \strong{not} need to call
-#' \code{set_main_font()} — just set the desired font via \code{gp}.
-#'
-#' Call \code{set_main_font()} only when you need MicroTeX's internal
-#' character-level metrics (e.g., for ligature support from a specific
-#' font) and you are not relying on \code{gp$fontfamily}.
-#'
-#' @param family Font family name (as returned by
-#'   \code{\link{main_font_families}}), or \code{""} to fall back to
-#'   the math font for text layout.
-#' @return Logical; \code{TRUE} if the font was set successfully.
-#' @seealso \code{\link{load_font}}, \code{\link{main_font_families}},
-#'   \code{\link{latex_grob}}
-#' @export
-#'
-#' @examples
-#' \donttest{
-#'   # Reset to default (math font handles text)
-#'   set_main_font("")
-#' }
-set_main_font <- function(family = "") {
-  microtex_set_default_main_font(family)
-}
-
-#' List loaded main (text) font families
-#'
-#' Returns the names of main font families currently loaded
-#' by MicroTeX. These can be used with \code{\link{set_main_font}}.
-#'
-#' @return A character vector of family names.
-#' @export
-#'
-#' @examples
-#' main_font_families()
-main_font_families <- function() {
-  microtex_main_font_families()
-}
-
 #' Load a font file into MicroTeX
 #'
 #' Loads an OTF/TTF font into MicroTeX's internal font registry. The font
-#' can then be used as a math font (via the \code{math_font} parameter of
-#' \code{\link{latex_grob}}) or as a main text font for layout (via
-#' \code{\link{set_main_font}}).
+#' can then be used as a math font via the \code{math_font} parameter of
+#' \code{\link{latex_grob}}.
 #'
 #' For standard usage, supply only \code{otf_path}. The package handles
 #' the remaining font loading details internally.
 #'
-#' @section Font availability in R:
-#' This function loads the font into MicroTeX's C++ layout engine only.
-#' It does \strong{not} make the font available to R's graphics system.
-#' To render \code{\\text\{\}} content in a specific font, set
-#' \code{gp = gpar(fontfamily = "...")} in \code{\link{latex_grob}}.
-#' Packages like \pkg{showtext} or \pkg{systemfonts} can be used to
-#' make additional fonts available to R's graphics devices.
-#'
-#' For most workflows, prefer choosing from built-in/loaded math fonts
-#' with \code{\link{set_math_font}} and \code{\link{available_math_fonts}}.
-#' Use \code{load_font()} only for custom fonts.
+#' @section Text fonts:
+#' Text inside \code{\\text\{\}} is rendered using R's standard
+#' text-rendering system. Control the font with
+#' \code{gp = gpar(fontfamily = "...")} in \code{\link{latex_grob}} ---
+#' no font loading required. This function is only needed for adding
+#' custom \strong{math} fonts.
 #'
 #' @param otf_path Path to the OTF/TTF font file.
 #' @param clm_path Optional legacy metrics path. Usually leave as
 #'   \code{NULL}.
 #' @return Invisibly returns \code{NULL}.
-#' @seealso \code{\link{set_main_font}}, \code{\link{available_math_fonts}},
+#' @seealso \code{\link{available_math_fonts}}, \code{\link{set_math_font}},
 #'   \code{\link{latex_grob}}
 #' @export
 #'
@@ -287,6 +227,7 @@ check_fonts <- function() {
   bundled <- list(
     "Latin Modern Math" = c("latinmodern-math.clm2", "latinmodern-math.otf"),
     "XITS Math" = c("XITSMath-Regular.clm2", "XITSMath-Regular.otf"),
+    "Garamond Math" = c("Garamond-Math.clm2", "Garamond-Math.otf"),
     "TeX Gyre DejaVu Math" = c("texgyredejavu-math.clm2", "texgyredejavu-math.otf")
   )
   message("Bundled font files:")
