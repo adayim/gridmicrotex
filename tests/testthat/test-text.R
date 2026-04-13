@@ -18,8 +18,7 @@ test_that("text and CJK parsing produces correct layout records", {
 
 test_that("latex_grob with CJK text renders and stores fontfamily", {
   g <- latex_grob("x + \\text{\u4F60\u597D}",
-                  fontsize = 20,
-                  gp = grid::gpar(fontfamily = "sans"))
+                  gp = grid::gpar(fontfamily = "sans", fontsize = 20))
   expect_s3_class(g, "latexgrob")
   expect_equal(g$text_gp$fontfamily, "sans")
 })

@@ -42,7 +42,7 @@ on any R graphics device at any resolution.
 The core function is `latex_grob()`, which returns a grid grob:
 
 ```{r basic, fig.height=0.8, fig.width=2, out.width="50%"}
-g <- latex_grob("\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", fontsize = 24)
+g <- latex_grob("\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", gp = grid::gpar(fontsize = 24))
 grid::grid.newpage()
 grid::grid.draw(g)
 ```
@@ -51,7 +51,7 @@ For quick rendering, use `grid.latex()`:
 
 ```{r quick, fig.height=0.8, fig.width=2, out.width="50%"}
 grid::grid.newpage()
-grid.latex("\\sum_{i=1}^{n} x_i^2", fontsize = 28)
+grid.latex("\\sum_{i=1}^{n} x_i^2", gp = grid::gpar(fontsize = 28))
 ```
 
 ## Positioning and justification
@@ -60,8 +60,8 @@ Control placement with `x`, `y`, `hjust`, and `vjust`:
 
 ```{r positioning, fig.height=1.2, fig.width=2, out.width="50%"}
 grid::grid.newpage()
-grid.latex("E = mc^2", x = 0.2, y = 0.7, hjust = 0, fontsize = 24)
-grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, fontsize = 24)
+grid.latex("E = mc^2", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24))
 ```
 
 ## Colors
@@ -72,7 +72,7 @@ Set the formula color via `gp`, or use `\textcolor{}` within the LaTeX:
 grid::grid.newpage()
 grid.latex(
   "\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma",
-  fontsize = 28
+  gp = grid::gpar(fontsize = 28)
 )
 ```
 
@@ -83,7 +83,7 @@ Lete Sans Math, and TeX Gyre DejaVu Math.
 For most users, the easiest workflow is:
 
 1. List available math fonts with `available_math_fonts()`
-2. Select one with `set_math_font()`
+2. Select one with `latex_options(math_font = ...)`
 3. Render formulas normally (no OTF/CLM paths needed)
 
 ```{r fonts-list}
@@ -91,12 +91,12 @@ available_math_fonts()
 ```
 
 ```{r fonts-default, fig.height=0.8, fig.width=2, out.width="50%"}
-set_math_font("stix")
+latex_options(math_font = "stix")
 grid::grid.newpage()
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
+grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
 
 # Switch back to Latin Modern Math
-set_math_font("lm")
+latex_options(math_font = "lm")
 ```
 
 You can still override the font per call via `math_font`:
@@ -105,10 +105,10 @@ You can still override the font per call via `math_font`:
 grid::grid.newpage()
 grid::pushViewport(grid::viewport(layout = grid::grid.layout(2, 1)))
 grid::pushViewport(grid::viewport(layout.pos.row = 1))
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
+grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
 grid::upViewport()
 grid::pushViewport(grid::viewport(layout.pos.row = 2))
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "stix")
+grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24), math_font = "stix")
 grid::upViewport(2)
 ```
 
@@ -146,10 +146,10 @@ gridmicrotex supports two rendering modes for math glyphs:
 
 ```r
 # Default typeface mode (selectable text in PDF/SVG)
-grid.latex("E = mc^2", fontsize = 24)
+grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24))
 
 # Explicit path mode (works everywhere, but text is not selectable)
-grid.latex("E = mc^2", fontsize = 24, render_mode = "path")
+grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24), render_mode = "path")
 ```
 
 > **Important: Do not use `showtext::showtext_auto()` with typeface mode.**
@@ -162,7 +162,7 @@ grid.latex("E = mc^2", fontsize = 24, render_mode = "path")
 >
 > ```r
 > showtext::showtext_auto(FALSE)
-> grid.latex("E = mc^2", fontsize = 24)  # typeface mode works correctly
+> grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24))  # typeface mode works correctly
 > ```
 
 ## Querying dimensions
@@ -185,7 +185,7 @@ other script your R graphics device supports:
 
 ```{r cjk, fig.height = 0.8, fig.width = 2.5, out.width="50%"}
 grid::grid.newpage()
-grid.latex("x^2 + \\text{你好}", fontsize = 24, gp = grid::gpar(fontfamily = "sans"))
+grid.latex("x^2 + \\text{你好}", gp = grid::gpar(fontsize = 24, fontfamily = "sans"))
 ```
 
 Any font available to R works: base families like `"sans"`, `"serif"`,
@@ -240,7 +240,7 @@ grid.latex(paste0(
       " \\int_0^\\infty{x^{2(n-1)} e^{-a x^2}\\,dx}",
       " = \\frac{(2n-1)!!}{2^{n+1}} \\sqrt{\\frac{\\pi}{a^{2n+1}}}\\\\",
       "\\end{array}"
-), fontsize = 16)
+), gp = grid::gpar(fontsize = 16))
 ```
 
 
@@ -268,7 +268,7 @@ grid.latex(
   \\hline
 \\end{array}
   ",
-  fontsize = 22
+  gp = grid::gpar(fontsize = 22)
 )
 ```
 
@@ -317,7 +317,7 @@ grid.latex(
   \\end{split}\\\\
   \\rotatebox{30}{\\sum_{n=1}^{+\\infty}}\\quad\\mbox{Mirror rorriM}\\reflectbox{\\mbox{Mirror rorriM}}
 \\end{array}",
-  fontsize = 22
+  gp = grid::gpar(fontsize = 22)
 )
 ```
 
@@ -343,6 +343,91 @@ following are outside its scope:
 For most statistical graphics use cases --- axis labels, annotations,
 legends, and in-plot formulas --- the supported feature set is more
 than sufficient.
+
+## Project-wide defaults
+
+`latex_options()` sets defaults for `math_font` and `render_mode`, used
+by `latex_grob()`, `grid.latex()`, `latex_dims()`, and `latex_tree()`
+whenever the corresponding argument is not supplied at the call site.
+Size is controlled at the grob level via `gp$fontsize` /
+`gp$lineheight` (see *Basic usage*).
+
+```{r options, eval=FALSE}
+latex_options(math_font = "stix", render_mode = "typeface")
+
+# Later calls pick these up automatically
+grid.latex("\\sum_{i=1}^{n} i^{2}", gp = grid::gpar(fontsize = 14))
+
+# Query current settings
+latex_options()
+
+# Reset to built-in defaults
+reset_latex_options()
+```
+
+Explicit arguments always win. Setting `math_font` via
+`latex_options()` also updates the MicroTeX engine default, so you
+don't also need a separate font-setup call.
+
+## User-defined macros
+
+`define_macro()` registers zero-argument shorthands that are expanded
+by text substitution before the expression reaches MicroTeX. Handy for
+recurring notation:
+
+```{r macros, fig.height=0.7, fig.width=3, out.width="50%"}
+define_macro("RR", "\\mathbb{R}")
+define_macro("eps", "\\varepsilon")
+
+grid::grid.newpage()
+grid.latex("\\forall \\eps > 0, \\eps \\in \\RR", gp = grid::gpar(fontsize = 24))
+
+clear_macros()
+```
+
+Macro names must be ASCII letters. Expansion iterates to a fixed point,
+so macros can reference other macros. Use `list_macros()` to see
+currently registered ones, and `clear_macros()` (with no arguments) to
+drop them all.
+
+## Layout caching
+
+Parsed layouts are memoised by `(tex, fontsize, math_font, render_mode,
+...)`. Re-drawing the same formula --- for example, the same axis label
+across many plots --- reuses the cached layout:
+
+```{r cache, eval=FALSE}
+latex_cache_info()       # size / max_size / hits / misses
+latex_cache_limit(1024)  # raise or lower the LRU capacity
+latex_cache_clear()      # wipe the cache (e.g. after re-loading fonts)
+```
+
+Set the limit to `0` to disable caching entirely.
+
+## Introspecting a formula
+
+`latex_tree()` returns the raw draw-record table plus bbox metadata,
+useful for debugging alignment, counting glyphs, or building custom
+grobs on top of the layout:
+
+```{r tree}
+tr <- latex_tree("\\frac{a}{b}")
+tr
+head(tr$records, 3)
+```
+
+## Debug overlay
+
+Pass `debug = TRUE` to `latex_grob()` / `grid.latex()` to overlay
+diagnostics on the rendered formula --- the full bounding box (dashed
+gray), the baseline (solid red), and a dot at each draw record's
+origin. Useful for checking vertical alignment between a formula and
+surrounding grobs:
+
+```{r debug, fig.height=1, fig.width=3, out.width="60%"}
+grid::grid.newpage()
+grid.latex("x^{2} + y_{i}", gp = grid::gpar(fontsize = 30), debug = TRUE)
+```
 
 ## Comparison with alternatives
 

@@ -9,15 +9,11 @@
 #' @param x,y Position in grid coordinates.
 #' @param default.units Units for x, y if given as numeric.
 #' @param hjust,vjust Horizontal/vertical justification (0-1).
-#' @param fontsize Base font size in points (default: 20).
 #' @param rot Rotation angle in degrees, counter-clockwise (default: 0).
 #'   Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.
 #' @param math_font Name of the math font to use (e.g., \code{"stix"}).
 #'   Use \code{""} (default) for the default Latin Modern Math font.
 #'   See \code{\link{available_math_fonts}} for loaded fonts.
-#' @param line_space Numeric inter-line spacing in big points for
-#'   multi-line formulas (e.g., \code{\\\\}, \code{\\begin\{array\}}).
-#'   Default is \code{10}.
 #' @param max_width Numeric maximum width in big points for automatic
 #'   line wrapping.  Use \code{0} (default) for no wrapping.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
@@ -30,6 +26,11 @@
 #'   all devices but text is not selectable in PDF/SVG).
 #'   For PDF output with embedded/selectable text, prefer
 #'   \code{\link[grDevices]{cairo_pdf}}.
+#' @param debug Logical; if \code{TRUE}, draws diagnostic overlays on the
+#'   grob --- the full bounding box (dashed gray), the baseline (solid
+#'   red), the depth line (dashed gray), and a small dot at each
+#'   MicroTeX draw record's origin. Useful for checking positioning and
+#'   diagnosing vertical alignment.
 #' @param name Optional grob name.
 #' @param gp Graphical parameters (see \code{\link[grid]{gpar}}).
 #'   Use \code{gpar(col = "red")} to set the default foreground color
@@ -45,6 +46,17 @@
 #'   registered via \pkg{showtext} / \pkg{systemfonts}).
 #'   Math symbols always use the selected math font.
 #'
+#'   Size is controlled by \code{gp$fontsize} (points, default 20)
+#'   and \code{gp$cex} (multiplier, default 1). Both math and text
+#'   scale together. The effective size is baked into the parsed
+#'   layout, so downstream viewports inheriting \code{cex} will not
+#'   re-scale it (matches \code{textGrob} semantics when \code{gp} is
+#'   set explicitly).
+#'
+#'   Multi-line spacing is controlled by \code{gp$lineheight}
+#'   (default 1.2): inter-line gap = \code{(lineheight - 1) *
+#'   fontsize} big points.
+#'
 #' @return A \code{grid} grob of class \code{"latexgrob"}.
 #' @seealso \code{\link{grid.latex}}, \code{\link{latex_dims}},
 #'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}}
@@ -52,14 +64,15 @@
 #'
 #' @examples
 #' \donttest{
-#'   g <- latex_grob("\\frac{a}{b}", fontsize = 30)
+#'   g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
 #'   grid::grid.draw(g)
 #'
 #'   # Red formula
 #'   grid::grid.draw(latex_grob("x^{2}", gp = grid::gpar(col = "red")))
 #'
 #'   # Rotated formula
-#'   grid::grid.draw(latex_grob("x^{2} + y^{2}", fontsize = 24, rot = 45))
+#'   grid::grid.draw(latex_grob("x^{2} + y^{2}",
+#'                              gp = grid::gpar(fontsize = 24), rot = 45))
 #' }
 latex_grob <- function(tex,
                        x = grid::unit(0.5, "npc"),
@@ -68,15 +81,21 @@ latex_grob <- function(tex,
                        hjust = 0.5,
                        vjust = 0.5,
                        rot = 0,
-                       fontsize = 20,
                        math_font = "",
-                       line_space = 10,
                        max_width = 0,
                        render_mode = c("typeface", "path"),
+                       debug = FALSE,
                        name = NULL,
                        gp = grid::gpar()) {
 
+  # Resolve package-wide defaults for unspecified arguments
+  if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
+  if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
+
   render_mode <- match.arg(render_mode)
+
+  # Expand any user-registered macros before parsing
+  tex <- .expand_macros(tex)
 
   # Convert numeric x/y to units
   if (is.numeric(x)) x <- grid::unit(x, default.units)
@@ -92,6 +111,21 @@ latex_grob <- function(tex,
   # Resolve font name alias
   math_font <- resolve_math_font(math_font)
 
+  # Resolve effective fontsize and line spacing from gp. Grid semantics:
+  # gp$fontsize is in points, gp$cex is a multiplier on it, and
+  # gp$lineheight is a multiplier such that total line height =
+  # fontsize * lineheight. MicroTeX's line_space is the *extra* gap
+  # between lines, so (lineheight - 1) * fontsize. We bake both into
+  # the parse call since layout depends on them, then strip from gp
+  # so they don't also re-apply to child grobs at draw time.
+  eff_fontsize <- gp$fontsize %||% 20
+  if (!is.null(gp$cex)) eff_fontsize <- eff_fontsize * gp$cex
+  eff_lineheight <- gp$lineheight %||% 1.2
+  eff_line_space <- max(0, (eff_lineheight - 1) * eff_fontsize)
+  gp$fontsize <- NULL
+  gp$cex <- NULL
+  gp$lineheight <- NULL
+
   # Extract font settings from gp for text (non-math) grobs
   text_gp <- grid::gpar()
   if (!is.null(gp$fontfamily)) text_gp$fontfamily <- gp$fontfamily
@@ -102,14 +136,15 @@ latex_grob <- function(tex,
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
 
-  # Parse via C++
-  layout <- parse_latex_cpp(
+  # Parse via C++ (layout cached by (tex + params))
+  layout <- .parse_latex_cached(
     tex = tex,
-    text_size = fontsize,
-    line_space = line_space,
+    text_size = eff_fontsize,
+    line_space = eff_line_space,
     fg_color = fg_color,
     max_width = max_width,
     math_font = math_font,
+    main_font = "",
     use_path = (render_mode == "path")
   )
 
@@ -118,13 +153,14 @@ latex_grob <- function(tex,
   # windows(), quartz()).
   path_layout <- NULL
   if (render_mode == "typeface") {
-    path_layout <- parse_latex_cpp(
+    path_layout <- .parse_latex_cached(
       tex = tex,
-      text_size = fontsize,
-      line_space = line_space,
+      text_size = eff_fontsize,
+      line_space = eff_line_space,
       fg_color = fg_color,
       max_width = max_width,
       math_font = math_font,
+      main_font = "",
       use_path = TRUE
     )
   }
@@ -146,12 +182,13 @@ latex_grob <- function(tex,
     bbox_d = bbox_d,
     bbox_bl = bbox_bl,
     total_h = total_h,
-    fontsize = fontsize,
+    fontsize = eff_fontsize,
     hjust = hjust,
     vjust = vjust,
     text_gp = text_gp,
     render_mode = render_mode,
     path_layout_df = path_layout,
+    debug = isTRUE(debug),
     cl = "latexgrob",
     name = name,
     gp = gp,
@@ -205,7 +242,70 @@ makeContent.latexgrob <- function(x) {
     text_gp = x$text_gp,
     render_mode = render_mode
   )
+
+  if (isTRUE(x$debug)) {
+    children <- .add_debug_overlay(
+      children, layout_df,
+      total_h = x$total_h,
+      bbox_w = x$bbox_w,
+      depth = x$bbox_d %||% 0
+    )
+  }
+
   grid::setChildren(x, children)
+}
+
+.add_debug_overlay <- function(children, layout_df, total_h, bbox_w, depth) {
+  bbox <- grid::rectGrob(
+    x = grid::unit(0, "bigpts"),
+    y = grid::unit(0, "bigpts"),
+    width = grid::unit(bbox_w, "bigpts"),
+    height = grid::unit(total_h, "bigpts"),
+    just = c("left", "bottom"),
+    gp = grid::gpar(col = "gray60", fill = NA, lty = "dashed", lwd = 0.5),
+    name = "debug.bbox"
+  )
+
+  baseline_y <- depth
+  baseline <- grid::segmentsGrob(
+    x0 = grid::unit(0, "bigpts"),
+    y0 = grid::unit(baseline_y, "bigpts"),
+    x1 = grid::unit(bbox_w, "bigpts"),
+    y1 = grid::unit(baseline_y, "bigpts"),
+    gp = grid::gpar(col = "red", lwd = 0.75),
+    name = "debug.baseline"
+  )
+
+  depth_line <- grid::segmentsGrob(
+    x0 = grid::unit(0, "bigpts"),
+    y0 = grid::unit(0, "bigpts"),
+    x1 = grid::unit(bbox_w, "bigpts"),
+    y1 = grid::unit(0, "bigpts"),
+    gp = grid::gpar(col = "gray60", lwd = 0.5, lty = "dashed"),
+    name = "debug.depth"
+  )
+
+  overlays <- grid::gList(bbox, depth_line, baseline)
+
+  n <- nrow(layout_df)
+  if (!is.null(n) && n > 0) {
+    ox <- layout_df$x
+    oy <- total_h - layout_df$y
+    keep <- is.finite(ox) & is.finite(oy)
+    if (any(keep)) {
+      dots <- grid::pointsGrob(
+        x = grid::unit(ox[keep], "bigpts"),
+        y = grid::unit(oy[keep], "bigpts"),
+        pch = 20,
+        size = grid::unit(0.6, "mm"),
+        gp = grid::gpar(col = "blue"),
+        name = "debug.origins"
+      )
+      overlays <- grid::gList(overlays, dots)
+    }
+  }
+
+  grid::gList(children, overlays)
 }
 
 #' @method widthDetails latexgrob
@@ -285,19 +385,23 @@ grid.latex <- function(tex, ...) {
 #' @examples
 #' latex_dims("\\frac{a}{b}")
 latex_dims <- function(tex, fontsize = 20, math_font = "",
-                       line_space = 10, max_width = 0,
+                       line_space = 0, max_width = 0,
                        render_mode = c("typeface", "path")) {
+  if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
+  if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
   render_mode <- match.arg(render_mode)
+  tex <- .expand_macros(tex)
   math_font <- resolve_math_font(math_font)
   measurer <- .make_text_measurer(grid::gpar())
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
 
-  layout <- parse_latex_cpp(tex, text_size = fontsize,
-                            line_space = line_space,
-                            max_width = max_width,
-                            math_font = math_font,
-                            use_path = (render_mode == "path"))
+  layout <- .parse_latex_cached(
+    tex = tex, text_size = fontsize,
+    line_space = line_space, fg_color = "#000000",
+    max_width = max_width, math_font = math_font,
+    main_font = "", use_path = (render_mode == "path")
+  )
   list(
     width    = grid::unit(attr(layout, "bbox_width"), "bigpts"),
     height   = grid::unit(attr(layout, "bbox_height"), "bigpts"),

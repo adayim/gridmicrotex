@@ -45,7 +45,7 @@ library(gridmicrotex)
 library(grid)
 
 grid.newpage()
-grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", fontsize = 30)
+grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", gp = grid::gpar(fontsize = 30))
 ```
 
 <img src="man/figures/README-example-basic-1.png" alt="" width="100%" />
@@ -55,7 +55,7 @@ grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", font
 The grob can be placed alongside other grid objects:
 
 ``` r
-g <- latex_grob("\\frac{a}{b}", fontsize = 30)
+g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
 grid.newpage()
 # A blue box behind the formula
 grid.rect(
@@ -87,7 +87,7 @@ for (i in seq_along(exprs)) {
     exprs[i],
     x = unit(0.5, "npc"),
     y = unit(1 - i / (length(exprs) + 1), "npc"),
-    fontsize = 28
+    gp = grid::gpar(fontsize = 28)
   )
 }
 ```
@@ -102,7 +102,7 @@ Use `\text{}` to embed regular text within math expressions:
 grid.newpage()
 grid.latex(
   "f(x) = \\begin{cases} x^2 & \\text{if } x \\geq 0 \\\\ -x & \\text{otherwise} \\end{cases}",
-  fontsize = 26
+  gp = grid::gpar(fontsize = 26)
 )
 ```
 
@@ -116,8 +116,8 @@ rendering always uses the selected math font:
 
 ``` r
 grid.newpage()
-grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2", fontsize = 24,
-           gp = gpar(fontfamily = "sans"))
+grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2",
+           gp = gpar(fontsize = 24, fontfamily = "sans"))
 ```
 
 <img src="man/figures/README-example-mixed-cjk-math-1.png" alt="" width="100%" />
@@ -160,6 +160,13 @@ ggplot2 is a soft dependency — the core functions work without it. See
   ggplot2 \>= 4.0)
 - Resolution-independent vector output on all R devices
 - No external LaTeX installation required
+- Project-wide defaults via `latex_options()` (math font, fontsize,
+  render mode, line spacing)
+- User-defined macros (`define_macro()`) for reusable notation
+- LRU layout cache for repeated formulas (`latex_cache_info()` /
+  `latex_cache_limit()` / `latex_cache_clear()`)
+- Formula introspection with `latex_tree()`; alignment overlay with
+  `latex_grob(..., debug = TRUE)`
 
 ## Comparison
 

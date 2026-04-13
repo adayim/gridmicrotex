@@ -14,6 +14,19 @@ reference:
       - latex_grob
       - grid.latex
       - latex_dims
+      - latex_tree
+
+  - title: Options, macros, and cache
+    desc: Project-wide defaults and advanced tooling
+    contents:
+      - latex_options
+      - reset_latex_options
+      - define_macro
+      - clear_macros
+      - list_macros
+      - latex_cache_info
+      - latex_cache_limit
+      - latex_cache_clear
 
   - title: ggplot2 integration
     desc: Use LaTeX in ggplot2 plots
@@ -27,7 +40,6 @@ reference:
       - available_math_fonts
       - load_font
       - check_fonts
-      - set_math_font
 
 articles:
   - title: Getting started

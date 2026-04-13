@@ -18,12 +18,6 @@ element_latex(
 Use \code{""} (default) for the default Latin Modern Math font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
 
-\item{fontsize}{Base font size in points (default: 20).}
-
-\item{line_space}{Numeric inter-line spacing in big points for
-multi-line formulas (e.g., \code{\\\\}, \code{\\begin\{array\}}).
-Default is \code{10}.}
-
 \item{max_width}{Numeric maximum width in big points for automatic
 line wrapping.  Use \code{0} (default) for no wrapping.}
 

@@ -102,28 +102,3 @@ ggplot(mtcars, aes(wt, mpg)) +
 Dollar-sign delimiters (`$...$`) are stripped automatically, so both
 `"\\frac{a}{b}"` and `"$\\frac{a}{b}$"` produce the same output.
 
-## Combining both extensions
-
-You can use `geom_latex()` and `element_latex()` together:
-
-```{r combined, out.width="70%"}
-df <- data.frame(
-  x = c(1, 2, 3),
-  y = c(1, 4, 9),
-  eq = c("1^2", "2^2", "3^2")
-)
-
-ggplot(df, aes(x, y, label = eq)) +
-  geom_point(size = 3) +
-  geom_latex(vjust = -1, fontsize = 14) +
-  labs(
-    x = "$n$",
-    y = "$n^2$",
-    title = "Perfect squares"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.title.x = element_latex(fontsize = 14),
-    axis.title.y = element_latex(fontsize = 14)
-  )
-```

@@ -34,7 +34,7 @@ test_that("latex_grob parameters work correctly", {
   expect_true(grid::convertWidth(grid::grobWidth(g_mw), "bigpts", valueOnly = TRUE) > 0)
 
   # makeContent builds children
-  g_mc <- grid::makeContent(latex_grob("\\frac{a}{b}", fontsize = 30, render_mode = "path"))
+  g_mc <- grid::makeContent(latex_grob("\\frac{a}{b}", render_mode = "path"))
   expect_true(length(g_mc$children) > 0)
 
   # width/height details positive
@@ -53,7 +53,7 @@ test_that("device support detection and typeface fallback work", {
 
   # PDF: renders without fallback warning
   expect_no_warning({
-    g <- latex_grob("\\frac{a}{b}", render_mode = "typeface", fontsize = 20)
+    g <- latex_grob("\\frac{a}{b}", render_mode = "typeface", gp = grid::gpar(fontsize = 20))
     grid::grid.newpage()
     grid::grid.draw(g)
   })
@@ -67,7 +67,7 @@ test_that("device support detection and typeface fallback work", {
   expect_false(gridmicrotex:::.device_supports_typeface_glyphs())
   expect_warning(
     expect_no_error({
-      g <- latex_grob("\\frac{a}{b}", render_mode = "typeface", fontsize = 20)
+      g <- latex_grob("\\frac{a}{b}", render_mode = "typeface", gp = grid::gpar(fontsize = 20))
       grid::grid.newpage()
       grid::grid.draw(g)
     }),

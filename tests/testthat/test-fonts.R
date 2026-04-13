@@ -14,11 +14,14 @@ test_that("math fonts load, resolve aliases, and render", {
   expect_equal(gridmicrotex:::resolve_math_font("LM"), "LatinModernMath-Regular")
   expect_error(gridmicrotex:::resolve_math_font("nonexistent"), "not found")
 
-  # set_math_font with alias + error cases
-  expect_true(set_math_font("stix"))
-  expect_error(set_math_font(""), "provide a math font")
+  # latex_options(math_font = ...) with alias + error cases
+  old <- latex_options(math_font = "stix")
+  expect_equal(latex_options()$math_font, "stix")
+  # Restore
+  do.call(latex_options, old)
 
   # Rendering with a specific math font
-  g <- latex_grob("\\frac{a}{b}", fontsize = 20, math_font = "stix")
+  g <- latex_grob("\\frac{a}{b}", math_font = "stix",
+                  gp = grid::gpar(fontsize = 20))
   expect_s3_class(g, "latexgrob")
 })

@@ -77,6 +77,6 @@ via \code{clm_path}.
 }
 }
 \seealso{
-\code{\link{available_math_fonts}}, \code{\link{set_math_font}},
+\code{\link{available_math_fonts}}, \code{\link{latex_options}},
 \code{\link{latex_grob}}
 }

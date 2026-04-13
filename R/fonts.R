@@ -74,28 +74,9 @@ available_math_fonts <- function() {
   microtex_math_font_names()
 }
 
-#' Set the default math font used by MicroTeX
-#'
-#' Selects the default math font for formula layout. For most users,
-#' this is the recommended way to switch fonts: choose one of the
-#' fonts returned by \code{\link{available_math_fonts}}.
-#'
-#' This avoids dealing with external OTF/CLM files in normal usage.
-#' Use \code{\link{load_font}} only when you need to add a custom font
-#' that is not already loaded.
-#'
-#' @param name Math font name or alias (e.g., \code{"lm"}, \code{"stix"}).
-#' @return Invisibly returns \code{TRUE} on success.
-#' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}},
-#'   \code{\link{load_font}}
-#' @export
-#'
-#' @examples
-#' \donttest{
-#'   # Switch default math font to STIX Two Math (if loaded)
-#'   set_math_font("stix")
-#' }
-set_math_font <- function(name) {
+# Internal: set the default math font used by MicroTeX.
+# Public entry point is `latex_options(math_font = ...)`.
+.set_math_font <- function(name) {
   if (!microtex_is_inited()) {
     stop("MicroTeX is not initialized.", call. = FALSE)
   }
@@ -172,7 +153,7 @@ set_math_font <- function(name) {
 #'   \code{load_font()} searches for a file with the same stem as
 #'   \code{otf_path}.
 #' @return Invisibly returns \code{NULL}.
-#' @seealso \code{\link{available_math_fonts}}, \code{\link{set_math_font}},
+#' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_options}},
 #'   \code{\link{latex_grob}}
 #' @export
 #'

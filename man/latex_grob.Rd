@@ -13,11 +13,10 @@ latex_grob(
   hjust = 0.5,
   vjust = 0.5,
   rot = 0,
-  fontsize = 20,
   math_font = "",
-  line_space = 10,
   max_width = 0,
   render_mode = c("typeface", "path"),
+  debug = FALSE,
   name = NULL,
   gp = grid::gpar()
 )
@@ -36,15 +35,9 @@ grid.latex(tex, ...)
 \item{rot}{Rotation angle in degrees, counter-clockwise (default: 0).
 Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.}
 
-\item{fontsize}{Base font size in points (default: 20).}
-
 \item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
 Use \code{""} (default) for the default Latin Modern Math font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
-
-\item{line_space}{Numeric inter-line spacing in big points for
-multi-line formulas (e.g., \code{\\\\}, \code{\\begin\{array\}}).
-Default is \code{10}.}
 
 \item{max_width}{Numeric maximum width in big points for automatic
 line wrapping.  Use \code{0} (default) for no wrapping.}
@@ -60,6 +53,12 @@ all devices but text is not selectable in PDF/SVG).
 For PDF output with embedded/selectable text, prefer
 \code{\link[grDevices]{cairo_pdf}}.}
 
+\item{debug}{Logical; if \code{TRUE}, draws diagnostic overlays on the
+grob --- the full bounding box (dashed gray), the baseline (solid
+red), the depth line (dashed gray), and a small dot at each
+MicroTeX draw record's origin. Useful for checking positioning and
+diagnosing vertical alignment.}
+
 \item{name}{Optional grob name.}
 
 \item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
@@ -74,7 +73,18 @@ For example, \code{gpar(fontfamily = "serif")} renders
 Any font available to R's graphics system can be used (base families
 like \code{"sans"}, \code{"serif"}, \code{"mono"}, or fonts
 registered via \pkg{showtext} / \pkg{systemfonts}).
-Math symbols always use the selected math font.}
+Math symbols always use the selected math font.
+
+Size is controlled by \code{gp$fontsize} (points, default 20)
+and \code{gp$cex} (multiplier, default 1). Both math and text
+scale together. The effective size is baked into the parsed
+layout, so downstream viewports inheriting \code{cex} will not
+re-scale it (matches \code{textGrob} semantics when \code{gp} is
+set explicitly).
+
+Multi-line spacing is controlled by \code{gp$lineheight}
+(default 1.2): inter-line gap = \code{(lineheight - 1) *
+  fontsize} big points.}
 
 \item{...}{Additional arguments passed to \code{\link{latex_grob}}.}
 }
@@ -95,14 +105,15 @@ immediately draws it on the current device via
 }
 \examples{
 \donttest{
-  g <- latex_grob("\\\\frac{a}{b}", fontsize = 30)
+  g <- latex_grob("\\\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
   grid::grid.draw(g)
 
   # Red formula
   grid::grid.draw(latex_grob("x^{2}", gp = grid::gpar(col = "red")))
 
   # Rotated formula
-  grid::grid.draw(latex_grob("x^{2} + y^{2}", fontsize = 24, rot = 45))
+  grid::grid.draw(latex_grob("x^{2} + y^{2}",
+                             gp = grid::gpar(fontsize = 24), rot = 45))
 }
 \donttest{
   grid.latex("x^{2} + y^{2} = z^{2}")

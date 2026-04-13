@@ -18,7 +18,7 @@ test_that("visual: complex formula", {
       " \\int_0^\\infty{x^{2(n-1)} e^{-a x^2}\\,dx}",
       " = \\frac{(2n-1)!!}{2^{n+1}} \\sqrt{\\frac{\\pi}{a^{2n+1}}}\\\\",
       "\\end{array}"
-    ), fontsize = 16, render_mode = "path")
+    ), render_mode = "path")
   })
 })
 
@@ -44,7 +44,7 @@ test_that("visual: table with multicolumn and borders", {
       "  \\multicolumn{4}{|c|}{\\text{Table Foot}}\\\\",
       "  \\hline",
       "\\end{array}"
-    ), fontsize = 14, render_mode = "path")
+    ), render_mode = "path")
   })
 })
 
@@ -53,13 +53,13 @@ test_that("visual: overbrace and cancel", {
   vdiffr::expect_doppelganger("overbrace-underbrace", function() {
     grid.latex(
       "\\rlap{\\overbrace{\\phantom{1 + a + b + \\cdots + z}}^{\\text{total + 1}}}\n1 + \\underbrace{a + b + \\cdots + z}_{\\text{total}}",
-      fontsize = 20, render_mode = "path"
+      render_mode = "path", gp = grid::gpar(fontsize = 20)
     )
   })
   vdiffr::expect_doppelganger("cancel-variants", function() {
     grid.latex(
       "\\frac{a\\cancel{b}}{\\cancel{b}} = a;\n\\frac{a\\bcancel{b}}{\\bcancel{b}} = a;\n\\frac{a\\xcancel{b}}{\\xcancel{b}} = a;",
-      fontsize = 20, render_mode = "path"
+      render_mode = "path", gp = grid::gpar(fontsize = 20)
     )
   })
 
@@ -73,7 +73,7 @@ test_that("visual: cases and split", {
       "0& \\text{if $r-j$ is odd},\\\\",
       "r!\\,(-1)^{(r-j)/2}& \\text{if $r-j$ is even}.",
       "\\end{cases}"
-    ), fontsize = 18, render_mode = "path")
+    ), render_mode = "path")
   })
 })
 
@@ -82,7 +82,7 @@ test_that("visual: continued fraction", {
   vdiffr::expect_doppelganger("cfrac", function() {
     grid.latex(
       "\\cfrac{1}{\\sqrt{2}+\n\\cfrac{1}{\\sqrt{2}+\n\\cfrac{1}{\\sqrt{2}+\\dotsb\n}}}",
-      fontsize = 20, render_mode = "path"
+      render_mode = "path", gp = grid::gpar(fontsize = 20)
     )
   })
 })

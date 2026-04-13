@@ -1,0 +1,85 @@
+#' Inspect the parsed layout of a LaTeX expression
+#'
+#' Returns the raw draw-record table produced by MicroTeX's layout pass
+#' together with the bounding-box metadata. Useful for debugging
+#' alignment issues, building custom grobs on top of the layout, or
+#' counting glyphs/paths/rules in a formula.
+#'
+#' @inheritParams latex_grob
+#' @return A list with class \code{"latex_tree"} containing:
+#'   \describe{
+#'     \item{\code{records}}{Data frame of draw records (one row per
+#'       glyph, path, line, rect, or text block). Columns include
+#'       \code{type}, \code{x}, \code{y}, \code{glyph}, \code{font_size},
+#'       \code{color}, \code{text}, \code{codepoint}, \code{font_file}.}
+#'     \item{\code{bbox}}{Named numeric vector with \code{width},
+#'       \code{height}, \code{depth}, \code{baseline} (all in big points).}
+#'     \item{\code{tex}}{The (macro-expanded) input string.}
+#'     \item{\code{render_mode}}{Rendering mode used for the layout.}
+#'   }
+#' @seealso \code{\link{latex_grob}}, \code{\link{latex_dims}}
+#' @export
+#'
+#' @examples
+#' \donttest{
+#'   tree <- latex_tree("\\frac{a}{b}")
+#'   print(tree)
+#'   head(tree$records)
+#' }
+latex_tree <- function(tex, fontsize = 20, math_font = "",
+                       line_space = 0, max_width = 0,
+                       render_mode = c("typeface", "path")) {
+  if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
+  if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
+  render_mode <- match.arg(render_mode)
+  tex_expanded <- .expand_macros(tex)
+  math_font <- resolve_math_font(math_font)
+  measurer <- .make_text_measurer(grid::gpar())
+  register_text_measurer(measurer)
+  on.exit(clear_text_measurer(), add = TRUE)
+
+  layout <- .parse_latex_cached(
+    tex = tex_expanded, text_size = fontsize,
+    line_space = line_space, fg_color = "#000000",
+    max_width = max_width, math_font = math_font,
+    main_font = "", use_path = (render_mode == "path")
+  )
+
+  bbox <- c(
+    width    = as.numeric(attr(layout, "bbox_width")),
+    height   = as.numeric(attr(layout, "bbox_height")),
+    depth    = as.numeric(attr(layout, "bbox_depth")),
+    baseline = as.numeric(attr(layout, "bbox_baseline"))
+  )
+
+  structure(
+    list(
+      records = layout,
+      bbox = bbox,
+      tex = tex_expanded,
+      render_mode = render_mode
+    ),
+    class = "latex_tree"
+  )
+}
+
+#' @export
+print.latex_tree <- function(x, ...) {
+  cat("<latex_tree>\n")
+  cat("  tex:         ", x$tex, "\n", sep = "")
+  cat("  render_mode: ", x$render_mode, "\n", sep = "")
+  cat(sprintf(
+    "  bbox:        width=%.2f  height=%.2f  depth=%.2f  baseline=%.2f (bigpts)\n",
+    x$bbox[["width"]], x$bbox[["height"]],
+    x$bbox[["depth"]], x$bbox[["baseline"]]
+  ))
+  n <- nrow(x$records)
+  cat("  records:     ", n, "\n", sep = "")
+  if (n > 0) {
+    tbl <- table(x$records$type)
+    for (nm in names(tbl)) {
+      cat(sprintf("    %-10s %d\n", nm, tbl[[nm]]))
+    }
+  }
+  invisible(x)
+}

@@ -198,6 +198,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
           row$colour
         }
 
+        lh <- if (fs > 0 && line_space > 0) 1 + line_space / fs else 1.2
         latex_grob(
           tex = row$label,
           x = grid::unit(row$x, "npc"),
@@ -205,12 +206,10 @@ element_latex <- function(math_font = "", fontsize = NULL,
           hjust = row$hjust,
           vjust = row$vjust,
           rot = row$angle %||% 0,
-          fontsize = fs,
           math_font = math_font,
-          line_space = line_space,
           max_width = max_width,
           render_mode = render_mode,
-          gp = grid::gpar(col = col)
+          gp = grid::gpar(col = col, fontsize = fs, lineheight = lh)
         )
       })
 
@@ -265,6 +264,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
 
   # Single label (axis title, strip text) — render one grob
 
+  lh <- if (fontsize > 0 && line_space > 0) 1 + line_space / fontsize else 1.2
   if (length(label) == 1L) {
     label <- gsub("^\\$|\\$$", "", label)
     if (is.null(x)) x <- grid::unit(0.5, "npc")
@@ -272,10 +272,10 @@ element_latex <- function(math_font = "", fontsize = NULL,
     return(latex_grob(
       tex = label, x = x, y = y,
       hjust = hjust, vjust = vjust,
-      fontsize = fontsize, math_font = math_font,
-      line_space = line_space, max_width = max_width,
+      math_font = math_font,
+      max_width = max_width,
       render_mode = render_mode,
-      gp = grid::gpar(col = colour)
+      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lh)
     ))
   }
 
@@ -294,10 +294,10 @@ element_latex <- function(math_font = "", fontsize = NULL,
     grobs <- grid::gList(grobs, latex_grob(
       tex = lab, x = xi, y = yi,
       hjust = hjust, vjust = vjust,
-      fontsize = fontsize, math_font = math_font,
-      line_space = line_space, max_width = max_width,
+      math_font = math_font,
+      max_width = max_width,
       render_mode = render_mode,
-      gp = grid::gpar(col = colour),
+      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lh),
       name = paste0("ticklabel.", i)
     ))
   }
