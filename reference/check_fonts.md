@@ -20,13 +20,13 @@ Invisibly returns the character vector of available font names.
 check_fonts()
 #> MicroTeX version: 1.0.0
 #> Loaded math fonts (4):
-#>   - Garamond-Math
 #>   - LatinModernMath-Regular
+#>   - Lete Sans Math
+#>   - STIX Two Math
 #>   - TeXGyreDejaVuMath-Regular
-#>   - XITS Math
 #> Bundled font files:
 #>   - Latin Modern Math: found
-#>   - XITS Math: found
-#>   - Garamond Math: found
+#>   - STIX Two Math: found
+#>   - Lete Sans Math: found
 #>   - TeX Gyre DejaVu Math: found
 ```

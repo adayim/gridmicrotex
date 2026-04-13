@@ -18,8 +18,8 @@ graphics device at any resolution.
   …)
 - Full math support: fractions, roots, integrals, matrices, Greek
   letters, accents, delimiters, and more
-- Multiple math fonts (Latin Modern Math, XITS Math, Garamond Math, TeX
-  Gyre DejaVu Math)
+- Multiple math fonts (Latin Modern Math, STIX Two Math, Lete Sans Math,
+  TeX Gyre DejaVu Math)
 - Color support via `\textcolor{}`
 - ggplot2 integration with
   [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
@@ -79,8 +79,9 @@ grid.latex(
 
 ## Math fonts
 
-The package bundles Latin Modern Math (default), XITS Math, and TeX Gyre
-DejaVu Math. For most users, the easiest workflow is:
+The package bundles Latin Modern Math (default), STIX Two Math, Lete
+Sans Math, and TeX Gyre DejaVu Math. For most users, the easiest
+workflow is:
 
 1.  List available math fonts with
     [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
@@ -90,12 +91,12 @@ DejaVu Math. For most users, the easiest workflow is:
 
 ``` r
 available_math_fonts()
-#> [1] "Garamond-Math"             "LatinModernMath-Regular"  
-#> [3] "TeXGyreDejaVuMath-Regular" "XITS Math"
+#> [1] "LatinModernMath-Regular"   "Lete Sans Math"           
+#> [3] "STIX Two Math"             "TeXGyreDejaVuMath-Regular"
 ```
 
 ``` r
-set_math_font("xits")
+set_math_font("stix")
 grid::grid.newpage()
 grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
 ```
@@ -117,7 +118,7 @@ grid::pushViewport(grid::viewport(layout.pos.row = 1))
 grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
 grid::upViewport()
 grid::pushViewport(grid::viewport(layout.pos.row = 2))
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "xits")
+grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "stix")
 grid::upViewport(2)
 ```
 
@@ -236,8 +237,8 @@ pair them with a matching `fontfamily`:
 | Math font                         | Style      | Suggested `fontfamily` |
 |-----------------------------------|------------|------------------------|
 | Latin Modern Math (`"lm"`)        | Serif      | `"serif"`              |
-| XITS Math (`"xits"`)              | Serif      | `"serif"`              |
-| Garamond Math (`"garamond"`)      | Serif      | `"serif"`              |
+| STIX Two Math (`"stix"`)          | Serif      | `"serif"`              |
+| Lete Sans Math (`"lete"`)         | Sans-serif | `"sans"`               |
 | TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"`               |
 
 ``` r

@@ -15,7 +15,7 @@ set_math_font(name)
 
 - name:
 
-  Math font name or alias (e.g., `"lm"`, `"xits"`).
+  Math font name or alias (e.g., `"lm"`, `"stix"`).
 
 ## Value
 
@@ -37,7 +37,7 @@ only when you need to add a custom font that is not already loaded.
 
 ``` r
 # \donttest{
-  # Switch default math font to XITS Math (if loaded)
-  set_math_font("xits")
+  # Switch default math font to STIX Two Math (if loaded)
+  set_math_font("stix")
 # }
 ```

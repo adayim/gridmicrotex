@@ -78,8 +78,8 @@ embedded</li>
 SVG, …)</li>
 <li>Full math support: fractions, roots, integrals, matrices, Greek
 letters, accents, delimiters, and more</li>
-<li>Multiple math fonts (Latin Modern Math, XITS Math, Garamond Math,
-TeX Gyre DejaVu Math)</li>
+<li>Multiple math fonts (Latin Modern Math, STIX Two Math, Lete Sans
+Math, TeX Gyre DejaVu Math)</li>
 <li>Color support via <code>\textcolor{}</code>
 </li>
 <li>ggplot2 integration with <code><a href="../reference/geom_latex.html">geom_latex()</a></code> and
@@ -131,8 +131,9 @@ grob:</p>
 <div class="section level2">
 <h2 id="math-fonts">Math fonts<a class="anchor" aria-label="anchor" href="#math-fonts"></a>
 </h2>
-<p>The package bundles Latin Modern Math (default), XITS Math, and TeX
-Gyre DejaVu Math. For most users, the easiest workflow is:</p>
+<p>The package bundles Latin Modern Math (default), STIX Two Math, Lete
+Sans Math, and TeX Gyre DejaVu Math. For most users, the easiest
+workflow is:</p>
 <ol style="list-style-type: decimal">
 <li>List available math fonts with
 <code><a href="../reference/available_math_fonts.html">available_math_fonts()</a></code>
@@ -143,10 +144,10 @@ Gyre DejaVu Math. For most users, the easiest workflow is:</p>
 </ol>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/available_math_fonts.html">available_math_fonts</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Garamond-Math"             "LatinModernMath-Regular"  </span></span>
-<span><span class="co">#&gt; [3] "TeXGyreDejaVuMath-Regular" "XITS Math"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "LatinModernMath-Regular"   "Lete Sans Math"           </span></span>
+<span><span class="co">#&gt; [3] "STIX Two Math"             "TeXGyreDejaVuMath-Regular"</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/set_math_font.html">set_math_font</a></span><span class="op">(</span><span class="st">"xits"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/set_math_font.html">set_math_font</a></span><span class="op">(</span><span class="st">"stix"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-default-1.png" class="r-plt" alt="" width="50%"></p>
@@ -163,7 +164,7 @@ Gyre DejaVu Math. For most users, the easiest workflow is:</p>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, math_font <span class="op">=</span> <span class="st">"xits"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, fontsize <span class="op">=</span> <span class="fl">24</span>, math_font <span class="op">=</span> <span class="st">"stix"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-1.png" class="r-plt" alt="" width="50%"></p>
 <p>Use <code><a href="../reference/available_math_fonts.html">available_math_fonts()</a></code> to list loaded fonts and
@@ -274,14 +275,14 @@ pair them with a matching <code>fontfamily</code>:</p>
 <td><code>"serif"</code></td>
 </tr>
 <tr class="even">
-<td>XITS Math (<code>"xits"</code>)</td>
+<td>STIX Two Math (<code>"stix"</code>)</td>
 <td>Serif</td>
 <td><code>"serif"</code></td>
 </tr>
 <tr class="odd">
-<td>Garamond Math (<code>"garamond"</code>)</td>
-<td>Serif</td>
-<td><code>"serif"</code></td>
+<td>Lete Sans Math (<code>"lete"</code>)</td>
+<td>Sans-serif</td>
+<td><code>"sans"</code></td>
 </tr>
 <tr class="even">
 <td>TeX Gyre DejaVu Math (<code>"dejavu"</code>)</td>

@@ -21,7 +21,7 @@ element_latex(
 
 - math_font:
 
-  Name of the math font to use (e.g., `"xits"`). Use `""` (default) for
+  Name of the math font to use (e.g., `"stix"`). Use `""` (default) for
   the default Latin Modern Math font. See
   [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
   for loaded fonts.

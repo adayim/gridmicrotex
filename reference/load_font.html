@@ -57,8 +57,10 @@ can then be used as a math font via the <code>math_font</code> parameter of
 
 
 <dt id="arg-clm-path">clm_path<a class="anchor" aria-label="anchor" href="#arg-clm-path"></a></dt>
-<dd><p>Optional legacy metrics path. Usually leave as
-<code>NULL</code>.</p></dd>
+<dd><p>Optional path to the companion <code>.clm2</code> (or
+legacy <code>.clm1</code>) metrics file. If <code>NULL</code> (the default),
+<code>load_font()</code> searches for a file with the same stem as
+<code>otf_path</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -67,8 +69,10 @@ can then be used as a math font via the <code>math_font</code> parameter of
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>For standard usage, supply only <code>otf_path</code>. The package handles
-the remaining font loading details internally.</p>
+    <p>For standard usage, supply only <code>otf_path</code>. If a matching
+<code>.clm2</code> file is present next to the OTF, it is used automatically.
+Otherwise you must generate one first (see <em>Generating a CLM
+metrics file</em> below).</p>
     </div>
     <div class="section level2">
     <h2 id="text-fonts">Text fonts<a class="anchor" aria-label="anchor" href="#text-fonts"></a></h2>
@@ -81,6 +85,33 @@ no font loading required. This function is only needed for adding
 custom <strong>math</strong> fonts.</p>
     </div>
     <div class="section level2">
+    <h2 id="generating-a-clm-metrics-file">Generating a CLM metrics file<a class="anchor" aria-label="anchor" href="#generating-a-clm-metrics-file"></a></h2>
+
+
+<p>MicroTeX reads glyph metrics, the OpenType MATH table, and glyph
+outlines from a binary companion file (<code>.clm2</code>) rather than from
+the OTF directly. A converter script is bundled with the package at
+<code>system.file("otf2clm.py", package = "gridmicrotex")</code>. It requires
+FontForge's embedded Python (<code>ffpython</code>), since the standard
+Python does not ship the <code>fontforge</code> module.</p>
+<p>Typical usage from a shell, for a single font:</p><div class="sourceCode"><pre><code>
+ffpython otf2clm.py --single path/to/font.otf true out_dir
+</code></pre></div>
+
+<p>Or to convert every OTF in a directory:</p><div class="sourceCode"><pre><code>
+ffpython otf2clm.py --batch in_dir true out_dir
+</code></pre></div>
+
+<p>The <code>true</code> argument tells the converter to embed glyph outlines
+(required for <code>render_mode = "path"</code>); pass <code>false</code> to
+generate a smaller <code>.clm1</code> file suitable only for
+<code>render_mode = "typeface"</code>. Run the script with no arguments to
+see the full usage including font-style flags.</p>
+<p>Place the generated <code>.clm2</code> file next to the OTF (same stem) so
+that <code>load_font()</code> finds it automatically, or pass it explicitly
+via <code>clm_path</code>.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="available_math_fonts.html">available_math_fonts</a></code>, <code><a href="set_math_font.html">set_math_font</a></code>,
 <code><a href="latex_grob.html">latex_grob</a></code></p></div>
@@ -89,8 +120,11 @@ custom <strong>math</strong> fonts.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span>  <span class="co"># Load a custom math font from OTF:</span></span></span>
+<span class="r-in"><span>  <span class="co"># Load a custom math font from OTF (with a sibling .clm2 file):</span></span></span>
 <span class="r-in"><span>  <span class="co"># load_font("path/to/font.otf")</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span>  <span class="co"># Locate the bundled CLM converter:</span></span></span>
+<span class="r-in"><span>  <span class="co"># system.file("otf2clm.py", package = "gridmicrotex")</span></span></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

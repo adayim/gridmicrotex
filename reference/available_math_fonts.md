@@ -25,14 +25,14 @@ pair them with a matching `fontfamily` in `gp`:
 |-----------------------------------|------------|-------------------------|
 | **Math font**                     | **Style**  | **Suggested text font** |
 | Latin Modern Math (`"lm"`)        | Serif      | `"serif"`               |
-| XITS Math (`"xits"`)              | Serif      | `"serif"`               |
-| Garamond Math (`"garamond"`)      | Serif      | `"serif"`               |
+| STIX Two Math (`"stix"`)          | Serif      | `"serif"`               |
+| Lete Sans Math (`"lete"`)         | Sans-serif | `"sans"`                |
 | TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"`                |
 
 ## Examples
 
 ``` r
 available_math_fonts()
-#> [1] "Garamond-Math"             "LatinModernMath-Regular"  
-#> [3] "TeXGyreDejaVuMath-Regular" "XITS Math"                
+#> [1] "LatinModernMath-Regular"   "Lete Sans Math"           
+#> [3] "STIX Two Math"             "TeXGyreDejaVuMath-Regular"
 ```
