@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   ggplot2-integration: ggplot2-integration.html
   introduction: introduction.html
-last_built: 2026-04-13T14:23Z
+last_built: 2026-04-13T15:00Z
 urls:
   reference: https://adayim.github.io/gridmicrotex/reference
   article: https://adayim.github.io/gridmicrotex/articles
