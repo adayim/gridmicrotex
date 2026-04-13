@@ -320,6 +320,7 @@ Glyph* CLMReader::readGlyph(bool isMathFont, bool hasGlyphPath, BinaryReader& re
   glyph->_metrics._width = reader.read<i16>();
   glyph->_metrics._height = reader.read<i16>();
   glyph->_metrics._depth = reader.read<i16>();
+  glyph->_metrics._xMin = reader.read<i16>();
   // read kern record, optional
   auto kern = readKerns(reader);
   glyph->_kernRecord = kern == nullptr ? &KernRecord::empty : kern;

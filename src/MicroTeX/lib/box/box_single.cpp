@@ -45,6 +45,7 @@ void _drawWithPath(const Char& chr, Graphics2D& g2, float x, float y) {
   const auto scale = chr.scale;
   g2.translate(x, y);
   if (scale != 1.f) g2.scale(scale, scale);
+  g2.setPathGlyphInfo(chr.glyphId, chr.mappedCode);
   chr.glyph()->path().draw(g2);
   if (scale != 1.f) g2.scale(1 / scale, 1 / scale);
   g2.translate(-x, -y);

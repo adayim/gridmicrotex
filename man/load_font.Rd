@@ -9,8 +9,10 @@ load_font(otf_path, clm_path = NULL)
 \arguments{
 \item{otf_path}{Path to the OTF/TTF font file.}
 
-\item{clm_path}{Optional legacy metrics path. Usually leave as
-\code{NULL}.}
+\item{clm_path}{Optional path to the companion \code{.clm2} (or
+legacy \code{.clm1}) metrics file. If \code{NULL} (the default),
+\code{load_font()} searches for a file with the same stem as
+\code{otf_path}.}
 }
 \value{
 Invisibly returns \code{NULL}.
@@ -21,8 +23,10 @@ can then be used as a math font via the \code{math_font} parameter of
 \code{\link{latex_grob}}.
 }
 \details{
-For standard usage, supply only \code{otf_path}. The package handles
-the remaining font loading details internally.
+For standard usage, supply only \code{otf_path}. If a matching
+\code{.clm2} file is present next to the OTF, it is used automatically.
+Otherwise you must generate one first (see \emph{Generating a CLM
+metrics file} below).
 }
 \section{Text fonts}{
 
@@ -33,10 +37,43 @@ no font loading required. This function is only needed for adding
 custom \strong{math} fonts.
 }
 
+\section{Generating a CLM metrics file}{
+
+MicroTeX reads glyph metrics, the OpenType MATH table, and glyph
+outlines from a binary companion file (\code{.clm2}) rather than from
+the OTF directly. A converter script is bundled with the package at
+\code{system.file("otf2clm.py", package = "gridmicrotex")}. It requires
+FontForge's embedded Python (\code{ffpython}), since the standard
+Python does not ship the \code{fontforge} module.
+
+Typical usage from a shell, for a single font:
+\preformatted{
+ffpython otf2clm.py --single path/to/font.otf true out_dir
+}
+
+Or to convert every OTF in a directory:
+\preformatted{
+ffpython otf2clm.py --batch in_dir true out_dir
+}
+
+The \code{true} argument tells the converter to embed glyph outlines
+(required for \code{render_mode = "path"}); pass \code{false} to
+generate a smaller \code{.clm1} file suitable only for
+\code{render_mode = "typeface"}. Run the script with no arguments to
+see the full usage including font-style flags.
+
+Place the generated \code{.clm2} file next to the OTF (same stem) so
+that \code{load_font()} finds it automatically, or pass it explicitly
+via \code{clm_path}.
+}
+
 \examples{
 \donttest{
-  # Load a custom math font from OTF:
+  # Load a custom math font from OTF (with a sibling .clm2 file):
   # load_font("path/to/font.otf")
+
+  # Locate the bundled CLM converter:
+  # system.file("otf2clm.py", package = "gridmicrotex")
 }
 }
 \seealso{

@@ -200,7 +200,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 type_col[i] = "path";
                 x_col[i] = NA_REAL;
                 y_col[i] = NA_REAL;
-                glyph_col[i] = NA_INTEGER;
+                glyph_col[i] = rec.path_glyph_id >= 0 ? rec.path_glyph_id : NA_INTEGER;
                 font_size_col[i] = NA_REAL;
                 color_col[i] = color_to_hex(rec.col);
                 x2_col[i] = NA_REAL;
@@ -232,7 +232,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 );
                 text_col[i] = NA_STRING;
                 font_style_col[i] = NA_INTEGER;
-                codepoint_col[i] = NA_INTEGER;
+                codepoint_col[i] = rec.path_codepoint > 0
+                    ? static_cast<int>(rec.path_codepoint) : NA_INTEGER;
                 font_file_col[i] = NA_STRING;
                 break;
             }

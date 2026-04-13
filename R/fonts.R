@@ -2,15 +2,17 @@
 .font_aliases <- c(
   "latinmodern" = "LatinModernMath-Regular",
   "lm"          = "LatinModernMath-Regular",
-  "xits"        = "XITS Math",
+  "stix"        = "STIX Two Math",
+  "stix2"       = "STIX Two Math",
+  "lete"        = "Lete Sans Math",
+  "letesans"    = "Lete Sans Math",
   "dejavu"      = "TeXGyreDejaVuMath-Regular",
-  "texgyre"     = "TeXGyreDejaVuMath-Regular",
-  "garamond"    = "Garamond-Math"
+  "texgyre"     = "TeXGyreDejaVuMath-Regular"
 )
 
 #' Resolve a math font name
 #'
-#' Translates short aliases (e.g., \code{"xits"}, \code{"lm"}) to the
+#' Translates short aliases (e.g., \code{"stix"}, \code{"lm"}) to the
 #' full MicroTeX font name. Validates that the font is loaded.
 #'
 #' @param name Font name or alias. Empty string uses the default font.
@@ -58,8 +60,8 @@ resolve_math_font <- function(name) {
 #' \tabular{lll}{
 #'   \strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
 #'   Latin Modern Math (\code{"lm"}) \tab Serif  \tab \code{"serif"} \cr
-#'   XITS Math (\code{"xits"})       \tab Serif  \tab \code{"serif"} \cr
-#'   Garamond Math (\code{"garamond"}) \tab Serif  \tab \code{"serif"} \cr
+#'   STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
+#'   Lete Sans Math (\code{"lete"})  \tab Sans-serif \tab \code{"sans"} \cr
 #'   TeX Gyre DejaVu Math (\code{"dejavu"}) \tab Sans-serif \tab \code{"sans"} \cr
 #' }
 #'
@@ -82,7 +84,7 @@ available_math_fonts <- function() {
 #' Use \code{\link{load_font}} only when you need to add a custom font
 #' that is not already loaded.
 #'
-#' @param name Math font name or alias (e.g., \code{"lm"}, \code{"xits"}).
+#' @param name Math font name or alias (e.g., \code{"lm"}, \code{"stix"}).
 #' @return Invisibly returns \code{TRUE} on success.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}},
 #'   \code{\link{load_font}}
@@ -90,8 +92,8 @@ available_math_fonts <- function() {
 #'
 #' @examples
 #' \donttest{
-#'   # Switch default math font to XITS Math (if loaded)
-#'   set_math_font("xits")
+#'   # Switch default math font to STIX Two Math (if loaded)
+#'   set_math_font("stix")
 #' }
 set_math_font <- function(name) {
   if (!microtex_is_inited()) {
@@ -124,8 +126,10 @@ set_math_font <- function(name) {
 #' can then be used as a math font via the \code{math_font} parameter of
 #' \code{\link{latex_grob}}.
 #'
-#' For standard usage, supply only \code{otf_path}. The package handles
-#' the remaining font loading details internally.
+#' For standard usage, supply only \code{otf_path}. If a matching
+#' \code{.clm2} file is present next to the OTF, it is used automatically.
+#' Otherwise you must generate one first (see \emph{Generating a CLM
+#' metrics file} below).
 #'
 #' @section Text fonts:
 #' Text inside \code{\\text\{\}} is rendered using R's standard
@@ -134,9 +138,39 @@ set_math_font <- function(name) {
 #' no font loading required. This function is only needed for adding
 #' custom \strong{math} fonts.
 #'
+#' @section Generating a CLM metrics file:
+#' MicroTeX reads glyph metrics, the OpenType MATH table, and glyph
+#' outlines from a binary companion file (\code{.clm2}) rather than from
+#' the OTF directly. A converter script is bundled with the package at
+#' \code{system.file("otf2clm.py", package = "gridmicrotex")}. It requires
+#' FontForge's embedded Python (\code{ffpython}), since the standard
+#' Python does not ship the \code{fontforge} module.
+#'
+#' Typical usage from a shell, for a single font:
+#' \preformatted{
+#' ffpython otf2clm.py --single path/to/font.otf true out_dir
+#' }
+#'
+#' Or to convert every OTF in a directory:
+#' \preformatted{
+#' ffpython otf2clm.py --batch in_dir true out_dir
+#' }
+#'
+#' The \code{true} argument tells the converter to embed glyph outlines
+#' (required for \code{render_mode = "path"}); pass \code{false} to
+#' generate a smaller \code{.clm1} file suitable only for
+#' \code{render_mode = "typeface"}. Run the script with no arguments to
+#' see the full usage including font-style flags.
+#'
+#' Place the generated \code{.clm2} file next to the OTF (same stem) so
+#' that \code{load_font()} finds it automatically, or pass it explicitly
+#' via \code{clm_path}.
+#'
 #' @param otf_path Path to the OTF/TTF font file.
-#' @param clm_path Optional legacy metrics path. Usually leave as
-#'   \code{NULL}.
+#' @param clm_path Optional path to the companion \code{.clm2} (or
+#'   legacy \code{.clm1}) metrics file. If \code{NULL} (the default),
+#'   \code{load_font()} searches for a file with the same stem as
+#'   \code{otf_path}.
 #' @return Invisibly returns \code{NULL}.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{set_math_font}},
 #'   \code{\link{latex_grob}}
@@ -144,8 +178,11 @@ set_math_font <- function(name) {
 #'
 #' @examples
 #' \donttest{
-#'   # Load a custom math font from OTF:
+#'   # Load a custom math font from OTF (with a sibling .clm2 file):
 #'   # load_font("path/to/font.otf")
+#'
+#'   # Locate the bundled CLM converter:
+#'   # system.file("otf2clm.py", package = "gridmicrotex")
 #' }
 load_font <- function(otf_path, clm_path = NULL) {
   if (!file.exists(otf_path)) {
@@ -226,8 +263,8 @@ check_fonts <- function() {
   pkg <- "gridmicrotex"
   bundled <- list(
     "Latin Modern Math" = c("latinmodern-math.clm2", "latinmodern-math.otf"),
-    "XITS Math" = c("XITSMath-Regular.clm2", "XITSMath-Regular.otf"),
-    "Garamond Math" = c("Garamond-Math.clm2", "Garamond-Math.otf"),
+    "STIX Two Math" = c("STIXTwoMath-Regular.clm2", "STIXTwoMath-Regular.otf"),
+    "Lete Sans Math" = c("LeteSansMath.clm2", "LeteSansMath.otf"),
     "TeX Gyre DejaVu Math" = c("texgyredejavu-math.clm2", "texgyredejavu-math.otf")
   )
   message("Bundled font files:")

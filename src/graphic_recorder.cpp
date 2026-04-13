@@ -140,8 +140,17 @@ void Graphics2D_Recorder::fillPath(i32 id) {
     rec.type = DrawRecord::PATH;
     rec.col = _currentColor;
     rec.path_segments = std::move(_currentPath);
+    rec.path_glyph_id = _pendingPathGlyphId;
+    rec.path_codepoint = _pendingPathCodepoint;
     _currentPath.clear();
+    _pendingPathGlyphId = -1;
+    _pendingPathCodepoint = 0;
     _records.push_back(std::move(rec));
+}
+
+void Graphics2D_Recorder::setPathGlyphInfo(i32 glyphId, c32 codepoint) {
+    _pendingPathGlyphId = glyphId;
+    _pendingPathCodepoint = codepoint;
 }
 
 void Graphics2D_Recorder::drawLine(float x1, float y1, float x2, float y2) {

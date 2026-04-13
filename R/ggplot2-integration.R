@@ -35,7 +35,7 @@
 #' @inheritParams latex_grob
 #' @param fontsize Default font size in points. Overridden by the \code{size}
 #'   aesthetic if mapped.
-#' @param math_font Name of the math font to use (e.g., \code{"xits"}).
+#' @param math_font Name of the math font to use (e.g., \code{"stix"}).
 #' @param line_space Inter-line spacing in big points for multi-line
 #'   formulas (default: 10).
 #' @param max_width Maximum width in big points for automatic line

@@ -88,12 +88,12 @@ test_that("latex_grob handles invalid LaTeX commands gracefully", {
 })
 
 test_that("latex_dims respects math_font parameter", {
-  dims_lm   <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "lm")
-  dims_xits <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "xits")
-  w_lm   <- grid::convertWidth(dims_lm$width, "bigpts", valueOnly = TRUE)
-  w_xits <- grid::convertWidth(dims_xits$width, "bigpts", valueOnly = TRUE)
+  dims_lm     <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "lm")
+  dims_dejavu <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "dejavu")
+  w_lm     <- grid::convertWidth(dims_lm$width, "bigpts", valueOnly = TRUE)
+  w_dejavu <- grid::convertWidth(dims_dejavu$width, "bigpts", valueOnly = TRUE)
   # Different fonts should produce different (but both positive) widths
   expect_true(w_lm > 0)
-  expect_true(w_xits > 0)
-  expect_false(w_lm == w_xits)
+  expect_true(w_dejavu > 0)
+  expect_false(w_lm == w_dejavu)
 })

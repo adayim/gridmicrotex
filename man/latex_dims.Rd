@@ -18,7 +18,7 @@ latex_dims(
 
 \item{fontsize}{Base font size in points (default: 20).}
 
-\item{math_font}{Name of the math font to use (e.g., \code{"xits"}).
+\item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
 Use \code{""} (default) for the default Latin Modern Math font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
 

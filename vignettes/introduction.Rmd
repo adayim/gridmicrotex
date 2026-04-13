@@ -32,7 +32,7 @@ on any R graphics device at any resolution.
 - Resolution-independent vector output on all R devices (PNG, PDF, SVG, ...)
 - Full math support: fractions, roots, integrals, matrices, Greek letters,
   accents, delimiters, and more
-- Multiple math fonts (Latin Modern Math, XITS Math, Garamond Math, TeX Gyre DejaVu Math)
+- Multiple math fonts (Latin Modern Math, STIX Two Math, Lete Sans Math, TeX Gyre DejaVu Math)
 - Color support via `\textcolor{}`
 - ggplot2 integration with `geom_latex()` and `element_latex()`
 - CJK and multilingual text in `\text{}` blocks
@@ -78,8 +78,8 @@ grid.latex(
 
 ## Math fonts
 
-The package bundles Latin Modern Math (default), XITS Math, and
-TeX Gyre DejaVu Math.
+The package bundles Latin Modern Math (default), STIX Two Math,
+Lete Sans Math, and TeX Gyre DejaVu Math.
 For most users, the easiest workflow is:
 
 1. List available math fonts with `available_math_fonts()`
@@ -91,7 +91,7 @@ available_math_fonts()
 ```
 
 ```{r fonts-default, fig.height=0.8, fig.width=2, out.width="50%"}
-set_math_font("xits")
+set_math_font("stix")
 grid::grid.newpage()
 grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
 
@@ -108,7 +108,7 @@ grid::pushViewport(grid::viewport(layout.pos.row = 1))
 grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
 grid::upViewport()
 grid::pushViewport(grid::viewport(layout.pos.row = 2))
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "xits")
+grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "stix")
 grid::upViewport(2)
 ```
 
@@ -199,8 +199,8 @@ pair them with a matching `fontfamily`:
 | Math font | Style | Suggested `fontfamily` |
 |-----------|-------|------------------------|
 | Latin Modern Math (`"lm"`) | Serif | `"serif"` |
-| XITS Math (`"xits"`) | Serif | `"serif"` |
-| Garamond Math (`"garamond"`) | Serif | `"serif"` |
+| STIX Two Math (`"stix"`) | Serif | `"serif"` |
+| Lete Sans Math (`"lete"`) | Sans-serif | `"sans"` |
 | TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"` |
 
 ```{r font-pairing, fig.height = 1, fig.width = 6, out.width="70%"}

@@ -51,6 +51,10 @@ struct DrawRecord {
         float coords[6] = {};
     };
     std::vector<PathSegment> path_segments;
+
+    // For PATH: glyph identification (set via setPathGlyphInfo before drawing)
+    i32 path_glyph_id = -1;
+    c32 path_codepoint = 0;
 };
 
 // A Graphics2D that records all draw operations
@@ -90,6 +94,7 @@ public:
     void quadTo(float x1, float y1, float x2, float y2) override;
     void closePath() override;
     void fillPath(i32 id) override;
+    void setPathGlyphInfo(i32 glyphId, c32 codepoint) override;
 
     void drawLine(float x1, float y1, float x2, float y2) override;
     void drawRect(float x, float y, float w, float h) override;
@@ -120,6 +125,10 @@ private:
 
     // For building paths
     std::vector<DrawRecord::PathSegment> _currentPath;
+
+    // Glyph info for the next path record
+    i32 _pendingPathGlyphId = -1;
+    c32 _pendingPathCodepoint = 0;
 
     // Apply current transform to a point
     void transformPoint(float& x, float& y) const;
