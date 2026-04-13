@@ -304,19 +304,55 @@ def _ink_xmin_in_y_range(glyph, y_lo, y_hi):
     return min(xs) if xs else None
 
 
+def _is_extender_flag(flags):
+    '''OT MATH PartFlags bit 0 = EXTENDER. fontforge returns the flag field
+    as an integer (the CLM writer packs it as !H, confirming this).'''
+    try:
+        return (int(flags) & 0x1) != 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _part_stroke_anchor(pg, start_len, end_len):
+    '''Return the ink xMin of `pg` inside its connector region(s), or None
+    if the region is undefined or contains no ink.'''
+    bbox = pg.boundingBox()
+    if not bbox:
+        return None
+    _, y_min, _, y_max = bbox
+    strips = []
+    if start_len and start_len > 0:
+        strips.append((y_min, y_min + start_len))
+    if end_len and end_len > 0:
+        strips.append((y_max - end_len, y_max))
+    if not strips:
+        return None
+    candidates = [_ink_xmin_in_y_range(pg, lo, hi) for lo, hi in strips]
+    candidates = [c for c in candidates if c is not None]
+    if not candidates:
+        return None
+    return min(candidates)
+
+
 def collect_vertical_assembly_shifts(font):
-    '''For each glyph referenced as a part in any vertical glyph assembly,
-    compute the dx needed to shift its path so the vertical stroke edge
-    (the ink xMin inside the connector region) lands at x = 0.
+    '''For each glyph used as a part in some vertical glyph assembly, return
+    the dx its path must be shifted by so that its vertical stroke edge
+    coincides with the extender's stroke edge in that assembly.
 
     Returns dict {glyph_name: dx}. Glyphs not in the dict are left unshifted.
 
-    The anchor we align on is the ink xMin within the connector strip, NOT
-    the whole-glyph xMin. Caps in serifed fonts have ink (the horizontal
-    serif/flare) that extends past the vertical stroke on the "open" side
-    of the glyph; using whole-glyph xMin would place that serif at x=0 and
-    push the stroke further right than the extender's stroke. The connector
-    region is by OT spec uniform with the neighboring extender, so its
+    Rationale: MicroTeX's VBox stacks assembly parts at the same x (advance
+    origin). If parts have mismatched LSBs the strokes don't align (visible
+    step on serifed right brackets). The extender is chosen as the reference
+    so its visual position is preserved — if we anchored to x=0 instead, the
+    whole assembly would render slightly left of where typeface mode (and
+    the font designer) intends. Caps are then shifted to meet the extender's
+    stroke.
+
+    The stroke edge is detected by taking the ink xMin inside the connector
+    region(s) rather than the whole-glyph xMin: caps often have serifs that
+    extend past the stroke, so whole-glyph xMin is not the stroke edge. By
+    the OT spec the connector region is uniform with its neighbour, so its
     xMin gives the true stroke edge.
     '''
     shifts = {}
@@ -325,34 +361,37 @@ def collect_vertical_assembly_shifts(font):
         components = g.verticalComponents
         if not components:
             continue
+
+        part_anchors = {}  # pname -> anchor (design-unit x)
+        ref_anchor = None  # extender's anchor, if we find one
         for part in components:
-            pname, _flags, start_len, end_len, _adv = part
-            if pname in shifts:
-                continue
+            pname, flags, start_len, end_len, _adv = part
             try:
                 pg = font[pname]
             except TypeError:
                 continue
-            bbox = pg.boundingBox()
-            if not bbox:
+            anchor = _part_stroke_anchor(pg, start_len, end_len)
+            if anchor is None:
                 continue
-            _, y_min, _, y_max = bbox
-            strips = []
-            if start_len and start_len > 0:
-                strips.append((y_min, y_min + start_len))
-            if end_len and end_len > 0:
-                strips.append((y_max - end_len, y_max))
-            if not strips:
+            part_anchors[pname] = anchor
+            if ref_anchor is None and _is_extender_flag(flags):
+                ref_anchor = anchor
+
+        if not part_anchors:
+            continue
+        if ref_anchor is None:
+            # No extender (shouldn't happen for well-formed vertical assemblies);
+            # fall back to the min anchor as reference.
+            ref_anchor = min(part_anchors.values())
+
+        for pname, anchor in part_anchors.items():
+            dx = int(round(ref_anchor - anchor))
+            if dx == 0:
                 continue
-            candidates = [
-                _ink_xmin_in_y_range(pg, lo, hi)
-                for lo, hi in strips
-            ]
-            candidates = [c for c in candidates if c is not None]
-            if not candidates:
+            if pname in shifts and shifts[pname] != dx:
+                # conflicting shift from a different assembly - keep first.
                 continue
-            stroke_x = min(candidates)
-            shifts[pname] = -int(round(stroke_x))
+            shifts[pname] = dx
     return shifts
 
 
