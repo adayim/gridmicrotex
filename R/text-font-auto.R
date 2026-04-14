@@ -63,28 +63,33 @@
   }
 
   # match_fonts() always returns *something* (a system fallback) so we
-  # don't need an extra existence check. The returned `path` is a file
-  # on disk; `index` > 0 means a .ttc face (we reject those).
+  # don't need an extra existence check. `index` identifies the face
+  # within a TrueType Collection (.ttc); for a single-face file it's 0.
   match <- systemfonts::match_fonts(family)
-  otf_path <- match$path
-  if (!is.character(otf_path) || !nzchar(otf_path) || !file.exists(otf_path)) {
+  source_path <- match$path
+  if (!is.character(source_path) || !nzchar(source_path) || !file.exists(source_path)) {
     return("")
   }
-  if (isTRUE(match$index > 0L)) {
-    warning(
-      "Font '", family, "' resolved to a TrueType Collection face (index ",
-      match$index, ") which is not supported for MicroTeX layout. ",
-      "Using default metrics.",
-      call. = FALSE
-    )
-    return("")
+  face_index <- if (is.numeric(match$index)) as.integer(match$index) else 0L
+  if (is.na(face_index) || face_index < 0L) face_index <- 0L
+
+  # TTCs (e.g. macOS Helvetica.ttc) hold multiple faces in one file;
+  # MicroTeX takes a single-face sfnt, so extract the requested face
+  # into a freestanding OTF the first time we see it.
+  otf_path <- if (.is_ttc_file(source_path)) {
+    .extract_ttc_face(source_path, face_index)
+  } else {
+    source_path
   }
 
   # Already registered? Re-use the family name we recorded then.
   cached_fam <- .text_font_registered[[otf_path]]
   if (!is.null(cached_fam)) return(cached_fam)
 
-  clm_path <- .ensure_text_clm(otf_path)
+  # Cache key is tied to the original source + face index so that the
+  # same ttc face always resolves to the same CLM across sessions.
+  clm_key <- .text_clm_cache_key(source_path, face_index)
+  clm_path <- .ensure_text_clm(otf_path, clm_key)
   if (is.null(clm_path)) return("")
 
   # Parse the OTF just enough to learn the family name MicroTeX will
@@ -99,15 +104,17 @@
   fam_name
 }
 
-# Generate or locate a cached .clm1 for otf_path. Returns the clm path,
-# or NULL on failure.
-.ensure_text_clm <- function(otf_path) {
+# Generate or locate a cached .clm1 for otf_path. `key` overrides the
+# cache key — useful when `otf_path` is an intermediate file (e.g. a
+# face extracted from a .ttc) and we want the CLM keyed to the original
+# source. Returns the clm path, or NULL on failure.
+.ensure_text_clm <- function(otf_path, key = NULL) {
   cache_dir <- .text_clm_cache_dir()
   if (!dir.exists(cache_dir)) {
     dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
   }
 
-  key <- .text_clm_cache_key(otf_path)
+  if (is.null(key)) key <- .text_clm_cache_key(otf_path)
   clm_path <- file.path(cache_dir, paste0(key, ".clm1"))
 
   if (file.exists(clm_path) &&
@@ -124,18 +131,19 @@
   clm_path
 }
 
-# Cache key: short hash of (path, mtime, writer-ver, clm-ver). mtime is
-# included so a reinstalled or updated font produces a fresh CLM.
-.text_clm_cache_key <- function(otf_path) {
+# Cache key: short hash of (path, mtime, size, face_index, writer-ver,
+# clm-ver). mtime is included so a reinstalled or updated font produces
+# a fresh CLM. face_index distinguishes faces within a .ttc so the same
+# collection with different faces doesn't collide.
+.text_clm_cache_key <- function(otf_path, face_index = 0L) {
   info <- file.info(otf_path)
   mtime <- as.numeric(info$mtime)
   size  <- as.numeric(info$size)
   base <- tools::file_path_sans_ext(basename(otf_path))
-  # Keep base readable; append a short content/identity hash so different
-  # fonts with the same basename don't collide.
   hash_input <- paste(
     normalizePath(otf_path, winslash = "/", mustWork = FALSE),
     sprintf("%.0f", mtime), sprintf("%.0f", size),
+    as.integer(face_index),
     .TEXT_CLM_WRITER_VER, .CLM_VER_MAJOR,
     sep = "|"
   )
