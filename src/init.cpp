@@ -4,7 +4,9 @@
 #include "graphic_recorder.h"
 #include "unimath/font_src.h"
 
+#include <array>
 #include <string>
+#include <unordered_map>
 
 using namespace microtex;
 
@@ -13,6 +15,11 @@ using namespace microtex;
 // accurate font metrics from R's graphics system instead of heuristics.
 // Use NULL (not R_NilValue) for static init to avoid DLL load ordering issues.
 static SEXP g_text_measure_fn = nullptr;
+
+// Per-measurer cache of (src, style) -> (width, ascent, height) ratios
+// relative to font size. Cleared whenever the measurer is swapped so stale
+// metrics from a different gp$fontfamily/fontface never leak across calls.
+static std::unordered_map<std::string, std::array<float, 3>> g_text_measure_cache;
 
 static bool has_text_measurer() {
     return g_text_measure_fn != nullptr && g_text_measure_fn != R_NilValue;
@@ -25,6 +32,7 @@ void register_text_measurer(SEXP fn) {
     }
     g_text_measure_fn = fn;
     R_PreserveObject(g_text_measure_fn);
+    g_text_measure_cache.clear();
 }
 
 // [[Rcpp::export]]
@@ -33,6 +41,7 @@ void clear_text_measurer() {
         R_ReleaseObject(g_text_measure_fn);
     }
     g_text_measure_fn = nullptr;
+    g_text_measure_cache.clear();
 }
 
 
@@ -81,16 +90,39 @@ public:
     void getBounds(Rect& bounds) override {
         // Try R callback for accurate font metrics
         if (has_text_measurer()) {
+            // Cache key: style prefix + '\x01' separator + src. The separator
+            // can't appear in UTF-8 text so two different (src, style) pairs
+            // cannot collide.
+            std::string key;
+            key.reserve(_src.size() + 3);
+            key.push_back(static_cast<char>(static_cast<int>(_style) & 0xFF));
+            key.push_back('\x01');
+            key.append(_src);
+
+            auto it = g_text_measure_cache.find(key);
+            if (it != g_text_measure_cache.end()) {
+                bounds.x = 0;
+                bounds.w = it->second[0] * _size;
+                bounds.y = -it->second[1] * _size;
+                bounds.h = it->second[2] * _size;
+                return;
+            }
+
             try {
                 Rcpp::Function fn(g_text_measure_fn);
                 Rcpp::NumericVector result = fn(_src, static_cast<int>(_style));
                 if (result.size() >= 3) {
                     // result = c(width_ratio, ascent_ratio, height_ratio)
                     // Ratios are relative to font size, multiply by _size
+                    float wr = static_cast<float>(result[0]);
+                    float ar = static_cast<float>(result[1]);
+                    float hr = static_cast<float>(result[2]);
+                    g_text_measure_cache.emplace(std::move(key),
+                                                 std::array<float, 3>{wr, ar, hr});
                     bounds.x = 0;
-                    bounds.w = static_cast<float>(result[0]) * _size;
-                    bounds.y = -static_cast<float>(result[1]) * _size;
-                    bounds.h = static_cast<float>(result[2]) * _size;
+                    bounds.w = wr * _size;
+                    bounds.y = -ar * _size;
+                    bounds.h = hr * _size;
                     return;
                 }
             } catch (...) {

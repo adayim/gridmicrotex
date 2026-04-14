@@ -6,11 +6,11 @@
 \usage{
 latex_tree(
   tex,
-  fontsize = 20,
   math_font = "",
-  line_space = 0,
   max_width = 0,
-  render_mode = c("typeface", "path")
+  tex_style = "",
+  render_mode = c("typeface", "path"),
+  gp = grid::gpar()
 )
 }
 \arguments{
@@ -24,6 +24,11 @@ See \code{\link{available_math_fonts}} for loaded fonts.}
 \item{max_width}{Numeric maximum width in big points for automatic
 line wrapping.  Use \code{0} (default) for no wrapping.}
 
+\item{tex_style}{Character: TeX style override. One of \code{""}
+(default; let the parser decide), \code{"display"}, \code{"text"},
+\code{"script"}, or \code{"scriptscript"}. See
+\code{\link{latex_grob}} for the semantics of each value.}
+
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
@@ -34,6 +39,13 @@ font embedding (e.g., the base \code{pdf()} device).
 all devices but text is not selectable in PDF/SVG).
 For PDF output with embedded/selectable text, prefer
 \code{\link[grDevices]{cairo_pdf}}.}
+
+\item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
+Common entries: \code{col} (formula foreground), \code{fontfamily}
+/ \code{fontface} (text font), \code{fontsize} / \code{cex}
+(formula size), and \code{lineheight} (multi-line spacing). See
+\code{\link{latex_grob}} for how each of these flows through
+MicroTeX.}
 }
 \value{
 A list with class \code{"latex_tree"} containing:

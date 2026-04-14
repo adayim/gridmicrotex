@@ -75,7 +75,10 @@ PKG_CPPFLAGS = -I. -I$(MICROTEX_DIR) \
 	-DGLYPH_RENDER_TYPE=0 \
 	-include microtexconfig.h
 
-PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
+# PKG_CXXFLAGS_EXTRA is an opt-in slot for dev-time flags (e.g.
+# `-Wextra -Wpedantic`). CRAN builds leave it empty; devs can set it via
+# `Sys.setenv(PKG_CXXFLAGS_EXTRA = "-Wextra -Wpedantic")` before R CMD INSTALL.
+PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(PKG_CXXFLAGS_EXTRA)
 
 PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
 

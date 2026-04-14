@@ -170,6 +170,20 @@ load_font <- function(otf_path, clm_path = NULL) {
     stop("Font file not found: ", otf_path, call. = FALSE)
   }
 
+  # Reject TrueType Collections — MicroTeX::addFont expects a single face.
+  header <- tryCatch(
+    readBin(otf_path, what = "raw", n = 4L),
+    error = function(e) raw()
+  )
+  if (length(header) == 4L && identical(header, charToRaw("ttcf"))) {
+    stop(
+      "TrueType Collection (.ttc) files are not supported.\n",
+      "Extract a single face (.otf/.ttf) and pass that instead.\n",
+      "File: ", otf_path,
+      call. = FALSE
+    )
+  }
+
   if (is.null(clm_path)) {
     clm_path <- .find_clm(otf_path)
   }

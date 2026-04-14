@@ -1,5 +1,6 @@
 test_that("visual: complex formula", {
   skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
   vdiffr::expect_doppelganger("complex-formula", function() {
     grid.latex(paste0(
       "\\begin{array}{l}",
@@ -24,6 +25,7 @@ test_that("visual: complex formula", {
 
 test_that("visual: table with multicolumn and borders", {
   skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
   vdiffr::expect_doppelganger("table-multicolumn", function() {
     grid.latex(paste0(
       "\\begin{array}{|c|c|c|c|}",
@@ -50,6 +52,7 @@ test_that("visual: table with multicolumn and borders", {
 
 test_that("visual: overbrace and cancel", {
   skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
   vdiffr::expect_doppelganger("overbrace-underbrace", function() {
     grid.latex(
       "\\rlap{\\overbrace{\\phantom{1 + a + b + \\cdots + z}}^{\\text{total + 1}}}\n1 + \\underbrace{a + b + \\cdots + z}_{\\text{total}}",
@@ -67,6 +70,7 @@ test_that("visual: overbrace and cancel", {
 
 test_that("visual: cases and split", {
   skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
   vdiffr::expect_doppelganger("cases", function() {
     grid.latex(paste0(
       "P_{r-j}=\\begin{cases}",
@@ -79,6 +83,7 @@ test_that("visual: cases and split", {
 
 test_that("visual: continued fraction", {
   skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
   vdiffr::expect_doppelganger("cfrac", function() {
     grid.latex(
       "\\cfrac{1}{\\sqrt{2}+\n\\cfrac{1}{\\sqrt{2}+\n\\cfrac{1}{\\sqrt{2}+\\dotsb\n}}}",

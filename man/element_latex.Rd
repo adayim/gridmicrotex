@@ -7,7 +7,7 @@
 element_latex(
   math_font = "",
   fontsize = NULL,
-  line_space = 10,
+  lineheight = 1.2,
   max_width = 0,
   render_mode = c("typeface", "path"),
   ...
@@ -18,6 +18,14 @@ element_latex(
 Use \code{""} (default) for Lete Sans Math, which pairs with R's
 default sans-serif text font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
+
+\item{fontsize}{Convenience alias for \code{size}; when supplied,
+it is forwarded to \code{ggplot2::element_text()} as the text size
+in points. If \code{NULL} (default), the theme's inherited size is
+used.}
+
+\item{lineheight}{Multi-line height multiplier (default 1.2), matching
+\code{grid::gpar()} semantics.}
 
 \item{max_width}{Numeric maximum width in big points for automatic
 line wrapping.  Use \code{0} (default) for no wrapping.}

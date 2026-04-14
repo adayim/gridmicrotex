@@ -46,8 +46,8 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 
 \item{tex_style}{Character: TeX style override. One of \code{""}
 (default; let the parser decide), \code{"display"}, \code{"text"},
-\code{"script"}, or \code{"scriptscript"}. See \strong{Details}
-for the semantics of each value.}
+\code{"script"}, or \code{"scriptscript"}. See
+\code{\link{latex_grob}} for the semantics of each value.}
 
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
@@ -72,7 +72,8 @@ diagnosing vertical alignment.}
 Common entries: \code{col} (formula foreground), \code{fontfamily}
 / \code{fontface} (text font), \code{fontsize} / \code{cex}
 (formula size), and \code{lineheight} (multi-line spacing). See
-\strong{Details} for how each of these flows through MicroTeX.}
+\code{\link{latex_grob}} for how each of these flows through
+MicroTeX.}
 
 \item{...}{Additional arguments passed to \code{\link{latex_grob}}.}
 }

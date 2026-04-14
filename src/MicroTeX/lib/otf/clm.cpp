@@ -1,6 +1,7 @@
 #include "otf/clm.h"
 
 #include <cstring>
+#include <memory>
 
 #include "utils/exceptions.h"
 #include "utils/string_utils.h"
@@ -127,29 +128,29 @@ void CLMReader::readMeta(Otf& font, BinaryReader& reader) {
   font._ascent = reader.read<u16>();
   font._descent = reader.read<u16>();
   u16 count = reader.read<u16>();
-  u32* unicodes = new u32[count];
-  u16* glyphs = new u16[count];
+  std::unique_ptr<u32[]> unicodes(new u32[count]);
+  std::unique_ptr<u16[]> glyphs(new u16[count]);
   for (u16 i = 0; i < count; i++) {
     unicodes[i] = reader.read<u32>();
     glyphs[i] = reader.read<u16>();
   }
   font._unicodeCount = count;
-  font._unicodes = unicodes;
-  font._unicodeGlyphs = glyphs;
+  font._unicodes = unicodes.release();
+  font._unicodeGlyphs = glyphs.release();
 }
 
 std::pair<u16, u16*> CLMReader::readClassKerningGlyphs(BinaryReader& reader) {
   const u16 count = reader.read<u16>();
-  u16* glyphs = new u16[count * 2];
+  std::unique_ptr<u16[]> glyphs(new u16[count * 2]);
   for (u16 i = 0; i < count; i++) {
     glyphs[i << 1] = reader.read<u16>();
     glyphs[(i << 1) + 1] = reader.read<u16>();
   }
-  return std::make_pair(count, glyphs);
+  return std::make_pair(count, glyphs.release());
 }
 
 ClassKerning* CLMReader::readClassKerning(BinaryReader& reader) {
-  auto* ptr = new ClassKerning();
+  std::unique_ptr<ClassKerning> ptr(new ClassKerning());
   ClassKerning& ck = *ptr;
   // read left glyphs
   ck._rowLength = reader.read<u16>();
@@ -163,12 +164,12 @@ ClassKerning* CLMReader::readClassKerning(BinaryReader& reader) {
   ck._rights = rg;
   // read table
   const u32 size = (u32)ck._rowLength * (u32)ck._columnLength;
-  i16* table = new i16[size];
+  std::unique_ptr<i16[]> table(new i16[size]);
   for (u32 i = 0; i < size; i++) {
     table[i] = reader.read<i16>();
   }
-  ck._table = table;
-  return ptr;
+  ck._table = table.release();
+  return ptr.release();
 }
 
 void CLMReader::readClassKernings(Otf& font, BinaryReader& reader) {
@@ -285,17 +286,23 @@ Path* CLMReader::readPath(BinaryReader& reader) {
 
   const auto len = reader.read<u16>();
   if (len == 0) return nullptr;
-  auto cmds = new PathCmd*[len];
-  for (u16 i = 0; i < len; i++) {
-    const auto cmd = reader.read<char>();
-    const auto cnt = microtex::pathCmdArgsCount(cmd);
-    auto args = new i16[cnt];
-    for (u16 j = 0; j < cnt; j++) {
-      args[j] = reader.read<i16>();
+  std::unique_ptr<PathCmd*[]> cmds(new PathCmd*[len]);
+  for (u16 i = 0; i < len; i++) cmds[i] = nullptr;
+  try {
+    for (u16 i = 0; i < len; i++) {
+      const auto cmd = reader.read<char>();
+      const auto cnt = microtex::pathCmdArgsCount(cmd);
+      std::unique_ptr<i16[]> args(new i16[cnt]);
+      for (u16 j = 0; j < cnt; j++) {
+        args[j] = reader.read<i16>();
+      }
+      cmds[i] = new PathCmd(cmd, args.release());
     }
-    cmds[i] = new PathCmd(cmd, args);
+  } catch (...) {
+    for (u16 i = 0; i < len; i++) delete cmds[i];
+    throw;
   }
-  return new Path(++id, len, cmds);
+  return new Path(++id, len, cmds.release());
 }
 
 #else
@@ -346,12 +353,18 @@ Glyph* CLMReader::readGlyph(bool isMathFont, bool hasGlyphPath, BinaryReader& re
 
 void CLMReader::readGlyphs(Otf& font, bool hasGlyphPath, BinaryReader& reader) {
   const u16 count = reader.read<u16>();
-  auto** glyphs = new Glyph*[count];
-  for (u16 i = 0; i < count; i++) {
-    glyphs[i] = readGlyph(font._isMathFont, hasGlyphPath, reader);
+  std::unique_ptr<Glyph*[]> glyphs(new Glyph*[count]);
+  for (u16 i = 0; i < count; i++) glyphs[i] = nullptr;
+  try {
+    for (u16 i = 0; i < count; i++) {
+      glyphs[i] = readGlyph(font._isMathFont, hasGlyphPath, reader);
+    }
+  } catch (...) {
+    for (u16 i = 0; i < count; i++) delete glyphs[i];
+    throw;
   }
   font._glyphCount = count;
-  font._glyphs = glyphs;
+  font._glyphs = glyphs.release();
 }
 
 Otf* CLMReader::read(BinaryReader& reader) {

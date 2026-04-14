@@ -6,13 +6,11 @@
 \usage{
 latex_dims(
   tex,
-  fontsize = 20,
   math_font = "",
-  line_space = 0,
   max_width = 0,
   tex_style = "",
   render_mode = c("typeface", "path"),
-  family = "sans"
+  gp = grid::gpar()
 )
 }
 \arguments{
@@ -28,8 +26,8 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 
 \item{tex_style}{Character: TeX style override. One of \code{""}
 (default; let the parser decide), \code{"display"}, \code{"text"},
-\code{"script"}, or \code{"scriptscript"}. See \strong{Details}
-for the semantics of each value.}
+\code{"script"}, or \code{"scriptscript"}. See
+\code{\link{latex_grob}} for the semantics of each value.}
 
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
@@ -42,9 +40,12 @@ all devices but text is not selectable in PDF/SVG).
 For PDF output with embedded/selectable text, prefer
 \code{\link[grDevices]{cairo_pdf}}.}
 
-\item{family}{Font family used for non-math text metrics. Defaults
-to \code{"sans"}; pass the same family you intend to use in
-\code{gp = gpar(fontfamily = ...)} for consistent measurement.}
+\item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
+Common entries: \code{col} (formula foreground), \code{fontfamily}
+/ \code{fontface} (text font), \code{fontsize} / \code{cex}
+(formula size), and \code{lineheight} (multi-line spacing). See
+\code{\link{latex_grob}} for how each of these flows through
+MicroTeX.}
 }
 \value{
 A list with the following elements:

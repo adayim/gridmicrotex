@@ -18,3 +18,12 @@ tex_pt_to_bigpt <- function(tex_pt) {
 bigpt_to_tex_pt <- function(big_pt) {
   big_pt * (72.27 / 72)
 }
+
+# Convert a grid-style lineheight multiplier to MicroTeX's line_space
+# (extra gap between lines, in big points). Mirrors grid semantics:
+# total line height = fontsize * lineheight.
+.line_space_from_lineheight <- function(lineheight, fontsize) {
+  if (is.null(lineheight)) lineheight <- 1.2
+  if (is.null(fontsize) || fontsize <= 0) return(0)
+  max(0, (lineheight - 1) * fontsize)
+}

@@ -15,22 +15,40 @@
   .onLoad_ggplot2()
 
   # Load additional bundled math fonts
-  lm_clm <- system.file("fonts", "latinmodern-math.clm2", package = pkgname)
-  lm_otf <- system.file("fonts", "latinmodern-math.otf", package = pkgname)
-  if (nchar(lm_clm) > 0 && nchar(lm_otf) > 0) {
-    microtex_add_font(lm_clm, lm_otf)
+  additional <- list(
+    "Latin Modern Math"    = c("latinmodern-math.clm2",       "latinmodern-math.otf"),
+    "STIX Two Math"        = c("STIXTwoMath-Regular.clm2",    "STIXTwoMath-Regular.otf"),
+    "TeX Gyre DejaVu Math" = c("texgyredejavu-math.clm2",     "texgyredejavu-math.otf")
+  )
+  for (nm in names(additional)) {
+    files <- additional[[nm]]
+    f_clm <- system.file("fonts", files[1], package = pkgname)
+    f_otf <- system.file("fonts", files[2], package = pkgname)
+    if (nchar(f_clm) > 0 && nchar(f_otf) > 0) {
+      microtex_add_font(f_clm, f_otf)
+    }
   }
 
-  stix_clm <- system.file("fonts", "STIXTwoMath-Regular.clm2", package = pkgname)
-  stix_otf <- system.file("fonts", "STIXTwoMath-Regular.otf", package = pkgname)
-  if (nchar(stix_clm) > 0 && nchar(stix_otf) > 0) {
-    microtex_add_font(stix_clm, stix_otf)
-  }
+}
 
-  dv_clm <- system.file("fonts", "texgyredejavu-math.clm2", package = pkgname)
-  dv_otf <- system.file("fonts", "texgyredejavu-math.otf", package = pkgname)
-  if (nchar(dv_clm) > 0 && nchar(dv_otf) > 0) {
-    microtex_add_font(dv_clm, dv_otf)
+.onAttach <- function(libname, pkgname) {
+  # Any bundled font that didn't register at load time gets a startup
+  # message so users notice a broken install instead of silently missing
+  # aliases (e.g. `math_font = "stix"`).
+  loaded <- microtex_math_font_names()
+  expected <- c(
+    "Lete Sans Math"       = "Lete Sans Math",
+    "Latin Modern Math"    = "LatinModernMath-Regular",
+    "STIX Two Math"        = "STIX Two Math",
+    "TeX Gyre DejaVu Math" = "TeXGyreDejaVuMath-Regular"
+  )
+  missing_names <- names(expected)[!expected %in% loaded]
+  if (length(missing_names) > 0) {
+    packageStartupMessage(
+      "gridmicrotex: bundled math font(s) failed to register: ",
+      paste(missing_names, collapse = ", "),
+      ". Run check_fonts() for details."
+    )
   }
 }
 

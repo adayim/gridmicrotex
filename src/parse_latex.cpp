@@ -1,4 +1,5 @@
 #include <Rcpp.h>
+#include <memory>
 #include "microtex.h"
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
@@ -62,9 +63,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // Parse LaTeX. Forward MicroTeX exceptions verbatim so users see the
     // original parser message (with offending token / position info)
     // instead of a generic failure.
-    Render* render = nullptr;
+    std::unique_ptr<Render> render;
     try {
-        render = MicroTeX::parse(
+        render.reset(MicroTeX::parse(
             tex,
             max_width,
             text_size,
@@ -74,7 +75,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
             resolve_tex_style(tex_style),           // overrideTeXStyle
             math_font,                              // mathFontName
             main_font                               // mainFontFamily
-        );
+        ));
     } catch (const std::exception& e) {
         Rcpp::stop(std::string("LaTeX parse error: ") + e.what());
     }
@@ -93,9 +94,6 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // Draw into our recorder
     Graphics2D_Recorder recorder;
     render->draw(recorder, 0, 0);
-
-    // Clean up render
-    delete render;
 
     // Convert records to R data structures
     const auto& records = recorder.records();

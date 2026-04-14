@@ -32,9 +32,9 @@ test_that("register/clear measurer lifecycle and integration", {
 
   # CJK layout uses measurer for dimensions
   if (.Platform$OS.type == "windows") {
-    expect_no_error(dims <- latex_dims("\\text{\u4F60\u597D\u4E16\u754C}", fontsize = 20))
+    expect_no_error(dims <- latex_dims("\\text{\u4F60\u597D\u4E16\u754C}", gp = grid::gpar(fontsize = 20)))
   } else {
-    expect_silent(dims <- latex_dims("\\text{\u4F60\u597D\u4E16\u754C}", fontsize = 20))
+    expect_silent(dims <- latex_dims("\\text{\u4F60\u597D\u4E16\u754C}", gp = grid::gpar(fontsize = 20)))
   }
   expect_true(grid::convertWidth(dims$width, "bigpts", valueOnly = TRUE) > 0)
 })

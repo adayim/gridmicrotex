@@ -14,7 +14,7 @@ geom_latex(
   ...,
   fontsize = 11,
   math_font = "",
-  line_space = 10,
+  lineheight = 1.2,
   max_width = 0,
   render_mode = c("typeface", "path"),
   na.rm = FALSE,
@@ -76,8 +76,8 @@ aesthetic if mapped.}
 
 \item{math_font}{Name of the math font to use (e.g., \code{"stix"}).}
 
-\item{line_space}{Inter-line spacing in big points for multi-line
-formulas (default: 10).}
+\item{lineheight}{Multi-line height multiplier (default 1.2), matching
+\code{grid::gpar()} semantics.}
 
 \item{max_width}{Maximum width in big points for automatic line
 wrapping (default: 0, no wrapping).}

@@ -45,8 +45,8 @@ test_that("latex_grob renders with gp$fontfamily and registers main_font", {
   expect_s3_class(g2, "latexgrob")
 })
 
-test_that("latex_dims accepts a family argument and returns finite dims", {
-  d <- latex_dims("\\text{Width test}", fontsize = 12, family = "sans")
+test_that("latex_dims accepts a fontfamily via gp and returns finite dims", {
+  d <- latex_dims("\\text{Width test}", gp = grid::gpar(fontsize = 12, fontfamily = "sans"))
   expect_true(is.list(d))
   expect_true(is.finite(as.numeric(d$width)))
   expect_gt(as.numeric(d$width), 0)

@@ -3,7 +3,6 @@
 ^README\.md$
 ^man/figures/.*$
 ^gridmicrotex\.Rproj$
-^\.Rproj\.user$
 ^mytest/.*$
 ^src/MicroTeX/lib/CMakeLists\.txt$
 ^src/MicroTeX/lib/meson\.build$
@@ -11,14 +10,14 @@
 ^src/MicroTeX/lib/microtexconfig\.h\.in$
 ^src/MicroTeX/lib/microtexapi\.h$
 ^src/MicroTeX/lib/wrapper/
-^\.github$
 ^_pkgdown\.yml$
 ^pkgdown$
 ^docs$
 ^doc$
 ^Meta$
-^\.covrignore$
 src/.*\.o$
 src/.*\.so$
 src/.*\.dll$
 ^debug_*
+^tools$
+^\..+$

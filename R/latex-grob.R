@@ -19,8 +19,8 @@
 #'   line wrapping.  Use \code{0} (default) for no wrapping.
 #' @param tex_style Character: TeX style override. One of \code{""}
 #'   (default; let the parser decide), \code{"display"}, \code{"text"},
-#'   \code{"script"}, or \code{"scriptscript"}. See \strong{Details}
-#'   for the semantics of each value.
+#'   \code{"script"}, or \code{"scriptscript"}. See
+#'   \code{\link{latex_grob}} for the semantics of each value.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
@@ -41,7 +41,8 @@
 #'   Common entries: \code{col} (formula foreground), \code{fontfamily}
 #'   / \code{fontface} (text font), \code{fontsize} / \code{cex}
 #'   (formula size), and \code{lineheight} (multi-line spacing). See
-#'   \strong{Details} for how each of these flows through MicroTeX.
+#'   \code{\link{latex_grob}} for how each of these flows through
+#'   MicroTeX.
 #'
 #' @details
 #' ## Controlling TeX style with `tex_style`
@@ -141,109 +142,32 @@ latex_grob <- function(tex,
                        name = NULL,
                        gp = grid::gpar()) {
 
-  # Resolve package-wide defaults for unspecified arguments
   if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
   if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
   if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
-
   render_mode <- match.arg(render_mode)
-  .check_tex_style(tex_style)
 
-  # Expand any user-registered macros before parsing
-  tex <- .expand_macros(tex)
+  parsed <- .parse_from_gp(
+    tex = tex, gp = gp, math_font = math_font, max_width = max_width,
+    tex_style = tex_style, render_mode = render_mode,
+    with_path_fallback = TRUE
+  )
 
   # Convert numeric x/y to units
   if (is.numeric(x)) x <- grid::unit(x, default.units)
   if (is.numeric(y)) y <- grid::unit(y, default.units)
 
-  # Extract foreground color from gp, default to black
-  fg_color <- if (!is.null(gp$col)) {
-    grDevices::rgb(t(grDevices::col2rgb(gp$col)), maxColorValue = 255)
-  } else {
-    "#000000"
-  }
-
-  # Resolve font name alias
-  math_font <- resolve_math_font(math_font)
-
-  # Resolve effective fontsize and line spacing from gp. Grid semantics:
-  # gp$fontsize is in points, gp$cex is a multiplier on it, and
-  # gp$lineheight is a multiplier such that total line height =
-  # fontsize * lineheight. MicroTeX's line_space is the *extra* gap
-  # between lines, so (lineheight - 1) * fontsize. We bake both into
-  # the parse call since layout depends on them, then strip from gp
-  # so they don't also re-apply to child grobs at draw time.
-  eff_fontsize <- gp$fontsize %||% 20
-  if (!is.null(gp$cex)) eff_fontsize <- eff_fontsize * gp$cex
-  eff_lineheight <- gp$lineheight %||% 1.2
-  eff_line_space <- max(0, (eff_lineheight - 1) * eff_fontsize)
-  gp$fontsize <- NULL
-  gp$cex <- NULL
-  gp$lineheight <- NULL
-
-  # Extract font settings from gp for text (non-math) grobs
-  text_gp <- grid::gpar()
-  if (!is.null(gp$fontfamily)) text_gp$fontfamily <- gp$fontfamily
-  if (!is.null(gp$fontface))   text_gp$fontface <- gp$fontface
-
-  # Auto-register the text font with MicroTeX so that layout metrics
-  # for non-math runs match what grid will draw. The returned family
-  # name (as registered under MicroTeX) is passed as main_font. Uses
-  # "sans" when gp$fontfamily is unset, matching R's grid default.
-  main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
-
-  # Register text measurement callback for accurate \text{} layout
-  measurer <- .make_text_measurer(text_gp)
-  register_text_measurer(measurer)
-  on.exit(clear_text_measurer(), add = TRUE)
-
-  # Parse via C++ (layout cached by (tex + params))
-  layout <- .parse_latex_cached(
-    tex = tex,
-    text_size = eff_fontsize,
-    line_space = eff_line_space,
-    fg_color = fg_color,
-    max_width = max_width,
-    math_font = math_font,
-    main_font = main_font,
-    use_path = (render_mode == "path"),
-    tex_style = tex_style
-  )
-
-  # Keep a full path-mode layout in typeface mode so we can
-  # safely fall back on devices that cannot render glyphs (e.g. pdf(),
-  # windows(), quartz()).
-  path_layout <- NULL
-  if (render_mode == "typeface") {
-    path_layout <- .parse_latex_cached(
-      tex = tex,
-      text_size = eff_fontsize,
-      line_space = eff_line_space,
-      fg_color = fg_color,
-      max_width = max_width,
-      math_font = math_font,
-      main_font = main_font,
-      use_path = TRUE,
-      tex_style = tex_style
-    )
-  }
-
-  # Extract bounding box. MicroTeX's getBaseline() returns the baseline
-  # height as a fraction of the total height (0..1, measured from the top).
-  # Convert to absolute bigpts measured from the bottom so that it can be
-  # used directly for vertical alignment.
+  layout <- parsed$layout
   bbox_w <- attr(layout, "bbox_width")
   bbox_h <- attr(layout, "bbox_height")
   bbox_d <- attr(layout, "bbox_depth")
   bbox_bl_frac <- attr(layout, "bbox_baseline")
   bbox_bl_bp <- bbox_h * (1 - bbox_bl_frac)
   is_split <- isTRUE(attr(layout, "bbox_is_split"))
-
-  # bbox_h from MicroTeX's getHeight() is already ascent + descent
   total_h <- bbox_h
 
   grid::gTree(
-    tex = tex,
+    tex = parsed$tex,
     layout_df = layout,
     bbox_w = bbox_w,
     bbox_h = bbox_h,
@@ -252,16 +176,16 @@ latex_grob <- function(tex,
     bbox_bl_bp = bbox_bl_bp,
     is_split = is_split,
     total_h = total_h,
-    fontsize = eff_fontsize,
+    fontsize = parsed$fontsize,
     hjust = hjust,
     vjust = vjust,
-    text_gp = text_gp,
-    render_mode = render_mode,
-    path_layout_df = path_layout,
+    text_gp = parsed$text_gp,
+    render_mode = parsed$render_mode,
+    path_layout_df = parsed$path_layout,
     debug = isTRUE(debug),
     cl = "latexgrob",
     name = name,
-    gp = gp,
+    gp = parsed$gp,
     vp = grid::viewport(
       x = x, y = y,
       width = grid::unit(bbox_w, "bigpts"),
@@ -269,6 +193,75 @@ latex_grob <- function(tex,
       just = c(hjust, vjust),
       angle = rot
     )
+  )
+}
+
+# Shared parse pipeline used by latex_grob(), latex_dims(), latex_tree().
+# Resolves fontsize/cex/lineheight/fontfamily/fontface/col out of `gp`,
+# runs MicroTeX parse via the cache, optionally also runs a path-mode
+# parse for device-fallback. Returns the layout and the stripped-down
+# `gp` safe to attach to child grobs (fontsize/cex/lineheight removed
+# so they don't re-scale at draw time).
+.parse_from_gp <- function(tex, gp, math_font, max_width, tex_style,
+                           render_mode, with_path_fallback = FALSE) {
+  .check_tex_style(tex_style)
+  if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
+
+  tex <- .expand_macros(tex)
+  math_font <- resolve_math_font(math_font)
+
+  fg_color <- if (!is.null(gp$col)) {
+    grDevices::rgb(t(grDevices::col2rgb(gp$col)), maxColorValue = 255)
+  } else {
+    "#000000"
+  }
+
+  # Grid semantics: gp$fontsize is in points, gp$cex multiplies it,
+  # gp$lineheight is total-line-height multiplier. Bake these into the
+  # parse call (layout depends on them), then strip from gp so they
+  # don't re-apply at draw time.
+  fontsize <- gp$fontsize %||% 20
+  if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
+  line_space <- .line_space_from_lineheight(gp$lineheight, fontsize)
+  gp$fontsize <- NULL
+  gp$cex <- NULL
+  gp$lineheight <- NULL
+
+  text_gp <- grid::gpar()
+  if (!is.null(gp$fontfamily)) text_gp$fontfamily <- gp$fontfamily
+  if (!is.null(gp$fontface))   text_gp$fontface <- gp$fontface
+
+  main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
+
+  measurer <- .make_text_measurer(text_gp)
+  register_text_measurer(measurer)
+  on.exit(clear_text_measurer(), add = TRUE)
+
+  layout <- .parse_latex_cached(
+    tex = tex, text_size = fontsize, line_space = line_space,
+    fg_color = fg_color, max_width = max_width, math_font = math_font,
+    main_font = main_font, use_path = (render_mode == "path"),
+    tex_style = tex_style
+  )
+
+  path_layout <- NULL
+  if (with_path_fallback && render_mode == "typeface") {
+    path_layout <- .parse_latex_cached(
+      tex = tex, text_size = fontsize, line_space = line_space,
+      fg_color = fg_color, max_width = max_width, math_font = math_font,
+      main_font = main_font, use_path = TRUE, tex_style = tex_style
+    )
+  }
+
+  list(
+    tex = tex,
+    layout = layout,
+    path_layout = path_layout,
+    fontsize = fontsize,
+    fg_color = fg_color,
+    text_gp = text_gp,
+    gp = gp,
+    render_mode = render_mode
   )
 }
 
@@ -448,9 +441,6 @@ grid.latex <- function(tex, ...) {
 #' Get dimensions of a LaTeX expression
 #'
 #' @inheritParams latex_grob
-#' @param family Font family used for non-math text metrics. Defaults
-#'   to \code{"sans"}; pass the same family you intend to use in
-#'   \code{gp = gpar(fontfamily = ...)} for consistent measurement.
 #' @return A list with the following elements:
 #' \itemize{
 #'   \item \code{width}, \code{height}, \code{depth}: grid unit objects
@@ -466,30 +456,20 @@ grid.latex <- function(tex, ...) {
 #'
 #' @examples
 #' latex_dims("\\frac{a}{b}")
-latex_dims <- function(tex, fontsize = 20, math_font = "",
-                       line_space = 0, max_width = 0,
+latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
                        render_mode = c("typeface", "path"),
-                       family = "sans") {
+                       gp = grid::gpar()) {
   if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
   if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
   if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
   render_mode <- match.arg(render_mode)
-  .check_tex_style(tex_style)
-  tex <- .expand_macros(tex)
-  math_font <- resolve_math_font(math_font)
-  main_font <- .resolve_text_font(family)
-  measurer  <- .make_text_measurer(grid::gpar(fontfamily = family))
-  register_text_measurer(measurer)
-  on.exit(clear_text_measurer(), add = TRUE)
 
-  layout <- .parse_latex_cached(
-    tex = tex, text_size = fontsize,
-    line_space = line_space, fg_color = "#000000",
-    max_width = max_width, math_font = math_font,
-    main_font = main_font, use_path = (render_mode == "path"),
-    tex_style = tex_style
+  parsed <- .parse_from_gp(
+    tex = tex, gp = gp, math_font = math_font, max_width = max_width,
+    tex_style = tex_style, render_mode = render_mode
   )
+  layout <- parsed$layout
   bbox_h <- attr(layout, "bbox_height")
   bbox_bl_frac <- attr(layout, "bbox_baseline")
   list(

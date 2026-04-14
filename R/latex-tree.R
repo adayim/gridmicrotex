@@ -26,24 +26,20 @@
 #'   print(tree)
 #'   head(tree$records)
 #' }
-latex_tree <- function(tex, fontsize = 20, math_font = "",
-                       line_space = 0, max_width = 0,
-                       render_mode = c("typeface", "path")) {
+latex_tree <- function(tex, math_font = "", max_width = 0,
+                       tex_style = "",
+                       render_mode = c("typeface", "path"),
+                       gp = grid::gpar()) {
   if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
   if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
+  if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
   render_mode <- match.arg(render_mode)
-  tex_expanded <- .expand_macros(tex)
-  math_font <- resolve_math_font(math_font)
-  measurer <- .make_text_measurer(grid::gpar())
-  register_text_measurer(measurer)
-  on.exit(clear_text_measurer(), add = TRUE)
 
-  layout <- .parse_latex_cached(
-    tex = tex_expanded, text_size = fontsize,
-    line_space = line_space, fg_color = "#000000",
-    max_width = max_width, math_font = math_font,
-    main_font = "", use_path = (render_mode == "path")
+  parsed <- .parse_from_gp(
+    tex = tex, gp = gp, math_font = math_font, max_width = max_width,
+    tex_style = tex_style, render_mode = render_mode
   )
+  layout <- parsed$layout
 
   bbox <- c(
     width    = as.numeric(attr(layout, "bbox_width")),
@@ -56,8 +52,8 @@ latex_tree <- function(tex, fontsize = 20, math_font = "",
     list(
       records = layout,
       bbox = bbox,
-      tex = tex_expanded,
-      render_mode = render_mode
+      tex = parsed$tex,
+      render_mode = parsed$render_mode
     ),
     class = "latex_tree"
   )

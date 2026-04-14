@@ -16,9 +16,9 @@ test_that("latex_grob creates valid grob and returns correct dimensions", {
   # latex_dims with fontsize scaling
   dims <- latex_dims("\\frac{a}{b}", render_mode = "path")
   expect_true(grid::convertWidth(dims$width, "points", valueOnly = TRUE) > 0)
-  w_small <- grid::convertWidth(latex_dims("x^2", fontsize = 10)$width,
+  w_small <- grid::convertWidth(latex_dims("x^2", gp = grid::gpar(fontsize = 10))$width,
                                 "bigpts", valueOnly = TRUE)
-  w_large <- grid::convertWidth(latex_dims("x^2", fontsize = 40)$width,
+  w_large <- grid::convertWidth(latex_dims("x^2", gp = grid::gpar(fontsize = 40))$width,
                                 "bigpts", valueOnly = TRUE)
   expect_true(w_large > w_small)
 })
@@ -88,8 +88,8 @@ test_that("latex_grob handles invalid LaTeX commands gracefully", {
 })
 
 test_that("latex_dims respects math_font parameter", {
-  dims_lm     <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "lm")
-  dims_dejavu <- latex_dims("\\frac{a}{b}", fontsize = 20, math_font = "dejavu")
+  dims_lm     <- latex_dims("\\frac{a}{b}", math_font = "lm", gp = grid::gpar(fontsize = 20))
+  dims_dejavu <- latex_dims("\\frac{a}{b}", math_font = "dejavu", gp = grid::gpar(fontsize = 20))
   w_lm     <- grid::convertWidth(dims_lm$width, "bigpts", valueOnly = TRUE)
   w_dejavu <- grid::convertWidth(dims_dejavu$width, "bigpts", valueOnly = TRUE)
   # Different fonts should produce different (but both positive) widths

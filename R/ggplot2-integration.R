@@ -36,8 +36,8 @@
 #' @param fontsize Default font size in points. Overridden by the \code{size}
 #'   aesthetic if mapped.
 #' @param math_font Name of the math font to use (e.g., \code{"stix"}).
-#' @param line_space Inter-line spacing in big points for multi-line
-#'   formulas (default: 10).
+#' @param lineheight Multi-line height multiplier (default 1.2), matching
+#'   \code{grid::gpar()} semantics.
 #' @param max_width Maximum width in big points for automatic line
 #'   wrapping (default: 0, no wrapping).
 #' @param na.rm If \code{FALSE}, the default, missing values are removed with
@@ -66,7 +66,7 @@
 geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
                        position = "identity", ...,
                        fontsize = 11, math_font = "",
-                       line_space = 10, max_width = 0,
+                       lineheight = 1.2, max_width = 0,
                        render_mode = c("typeface", "path"),
                        na.rm = FALSE, show.legend = NA,
                        inherit.aes = TRUE) {
@@ -88,7 +88,7 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
     params = list(
       fontsize = fontsize,
       math_font = math_font,
-      line_space = line_space,
+      lineheight = lineheight,
       max_width = max_width,
       render_mode = render_mode,
       na.rm = na.rm,
@@ -122,6 +122,12 @@ GeomLatex <- NULL
 #' the theme and supports \code{merge_element()} correctly.
 #'
 #' @inheritParams latex_grob
+#' @param fontsize Convenience alias for \code{size}; when supplied,
+#'   it is forwarded to \code{ggplot2::element_text()} as the text size
+#'   in points. If \code{NULL} (default), the theme's inherited size is
+#'   used.
+#' @param lineheight Multi-line height multiplier (default 1.2), matching
+#'   \code{grid::gpar()} semantics.
 #' @param ... Additional arguments passed to \code{ggplot2::element_text()}
 #'   (e.g., \code{size}, \code{colour}, \code{hjust}).
 #'
@@ -139,7 +145,7 @@ GeomLatex <- NULL
 #' }
 #' }
 element_latex <- function(math_font = "", fontsize = NULL,
-                         line_space = 10, max_width = 0,
+                         lineheight = 1.2, max_width = 0,
                          render_mode = c("typeface", "path"), ...) {
   render_mode <- match.arg(render_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -152,7 +158,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
   if (!is.null(fontsize)) {
     dots$size <- fontsize
   }
-  do.call(.element_latex_class, c(list(math_font = math_font, line_space = line_space, max_width = max_width, render_mode = render_mode), dots))
+  do.call(.element_latex_class, c(list(math_font = math_font, lineheight = lineheight, max_width = max_width, render_mode = render_mode), dots))
 }
 
 # Placeholder — replaced in .onLoad_ggplot2() with the real S7 constructor
@@ -181,7 +187,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
     draw_key = ggplot2::draw_key_text,
 
     draw_panel = function(data, panel_params, coord, fontsize = 11,
-                          math_font = "", line_space = 10, max_width = 0,
+                          math_font = "", lineheight = 1.2, max_width = 0,
                           render_mode = "typeface",
                           na.rm = FALSE) {
       coords <- coord$transform(data, panel_params)
@@ -198,7 +204,6 @@ element_latex <- function(math_font = "", fontsize = NULL,
           row$colour
         }
 
-        lh <- if (fs > 0 && line_space > 0) 1 + line_space / fs else 1.2
         latex_grob(
           tex = row$label,
           x = grid::unit(row$x, "npc"),
@@ -209,7 +214,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
           math_font = math_font,
           max_width = max_width,
           render_mode = render_mode,
-          gp = grid::gpar(col = col, fontsize = fs, lineheight = lh)
+          gp = grid::gpar(col = col, fontsize = fs, lineheight = lineheight)
         )
       })
 
@@ -223,7 +228,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
     parent = ggplot2::element_text,
     properties = list(
       math_font = S7::new_property(S7::class_character, default = ""),
-      line_space = S7::new_property(S7::class_numeric, default = 10),
+      lineheight = S7::new_property(S7::class_numeric, default = 1.2),
       max_width = S7::new_property(S7::class_numeric, default = 0),
       render_mode = S7::new_property(S7::class_character, default = "typeface")
     )
@@ -258,13 +263,11 @@ element_latex <- function(math_font = "", fontsize = NULL,
   hjust <- element@hjust %||% 0.5
   vjust <- element@vjust %||% 0.5
   math_font <- element@math_font %||% ""
-  line_space <- element@line_space %||% 10
+  lineheight <- element@lineheight %||% 1.2
   max_width <- element@max_width %||% 0
   render_mode <- element@render_mode %||% "typeface"
 
   # Single label (axis title, strip text) — render one grob
-
-  lh <- if (fontsize > 0 && line_space > 0) 1 + line_space / fontsize else 1.2
   if (length(label) == 1L) {
     label <- gsub("^\\$|\\$$", "", label)
     if (is.null(x)) x <- grid::unit(0.5, "npc")
@@ -275,7 +278,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
       math_font = math_font,
       max_width = max_width,
       render_mode = render_mode,
-      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lh)
+      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
     ))
   }
 
@@ -297,7 +300,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
       math_font = math_font,
       max_width = max_width,
       render_mode = render_mode,
-      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lh),
+      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight),
       name = paste0("ticklabel.", i)
     ))
   }
