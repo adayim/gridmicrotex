@@ -10,11 +10,11 @@ glyphs/paths/rules in a formula.
 ``` r
 latex_tree(
   tex,
-  fontsize = 20,
   math_font = "",
-  line_space = 0,
   max_width = 0,
-  render_mode = c("typeface", "path")
+  tex_style = "",
+  render_mode = c("typeface", "path"),
+  gp = grid::gpar()
 )
 ```
 
@@ -36,6 +36,13 @@ latex_tree(
   Numeric maximum width in big points for automatic line wrapping. Use
   `0` (default) for no wrapping.
 
+- tex_style:
+
+  Character: TeX style override. One of `""` (default; let the parser
+  decide), `"display"`, `"text"`, `"script"`, or `"scriptscript"`. See
+  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+  for the semantics of each value.
+
 - render_mode:
 
   Character string: `"typeface"` (default) renders glyphs as native text
@@ -48,6 +55,15 @@ latex_tree(
   text is not selectable in PDF/SVG). For PDF output with
   embedded/selectable text, prefer
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html).
+
+- gp:
+
+  Graphical parameters (see [`gpar`](https://rdrr.io/r/grid/gpar.html)).
+  Common entries: `col` (formula foreground), `fontfamily` / `fontface`
+  (text font), `fontsize` / `cex` (formula size), and `lineheight`
+  (multi-line spacing). See
+  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+  for how each of these flows through MicroTeX.
 
 ## Value
 
@@ -86,22 +102,22 @@ A list with class `"latex_tree"` containing:
 #> <latex_tree>
 #>   tex:         \frac{a}{b}
 #>   render_mode: typeface
-#>   bbox:        width=8.00  height=30.00  depth=11.00  baseline=0.61 (bigpts)
+#>   bbox:        width=7.00  height=25.00  depth=9.00  baseline=0.63 (bigpts)
 #>   records:     3
 #>     glyph      2
 #>     line       1
   head(tree$records)
-#>    type         x      y glyph font_size   color    x2     y2 width height rx
-#> 1 glyph 0.0000000  7.238  4421        14 #000000    NA     NA    NA     NA NA
-#> 2  line 0.0000000 13.778    NA        NA #000000 8.526 13.778    NA     NA NA
-#> 3 glyph 0.1189999 30.638  4422        14 #000000    NA     NA    NA     NA NA
-#>   ry  lwd text font_style path codepoint
-#> 1 NA   NA <NA>         NA NULL        NA
-#> 2 NA 1.36 <NA>         NA NULL        NA
-#> 3 NA   NA <NA>         NA NULL        NA
-#>                                                                    font_file
-#> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf
-#> 2                                                                       <NA>
-#> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf
+#>    type     x      y glyph font_size   color    x2     y2 width height rx ry
+#> 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA
+#> 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA
+#> 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA
+#>    lwd text font_style path codepoint
+#> 1   NA <NA>         NA NULL        NA
+#> 2 1.32 <NA>         NA NULL        NA
+#> 3   NA <NA>         NA NULL        NA
+#>                                                             font_file
+#> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
+#> 2                                                                <NA>
+#> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
 # }
 ```

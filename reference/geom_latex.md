@@ -15,7 +15,7 @@ geom_latex(
   ...,
   fontsize = 11,
   math_font = "",
-  line_space = 10,
+  lineheight = 1.2,
   max_width = 0,
   render_mode = c("typeface", "path"),
   na.rm = FALSE,
@@ -106,10 +106,10 @@ geom_latex(
 
   Name of the math font to use (e.g., `"stix"`).
 
-- line_space:
+- lineheight:
 
-  Inter-line spacing in big points for multi-line formulas (default:
-  10).
+  Multi-line height multiplier (default 1.2), matching
+  [`grid::gpar()`](https://rdrr.io/r/grid/gpar.html) semantics.
 
 - max_width:
 

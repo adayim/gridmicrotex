@@ -7,13 +7,11 @@ Get dimensions of a LaTeX expression
 ``` r
 latex_dims(
   tex,
-  fontsize = 20,
   math_font = "",
-  line_space = 0,
   max_width = 0,
   tex_style = "",
   render_mode = c("typeface", "path"),
-  family = "sans"
+  gp = grid::gpar()
 )
 ```
 
@@ -39,7 +37,8 @@ latex_dims(
 
   Character: TeX style override. One of `""` (default; let the parser
   decide), `"display"`, `"text"`, `"script"`, or `"scriptscript"`. See
-  **Details** for the semantics of each value.
+  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+  for the semantics of each value.
 
 - render_mode:
 
@@ -54,11 +53,14 @@ latex_dims(
   embedded/selectable text, prefer
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html).
 
-- family:
+- gp:
 
-  Font family used for non-math text metrics. Defaults to `"sans"`; pass
-  the same family you intend to use in `gp = gpar(fontfamily = ...)` for
-  consistent measurement.
+  Graphical parameters (see [`gpar`](https://rdrr.io/r/grid/gpar.html)).
+  Common entries: `col` (formula foreground), `fontfamily` / `fontface`
+  (text font), `fontsize` / `cex` (formula size), and `lineheight`
+  (multi-line spacing). See
+  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+  for how each of these flows through MicroTeX.
 
 ## Value
 

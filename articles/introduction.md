@@ -196,7 +196,7 @@ grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24), render_mode = "path")
 returns the bounding box of an expression:
 
 ``` r
-dims <- latex_dims("\\frac{a}{b}", fontsize = 20)
+dims <- latex_dims("\\frac{a}{b}", gp = grid::gpar(fontsize = 20))
 dims
 #> $width
 #> [1] 7bigpts

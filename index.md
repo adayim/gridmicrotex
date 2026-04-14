@@ -12,13 +12,13 @@ works on any R graphics device.
 ## Disclaimer
 
 **A note on development**: This package was developed as a proof of
-concept exploring AI-assisted package creation. The architecture and
-specification were designed by me, and the core C++ integration (via
-[MicroTeX](https://github.com/NanoMichael/MicroTeX)) was facilitated
-largely by AI, with my review and oversight of the final output. I’m
-sharing it because it works and I hope others find it useful.
-Contributions, bug reports, and improvements from the community are very
-welcome.
+concept for AI-assisted package creation. I designed the architecture
+and specification, and the core C++ integration (via
+[MicroTeX](https://github.com/NanoMichael/MicroTeX)) was largely
+facilitated by AI, with my review and oversight of the design and final
+outputs. I am sharing it because it works, and I hope that others will
+find it useful. Contributions, bug reports and improvements from the
+community are very welcome.
 
 ## Installation
 

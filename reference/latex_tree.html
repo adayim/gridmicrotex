@@ -50,11 +50,11 @@ counting glyphs/paths/rules in a formula.</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">latex_tree</span><span class="op">(</span></span>
 <span>  <span class="va">tex</span>,</span>
-<span>  fontsize <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  math_font <span class="op">=</span> <span class="st">""</span>,</span>
-<span>  line_space <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  max_width <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span></span>
+<span>  tex_style <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -78,6 +78,13 @@ See <code><a href="available_math_fonts.html">available_math_fonts</a></code> fo
 line wrapping.  Use <code>0</code> (default) for no wrapping.</p></dd>
 
 
+<dt id="arg-tex-style">tex_style<a class="anchor" aria-label="anchor" href="#arg-tex-style"></a></dt>
+<dd><p>Character: TeX style override. One of <code>""</code>
+(default; let the parser decide), <code>"display"</code>, <code>"text"</code>,
+<code>"script"</code>, or <code>"scriptscript"</code>. See
+<code><a href="latex_grob.html">latex_grob</a></code> for the semantics of each value.</p></dd>
+
+
 <dt id="arg-render-mode">render_mode<a class="anchor" aria-label="anchor" href="#arg-render-mode"></a></dt>
 <dd><p>Character string: <code>"typeface"</code> (default) renders
 glyphs as native text using the math font, producing
@@ -89,6 +96,15 @@ font embedding (e.g., the base <code><a href="https://rdrr.io/r/grDevices/pdf.ht
 all devices but text is not selectable in PDF/SVG).
 For PDF output with embedded/selectable text, prefer
 <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf</a></code>.</p></dd>
+
+
+<dt id="arg-gp">gp<a class="anchor" aria-label="anchor" href="#arg-gp"></a></dt>
+<dd><p>Graphical parameters (see <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></code>).
+Common entries: <code>col</code> (formula foreground), <code>fontfamily</code>
+/ <code>fontface</code> (text font), <code>fontsize</code> / <code>cex</code>
+(formula size), and <code>lineheight</code> (multi-line spacing). See
+<code><a href="latex_grob.html">latex_grob</a></code> for how each of these flows through
+MicroTeX.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -124,23 +140,23 @@ glyph, path, line, rect, or text block). Columns include
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;latex_tree&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   tex:         \frac{a}{b}</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   render_mode: typeface</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   bbox:        width=8.00  height=30.00  depth=11.00  baseline=0.61 (bigpts)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   bbox:        width=7.00  height=25.00  depth=9.00  baseline=0.63 (bigpts)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   records:     3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     glyph      2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     line       1</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">tree</span><span class="op">$</span><span class="va">records</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    type         x      y glyph font_size   color    x2     y2 width height rx</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 glyph 0.0000000  7.238  4421        14 #000000    NA     NA    NA     NA NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  line 0.0000000 13.778    NA        NA #000000 8.526 13.778    NA     NA NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 glyph 0.1189999 30.638  4422        14 #000000    NA     NA    NA     NA NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   ry  lwd text font_style path codepoint</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 NA   NA &lt;NA&gt;         NA NULL        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 NA 1.36 &lt;NA&gt;         NA NULL        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 NA   NA &lt;NA&gt;         NA NULL        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                                                                    font_file</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2                                                                       &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    type     x      y glyph font_size   color    x2     y2 width height rx ry</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    lwd text font_style path codepoint</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   NA &lt;NA&gt;         NA NULL        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 1.32 &lt;NA&gt;         NA NULL        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   NA &lt;NA&gt;         NA NULL        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                                             font_file</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                                                                &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

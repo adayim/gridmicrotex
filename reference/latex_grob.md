@@ -75,7 +75,7 @@ grid.latex(tex, ...)
 
   Character: TeX style override. One of `""` (default; let the parser
   decide), `"display"`, `"text"`, `"script"`, or `"scriptscript"`. See
-  **Details** for the semantics of each value.
+  `latex_grob` for the semantics of each value.
 
 - render_mode:
 
@@ -106,7 +106,7 @@ grid.latex(tex, ...)
   Graphical parameters (see [`gpar`](https://rdrr.io/r/grid/gpar.html)).
   Common entries: `col` (formula foreground), `fontfamily` / `fontface`
   (text font), `fontsize` / `cex` (formula size), and `lineheight`
-  (multi-line spacing). See **Details** for how each of these flows
+  (multi-line spacing). See `latex_grob` for how each of these flows
   through MicroTeX.
 
 - ...:

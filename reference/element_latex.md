@@ -10,7 +10,7 @@ as LaTeX math and rendered via MicroTeX.
 element_latex(
   math_font = "",
   fontsize = NULL,
-  line_space = 10,
+  lineheight = 1.2,
   max_width = 0,
   render_mode = c("typeface", "path"),
   ...
@@ -25,6 +25,18 @@ element_latex(
   Lete Sans Math, which pairs with R's default sans-serif text font. See
   [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
   for loaded fonts.
+
+- fontsize:
+
+  Convenience alias for `size`; when supplied, it is forwarded to
+  [`ggplot2::element_text()`](https://ggplot2.tidyverse.org/reference/element.html)
+  as the text size in points. If `NULL` (default), the theme's inherited
+  size is used.
+
+- lineheight:
+
+  Multi-line height multiplier (default 1.2), matching
+  [`grid::gpar()`](https://rdrr.io/r/grid/gpar.html) semantics.
 
 - max_width:
 
