@@ -34,7 +34,7 @@ The core function is
 which returns a grid grob:
 
 ``` r
-g <- latex_grob("\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", fontsize = 24)
+g <- latex_grob("\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", gp = grid::gpar(fontsize = 24))
 grid::grid.newpage()
 grid::grid.draw(g)
 ```
@@ -46,7 +46,7 @@ For quick rendering, use
 
 ``` r
 grid::grid.newpage()
-grid.latex("\\sum_{i=1}^{n} x_i^2", fontsize = 28)
+grid.latex("\\sum_{i=1}^{n} x_i^2", gp = grid::gpar(fontsize = 28))
 ```
 
 ![](introduction_files/figure-html/quick-1.png)
@@ -57,8 +57,8 @@ Control placement with `x`, `y`, `hjust`, and `vjust`:
 
 ``` r
 grid::grid.newpage()
-grid.latex("E = mc^2", x = 0.2, y = 0.7, hjust = 0, fontsize = 24)
-grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, fontsize = 24)
+grid.latex("E = mc^2", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24))
 ```
 
 ![](introduction_files/figure-html/positioning-1.png)
@@ -71,7 +71,7 @@ Set the formula color via `gp`, or use `\textcolor{}` within the LaTeX:
 grid::grid.newpage()
 grid.latex(
   "\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma",
-  fontsize = 28
+  gp = grid::gpar(fontsize = 28)
 )
 ```
 
@@ -79,14 +79,13 @@ grid.latex(
 
 ## Math fonts
 
-The package bundles Latin Modern Math (default), STIX Two Math, Lete
-Sans Math, and TeX Gyre DejaVu Math. For most users, the easiest
-workflow is:
+The package bundles Lete Sans Math (default — pairs with R’s default
+sans text), Latin Modern Math, STIX Two Math, and TeX Gyre DejaVu Math.
+For most users, the easiest workflow is:
 
 1.  List available math fonts with
     [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
-2.  Select one with
-    [`set_math_font()`](https://adayim.github.io/gridmicrotex/reference/set_math_font.md)
+2.  Select one with `latex_options(math_font = ...)`
 3.  Render formulas normally (no OTF/CLM paths needed)
 
 ``` r
@@ -96,17 +95,17 @@ available_math_fonts()
 ```
 
 ``` r
-set_math_font("stix")
+latex_options(math_font = "stix")
 grid::grid.newpage()
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
+grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
 ```
 
 ![](introduction_files/figure-html/fonts-default-1.png)
 
 ``` r
 
-# Switch back to Latin Modern Math
-set_math_font("lm")
+# Switch back to the default (Lete Sans Math)
+latex_options(math_font = "lete")
 ```
 
 You can still override the font per call via `math_font`:
@@ -115,10 +114,10 @@ You can still override the font per call via `math_font`:
 grid::grid.newpage()
 grid::pushViewport(grid::viewport(layout = grid::grid.layout(2, 1)))
 grid::pushViewport(grid::viewport(layout.pos.row = 1))
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24)
+grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
 grid::upViewport()
 grid::pushViewport(grid::viewport(layout.pos.row = 2))
-grid.latex("\\int_0^1 f(x)\\,dx", fontsize = 24, math_font = "stix")
+grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24), math_font = "stix")
 grid::upViewport(2)
 ```
 
@@ -142,8 +141,10 @@ file (auto-discovered when possible):
 load_font("path/to/MyFont.otf")
 ```
 
-You can find and download other fonts with CLM
-[here](https://github.com/NanoMichael/MicroTeX/tree/openmath/res)
+You can generate your font CLM using the bundled Python script. See help
+for
+[`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+for instructions.
 
 ### Render modes
 
@@ -152,7 +153,7 @@ gridmicrotex supports two rendering modes for math glyphs:
 - **`"typeface"`** (default): Renders glyphs as native text using the
   math font’s typeface. This produces selectable, searchable, and
   accessible text in PDF and SVG output. Requires the math font (e.g.,
-  Latin Modern Math) to be installed on the system, and a device that
+  Lete Sans Math) to be installed on the system, and a device that
   supports font embedding (e.g.,
   [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html),
   `svglite::svglite()`,
@@ -167,10 +168,10 @@ gridmicrotex supports two rendering modes for math glyphs:
 
 ``` r
 # Default typeface mode (selectable text in PDF/SVG)
-grid.latex("E = mc^2", fontsize = 24)
+grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24))
 
 # Explicit path mode (works everywhere, but text is not selectable)
-grid.latex("E = mc^2", fontsize = 24, render_mode = "path")
+grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24), render_mode = "path")
 ```
 
 > **Important: Do not use
@@ -186,7 +187,7 @@ grid.latex("E = mc^2", fontsize = 24, render_mode = "path")
 >
 > ``` r
 > showtext::showtext_auto(FALSE)
-> grid.latex("E = mc^2", fontsize = 24)  # typeface mode works correctly
+> grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24))  # typeface mode works correctly
 > ```
 
 ## Querying dimensions
@@ -198,16 +199,19 @@ returns the bounding box of an expression:
 dims <- latex_dims("\\frac{a}{b}", fontsize = 20)
 dims
 #> $width
-#> [1] 8bigpts
-#> 
-#> $height
-#> [1] 21bigpts
-#> 
-#> $depth
 #> [1] 7bigpts
 #> 
+#> $height
+#> [1] 25bigpts
+#> 
+#> $depth
+#> [1] 9bigpts
+#> 
 #> $baseline
-#> [1] 0.6662558
+#> [1] 9.35305953025818bigpts
+#> 
+#> $is_split
+#> [1] FALSE
 ```
 
 This is useful for layout calculations and ensuring labels fit.
@@ -221,7 +225,7 @@ other script your R graphics device supports:
 
 ``` r
 grid::grid.newpage()
-grid.latex("x^2 + \\text{你好}", fontsize = 24, gp = grid::gpar(fontfamily = "sans"))
+grid.latex("x^2 + \\text{你好}", gp = grid::gpar(fontsize = 24, fontfamily = "sans"))
 ```
 
 ![](introduction_files/figure-html/cjk-1.png)
@@ -234,19 +238,19 @@ Any font available to R works: base families like `"sans"`, `"serif"`,
 The bundled math fonts have different styles. For a consistent look,
 pair them with a matching `fontfamily`:
 
-| Math font                         | Style      | Suggested `fontfamily` |
-|-----------------------------------|------------|------------------------|
-| Latin Modern Math (`"lm"`)        | Serif      | `"serif"`              |
-| STIX Two Math (`"stix"`)          | Serif      | `"serif"`              |
-| Lete Sans Math (`"lete"`)         | Sans-serif | `"sans"`               |
-| TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"`               |
+| Math font                          | Style      | Suggested `fontfamily` |
+|------------------------------------|------------|------------------------|
+| Lete Sans Math (`"lete"`, default) | Sans-serif | `"sans"`               |
+| TeX Gyre DejaVu Math (`"dejavu"`)  | Sans-serif | `"sans"`               |
+| Latin Modern Math (`"lm"`)         | Serif      | `"serif"`              |
+| STIX Two Math (`"stix"`)           | Serif      | `"serif"`              |
 
 ``` r
 grid::grid.newpage()
 grid.latex(
   "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",
-  fontsize = 20, math_font = "dejavu",
-  gp = grid::gpar(fontfamily = "sans")
+  math_font = "dejavu",
+  gp = grid::gpar(fontfamily = "sans", fontsize = 12)
 )
 ```
 
@@ -280,7 +284,7 @@ grid.latex(paste0(
       " \\int_0^\\infty{x^{2(n-1)} e^{-a x^2}\\,dx}",
       " = \\frac{(2n-1)!!}{2^{n+1}} \\sqrt{\\frac{\\pi}{a^{2n+1}}}\\\\",
       "\\end{array}"
-), fontsize = 16)
+), gp = grid::gpar(fontsize = 16))
 ```
 
 ![](introduction_files/figure-html/complex-formula-1.png)
@@ -309,7 +313,7 @@ grid.latex(
   \\hline
 \\end{array}
   ",
-  fontsize = 22
+  gp = grid::gpar(fontsize = 22)
 )
 ```
 
@@ -360,7 +364,7 @@ grid.latex(
   \\end{split}\\\\
   \\rotatebox{30}{\\sum_{n=1}^{+\\infty}}\\quad\\mbox{Mirror rorriM}\\reflectbox{\\mbox{Mirror rorriM}}
 \\end{array}",
-  fontsize = 22
+  gp = grid::gpar(fontsize = 22)
 )
 ```
 
@@ -386,6 +390,131 @@ following are outside its scope:
 For most statistical graphics use cases — axis labels, annotations,
 legends, and in-plot formulas — the supported feature set is more than
 sufficient.
+
+## Project-wide defaults
+
+[`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
+sets defaults for `math_font` and `render_mode`, used by
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
+[`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
+[`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md),
+and
+[`latex_tree()`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md)
+whenever the corresponding argument is not supplied at the call site.
+Size is controlled at the grob level via `gp$fontsize` / `gp$lineheight`
+(see *Basic usage*).
+
+``` r
+latex_options(math_font = "stix", render_mode = "typeface")
+
+# Later calls pick these up automatically
+grid.latex("\\sum_{i=1}^{n} i^{2}", gp = grid::gpar(fontsize = 14))
+
+# Query current settings
+latex_options()
+
+# Reset to built-in defaults
+reset_latex_options()
+```
+
+Explicit arguments always win. Setting `math_font` via
+[`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
+also updates the MicroTeX engine default, so you don’t also need a
+separate font-setup call.
+
+## User-defined macros
+
+[`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
+registers zero-argument shorthands that are expanded by text
+substitution before the expression reaches MicroTeX. Handy for recurring
+notation:
+
+``` r
+define_macro("RR", "\\mathbb{R}")
+define_macro("eps", "\\varepsilon")
+
+grid::grid.newpage()
+grid.latex("\\forall \\eps > 0, \\eps \\in \\RR", gp = grid::gpar(fontsize = 24))
+```
+
+![](introduction_files/figure-html/macros-1.png)
+
+``` r
+
+clear_macros()
+```
+
+Macro names must be ASCII letters. Expansion iterates to a fixed point,
+so macros can reference other macros. Use
+[`list_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
+to see currently registered ones, and
+[`clear_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
+(with no arguments) to drop them all.
+
+## Layout caching
+
+Parsed layouts are memoised by
+`(tex, fontsize, math_font, render_mode, ...)`. Re-drawing the same
+formula — for example, the same axis label across many plots — reuses
+the cached layout:
+
+``` r
+latex_cache_info()       # size / max_size / hits / misses
+latex_cache_limit(1024)  # raise or lower the LRU capacity
+latex_cache_clear()      # wipe the cache (e.g. after re-loading fonts)
+```
+
+Set the limit to `0` to disable caching entirely.
+
+## Introspecting a formula
+
+[`latex_tree()`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md)
+returns the raw draw-record table plus bbox metadata, useful for
+debugging alignment, counting glyphs, or building custom grobs on top of
+the layout:
+
+``` r
+tr <- latex_tree("\\frac{a}{b}")
+tr
+#> <latex_tree>
+#>   tex:         \frac{a}{b}
+#>   render_mode: typeface
+#>   bbox:        width=7.00  height=25.00  depth=9.00  baseline=0.63 (bigpts)
+#>   records:     3
+#>     glyph      2
+#>     line       1
+head(tr$records, 3)
+#>    type     x      y glyph font_size   color    x2     y2 width height rx ry
+#> 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA
+#> 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA
+#> 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA
+#>    lwd text font_style path codepoint
+#> 1   NA <NA>         NA NULL        NA
+#> 2 1.32 <NA>         NA NULL        NA
+#> 3   NA <NA>         NA NULL        NA
+#>                                                             font_file
+#> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
+#> 2                                                                <NA>
+#> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
+```
+
+## Debug overlay
+
+Pass `debug = TRUE` to
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+/
+[`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+to overlay diagnostics on the rendered formula — the full bounding box
+(dashed gray), the baseline (solid red), and a dot at each draw record’s
+origin. Useful for checking vertical alignment between a formula and
+surrounding grobs:
+
+``` r
+grid::grid.newpage()
+grid.latex("x^{2} + y_{i}", gp = grid::gpar(fontsize = 30), debug = TRUE)
+```
+
+![](introduction_files/figure-html/debug-1.png)
 
 ## Comparison with alternatives
 

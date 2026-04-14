@@ -21,13 +21,13 @@ A character vector of math font names.
 The bundled math fonts have different styles. For a consistent look,
 pair them with a matching `fontfamily` in `gp`:
 
-|                                   |            |                         |
-|-----------------------------------|------------|-------------------------|
-| **Math font**                     | **Style**  | **Suggested text font** |
-| Latin Modern Math (`"lm"`)        | Serif      | `"serif"`               |
-| STIX Two Math (`"stix"`)          | Serif      | `"serif"`               |
-| Lete Sans Math (`"lete"`)         | Sans-serif | `"sans"`                |
-| TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"`                |
+|                                    |            |                         |
+|------------------------------------|------------|-------------------------|
+| **Math font**                      | **Style**  | **Suggested text font** |
+| Lete Sans Math (`"lete"`, default) | Sans-serif | `"sans"`                |
+| TeX Gyre DejaVu Math (`"dejavu"`)  | Sans-serif | `"sans"`                |
+| Latin Modern Math (`"lm"`)         | Serif      | `"serif"`               |
+| STIX Two Math (`"stix"`)           | Serif      | `"serif"`               |
 
 ## Examples
 

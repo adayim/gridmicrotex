@@ -36,7 +36,7 @@ library(gridmicrotex)
 library(grid)
 
 grid.newpage()
-grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", fontsize = 30)
+grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", gp = grid::gpar(fontsize = 30))
 ```
 
 ![](reference/figures/README-example-basic-1.png)
@@ -46,7 +46,7 @@ grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", font
 The grob can be placed alongside other grid objects:
 
 ``` r
-g <- latex_grob("\\frac{a}{b}", fontsize = 30)
+g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
 grid.newpage()
 # A blue box behind the formula
 grid.rect(
@@ -78,7 +78,7 @@ for (i in seq_along(exprs)) {
     exprs[i],
     x = unit(0.5, "npc"),
     y = unit(1 - i / (length(exprs) + 1), "npc"),
-    fontsize = 28
+    gp = grid::gpar(fontsize = 28)
   )
 }
 ```
@@ -93,7 +93,7 @@ Use `\text{}` to embed regular text within math expressions:
 grid.newpage()
 grid.latex(
   "f(x) = \\begin{cases} x^2 & \\text{if } x \\geq 0 \\\\ -x & \\text{otherwise} \\end{cases}",
-  fontsize = 26
+  gp = grid::gpar(fontsize = 26)
 )
 ```
 
@@ -107,8 +107,8 @@ rendering always uses the selected math font:
 
 ``` r
 grid.newpage()
-grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2", fontsize = 24,
-           gp = gpar(fontfamily = "sans"))
+grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2",
+           gp = gpar(fontsize = 24, fontfamily = "sans"))
 ```
 
 ![](reference/figures/README-example-mixed-cjk-math-1.png)
@@ -142,12 +142,12 @@ for more examples.
 
 - Full LaTeX math: fractions, roots, integrals, matrices, Greek,
   accents, extensible delimiters
-- Four bundled math fonts: Latin Modern Math, STIX Two Math, Lete Sans
-  Math, TeX Gyre DejaVu Math
+- Four bundled math fonts: Lete Sans Math (default), TeX Gyre DejaVu
+  Math, Latin Modern Math, STIX Two Math
+  - Lete Sans & TeX Gyre DejaVu are sans-serif — pair with
+    `gpar(fontfamily = "sans")` (the R default)
   - Latin Modern & STIX Two are serif — pair with
     `gpar(fontfamily = "serif")`
-  - Lete Sans & TeX Gyre DejaVu are sans-serif — pair with
-    `gpar(fontfamily = "sans")`
 - Color support: `\textcolor{}`, `\color{}`
 - Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
 - CJK/multilingual text in `\text{}`
@@ -155,6 +155,21 @@ for more examples.
   ggplot2 \>= 4.0)
 - Resolution-independent vector output on all R devices
 - No external LaTeX installation required
+- Project-wide defaults via
+  [`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
+  (math font, fontsize, render mode, line spacing)
+- User-defined macros
+  ([`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md))
+  for reusable notation
+- LRU layout cache for repeated formulas
+  ([`latex_cache_info()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)
+  /
+  [`latex_cache_limit()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)
+  /
+  [`latex_cache_clear()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md))
+- Formula introspection with
+  [`latex_tree()`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md);
+  alignment overlay with `latex_grob(..., debug = TRUE)`
 
 ## Comparison
 

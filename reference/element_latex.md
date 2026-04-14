@@ -22,18 +22,9 @@ element_latex(
 - math_font:
 
   Name of the math font to use (e.g., `"stix"`). Use `""` (default) for
-  the default Latin Modern Math font. See
+  Lete Sans Math, which pairs with R's default sans-serif text font. See
   [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
   for loaded fonts.
-
-- fontsize:
-
-  Base font size in points (default: 20).
-
-- line_space:
-
-  Numeric inter-line spacing in big points for multi-line formulas
-  (e.g., `\\`, `\begin{array}`). Default is `10`.
 
 - max_width:
 

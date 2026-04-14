@@ -9,9 +9,11 @@ latex_dims(
   tex,
   fontsize = 20,
   math_font = "",
-  line_space = 10,
+  line_space = 0,
   max_width = 0,
-  render_mode = c("typeface", "path")
+  tex_style = "",
+  render_mode = c("typeface", "path"),
+  family = "sans"
 )
 ```
 
@@ -21,26 +23,23 @@ latex_dims(
 
   Character string of LaTeX math code.
 
-- fontsize:
-
-  Base font size in points (default: 20).
-
 - math_font:
 
   Name of the math font to use (e.g., `"stix"`). Use `""` (default) for
-  the default Latin Modern Math font. See
+  Lete Sans Math, which pairs with R's default sans-serif text font. See
   [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
   for loaded fonts.
-
-- line_space:
-
-  Numeric inter-line spacing in big points for multi-line formulas
-  (e.g., `\\`, `\begin{array}`). Default is `10`.
 
 - max_width:
 
   Numeric maximum width in big points for automatic line wrapping. Use
   `0` (default) for no wrapping.
+
+- tex_style:
+
+  Character: TeX style override. One of `""` (default; let the parser
+  decide), `"display"`, `"text"`, `"script"`, or `"scriptscript"`. See
+  **Details** for the semantics of each value.
 
 - render_mode:
 
@@ -55,25 +54,44 @@ latex_dims(
   embedded/selectable text, prefer
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html).
 
+- family:
+
+  Font family used for non-math text metrics. Defaults to `"sans"`; pass
+  the same family you intend to use in `gp = gpar(fontfamily = ...)` for
+  consistent measurement.
+
 ## Value
 
-A list with `width`, `height`, `depth`, and `baseline` as grid unit
-objects.
+A list with the following elements:
+
+- `width`, `height`, `depth`: grid unit objects in big points. `height`
+  is total height (ascent + descent).
+
+- `baseline`: grid unit object giving the baseline position measured in
+  big points from the *bottom* of the bounding box. Equivalent to
+  `height - depth` for single-line formulas. Useful for aligning a
+  formula's baseline with surrounding text.
+
+- `is_split`: logical; `TRUE` if the formula was wrapped across multiple
+  lines (only possible when `max_width > 0`).
 
 ## Examples
 
 ``` r
 latex_dims("\\frac{a}{b}")
 #> $width
-#> [1] 8bigpts
-#> 
-#> $height
-#> [1] 21bigpts
-#> 
-#> $depth
 #> [1] 7bigpts
 #> 
+#> $height
+#> [1] 25bigpts
+#> 
+#> $depth
+#> [1] 9bigpts
+#> 
 #> $baseline
-#> [1] 0.6662558
+#> [1] 9.35305953025818bigpts
+#> 
+#> $is_split
+#> [1] FALSE
 #> 
 ```

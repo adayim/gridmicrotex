@@ -43,9 +43,11 @@
 <span>  <span class="va">tex</span>,</span>
 <span>  fontsize <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  math_font <span class="op">=</span> <span class="st">""</span>,</span>
-<span>  line_space <span class="op">=</span> <span class="fl">10</span>,</span>
+<span>  line_space <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  max_width <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span></span>
+<span>  tex_style <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span>,</span>
+<span>  family <span class="op">=</span> <span class="st">"sans"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -57,25 +59,23 @@
 <dd><p>Character string of LaTeX math code.</p></dd>
 
 
-<dt id="arg-fontsize">fontsize<a class="anchor" aria-label="anchor" href="#arg-fontsize"></a></dt>
-<dd><p>Base font size in points (default: 20).</p></dd>
-
-
 <dt id="arg-math-font">math_font<a class="anchor" aria-label="anchor" href="#arg-math-font"></a></dt>
 <dd><p>Name of the math font to use (e.g., <code>"stix"</code>).
-Use <code>""</code> (default) for the default Latin Modern Math font.
+Use <code>""</code> (default) for Lete Sans Math, which pairs with R's
+default sans-serif text font.
 See <code><a href="available_math_fonts.html">available_math_fonts</a></code> for loaded fonts.</p></dd>
-
-
-<dt id="arg-line-space">line_space<a class="anchor" aria-label="anchor" href="#arg-line-space"></a></dt>
-<dd><p>Numeric inter-line spacing in big points for
-multi-line formulas (e.g., <code>\\</code>, <code>\begin{array}</code>).
-Default is <code>10</code>.</p></dd>
 
 
 <dt id="arg-max-width">max_width<a class="anchor" aria-label="anchor" href="#arg-max-width"></a></dt>
 <dd><p>Numeric maximum width in big points for automatic
 line wrapping.  Use <code>0</code> (default) for no wrapping.</p></dd>
+
+
+<dt id="arg-tex-style">tex_style<a class="anchor" aria-label="anchor" href="#arg-tex-style"></a></dt>
+<dd><p>Character: TeX style override. One of <code>""</code>
+(default; let the parser decide), <code>"display"</code>, <code>"text"</code>,
+<code>"script"</code>, or <code>"scriptscript"</code>. See <strong>Details</strong>
+for the semantics of each value.</p></dd>
 
 
 <dt id="arg-render-mode">render_mode<a class="anchor" aria-label="anchor" href="#arg-render-mode"></a></dt>
@@ -90,27 +90,42 @@ all devices but text is not selectable in PDF/SVG).
 For PDF output with embedded/selectable text, prefer
 <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf</a></code>.</p></dd>
 
+
+<dt id="arg-family">family<a class="anchor" aria-label="anchor" href="#arg-family"></a></dt>
+<dd><p>Font family used for non-math text metrics. Defaults
+to <code>"sans"</code>; pass the same family you intend to use in
+<code>gp = gpar(fontfamily = ...)</code> for consistent measurement.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list with <code>width</code>, <code>height</code>, <code>depth</code>, and
-<code>baseline</code> as grid unit objects.</p>
-    </div>
+    <p>A list with the following elements:</p><ul><li><p><code>width</code>, <code>height</code>, <code>depth</code>: grid unit objects
+in big points. <code>height</code> is total height (ascent + descent).</p></li>
+<li><p><code>baseline</code>: grid unit object giving the baseline position
+measured in big points from the <em>bottom</em> of the bounding box.
+Equivalent to <code>height - depth</code> for single-line formulas. Useful
+for aligning a formula's baseline with surrounding text.</p></li>
+<li><p><code>is_split</code>: logical; <code>TRUE</code> if the formula was wrapped
+across multiple lines (only possible when <code>max_width &gt; 0</code>).</p></li>
+</ul></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">latex_dims</span><span class="op">(</span><span class="st">"\\frac{a}{b}"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $width</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 8bigpts</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $height</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 21bigpts</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $depth</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 7bigpts</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $height</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 25bigpts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $depth</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 9bigpts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $baseline</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.6662558</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 9.35305953025818bigpts</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $is_split</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>

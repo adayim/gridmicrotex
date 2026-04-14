@@ -70,7 +70,7 @@ Place the generated `.clm2` file next to the OTF (same stem) so that
 ## See also
 
 [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md),
-[`set_math_font`](https://adayim.github.io/gridmicrotex/reference/set_math_font.md),
+[`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md),
 [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
 
 ## Examples
