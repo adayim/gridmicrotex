@@ -26,6 +26,17 @@ static std::string color_to_hex(color c) {
     return std::string(buf);
 }
 
+// Map a user-facing style name to MicroTeX's TexStyle enum.
+// Empty string means "do not override; let the parser decide".
+static OverrideTeXStyle resolve_tex_style(const std::string& s) {
+    if (s.empty()) return {false, TexStyle::text};
+    if (s == "display")      return {true, TexStyle::display};
+    if (s == "text")         return {true, TexStyle::text};
+    if (s == "script")       return {true, TexStyle::script};
+    if (s == "scriptscript") return {true, TexStyle::scriptScript};
+    Rcpp::stop("tex_style must be one of \"\", \"display\", \"text\", \"script\", \"scriptscript\".");
+}
+
 // [[Rcpp::export]]
 Rcpp::List parse_latex_cpp(std::string tex,
                            float text_size = 20.0,
@@ -34,7 +45,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            float max_width = 0,
                            std::string math_font = "",
                            std::string main_font = "",
-                           bool use_path = true) {
+                           bool use_path = true,
+                           std::string tex_style = "") {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
@@ -47,18 +59,25 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // Decode foreground color
     color fg = decodeColor(fg_color);
 
-    // Parse LaTeX
-    Render* render = MicroTeX::parse(
-        tex,
-        max_width,
-        text_size,
-        line_space,
-        fg,
-        true,                               // fillWidth
-        {false, TexStyle::text},             // overrideTeXStyle
-        math_font,                           // mathFontName
-        main_font                            // mainFontFamily
-    );
+    // Parse LaTeX. Forward MicroTeX exceptions verbatim so users see the
+    // original parser message (with offending token / position info)
+    // instead of a generic failure.
+    Render* render = nullptr;
+    try {
+        render = MicroTeX::parse(
+            tex,
+            max_width,
+            text_size,
+            line_space,
+            fg,
+            true,                                   // fillWidth
+            resolve_tex_style(tex_style),           // overrideTeXStyle
+            math_font,                              // mathFontName
+            main_font                               // mainFontFamily
+        );
+    } catch (const std::exception& e) {
+        Rcpp::stop(std::string("LaTeX parse error: ") + e.what());
+    }
 
     if (!render) {
         Rcpp::stop("Failed to parse LaTeX expression.");
@@ -69,6 +88,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     int height = render->getHeight();
     int depth = render->getDepth();
     float baseline = render->getBaseline();
+    bool is_split = render->isSplit();
 
     // Draw into our recorder
     Graphics2D_Recorder recorder;
@@ -89,6 +109,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     CharacterVector color_col(n);
     NumericVector x2_col(n), y2_col(n);
     NumericVector w_col(n), h_col(n);
+    NumericVector rx_col(n), ry_col(n);
     NumericVector lwd_col(n);
     CharacterVector text_col(n);
     IntegerVector font_style_col(n);
@@ -100,6 +121,10 @@ Rcpp::List parse_latex_cpp(std::string tex,
 
     for (int i = 0; i < n; i++) {
         const auto& rec = records[i];
+
+        // rx/ry are only meaningful for round-rect records; default NA.
+        rx_col[i] = NA_REAL;
+        ry_col[i] = NA_REAL;
 
         switch (rec.type) {
             case DrawRecord::GLYPH:
@@ -237,9 +262,10 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 font_file_col[i] = NA_STRING;
                 break;
             }
-            default:
-                // ROUND_RECT, FILL_ROUND_RECT — treat as rect for now
-                type_col[i] = (rec.type == DrawRecord::FILL_ROUND_RECT) ? "fill_rect" : "rect";
+            case DrawRecord::ROUND_RECT:
+            case DrawRecord::FILL_ROUND_RECT:
+                type_col[i] = (rec.type == DrawRecord::FILL_ROUND_RECT)
+                    ? "fill_roundrect" : "roundrect";
                 x_col[i] = rec.x;
                 y_col[i] = rec.y;
                 glyph_col[i] = NA_INTEGER;
@@ -249,7 +275,29 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 y2_col[i] = NA_REAL;
                 w_col[i] = rec.width;
                 h_col[i] = rec.height;
-                lwd_col[i] = rec.line_width;
+                rx_col[i] = rec.rx;
+                ry_col[i] = rec.ry;
+                lwd_col[i] = (rec.type == DrawRecord::ROUND_RECT)
+                    ? rec.line_width : NA_REAL;
+                text_col[i] = NA_STRING;
+                font_style_col[i] = NA_INTEGER;
+                codepoint_col[i] = NA_INTEGER;
+                font_file_col[i] = NA_STRING;
+                path_list[i] = R_NilValue;
+                break;
+            default:
+                // Unknown record type — emit a minimal placeholder.
+                type_col[i] = "unknown";
+                x_col[i] = NA_REAL;
+                y_col[i] = NA_REAL;
+                glyph_col[i] = NA_INTEGER;
+                font_size_col[i] = NA_REAL;
+                color_col[i] = color_to_hex(rec.col);
+                x2_col[i] = NA_REAL;
+                y2_col[i] = NA_REAL;
+                w_col[i] = NA_REAL;
+                h_col[i] = NA_REAL;
+                lwd_col[i] = NA_REAL;
                 text_col[i] = NA_STRING;
                 font_style_col[i] = NA_INTEGER;
                 codepoint_col[i] = NA_INTEGER;
@@ -270,6 +318,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Named("y2") = y2_col,
         Named("width") = w_col,
         Named("height") = h_col,
+        Named("rx") = rx_col,
+        Named("ry") = ry_col,
         Named("lwd") = lwd_col,
         Named("text") = text_col,
         Named("font_style") = font_style_col,
@@ -285,6 +335,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     result.attr("bbox_height") = height;
     result.attr("bbox_depth") = depth;
     result.attr("bbox_baseline") = baseline;
+    result.attr("bbox_is_split") = is_split;
 
     return result;
 }

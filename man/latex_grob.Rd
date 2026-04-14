@@ -15,6 +15,7 @@ latex_grob(
   rot = 0,
   math_font = "",
   max_width = 0,
+  tex_style = "",
   render_mode = c("typeface", "path"),
   debug = FALSE,
   name = NULL,
@@ -36,11 +37,17 @@ grid.latex(tex, ...)
 Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.}
 
 \item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
-Use \code{""} (default) for the default Latin Modern Math font.
+Use \code{""} (default) for Lete Sans Math, which pairs with R's
+default sans-serif text font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
 
 \item{max_width}{Numeric maximum width in big points for automatic
 line wrapping.  Use \code{0} (default) for no wrapping.}
+
+\item{tex_style}{Character: TeX style override. One of \code{""}
+(default; let the parser decide), \code{"display"}, \code{"text"},
+\code{"script"}, or \code{"scriptscript"}. See \strong{Details}
+for the semantics of each value.}
 
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
@@ -62,29 +69,10 @@ diagnosing vertical alignment.}
 \item{name}{Optional grob name.}
 
 \item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
-Use \code{gpar(col = "red")} to set the default foreground color
-for the formula. Individual elements can still be overridden with
-\code{\\textcolor\{\}} in the LaTeX string.
-
-Font-related parameters (\code{fontfamily}, \code{fontface}) control
-the appearance of text inside \code{\\text\{\}} and \code{\\mbox\{\}}.
-For example, \code{gpar(fontfamily = "serif")} renders
-\code{\\text\{Hello\}} in R's serif font family.
-Any font available to R's graphics system can be used (base families
-like \code{"sans"}, \code{"serif"}, \code{"mono"}, or fonts
-registered via \pkg{showtext} / \pkg{systemfonts}).
-Math symbols always use the selected math font.
-
-Size is controlled by \code{gp$fontsize} (points, default 20)
-and \code{gp$cex} (multiplier, default 1). Both math and text
-scale together. The effective size is baked into the parsed
-layout, so downstream viewports inheriting \code{cex} will not
-re-scale it (matches \code{textGrob} semantics when \code{gp} is
-set explicitly).
-
-Multi-line spacing is controlled by \code{gp$lineheight}
-(default 1.2): inter-line gap = \code{(lineheight - 1) *
-  fontsize} big points.}
+Common entries: \code{col} (formula foreground), \code{fontfamily}
+/ \code{fontface} (text font), \code{fontsize} / \code{cex}
+(formula size), and \code{lineheight} (multi-line spacing). See
+\strong{Details} for how each of these flows through MicroTeX.}
 
 \item{...}{Additional arguments passed to \code{\link{latex_grob}}.}
 }
@@ -102,6 +90,75 @@ The grob supports standard grid queries such as \code{grobWidth()},
 A convenience wrapper that creates a \code{\link{latex_grob}} and
 immediately draws it on the current device via
 \code{\link[grid]{grid.draw}}.
+}
+\details{
+\subsection{Controlling TeX style with \code{tex_style}}{
+
+\code{tex_style} selects the size-and-spacing regime MicroTeX applies to
+the whole expression. It changes the \emph{style} (display vs. text), not
+the font size --- size is always set via \code{gp$fontsize} / \code{gp$cex};
+style-dependent shrinking (for \code{"script"} and \code{"scriptscript"}) is
+applied on top of that size.
+\itemize{
+\item \code{""} (default): let the parser choose based on the delimiters in
+\code{tex}. Inline delimiters (single \code{$}, or \verb{\\(...\\)}) produce
+\code{"text"} style; display delimiters (double \verb{$$}, or \verb{\[...\]})
+produce \code{"display"} style. If the string has no delimiters,
+MicroTeX defaults to \code{"text"} style.
+\item \code{"display"}: force display style. Large operators (\verb{\\sum},
+\verb{\\int}, \verb{\\prod}) render at their full size, limits are placed
+above/below rather than as subscripts/superscripts, and fractions
+use full-size numerators and denominators. Useful when you want a
+display-style equation inline in a label, legend, or
+\code{element_latex()} title.
+\item \code{"text"}: force text (inline) style. Big operators shrink to their
+inline size and limits attach as scripts. The right choice for
+formulas embedded in a line of prose.
+\item \code{"script"}: force script style --- the size normally used for
+first-level subscripts and superscripts. Produces a smaller,
+tighter layout; mainly useful for callouts or sub-labels where a
+compact equation is wanted.
+\item \code{"scriptscript"}: force scriptscript style --- the smallest style,
+used by TeX for doubly-nested scripts. Rarely needed on its own;
+primarily for very dense annotations.
+}
+
+\code{tex_style} applies to the entire expression. To override the style
+of a sub-expression from within \code{tex}, use the inline TeX commands
+\verb{\\displaystyle}, \verb{\\textstyle}, \verb{\\scriptstyle}, or
+\verb{\\scriptscriptstyle}.
+}
+
+\subsection{Graphical parameters (\code{gp})}{
+\itemize{
+\item \code{col}: default foreground color for the formula. Individual
+elements can still be overridden with an inline \verb{\\textcolor}
+command in the LaTeX string.
+\item \code{fontfamily} / \code{fontface}: control the appearance of text inside
+\verb{\\text} and \verb{\\mbox} blocks. For example, \code{gpar(fontfamily = "serif")} renders \verb{\\text} content in R's serif family. Any font
+available to R's graphics system works --- base families
+(\code{"sans"}, \code{"serif"}, \code{"mono"}) as well as fonts registered via
+\pkg{showtext} or \pkg{systemfonts}. Math symbols always use the
+selected math font (see \code{math_font}).
+
+\code{fontfamily} \emph{also} drives MicroTeX's layout metrics for non-math
+text: the matching system font is resolved via \pkg{systemfonts},
+a minimal metrics file is generated on first use and cached under
+\code{tools::R_user_dir("gridmicrotex", "cache")}, so MicroTeX's
+spacing of \verb{\\text} blocks stays in sync with what \pkg{grid}
+actually draws. When \code{fontfamily} is unset, the R default
+(\code{"sans"}) is used. No manual font loading is required for text
+fonts; \code{\link[=load_font]{load_font()}} remains only for adding custom \strong{math}
+fonts.
+\item \code{fontsize} / \code{cex}: formula size is \code{fontsize * cex} big points
+(default 20 * 1). Both math and text scale together. The effective
+size is baked into the parsed layout, so downstream viewports that
+inherit \code{cex} will not re-scale the grob (matching \code{textGrob}
+semantics when \code{gp} is set explicitly).
+\item \code{lineheight}: controls multi-line spacing (default 1.2). The
+inter-line gap is \code{(lineheight - 1) * fontsize} big points.
+}
+}
 }
 \examples{
 \donttest{

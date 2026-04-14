@@ -10,18 +10,26 @@ latex_dims(
   math_font = "",
   line_space = 0,
   max_width = 0,
-  render_mode = c("typeface", "path")
+  tex_style = "",
+  render_mode = c("typeface", "path"),
+  family = "sans"
 )
 }
 \arguments{
 \item{tex}{Character string of LaTeX math code.}
 
 \item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
-Use \code{""} (default) for the default Latin Modern Math font.
+Use \code{""} (default) for Lete Sans Math, which pairs with R's
+default sans-serif text font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
 
 \item{max_width}{Numeric maximum width in big points for automatic
 line wrapping.  Use \code{0} (default) for no wrapping.}
+
+\item{tex_style}{Character: TeX style override. One of \code{""}
+(default; let the parser decide), \code{"display"}, \code{"text"},
+\code{"script"}, or \code{"scriptscript"}. See \strong{Details}
+for the semantics of each value.}
 
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
@@ -33,10 +41,23 @@ font embedding (e.g., the base \code{pdf()} device).
 all devices but text is not selectable in PDF/SVG).
 For PDF output with embedded/selectable text, prefer
 \code{\link[grDevices]{cairo_pdf}}.}
+
+\item{family}{Font family used for non-math text metrics. Defaults
+to \code{"sans"}; pass the same family you intend to use in
+\code{gp = gpar(fontfamily = ...)} for consistent measurement.}
 }
 \value{
-A list with \code{width}, \code{height}, \code{depth}, and
-\code{baseline} as grid unit objects.
+A list with the following elements:
+\itemize{
+\item \code{width}, \code{height}, \code{depth}: grid unit objects
+in big points. \code{height} is total height (ascent + descent).
+\item \code{baseline}: grid unit object giving the baseline position
+measured in big points from the \emph{bottom} of the bounding box.
+Equivalent to \code{height - depth} for single-line formulas. Useful
+for aligning a formula's baseline with surrounding text.
+\item \code{is_split}: logical; \code{TRUE} if the formula was wrapped
+across multiple lines (only possible when \code{max_width > 0}).
+}
 }
 \description{
 Get dimensions of a LaTeX expression

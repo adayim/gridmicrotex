@@ -123,8 +123,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // parse_latex_cpp
-Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path);
-RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP) {
+Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style);
+RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -136,7 +136,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type math_font(math_fontSEXP);
     Rcpp::traits::input_parameter< std::string >::type main_font(main_fontSEXP);
     Rcpp::traits::input_parameter< bool >::type use_path(use_pathSEXP);
-    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path));
+    Rcpp::traits::input_parameter< std::string >::type tex_style(tex_styleSEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -153,7 +154,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_microtex_version", (DL_FUNC) &_gridmicrotex_microtex_version, 0},
     {"_gridmicrotex_microtex_set_default_main_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_main_font, 1},
     {"_gridmicrotex_microtex_main_font_families", (DL_FUNC) &_gridmicrotex_microtex_main_font_families, 0},
-    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 8},
+    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 9},
     {NULL, NULL, 0}
 };
 

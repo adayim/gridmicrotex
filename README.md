@@ -147,12 +147,12 @@ ggplot2 is a soft dependency — the core functions work without it. See
 
 - Full LaTeX math: fractions, roots, integrals, matrices, Greek,
   accents, extensible delimiters
-- Four bundled math fonts: Latin Modern Math, STIX Two Math, Lete Sans
-  Math, TeX Gyre DejaVu Math
+- Four bundled math fonts: Lete Sans Math (default), TeX Gyre DejaVu
+  Math, Latin Modern Math, STIX Two Math
+  - Lete Sans & TeX Gyre DejaVu are sans-serif — pair with
+    `gpar(fontfamily = "sans")` (the R default)
   - Latin Modern & STIX Two are serif — pair with
     `gpar(fontfamily = "serif")`
-  - Lete Sans & TeX Gyre DejaVu are sans-serif — pair with
-    `gpar(fontfamily = "sans")`
 - Color support: `\textcolor{}`, `\color{}`
 - Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
 - CJK/multilingual text in `\text{}`

@@ -59,10 +59,10 @@ resolve_math_font <- function(name) {
 #'
 #' \tabular{lll}{
 #'   \strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
+#'   Lete Sans Math (\code{"lete"}, default) \tab Sans-serif \tab \code{"sans"} \cr
+#'   TeX Gyre DejaVu Math (\code{"dejavu"}) \tab Sans-serif \tab \code{"sans"} \cr
 #'   Latin Modern Math (\code{"lm"}) \tab Serif  \tab \code{"serif"} \cr
 #'   STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
-#'   Lete Sans Math (\code{"lete"})  \tab Sans-serif \tab \code{"sans"} \cr
-#'   TeX Gyre DejaVu Math (\code{"dejavu"}) \tab Sans-serif \tab \code{"sans"} \cr
 #' }
 #'
 #' @return A character vector of math font names.

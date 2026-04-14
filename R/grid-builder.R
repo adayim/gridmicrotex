@@ -104,6 +104,38 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
           name = paste0("rect.", i)
         ))
       },
+      "fill_roundrect" = {
+        # MicroTeX supplies rx/ry separately; grid only takes one radius,
+        # so use the smaller axis to avoid clipping outside the bounds.
+        r <- min(row$rx, row$ry, na.rm = TRUE)
+        children <- grid::gList(children, grid::roundrectGrob(
+          x = grid::unit(row$x, "bigpts"),
+          y = grid::unit(total_h - row$y, "bigpts"),
+          width = grid::unit(row$width, "bigpts"),
+          height = grid::unit(row$height, "bigpts"),
+          r = grid::unit(r, "bigpts"),
+          just = c("left", "top"),
+          gp = grid::gpar(fill = row$color, col = NA),
+          name = paste0("fillroundrect.", i)
+        ))
+      },
+      "roundrect" = {
+        r <- min(row$rx, row$ry, na.rm = TRUE)
+        children <- grid::gList(children, grid::roundrectGrob(
+          x = grid::unit(row$x, "bigpts"),
+          y = grid::unit(total_h - row$y, "bigpts"),
+          width = grid::unit(row$width, "bigpts"),
+          height = grid::unit(row$height, "bigpts"),
+          r = grid::unit(r, "bigpts"),
+          just = c("left", "top"),
+          gp = grid::gpar(
+            col = row$color,
+            fill = NA,
+            lwd = row$lwd * lwd_scale
+          ),
+          name = paste0("roundrect.", i)
+        ))
+      },
       "text" = {
         # Non-math text from \text{} — render as textGrob
         txt <- row$text

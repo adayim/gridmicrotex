@@ -12,10 +12,15 @@
 #' @param rot Rotation angle in degrees, counter-clockwise (default: 0).
 #'   Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.
 #' @param math_font Name of the math font to use (e.g., \code{"stix"}).
-#'   Use \code{""} (default) for the default Latin Modern Math font.
+#'   Use \code{""} (default) for Lete Sans Math, which pairs with R's
+#'   default sans-serif text font.
 #'   See \code{\link{available_math_fonts}} for loaded fonts.
 #' @param max_width Numeric maximum width in big points for automatic
 #'   line wrapping.  Use \code{0} (default) for no wrapping.
+#' @param tex_style Character: TeX style override. One of \code{""}
+#'   (default; let the parser decide), \code{"display"}, \code{"text"},
+#'   \code{"script"}, or \code{"scriptscript"}. See \strong{Details}
+#'   for the semantics of each value.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
@@ -33,35 +38,82 @@
 #'   diagnosing vertical alignment.
 #' @param name Optional grob name.
 #' @param gp Graphical parameters (see \code{\link[grid]{gpar}}).
-#'   Use \code{gpar(col = "red")} to set the default foreground color
-#'   for the formula. Individual elements can still be overridden with
-#'   \code{\\textcolor\{\}} in the LaTeX string.
+#'   Common entries: \code{col} (formula foreground), \code{fontfamily}
+#'   / \code{fontface} (text font), \code{fontsize} / \code{cex}
+#'   (formula size), and \code{lineheight} (multi-line spacing). See
+#'   \strong{Details} for how each of these flows through MicroTeX.
 #'
-#'   Font-related parameters (\code{fontfamily}, \code{fontface}) control
-#'   the appearance of text inside \code{\\text\{\}} and \code{\\mbox\{\}}.
-#'   For example, \code{gpar(fontfamily = "serif")} renders
-#'   \code{\\text\{Hello\}} in R's serif font family.
-#'   Any font available to R's graphics system can be used (base families
-#'   like \code{"sans"}, \code{"serif"}, \code{"mono"}, or fonts
-#'   registered via \pkg{showtext} / \pkg{systemfonts}).
-#'   Math symbols always use the selected math font.
+#' @details
+#' ## Controlling TeX style with `tex_style`
 #'
-#'   Size is controlled by \code{gp$fontsize} (points, default 20)
-#'   and \code{gp$cex} (multiplier, default 1). Both math and text
-#'   scale together. The effective size is baked into the parsed
-#'   layout, so downstream viewports inheriting \code{cex} will not
-#'   re-scale it (matches \code{textGrob} semantics when \code{gp} is
-#'   set explicitly).
+#' `tex_style` selects the size-and-spacing regime MicroTeX applies to
+#' the whole expression. It changes the *style* (display vs. text), not
+#' the font size --- size is always set via `gp$fontsize` / `gp$cex`;
+#' style-dependent shrinking (for `"script"` and `"scriptscript"`) is
+#' applied on top of that size.
 #'
-#'   Multi-line spacing is controlled by \code{gp$lineheight}
-#'   (default 1.2): inter-line gap = \code{(lineheight - 1) *
-#'   fontsize} big points.
+#' - `""` (default): let the parser choose based on the delimiters in
+#'   `tex`. Inline delimiters (single `$`, or `\(...\)`) produce
+#'   `"text"` style; display delimiters (double `$$`, or `\[...\]`)
+#'   produce `"display"` style. If the string has no delimiters,
+#'   MicroTeX defaults to `"text"` style.
+#' - `"display"`: force display style. Large operators (`\sum`,
+#'   `\int`, `\prod`) render at their full size, limits are placed
+#'   above/below rather than as subscripts/superscripts, and fractions
+#'   use full-size numerators and denominators. Useful when you want a
+#'   display-style equation inline in a label, legend, or
+#'   `element_latex()` title.
+#' - `"text"`: force text (inline) style. Big operators shrink to their
+#'   inline size and limits attach as scripts. The right choice for
+#'   formulas embedded in a line of prose.
+#' - `"script"`: force script style --- the size normally used for
+#'   first-level subscripts and superscripts. Produces a smaller,
+#'   tighter layout; mainly useful for callouts or sub-labels where a
+#'   compact equation is wanted.
+#' - `"scriptscript"`: force scriptscript style --- the smallest style,
+#'   used by TeX for doubly-nested scripts. Rarely needed on its own;
+#'   primarily for very dense annotations.
+#'
+#' `tex_style` applies to the entire expression. To override the style
+#' of a sub-expression from within `tex`, use the inline TeX commands
+#' `\displaystyle`, `\textstyle`, `\scriptstyle`, or
+#' `\scriptscriptstyle`.
+#'
+#' ## Graphical parameters (`gp`)
+#'
+#' - `col`: default foreground color for the formula. Individual
+#'   elements can still be overridden with an inline `\textcolor`
+#'   command in the LaTeX string.
+#' - `fontfamily` / `fontface`: control the appearance of text inside
+#'   `\text` and `\mbox` blocks. For example, `gpar(fontfamily =
+#'   "serif")` renders `\text` content in R's serif family. Any font
+#'   available to R's graphics system works --- base families
+#'   (`"sans"`, `"serif"`, `"mono"`) as well as fonts registered via
+#'   \pkg{showtext} or \pkg{systemfonts}. Math symbols always use the
+#'   selected math font (see `math_font`).
+#'
+#'   `fontfamily` *also* drives MicroTeX's layout metrics for non-math
+#'   text: the matching system font is resolved via \pkg{systemfonts},
+#'   a minimal metrics file is generated on first use and cached under
+#'   `tools::R_user_dir("gridmicrotex", "cache")`, so MicroTeX's
+#'   spacing of `\text` blocks stays in sync with what \pkg{grid}
+#'   actually draws. When `fontfamily` is unset, the R default
+#'   (`"sans"`) is used. No manual font loading is required for text
+#'   fonts; [load_font()] remains only for adding custom **math**
+#'   fonts.
+#' - `fontsize` / `cex`: formula size is `fontsize * cex` big points
+#'   (default 20 * 1). Both math and text scale together. The effective
+#'   size is baked into the parsed layout, so downstream viewports that
+#'   inherit `cex` will not re-scale the grob (matching `textGrob`
+#'   semantics when `gp` is set explicitly).
+#' - `lineheight`: controls multi-line spacing (default 1.2). The
+#'   inter-line gap is `(lineheight - 1) * fontsize` big points.
 #'
 #' @return A \code{grid} grob of class \code{"latexgrob"}.
 #' @seealso \code{\link{grid.latex}}, \code{\link{latex_dims}},
 #'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}}
 #' @export
-#'
+#' 
 #' @examples
 #' \donttest{
 #'   g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
@@ -83,6 +135,7 @@ latex_grob <- function(tex,
                        rot = 0,
                        math_font = "",
                        max_width = 0,
+                       tex_style = "",
                        render_mode = c("typeface", "path"),
                        debug = FALSE,
                        name = NULL,
@@ -91,8 +144,10 @@ latex_grob <- function(tex,
   # Resolve package-wide defaults for unspecified arguments
   if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
   if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
+  if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
 
   render_mode <- match.arg(render_mode)
+  .check_tex_style(tex_style)
 
   # Expand any user-registered macros before parsing
   tex <- .expand_macros(tex)
@@ -131,6 +186,12 @@ latex_grob <- function(tex,
   if (!is.null(gp$fontfamily)) text_gp$fontfamily <- gp$fontfamily
   if (!is.null(gp$fontface))   text_gp$fontface <- gp$fontface
 
+  # Auto-register the text font with MicroTeX so that layout metrics
+  # for non-math runs match what grid will draw. The returned family
+  # name (as registered under MicroTeX) is passed as main_font. Uses
+  # "sans" when gp$fontfamily is unset, matching R's grid default.
+  main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
+
   # Register text measurement callback for accurate \text{} layout
   measurer <- .make_text_measurer(text_gp)
   register_text_measurer(measurer)
@@ -144,8 +205,9 @@ latex_grob <- function(tex,
     fg_color = fg_color,
     max_width = max_width,
     math_font = math_font,
-    main_font = "",
-    use_path = (render_mode == "path")
+    main_font = main_font,
+    use_path = (render_mode == "path"),
+    tex_style = tex_style
   )
 
   # Keep a full path-mode layout in typeface mode so we can
@@ -160,16 +222,22 @@ latex_grob <- function(tex,
       fg_color = fg_color,
       max_width = max_width,
       math_font = math_font,
-      main_font = "",
-      use_path = TRUE
+      main_font = main_font,
+      use_path = TRUE,
+      tex_style = tex_style
     )
   }
 
-  # Extract bounding box
+  # Extract bounding box. MicroTeX's getBaseline() returns the baseline
+  # height as a fraction of the total height (0..1, measured from the top).
+  # Convert to absolute bigpts measured from the bottom so that it can be
+  # used directly for vertical alignment.
   bbox_w <- attr(layout, "bbox_width")
   bbox_h <- attr(layout, "bbox_height")
   bbox_d <- attr(layout, "bbox_depth")
-  bbox_bl <- attr(layout, "bbox_baseline")
+  bbox_bl_frac <- attr(layout, "bbox_baseline")
+  bbox_bl_bp <- bbox_h * (1 - bbox_bl_frac)
+  is_split <- isTRUE(attr(layout, "bbox_is_split"))
 
   # bbox_h from MicroTeX's getHeight() is already ascent + descent
   total_h <- bbox_h
@@ -180,7 +248,9 @@ latex_grob <- function(tex,
     bbox_w = bbox_w,
     bbox_h = bbox_h,
     bbox_d = bbox_d,
-    bbox_bl = bbox_bl,
+    bbox_bl = bbox_bl_frac,
+    bbox_bl_bp = bbox_bl_bp,
+    is_split = is_split,
     total_h = total_h,
     fontsize = eff_fontsize,
     hjust = hjust,
@@ -378,21 +448,38 @@ grid.latex <- function(tex, ...) {
 #' Get dimensions of a LaTeX expression
 #'
 #' @inheritParams latex_grob
-#' @return A list with \code{width}, \code{height}, \code{depth}, and
-#'   \code{baseline} as grid unit objects.
+#' @param family Font family used for non-math text metrics. Defaults
+#'   to \code{"sans"}; pass the same family you intend to use in
+#'   \code{gp = gpar(fontfamily = ...)} for consistent measurement.
+#' @return A list with the following elements:
+#' \itemize{
+#'   \item \code{width}, \code{height}, \code{depth}: grid unit objects
+#'     in big points. \code{height} is total height (ascent + descent).
+#'   \item \code{baseline}: grid unit object giving the baseline position
+#'     measured in big points from the \emph{bottom} of the bounding box.
+#'     Equivalent to \code{height - depth} for single-line formulas. Useful
+#'     for aligning a formula's baseline with surrounding text.
+#'   \item \code{is_split}: logical; \code{TRUE} if the formula was wrapped
+#'     across multiple lines (only possible when \code{max_width > 0}).
+#' }
 #' @export
 #'
 #' @examples
 #' latex_dims("\\frac{a}{b}")
 latex_dims <- function(tex, fontsize = 20, math_font = "",
                        line_space = 0, max_width = 0,
-                       render_mode = c("typeface", "path")) {
+                       tex_style = "",
+                       render_mode = c("typeface", "path"),
+                       family = "sans") {
   if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
   if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
+  if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
   render_mode <- match.arg(render_mode)
+  .check_tex_style(tex_style)
   tex <- .expand_macros(tex)
   math_font <- resolve_math_font(math_font)
-  measurer <- .make_text_measurer(grid::gpar())
+  main_font <- .resolve_text_font(family)
+  measurer  <- .make_text_measurer(grid::gpar(fontfamily = family))
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
 
@@ -400,13 +487,17 @@ latex_dims <- function(tex, fontsize = 20, math_font = "",
     tex = tex, text_size = fontsize,
     line_space = line_space, fg_color = "#000000",
     max_width = max_width, math_font = math_font,
-    main_font = "", use_path = (render_mode == "path")
+    main_font = main_font, use_path = (render_mode == "path"),
+    tex_style = tex_style
   )
+  bbox_h <- attr(layout, "bbox_height")
+  bbox_bl_frac <- attr(layout, "bbox_baseline")
   list(
     width    = grid::unit(attr(layout, "bbox_width"), "bigpts"),
-    height   = grid::unit(attr(layout, "bbox_height"), "bigpts"),
+    height   = grid::unit(bbox_h, "bigpts"),
     depth    = grid::unit(attr(layout, "bbox_depth"), "bigpts"),
-    baseline = attr(layout, "bbox_baseline")
+    baseline = grid::unit(bbox_h * (1 - bbox_bl_frac), "bigpts"),
+    is_split = isTRUE(attr(layout, "bbox_is_split"))
   )
 }
 

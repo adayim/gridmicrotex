@@ -1,10 +1,11 @@
 .onLoad <- function(libname, pkgname) {
-  # Initialize MicroTeX with Latin Modern Math as the default font
-  clm_path <- system.file("fonts", "latinmodern-math.clm2", package = pkgname)
-  otf_path <- system.file("fonts", "latinmodern-math.otf", package = pkgname)
+  # Initialize MicroTeX with Lete Sans Math as the default font --- it pairs
+  # naturally with R's sans-serif default for plot text.
+  clm_path <- system.file("fonts", "LeteSansMath.clm2", package = pkgname)
+  otf_path <- system.file("fonts", "LeteSansMath.otf", package = pkgname)
 
   if (nchar(clm_path) == 0 || nchar(otf_path) == 0) {
-    warning("gridmicrotex: Latin Modern Math font files not found, LaTeX rendering will not work")
+    warning("gridmicrotex: Lete Sans Math font files not found, LaTeX rendering will not work")
     return()
   }
 
@@ -14,16 +15,16 @@
   .onLoad_ggplot2()
 
   # Load additional bundled math fonts
+  lm_clm <- system.file("fonts", "latinmodern-math.clm2", package = pkgname)
+  lm_otf <- system.file("fonts", "latinmodern-math.otf", package = pkgname)
+  if (nchar(lm_clm) > 0 && nchar(lm_otf) > 0) {
+    microtex_add_font(lm_clm, lm_otf)
+  }
+
   stix_clm <- system.file("fonts", "STIXTwoMath-Regular.clm2", package = pkgname)
   stix_otf <- system.file("fonts", "STIXTwoMath-Regular.otf", package = pkgname)
   if (nchar(stix_clm) > 0 && nchar(stix_otf) > 0) {
     microtex_add_font(stix_clm, stix_otf)
-  }
-
-  lete_clm <- system.file("fonts", "LeteSansMath.clm2", package = pkgname)
-  lete_otf <- system.file("fonts", "LeteSansMath.otf", package = pkgname)
-  if (nchar(lete_clm) > 0 && nchar(lete_otf) > 0) {
-    microtex_add_font(lete_clm, lete_otf)
   }
 
   dv_clm <- system.file("fonts", "texgyredejavu-math.clm2", package = pkgname)

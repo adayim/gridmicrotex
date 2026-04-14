@@ -20,7 +20,9 @@ LinkingTo:
 Imports:
     grDevices,
     grid,
-    Rcpp
+    Rcpp,
+    systemfonts,
+    tools
 Suggests:
     ggplot2 (>= 4.0.0),
     knitr,

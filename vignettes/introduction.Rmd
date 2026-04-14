@@ -11,7 +11,8 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  dpi = 300
+  dpi = 300,
+  dev = "ragg_png"
 )
 library(gridmicrotex)
 ```
@@ -78,8 +79,9 @@ grid.latex(
 
 ## Math fonts
 
-The package bundles Latin Modern Math (default), STIX Two Math,
-Lete Sans Math, and TeX Gyre DejaVu Math.
+The package bundles Lete Sans Math (default --- pairs with R's
+default sans text), Latin Modern Math, STIX Two Math, and TeX Gyre
+DejaVu Math.
 For most users, the easiest workflow is:
 
 1. List available math fonts with `available_math_fonts()`
@@ -95,8 +97,8 @@ latex_options(math_font = "stix")
 grid::grid.newpage()
 grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
 
-# Switch back to Latin Modern Math
-latex_options(math_font = "lm")
+# Switch back to the default (Lete Sans Math)
+latex_options(math_font = "lete")
 ```
 
 You can still override the font per call via `math_font`:
@@ -125,7 +127,8 @@ matching CLM metrics file (auto-discovered when possible):
 load_font("path/to/MyFont.otf")
 ```
 
-You can find and download other fonts with CLM [here](https://github.com/NanoMichael/MicroTeX/tree/openmath/res)
+You can generate your font CLM using the bundled Python script. See help
+for `load_font()` for instructions.
 
 ### Render modes
 
@@ -134,7 +137,7 @@ gridmicrotex supports two rendering modes for math glyphs:
 - **`"typeface"`** (default): Renders glyphs as native text using the
   math font's typeface. This produces selectable, searchable, and
   accessible text in PDF and SVG output. Requires the math font (e.g.,
-  Latin Modern Math) to be installed on the system, and a device that
+  Lete Sans Math) to be installed on the system, and a device that
   supports font embedding (e.g., `ragg::agg_png()`,
   `svglite::svglite()`, `grDevices::cairo_pdf()`). On devices that
   do not support typeface rendering (e.g., the base `pdf()` device),
@@ -198,17 +201,17 @@ pair them with a matching `fontfamily`:
 
 | Math font | Style | Suggested `fontfamily` |
 |-----------|-------|------------------------|
+| Lete Sans Math (`"lete"`, default) | Sans-serif | `"sans"` |
+| TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"` |
 | Latin Modern Math (`"lm"`) | Serif | `"serif"` |
 | STIX Two Math (`"stix"`) | Serif | `"serif"` |
-| Lete Sans Math (`"lete"`) | Sans-serif | `"sans"` |
-| TeX Gyre DejaVu Math (`"dejavu"`) | Sans-serif | `"sans"` |
 
 ```{r font-pairing, fig.height = 1, fig.width = 6, out.width="70%"}
 grid::grid.newpage()
 grid.latex(
   "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",
-  fontsize = 20, math_font = "dejavu",
-  gp = grid::gpar(fontfamily = "sans")
+  math_font = "dejavu",
+  gp = grid::gpar(fontfamily = "sans", fontsize = 12)
 )
 ```
 

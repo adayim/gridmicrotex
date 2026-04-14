@@ -15,7 +15,8 @@ element_latex(
 }
 \arguments{
 \item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
-Use \code{""} (default) for the default Latin Modern Math font.
+Use \code{""} (default) for Lete Sans Math, which pairs with R's
+default sans-serif text font.
 See \code{\link{available_math_fonts}} for loaded fonts.}
 
 \item{max_width}{Numeric maximum width in big points for automatic

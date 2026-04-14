@@ -45,7 +45,7 @@ microtex_main_font_families <- function() {
     .Call(`_gridmicrotex_microtex_main_font_families`)
 }
 
-parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE) {
-    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path)
+parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "") {
+    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style)
 }
 

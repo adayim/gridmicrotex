@@ -5,7 +5,7 @@
 \alias{reset_latex_options}
 \title{Set or query package-wide LaTeX rendering defaults}
 \usage{
-latex_options(math_font = NULL, render_mode = NULL)
+latex_options(math_font = NULL, render_mode = NULL, tex_style = NULL)
 
 reset_latex_options()
 }
@@ -14,6 +14,12 @@ reset_latex_options()
 \code{\link{available_math_fonts}}).}
 
 \item{render_mode}{Either \code{"typeface"} or \code{"path"}.}
+
+\item{tex_style}{TeX style override. One of \code{""} (let the parser
+decide), \code{"display"}, \code{"text"}, \code{"script"}, or
+\code{"scriptscript"}. \code{"display"} forces large operators with
+limits placed over/under, useful for inline labels that should still
+look like display equations.}
 }
 \value{
 Invisibly returns the previous settings (a list). With no
