@@ -123,11 +123,14 @@ for LaTeX-rendered axis titles:
 
 ``` r
 library(ggplot2)
+# Add a LaTeX table as an annotation
+tab_str <- "\\begin{tabular}{c|c} \\text{A} & \\text{B} \\\\ \\hline 1 & \\cellcolor{#00bde5}2 \\\\ 3 & 4 \\end{tabular}"
 
 df <- data.frame(x = 1:3, y = 1:3,
                  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
 ggplot(df, aes(x, y, label = eq)) + 
   geom_latex() +
+  annotate("latex", x = 1, y = 2.7, label = tab_str, size = 12) +
   labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
   theme(axis.title.x = element_latex())
 ```
