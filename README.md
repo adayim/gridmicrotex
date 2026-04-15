@@ -48,7 +48,7 @@ grid.newpage()
 grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", gp = grid::gpar(fontsize = 30))
 ```
 
-<img src="man/figures/README-example-basic-1.png" alt="" width="100%" />
+<img src="man/figures/README-example-basic-1.png" alt="" width="50%" />
 
 ### Composing with other grobs
 
@@ -69,7 +69,7 @@ grid.rect(
 grid.draw(g)
 ```
 
-<img src="man/figures/README-example-compose-1.png" alt="" width="100%" />
+<img src="man/figures/README-example-compose-1.png" alt="" width="30%" />
 
 ### Multiple expressions
 
@@ -92,7 +92,7 @@ for (i in seq_along(exprs)) {
 }
 ```
 
-<img src="man/figures/README-example-multiple-1.png" alt="" width="100%" />
+<img src="man/figures/README-example-multiple-1.png" alt="" width="40%" />
 
 ### Mixed text and math
 
@@ -106,7 +106,7 @@ grid.latex(
 )
 ```
 
-<img src="man/figures/README-example-mixed-definition-1.png" alt="" width="100%" />
+<img src="man/figures/README-example-mixed-definition-1.png" alt="" width="50%" />
 
 ## CJK and multilingual text
 
@@ -120,7 +120,7 @@ grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2",
            gp = gpar(fontsize = 24, fontfamily = "sans"))
 ```
 
-<img src="man/figures/README-example-mixed-cjk-math-1.png" alt="" width="100%" />
+<img src="man/figures/README-example-mixed-cjk-math-1.png" alt="" width="50%" />
 
 ## ggplot2 integration
 
@@ -129,16 +129,19 @@ Use `geom_latex()` to place LaTeX labels at data coordinates, and
 
 ``` r
 library(ggplot2)
+# Add a LaTeX table as an annotation
+tab_str <- "\\begin{tabular}{c|c} \\text{A} & \\text{B} \\\\ \\hline 1 & \\cellcolor{#00bde5}2 \\\\ 3 & 4 \\end{tabular}"
 
 df <- data.frame(x = 1:3, y = 1:3,
                  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
 ggplot(df, aes(x, y, label = eq)) + 
   geom_latex() +
+  annotate("latex", x = 1, y = 2.7, label = tab_str, size = 12) +
   labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
   theme(axis.title.x = element_latex())
 ```
 
-<img src="man/figures/README-example-ggplot2-geom-1.png" alt="" width="100%" />
+<img src="man/figures/README-example-ggplot2-geom-1.png" alt="" width="80%" />
 
 ggplot2 is a soft dependency — the core functions work without it. See
 `vignette("ggplot2-integration")` for more examples.
