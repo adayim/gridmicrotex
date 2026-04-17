@@ -27,16 +27,12 @@ resolve_math_font <- function(name) {
     return(.font_aliases[[lower]])
   }
 
-  # Check if it matches a loaded font (case-insensitive)
+  # Check if it matches a loaded font (case-insensitive). This also
+  # covers the exact-match case.
   loaded <- microtex_math_font_names()
   idx <- match(tolower(name), tolower(loaded))
   if (!is.na(idx)) {
     return(loaded[idx])
-  }
-
-  # Exact match already?
-  if (name %in% loaded) {
-    return(name)
   }
 
   stop(
@@ -196,29 +192,23 @@ load_font <- function(otf_path, clm_path = NULL) {
   invisible(NULL)
 }
 
-# Search for a matching CLM file for a given OTF path
+# Search for a matching CLM file for a given OTF path. Looks next to
+# the OTF first, then in the package's bundled fonts dir; tries .clm2
+# (current format) before .clm1 (legacy, no glyph paths).
 .find_clm <- function(otf_path) {
-  # 1. Same directory, same stem
-  stem <- tools::file_path_sans_ext(otf_path)
-  candidate <- paste0(stem, ".clm2")
-  if (file.exists(candidate)) return(candidate)
+  stem      <- tools::file_path_sans_ext(otf_path)
+  base_stem <- tools::file_path_sans_ext(basename(otf_path))
 
-  # Also try .clm1 extension
-  candidate1 <- paste0(stem, ".clm1")
-  if (file.exists(candidate1)) return(candidate1)
+  for (ext in c(".clm2", ".clm1")) {
+    sibling <- paste0(stem, ext)
+    if (file.exists(sibling)) return(sibling)
 
-  # 2. Check bundled fonts in the package
-  otf_base <- basename(otf_path)
-  clm_base <- paste0(tools::file_path_sans_ext(otf_base), ".clm2")
-  pkg_candidate <- system.file("fonts", clm_base, package = "gridmicrotex")
-  if (nzchar(pkg_candidate)) return(pkg_candidate)
-
-  clm_base1 <- paste0(tools::file_path_sans_ext(otf_base), ".clm1")
-  pkg_candidate1 <- system.file("fonts", clm_base1, package = "gridmicrotex")
-  if (nzchar(pkg_candidate1)) return(pkg_candidate1)
+    bundled <- system.file("fonts", paste0(base_stem, ext), package = "gridmicrotex")
+    if (nzchar(bundled)) return(bundled)
+  }
 
   stop(
-    "Could not find a CLM metrics file for: ", otf_base, "\n",
+    "Could not find a CLM metrics file for: ", basename(otf_path), "\n",
     "Searched:\n",
     "  - ", paste0(stem, ".clm2"), "\n",
     "  - Package bundled fonts\n",

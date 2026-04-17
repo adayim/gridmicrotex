@@ -1,3 +1,8 @@
+# Null-coalescing operator. Defined here so it's available to every R
+# file in the package (R loads files alphabetically by default, and
+# `o` sorts ahead of the files that use it).
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
 .latex_options <- new.env(parent = emptyenv())
 .latex_options$values <- list(
   math_font   = NULL,
@@ -79,6 +84,21 @@ reset_latex_options <- function() {
 # Internal: resolve an argument against latex_options().
 .opt <- function(name) {
   .latex_options$values[[name]]
+}
+
+# Resolve named formal args of the calling function against
+# latex_options(): any arg the caller did not supply explicitly is
+# replaced (in the caller's frame) by .opt(<name>) when that option is
+# set. Used by latex_grob(), latex_dims(), latex_tree() so the
+# missing-arg-then-fallback pattern lives in one place.
+.apply_opts <- function(...) {
+  env <- parent.frame()
+  for (n in c(...)) {
+    if (eval(call("missing", as.name(n)), env)) {
+      opt <- .opt(n)
+      if (!is.null(opt)) assign(n, opt, envir = env)
+    }
+  }
 }
 
 # Internal: validate a tex_style value. Use exact matching (not match.arg)

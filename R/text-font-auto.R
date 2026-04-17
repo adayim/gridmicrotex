@@ -86,18 +86,17 @@
   cached_fam <- .text_font_registered[[otf_path]]
   if (!is.null(cached_fam)) return(cached_fam)
 
-  # Cache key is tied to the original source + face index so that the
-  # same ttc face always resolves to the same CLM across sessions.
-  clm_key <- .text_clm_cache_key(source_path, face_index)
-  clm_path <- .ensure_text_clm(otf_path, clm_key)
-  if (is.null(clm_path)) return("")
-
-  # Parse the OTF just enough to learn the family name MicroTeX will
-  # index it under. Could be read from the CLM instead, but re-parsing
-  # is fast and avoids duplicating that logic.
+  # Parse the OTF once: we need the family name MicroTeX will register
+  # under, and `.ensure_text_clm` needs the same parse on cache miss.
   meta <- .parse_otf_metrics(otf_path)
   fam_name <- if (nzchar(meta$family)) meta$family else meta$name
   if (!nzchar(fam_name)) return("")
+
+  # Cache key is tied to the original source + face index so that the
+  # same ttc face always resolves to the same CLM across sessions.
+  clm_key <- .text_clm_cache_key(source_path, face_index)
+  clm_path <- .ensure_text_clm(otf_path, clm_key, meta = meta)
+  if (is.null(clm_path)) return("")
 
   microtex_add_font(clm_path, otf_path)
   .text_font_registered[[otf_path]] <- fam_name
@@ -107,8 +106,9 @@
 # Generate or locate a cached .clm1 for otf_path. `key` overrides the
 # cache key — useful when `otf_path` is an intermediate file (e.g. a
 # face extracted from a .ttc) and we want the CLM keyed to the original
-# source. Returns the clm path, or NULL on failure.
-.ensure_text_clm <- function(otf_path, key = NULL) {
+# source. `meta` is the parsed OTF metrics; supplied by the caller so we
+# don't re-parse the OTF on cache miss. Returns the clm path, or NULL.
+.ensure_text_clm <- function(otf_path, key = NULL, meta = NULL) {
   cache_dir <- .text_clm_cache_dir()
   if (!dir.exists(cache_dir)) {
     dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
@@ -122,7 +122,7 @@
     return(clm_path)
   }
 
-  meta <- .parse_otf_metrics(otf_path)
+  if (is.null(meta)) meta <- .parse_otf_metrics(otf_path)
   # Write to a temp file first, then rename — avoids leaving a
   # half-written CLM on disk if R is interrupted.
   tmp <- paste0(clm_path, ".tmp")

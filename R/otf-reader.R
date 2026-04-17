@@ -82,8 +82,15 @@
   # beyond numOfLongHorMetrics inherit the last advance width.
   advances <- integer(num_glyphs)
   hmtx_off <- tables$hmtx$offset
-  for (i in seq_len(num_h_metrics)) {
-    advances[i] <- .ru16(bytes, hmtx_off + (i - 1L) * 4L)
+  if (num_h_metrics > 0L) {
+    # Read all 2*num_h_metrics u16s in one call, then take odd indices
+    # (the advance widths — even indices are i16 lsb, which we ignore).
+    pairs <- readBin(
+      bytes[hmtx_off:(hmtx_off + num_h_metrics * 4L - 1L)],
+      what = "integer", size = 2L, signed = FALSE, endian = "big",
+      n = num_h_metrics * 2L
+    )
+    advances[seq_len(num_h_metrics)] <- pairs[seq(1L, by = 2L, length.out = num_h_metrics)]
   }
   if (num_glyphs > num_h_metrics && num_h_metrics > 0L) {
     advances[(num_h_metrics + 1L):num_glyphs] <- advances[num_h_metrics]
@@ -156,8 +163,7 @@
   delta_off <- start_off + seg_count_x2
   range_off <- delta_off + seg_count_x2
 
-  unicodes <- integer(0)
-  glyphs   <- integer(0)
+  parts <- vector("list", seg_count)
   for (i in seq_len(seg_count)) {
     end_code   <- .ru16(bytes, end_off   + (i - 1L) * 2L)
     start_code <- .ru16(bytes, start_off + (i - 1L) * 2L)
@@ -179,16 +185,16 @@
       }
     }
     keep <- gids != 0L & cps != 0L
-    unicodes <- c(unicodes, cps[keep])
-    glyphs   <- c(glyphs, gids[keep])
+    parts[[i]] <- list(u = cps[keep], g = gids[keep])
   }
+  unicodes <- unlist(lapply(parts, `[[`, "u"), use.names = FALSE)
+  glyphs   <- unlist(lapply(parts, `[[`, "g"), use.names = FALSE)
   .dedupe_cmap(unicodes, glyphs)
 }
 
 .parse_cmap12 <- function(bytes, off) {
   num_groups <- .ru32(bytes, off + 12L)
-  unicodes <- integer(0)
-  glyphs   <- integer(0)
+  parts <- vector("list", num_groups)
   group_off <- off + 16L
   for (i in seq_len(num_groups)) {
     rec <- group_off + (i - 1L) * 12L
@@ -197,9 +203,10 @@
     start_gid  <- .ru32(bytes, rec + 8L)
     cps  <- start_char:end_char
     gids <- start_gid + seq_len(length(cps)) - 1L
-    unicodes <- c(unicodes, cps)
-    glyphs   <- c(glyphs, gids)
+    parts[[i]] <- list(u = cps, g = gids)
   }
+  unicodes <- unlist(lapply(parts, `[[`, "u"), use.names = FALSE)
+  glyphs   <- unlist(lapply(parts, `[[`, "g"), use.names = FALSE)
   .dedupe_cmap(unicodes, glyphs)
 }
 

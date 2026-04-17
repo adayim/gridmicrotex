@@ -79,47 +79,35 @@
 .pack_cmap <- function(unicodes, glyph_ids) {
   n <- length(unicodes)
   buf <- raw(n * 6L)
-  for (i in seq_len(n)) {
-    u <- unicodes[i]
-    g <- glyph_ids[i]
-    base <- (i - 1L) * 6L
-    buf[base + 1L] <- as.raw(bitwAnd(bitwShiftR(u, 24L), 0xFFL))
-    buf[base + 2L] <- as.raw(bitwAnd(bitwShiftR(u, 16L), 0xFFL))
-    buf[base + 3L] <- as.raw(bitwAnd(bitwShiftR(u,  8L), 0xFFL))
-    buf[base + 4L] <- as.raw(bitwAnd(u,                0xFFL))
-    buf[base + 5L] <- as.raw(bitwAnd(bitwShiftR(g,  8L), 0xFFL))
-    buf[base + 6L] <- as.raw(bitwAnd(g,                0xFFL))
-  }
+  if (n == 0L) return(buf)
+  u <- as.integer(unicodes)
+  g <- as.integer(glyph_ids)
+  # Vectorized subset-assign: one call per byte position across all records.
+  buf[seq.int(1L, by = 6L, length.out = n)] <- as.raw(bitwAnd(bitwShiftR(u, 24L), 0xFFL))
+  buf[seq.int(2L, by = 6L, length.out = n)] <- as.raw(bitwAnd(bitwShiftR(u, 16L), 0xFFL))
+  buf[seq.int(3L, by = 6L, length.out = n)] <- as.raw(bitwAnd(bitwShiftR(u,  8L), 0xFFL))
+  buf[seq.int(4L, by = 6L, length.out = n)] <- as.raw(bitwAnd(u, 0xFFL))
+  buf[seq.int(5L, by = 6L, length.out = n)] <- as.raw(bitwAnd(bitwShiftR(g, 8L), 0xFFL))
+  buf[seq.int(6L, by = 6L, length.out = n)] <- as.raw(bitwAnd(g, 0xFFL))
   buf
 }
 
 # Pack glyph records: (i16 width, i16 height, i16 depth, i16 xMin, u16 kernCount=0).
 .pack_glyphs <- function(advances, ascent, descent, n) {
   buf <- raw(n * 10L)
-  # Pre-compute ascent/descent bytes (same for every glyph in this minimal form).
-  h_hi <- as.raw(bitwAnd(bitwShiftR(ascent,  8L), 0xFFL))
-  h_lo <- as.raw(bitwAnd(ascent, 0xFFL))
-  d_hi <- as.raw(bitwAnd(bitwShiftR(descent, 8L), 0xFFL))
-  d_lo <- as.raw(bitwAnd(descent, 0xFFL))
-  zero <- as.raw(0L)
-  for (i in seq_len(n)) {
-    w <- if (i <= length(advances)) advances[i] else 0L
-    if (w < 0L) w <- 0L
-    if (w > 0xFFFFL) w <- 0xFFFFL
-    w_hi <- as.raw(bitwAnd(bitwShiftR(w, 8L), 0xFFL))
-    w_lo <- as.raw(bitwAnd(w, 0xFFL))
-    base <- (i - 1L) * 10L
-    buf[base + 1L] <- w_hi      # width  hi
-    buf[base + 2L] <- w_lo      # width  lo
-    buf[base + 3L] <- h_hi      # height hi
-    buf[base + 4L] <- h_lo      # height lo
-    buf[base + 5L] <- d_hi      # depth  hi
-    buf[base + 6L] <- d_lo      # depth  lo
-    buf[base + 7L] <- zero      # xMin   hi (0)
-    buf[base + 8L] <- zero      # xMin   lo (0)
-    buf[base + 9L] <- zero      # kernCount hi (0)
-    buf[base + 10L] <- zero     # kernCount lo (0)
-  }
+  if (n == 0L) return(buf)
+  # Pad / truncate advances to n and clamp to u16 range.
+  w <- if (length(advances) >= n) advances[seq_len(n)] else c(advances, integer(n - length(advances)))
+  w <- pmin.int(pmax.int(as.integer(w), 0L), 0xFFFFL)
+  # Width: vectorized across records. Height/depth: same for every glyph,
+  # so a single scalar broadcast suffices for each of the two bytes.
+  buf[seq.int(1L, by = 10L, length.out = n)] <- as.raw(bitwAnd(bitwShiftR(w, 8L), 0xFFL))
+  buf[seq.int(2L, by = 10L, length.out = n)] <- as.raw(bitwAnd(w, 0xFFL))
+  buf[seq.int(3L, by = 10L, length.out = n)] <- as.raw(bitwAnd(bitwShiftR(ascent,  8L), 0xFFL))
+  buf[seq.int(4L, by = 10L, length.out = n)] <- as.raw(bitwAnd(ascent, 0xFFL))
+  buf[seq.int(5L, by = 10L, length.out = n)] <- as.raw(bitwAnd(bitwShiftR(descent, 8L), 0xFFL))
+  buf[seq.int(6L, by = 10L, length.out = n)] <- as.raw(bitwAnd(descent, 0xFFL))
+  # Positions 7..10 (xMin, kernCount) stay zero from raw() init.
   buf
 }
 

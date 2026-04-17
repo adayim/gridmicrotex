@@ -15,184 +15,153 @@
 build_latex_children <- function(layout_df, total_h, depth = 0,
                                  text_gp = NULL,
                                  render_mode = "typeface") {
-  children <- grid::gList()
   n <- nrow(layout_df)
-  if (n == 0) return(children)
+  if (n == 0) return(grid::gList())
 
   # MicroTeX line widths are in bigpts (1/72 inch) but R's lwd unit is
   # 1/96 inch, so scale by 96/72 = 4/3 to get correct stroke widths.
   lwd_scale <- 96 / 72
 
-  # Collect glyph records for batched glyphGrob creation (typeface mode)
-  glyph_ids <- integer(0)
-  glyph_x <- numeric(0)
-  glyph_y <- numeric(0)
-  glyph_sizes <- numeric(0)
-  glyph_cols <- character(0)
-  glyph_fonts <- character(0)
+  # Pre-extract columns. data.frame row indexing (`layout_df[i, ]`)
+  # is much slower than column access (`layout_df$x[i]`).
+  type   <- layout_df$type
+  x      <- layout_df$x;      y      <- layout_df$y
+  x2     <- layout_df$x2;     y2     <- layout_df$y2
+  width  <- layout_df$width;  height <- layout_df$height
+  rx     <- layout_df$rx;     ry     <- layout_df$ry
+  color  <- layout_df$color;  lwd    <- layout_df$lwd
+
+  # Pre-allocated parts slot. parts[i] holds the grob for layout row i
+  # (NULL for empty/skipped rows and for glyph rows, which are batched
+  # below). Reserve one extra slot at the end for the batched glyphGrob
+  # so the final assembly is one do.call instead of an O(n) gList walk.
+  parts <- vector("list", n + 1L)
 
   for (i in seq_len(n)) {
-    row <- layout_df[i, ]
-
-    switch(row$type,
+    parts[[i]] <- switch(type[i],
       "path" = {
         path_data <- layout_df$path[[i]]
-        if (!is.null(path_data)) {
-          grob <- build_path_grob(path_data, row$color, i, total_h)
-          if (!is.null(grob)) {
-            children <- grid::gList(children, grob)
-          }
-        }
+        if (is.null(path_data)) NULL
+        else build_path_grob(path_data, color[i], i, total_h)
       },
-      "line" = {
-        # MicroTeX draws all TeX rules (fraction bars, \hline, vertical
-        # borders) as horizontal strokes via drawLine with large stroke
-        # width.  Render horizontal lines as filled rectGrobs so that
-        # dimensions stay in bigpts and avoid lwd-unit issues.
-        if (abs(row$y - row$y2) < 0.001) {
-          # Horizontal line → filled rect (covers hline, vline rules,
-          # fraction bars, overlines, underlines)
-          lw <- row$lwd
-          children <- grid::gList(children, grid::rectGrob(
-            x = grid::unit(row$x, "bigpts"),
-            y = grid::unit(total_h - row$y, "bigpts"),
-            width = grid::unit(row$x2 - row$x, "bigpts"),
-            height = grid::unit(lw, "bigpts"),
-            just = c("left", "centre"),
-            gp = grid::gpar(fill = row$color, col = NA),
-            name = paste0("rule.", i)
-          ))
-        } else {
-          # Non-horizontal line (e.g. \cancel diagonals)
-          children <- grid::gList(children, grid::segmentsGrob(
-            x0 = grid::unit(row$x, "bigpts"),
-            y0 = grid::unit(total_h - row$y, "bigpts"),
-            x1 = grid::unit(row$x2, "bigpts"),
-            y1 = grid::unit(total_h - row$y2, "bigpts"),
-            gp = grid::gpar(
-              col = row$color,
-              lwd = row$lwd * lwd_scale,
-              lineend = "butt"
-            ),
-            name = paste0("line.", i)
-          ))
-        }
+      "line" = if (abs(y[i] - y2[i]) < 0.001) {
+        # Horizontal rule (fraction bars, \hline, vertical borders) →
+        # filled rect; keeps dimensions in bigpts and avoids lwd issues.
+        grid::rectGrob(
+          x = grid::unit(x[i], "bigpts"),
+          y = grid::unit(total_h - y[i], "bigpts"),
+          width = grid::unit(x2[i] - x[i], "bigpts"),
+          height = grid::unit(lwd[i], "bigpts"),
+          just = c("left", "centre"),
+          gp = grid::gpar(fill = color[i], col = NA),
+          name = paste0("rule.", i)
+        )
+      } else {
+        grid::segmentsGrob(
+          x0 = grid::unit(x[i], "bigpts"),
+          y0 = grid::unit(total_h - y[i], "bigpts"),
+          x1 = grid::unit(x2[i], "bigpts"),
+          y1 = grid::unit(total_h - y2[i], "bigpts"),
+          gp = grid::gpar(col = color[i], lwd = lwd[i] * lwd_scale, lineend = "butt"),
+          name = paste0("line.", i)
+        )
       },
-      "fill_rect" = {
-        children <- grid::gList(children, grid::rectGrob(
-          x = grid::unit(row$x, "bigpts"),
-          y = grid::unit(total_h - row$y, "bigpts"),
-          width = grid::unit(row$width, "bigpts"),
-          height = grid::unit(row$height, "bigpts"),
-          just = c("left", "top"),
-          gp = grid::gpar(fill = row$color, col = NA),
-          name = paste0("fillrect.", i)
-        ))
-      },
-      "rect" = {
-        children <- grid::gList(children, grid::rectGrob(
-          x = grid::unit(row$x, "bigpts"),
-          y = grid::unit(total_h - row$y, "bigpts"),
-          width = grid::unit(row$width, "bigpts"),
-          height = grid::unit(row$height, "bigpts"),
-          just = c("left", "top"),
-          gp = grid::gpar(
-            col = row$color,
-            fill = NA,
-            lwd = row$lwd * lwd_scale
-          ),
-          name = paste0("rect.", i)
-        ))
-      },
+      "fill_rect" = grid::rectGrob(
+        x = grid::unit(x[i], "bigpts"),
+        y = grid::unit(total_h - y[i], "bigpts"),
+        width = grid::unit(width[i], "bigpts"),
+        height = grid::unit(height[i], "bigpts"),
+        just = c("left", "top"),
+        gp = grid::gpar(fill = color[i], col = NA),
+        name = paste0("fillrect.", i)
+      ),
+      "rect" = grid::rectGrob(
+        x = grid::unit(x[i], "bigpts"),
+        y = grid::unit(total_h - y[i], "bigpts"),
+        width = grid::unit(width[i], "bigpts"),
+        height = grid::unit(height[i], "bigpts"),
+        just = c("left", "top"),
+        gp = grid::gpar(col = color[i], fill = NA, lwd = lwd[i] * lwd_scale),
+        name = paste0("rect.", i)
+      ),
       "fill_roundrect" = {
         # MicroTeX supplies rx/ry separately; grid only takes one radius,
         # so use the smaller axis to avoid clipping outside the bounds.
-        r <- min(row$rx, row$ry, na.rm = TRUE)
-        children <- grid::gList(children, grid::roundrectGrob(
-          x = grid::unit(row$x, "bigpts"),
-          y = grid::unit(total_h - row$y, "bigpts"),
-          width = grid::unit(row$width, "bigpts"),
-          height = grid::unit(row$height, "bigpts"),
+        r <- min(rx[i], ry[i], na.rm = TRUE)
+        grid::roundrectGrob(
+          x = grid::unit(x[i], "bigpts"),
+          y = grid::unit(total_h - y[i], "bigpts"),
+          width = grid::unit(width[i], "bigpts"),
+          height = grid::unit(height[i], "bigpts"),
           r = grid::unit(r, "bigpts"),
           just = c("left", "top"),
-          gp = grid::gpar(fill = row$color, col = NA),
+          gp = grid::gpar(fill = color[i], col = NA),
           name = paste0("fillroundrect.", i)
-        ))
+        )
       },
       "roundrect" = {
-        r <- min(row$rx, row$ry, na.rm = TRUE)
-        children <- grid::gList(children, grid::roundrectGrob(
-          x = grid::unit(row$x, "bigpts"),
-          y = grid::unit(total_h - row$y, "bigpts"),
-          width = grid::unit(row$width, "bigpts"),
-          height = grid::unit(row$height, "bigpts"),
+        r <- min(rx[i], ry[i], na.rm = TRUE)
+        grid::roundrectGrob(
+          x = grid::unit(x[i], "bigpts"),
+          y = grid::unit(total_h - y[i], "bigpts"),
+          width = grid::unit(width[i], "bigpts"),
+          height = grid::unit(height[i], "bigpts"),
           r = grid::unit(r, "bigpts"),
           just = c("left", "top"),
-          gp = grid::gpar(
-            col = row$color,
-            fill = NA,
-            lwd = row$lwd * lwd_scale
-          ),
+          gp = grid::gpar(col = color[i], fill = NA, lwd = lwd[i] * lwd_scale),
           name = paste0("roundrect.", i)
-        ))
+        )
       },
       "text" = {
-        # Non-math text from \text{} — render as textGrob
-        txt <- row$text
-        if (!is.na(txt) && nzchar(txt)) {
-          # Resolve font face from MicroTeX FontStyle flags
-          face <- .resolve_text_face(row$font_style)
-          # Build gpar: use text_gp font settings, override color and size
+        txt <- layout_df$text[i]
+        if (is.na(txt) || !nzchar(txt)) NULL
+        else {
           tgp <- grid::gpar(
-            fontsize = row$font_size,
-            col = row$color,
-            fontface = face
+            fontsize = layout_df$font_size[i],
+            col = color[i],
+            fontface = .resolve_text_face(layout_df$font_style[i])
           )
-          if (!is.null(text_gp$fontfamily)) {
-            tgp$fontfamily <- text_gp$fontfamily
-          }
-          children <- grid::gList(children, grid::textGrob(
+          if (!is.null(text_gp$fontfamily)) tgp$fontfamily <- text_gp$fontfamily
+          grid::textGrob(
             label = txt,
-            x = grid::unit(row$x, "bigpts"),
-            y = grid::unit(total_h - row$y, "bigpts"),
+            x = grid::unit(x[i], "bigpts"),
+            y = grid::unit(total_h - y[i], "bigpts"),
             just = c("left", "bottom"),
             gp = tgp,
             name = paste0("text.", i)
-          ))
+          )
         }
       },
-      "glyph" = {
-        # Typeface mode: collect glyph data for batched glyphGrob.
-        if (render_mode == "typeface") {
-          font_file <- row$font_file
-          glyph_id <- row$glyph
-          if (!is.na(font_file) && nzchar(font_file) &&
-              !is.na(glyph_id)) {
-            glyph_ids <- c(glyph_ids, glyph_id)
-            glyph_x <- c(glyph_x, row$x)
-            glyph_y <- c(glyph_y, total_h - row$y)
-            glyph_sizes <- c(glyph_sizes, row$font_size)
-            glyph_cols <- c(glyph_cols, row$color)
-            glyph_fonts <- c(glyph_fonts, font_file)
-          }
-        }
-        # In path mode, glyphs are rendered as path records (no action needed)
-      }
+      NULL  # glyph rows handled in bulk below; everything else → NULL
     )
   }
 
-  # Build a single batched glyphGrob for all typeface-mode glyphs
-  if (length(glyph_ids) > 0) {
-    glyph_grob <- .build_glyph_grob(
-      glyph_ids, glyph_x, glyph_y, glyph_sizes,
-      glyph_cols, glyph_fonts, depth = depth
-    )
-    if (!is.null(glyph_grob)) {
-      children <- grid::gList(children, glyph_grob)
+  # --- Glyphs: collected in bulk and rendered as a single batched
+  # glyphGrob at the end of the gList (matching original behavior, so
+  # math symbols overlay rules/fills). Path mode renders glyphs as
+  # path records and emits no "glyph" rows. ---
+  if (render_mode == "typeface") {
+    g <- which(type == "glyph")
+    if (length(g) > 0L) {
+      ff  <- layout_df$font_file[g]
+      gid <- layout_df$glyph[g]
+      keep <- !is.na(ff) & nzchar(ff) & !is.na(gid)
+      if (any(keep)) {
+        k <- g[keep]
+        parts[[n + 1L]] <- .build_glyph_grob(
+          ids        = layout_df$glyph[k],
+          x          = layout_df$x[k],
+          y          = total_h - layout_df$y[k],
+          sizes      = layout_df$font_size[k],
+          cols       = layout_df$color[k],
+          font_files = layout_df$font_file[k],
+          depth      = depth
+        )
+      }
     }
   }
 
-  children
+  do.call(grid::gList, Filter(Negate(is.null), parts))
 }
 
 #' Convert path segments to a grid pathGrob

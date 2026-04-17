@@ -38,3 +38,24 @@ test_that("register/clear measurer lifecycle and integration", {
   }
   expect_true(grid::convertWidth(dims$width, "bigpts", valueOnly = TRUE) > 0)
 })
+
+test_that("measurer cache returns identical values to a fresh measurement", {
+  # Within one closure, repeat calls hit the cache; they must equal the
+  # first (un-cached) call bit-for-bit, and must also match a separate
+  # fresh closure's first (un-cached) call.
+  txt <- "The quick brown fox jumps over the lazy dog"
+  m1 <- gridmicrotex:::.make_text_measurer(grid::gpar())
+  first  <- m1(txt, 0L)
+  second <- m1(txt, 0L)  # cache hit
+  expect_identical(first, second)
+
+  m2 <- gridmicrotex:::.make_text_measurer(grid::gpar())
+  fresh  <- m2(txt, 0L)  # un-cached, separate closure
+  expect_identical(first, fresh)
+
+  # Different font_style must not collide with a cached entry.
+  bold_cached <- m1(txt, 2L)  # first time for style=2 on m1
+  bold_fresh  <- m2(txt, 2L)
+  expect_identical(bold_cached, bold_fresh)
+  expect_false(identical(first, bold_cached))
+})

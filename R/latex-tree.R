@@ -30,9 +30,7 @@ latex_tree <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
                        render_mode = c("typeface", "path"),
                        gp = grid::gpar()) {
-  if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
-  if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
-  if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
+  .apply_opts("math_font", "render_mode", "tex_style")
   render_mode <- match.arg(render_mode)
 
   parsed <- .parse_from_gp(

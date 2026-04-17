@@ -306,6 +306,3 @@ element_latex <- function(math_font = "", fontsize = NULL,
   }
   grid::gTree(children = grobs, name = "axis.latex.labels")
 }
-
-# Null-coalescing operator
-`%||%` <- function(x, y) if (is.null(x)) y else x

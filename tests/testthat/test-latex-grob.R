@@ -87,6 +87,74 @@ test_that("latex_grob handles invalid LaTeX commands gracefully", {
   expect_s3_class(g, "latexgrob")
 })
 
+# --- editGrob: re-parse on parse-affecting fields ---
+
+test_that("editGrob re-parses when tex changes", {
+  g <- latex_grob("x", render_mode = "path")
+  g2 <- grid::editGrob(g, tex = "x^{2} + y^{2} + z^{2}")
+  expect_equal(g2$tex, "x^{2} + y^{2} + z^{2}")
+  expect_true(g2$bbox_w > g$bbox_w)
+  expect_true(nrow(g2$layout_df) > nrow(g$layout_df))
+  # viewport width/height tracked bbox
+  expect_equal(
+    as.numeric(g2$vp$width),
+    as.numeric(grid::unit(g2$bbox_w, "bigpts"))
+  )
+})
+
+test_that("editGrob re-parses when gp (fontsize) changes", {
+  g20 <- latex_grob("x^2", render_mode = "path", gp = grid::gpar(fontsize = 20))
+  g40 <- grid::editGrob(g20, gp = grid::gpar(fontsize = 40))
+  expect_equal(g40$fontsize, 40)
+  # 2x font -> ~2x bbox
+  expect_equal(g40$bbox_w / g20$bbox_w, 2, tolerance = 0.05)
+  # gp is re-stripped after parse (fontsize not carried on the gTree)
+  expect_null(g40$gp$fontsize)
+})
+
+test_that("editGrob re-parses when math_font / tex_style / render_mode change", {
+  g <- latex_grob("\\frac{a}{b}", render_mode = "path", math_font = "lm")
+  g2 <- grid::editGrob(g, math_font = "dejavu")
+  expect_false(identical(g$layout_df, g2$layout_df))
+
+  g3 <- latex_grob("\\sum_{i=1}^{n} i", render_mode = "path", tex_style = "text")
+  g4 <- grid::editGrob(g3, tex_style = "display")
+  expect_true(g4$bbox_h > g3$bbox_h)  # display makes \sum taller
+
+  g5 <- latex_grob("x^2", render_mode = "path")
+  g6 <- grid::editGrob(g5, render_mode = "typeface")
+  expect_equal(g6$render_mode, "typeface")
+  expect_s3_class(g6$path_layout_df, "data.frame")  # fallback layout generated
+})
+
+test_that("editGrob on non-parse fields does not re-parse", {
+  g <- latex_grob("\\frac{a}{b}", render_mode = "path")
+  orig_layout <- g$layout_df
+  g2 <- grid::editGrob(g, debug = TRUE)
+  expect_true(isTRUE(g2$debug))
+  expect_identical(g2$layout_df, orig_layout)
+})
+
+test_that("ascentDetails + descentDetails sum to heightDetails", {
+  g <- latex_grob("\\frac{a}{b}", render_mode = "path", gp = grid::gpar(fontsize = 24))
+  asc  <- grid::convertHeight(grid::ascentDetails(g),  "bigpts", valueOnly = TRUE)
+  desc <- grid::convertHeight(grid::descentDetails(g), "bigpts", valueOnly = TRUE)
+  h    <- grid::convertHeight(grid::heightDetails(g),  "bigpts", valueOnly = TRUE)
+  expect_equal(asc + desc, h, tolerance = 1e-6)
+  expect_true(asc > 0)
+  expect_true(desc >= 0)
+  # Descent matches the bbox_d field exposed for grob-to-grob alignment
+  expect_equal(desc, g$bbox_d, tolerance = 1e-6)
+})
+
+test_that("editGrob keeps viewport just in sync with hjust/vjust", {
+  g <- latex_grob("x", render_mode = "path", hjust = 0.5, vjust = 0.5)
+  g2 <- grid::editGrob(g, hjust = 0, vjust = 1)
+  expect_equal(g2$hjust, 0)
+  expect_equal(g2$vjust, 1)
+  expect_equal(as.numeric(g2$vp$valid.just), c(0, 1))
+})
+
 test_that("latex_dims respects math_font parameter", {
   dims_lm     <- latex_dims("\\frac{a}{b}", math_font = "lm", gp = grid::gpar(fontsize = 20))
   dims_dejavu <- latex_dims("\\frac{a}{b}", math_font = "dejavu", gp = grid::gpar(fontsize = 20))

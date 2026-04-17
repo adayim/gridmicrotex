@@ -142,9 +142,7 @@ latex_grob <- function(tex,
                        name = NULL,
                        gp = grid::gpar()) {
 
-  if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
-  if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
-  if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
+  .apply_opts("math_font", "render_mode", "tex_style")
   render_mode <- match.arg(render_mode)
 
   parsed <- .parse_from_gp(
@@ -161,10 +159,10 @@ latex_grob <- function(tex,
   bbox_w <- attr(layout, "bbox_width")
   bbox_h <- attr(layout, "bbox_height")
   bbox_d <- attr(layout, "bbox_depth")
-  bbox_bl_frac <- attr(layout, "bbox_baseline")
-  bbox_bl_bp <- bbox_h * (1 - bbox_bl_frac)
+  # Baseline as bigpts from the bottom edge of the bounding box —
+  # exposed read-only on the gTree for advanced grob-to-grob alignment.
+  bbox_bl_bp <- bbox_h * (1 - attr(layout, "bbox_baseline"))
   is_split <- isTRUE(attr(layout, "bbox_is_split"))
-  total_h <- bbox_h
 
   grid::gTree(
     tex = parsed$tex,
@@ -172,13 +170,17 @@ latex_grob <- function(tex,
     bbox_w = bbox_w,
     bbox_h = bbox_h,
     bbox_d = bbox_d,
-    bbox_bl = bbox_bl_frac,
     bbox_bl_bp = bbox_bl_bp,
     is_split = is_split,
-    total_h = total_h,
     fontsize = parsed$fontsize,
     hjust = hjust,
     vjust = vjust,
+    # Input parameters kept on the grob so editGrob() can re-parse when
+    # any of them change. Resolved/baked values live in the parsed fields
+    # above; these fields hold the user-facing inputs.
+    math_font = math_font,
+    max_width = max_width,
+    tex_style = tex_style,
     text_gp = parsed$text_gp,
     render_mode = parsed$render_mode,
     path_layout_df = parsed$path_layout,
@@ -189,7 +191,7 @@ latex_grob <- function(tex,
     vp = grid::viewport(
       x = x, y = y,
       width = grid::unit(bbox_w, "bigpts"),
-      height = grid::unit(total_h, "bigpts"),
+      height = grid::unit(bbox_h, "bigpts"),
       just = c(hjust, vjust),
       angle = rot
     )
@@ -300,7 +302,7 @@ makeContent.latexgrob <- function(x) {
   }
 
   children <- build_latex_children(
-    layout_df, x$total_h,
+    layout_df, x$bbox_h,
     depth = x$bbox_d %||% 0,
     text_gp = x$text_gp,
     render_mode = render_mode
@@ -309,13 +311,61 @@ makeContent.latexgrob <- function(x) {
   if (isTRUE(x$debug)) {
     children <- .add_debug_overlay(
       children, layout_df,
-      total_h = x$total_h,
+      total_h = x$bbox_h,
       bbox_w = x$bbox_w,
       depth = x$bbox_d %||% 0
     )
   }
 
   grid::setChildren(x, children)
+}
+
+# Fields whose values feed .parse_from_gp(); editing any of them forces a
+# re-parse so the layout/bbox/text metrics stay in sync with the inputs.
+.latex_parse_fields <- c("tex", "math_font", "max_width", "tex_style",
+                         "render_mode", "gp")
+
+#' @method editDetails latexgrob
+#' @export
+editDetails.latexgrob <- function(x, specs) {
+  if (length(specs) == 0L) return(x)
+
+  parse_changed <- any(.latex_parse_fields %in% names(specs))
+  just_changed  <- any(c("hjust", "vjust") %in% names(specs))
+
+  if (parse_changed) {
+    parsed <- .parse_from_gp(
+      tex = x$tex, gp = x$gp, math_font = x$math_font,
+      max_width = x$max_width, tex_style = x$tex_style,
+      render_mode = x$render_mode, with_path_fallback = TRUE
+    )
+    layout <- parsed$layout
+    x$tex            <- parsed$tex
+    x$layout_df      <- layout
+    x$bbox_w         <- attr(layout, "bbox_width")
+    x$bbox_h         <- attr(layout, "bbox_height")
+    x$bbox_d         <- attr(layout, "bbox_depth")
+    x$bbox_bl_bp     <- x$bbox_h * (1 - attr(layout, "bbox_baseline"))
+    x$is_split       <- isTRUE(attr(layout, "bbox_is_split"))
+    x$fontsize       <- parsed$fontsize
+    x$text_gp        <- parsed$text_gp
+    x$render_mode    <- parsed$render_mode
+    x$path_layout_df <- parsed$path_layout
+    x$gp             <- parsed$gp
+  }
+
+  if ((parse_changed || just_changed) && !is.null(x$vp)) {
+    old_vp <- x$vp
+    x$vp <- grid::viewport(
+      x = old_vp$x, y = old_vp$y,
+      width  = grid::unit(x$bbox_w, "bigpts"),
+      height = grid::unit(x$bbox_h, "bigpts"),
+      just   = c(x$hjust, x$vjust),
+      angle  = old_vp$angle
+    )
+  }
+
+  x
 }
 
 .add_debug_overlay <- function(children, layout_df, total_h, bbox_w, depth) {
@@ -380,7 +430,19 @@ widthDetails.latexgrob <- function(x) {
 #' @method heightDetails latexgrob
 #' @export
 heightDetails.latexgrob <- function(x) {
-  grid::unit(x$total_h, "bigpts")
+  grid::unit(x$bbox_h, "bigpts")
+}
+
+#' @method ascentDetails latexgrob
+#' @export
+ascentDetails.latexgrob <- function(x) {
+  grid::unit(x$bbox_h - x$bbox_d, "bigpts")
+}
+
+#' @method descentDetails latexgrob
+#' @export
+descentDetails.latexgrob <- function(x) {
+  grid::unit(x$bbox_d, "bigpts")
 }
 
 #' @method xDetails latexgrob
@@ -403,7 +465,7 @@ xDetails.latexgrob <- function(x, theta) {
 #' @export
 yDetails.latexgrob <- function(x, theta) {
   gy <- grid::convertY(x$vp$y, "native", valueOnly = TRUE)
-  h <- grid::convertHeight(grid::unit(x$total_h, "bigpts"), "native", valueOnly = TRUE)
+  h <- grid::convertHeight(grid::unit(x$bbox_h, "bigpts"), "native", valueOnly = TRUE)
   vjust <- x$vjust
   bottom <- gy - vjust * h
   top <- bottom + h
@@ -460,9 +522,7 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
                        render_mode = c("typeface", "path"),
                        gp = grid::gpar()) {
-  if (missing(math_font)   && !is.null(.opt("math_font")))   math_font <- .opt("math_font")
-  if (missing(render_mode) && !is.null(.opt("render_mode"))) render_mode <- .opt("render_mode")
-  if (missing(tex_style)   && !is.null(.opt("tex_style")))   tex_style <- .opt("tex_style")
+  .apply_opts("math_font", "render_mode", "tex_style")
   render_mode <- match.arg(render_mode)
 
   parsed <- .parse_from_gp(
@@ -517,7 +577,17 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
   # Cache the R version check
   has_ascent_fn <- getRversion() >= "4.4.0"
 
+  # Per-closure cache keyed on (font_style, text). Lifetime = one parse
+  # (the closure is created fresh per parse in latex_grob/latex_dims), so
+  # graphics state can't drift between calls. Hits avoid a push/pop
+  # viewport + grid::convertHeight round trip per repeated span.
+  cache <- new.env(parent = emptyenv())
+
   function(text, font_style) {
+    key <- paste0(as.integer(font_style), "\x1f", text)
+    hit <- cache[[key]]
+    if (!is.null(hit)) return(hit)
+
     face <- .resolve_text_face(as.integer(font_style))
 
     gp <- grid::gpar(fontsize = ref_size, fontface = face)
@@ -566,7 +636,8 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     asc  <- ad[1]
     desc <- ad[2]
 
-    # Return ratios relative to font size
-    c(w / ref_size, asc / ref_size, (asc + desc) / ref_size)
+    result <- c(w / ref_size, asc / ref_size, (asc + desc) / ref_size)
+    cache[[key]] <- result
+    result
   }
 }
