@@ -25,8 +25,8 @@ community are very welcome.
 Install the development version from GitHub:
 
 ``` r
-# install.packages("pak")
-pak::pak("adayim/gridmicrotex")
+# install.packages("devtools")
+devtools::install_github("adayim/gridmicrotex")
 ```
 
 ## Examples
