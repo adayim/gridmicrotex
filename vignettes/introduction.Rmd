@@ -15,6 +15,15 @@ knitr::opts_chunk$set(
   dev = "ragg_png"
 )
 library(gridmicrotex)
+
+# Only Lete Sans Math is bundled with the package. Latin Modern, STIX,
+# and TeX Gyre DejaVu are fetched on demand via download_math_font().
+# Chunks demonstrating those fonts are evaluated only when they are
+# registered (i.e. the reader has already downloaded them).
+have_extra_fonts <- all(c("STIX Two Math",
+                          "LatinModernMath-Regular",
+                          "TeXGyreDejaVuMath-Regular") %in%
+                        available_math_fonts())
 ```
 
 ## What is gridmicrotex?
@@ -33,7 +42,8 @@ on any R graphics device at any resolution.
 - Resolution-independent vector output on all R devices (PNG, PDF, SVG, ...)
 - Full math support: fractions, roots, integrals, matrices, Greek letters,
   accents, delimiters, and more
-- Multiple math fonts (Latin Modern Math, STIX Two Math, Lete Sans Math, TeX Gyre DejaVu Math)
+- Multiple math fonts: Lete Sans Math (bundled); Latin Modern Math,
+  STIX Two Math, and TeX Gyre DejaVu Math fetched on demand
 - Color support via `\textcolor{}`
 - ggplot2 integration with `geom_latex()` and `element_latex()`
 - CJK and multilingual text in `\text{}` blocks
@@ -79,20 +89,34 @@ grid.latex(
 
 ## Math fonts
 
-The package bundles Lete Sans Math (default --- pairs with R's
-default sans text), Latin Modern Math, STIX Two Math, and TeX Gyre
-DejaVu Math.
-For most users, the easiest workflow is:
+The package ships with **Lete Sans Math** as the default math font ---
+it pairs naturally with R's default sans text. Three additional math
+fonts are available on demand to keep the installed package small:
 
-1. List available math fonts with `available_math_fonts()`
-2. Select one with `latex_options(math_font = ...)`
-3. Render formulas normally (no OTF/CLM paths needed)
+| Alias | Font | License |
+|-------|------|---------|
+| `"lm"` | Latin Modern Math | GUST Font License |
+| `"stix"` | STIX Two Math | SIL Open Font License |
+| `"dejavu"` | TeX Gyre DejaVu Math | Bitstream Vera + public-domain additions |
+
+Fetch any of them once per user with `download_math_font()`:
+
+```r
+download_math_font("stix")   # downloads ~2.3 MB into user cache
+download_math_font("lm")
+download_math_font("dejavu")
+```
+
+Downloaded files are cached under
+`tools::R_user_dir("gridmicrotex", "cache")` and re-registered
+automatically on future package loads --- you only need to call
+`download_math_font()` once per font per user.
 
 ```{r fonts-list}
 available_math_fonts()
 ```
 
-```{r fonts-default, fig.height=0.8, fig.width=2, out.width="50%"}
+```{r fonts-default, fig.height=0.8, fig.width=2, out.width="50%", eval=have_extra_fonts}
 latex_options(math_font = "stix")
 grid::grid.newpage()
 grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
@@ -103,7 +127,7 @@ latex_options(math_font = "lete")
 
 You can still override the font per call via `math_font`:
 
-```{r fonts, fig.height=1.5, fig.width=2, out.width="50%"}
+```{r fonts, fig.height=1.5, fig.width=2, out.width="50%", eval=have_extra_fonts}
 grid::grid.newpage()
 grid::pushViewport(grid::viewport(layout = grid::grid.layout(2, 1)))
 grid::pushViewport(grid::viewport(layout.pos.row = 1))
@@ -206,7 +230,7 @@ pair them with a matching `fontfamily`:
 | Latin Modern Math (`"lm"`) | Serif | `"serif"` |
 | STIX Two Math (`"stix"`) | Serif | `"serif"` |
 
-```{r font-pairing, fig.height = 1, fig.width = 6, out.width="70%"}
+```{r font-pairing, fig.height = 1, fig.width = 6, out.width="70%", eval=have_extra_fonts}
 grid::grid.newpage()
 grid.latex(
   "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",

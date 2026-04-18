@@ -192,6 +192,138 @@ load_font <- function(otf_path, clm_path = NULL) {
   invisible(NULL)
 }
 
+#' Download an extra bundled math font on demand
+#'
+#' Downloads a math font and its companion \code{.clm2} metrics file from
+#' the \code{gridmicrotex} GitHub release and registers them with MicroTeX
+#' so they become available for rendering. Downloaded files are cached
+#' under \code{tools::R_user_dir("gridmicrotex", "cache")/fonts} and
+#' re-registered automatically in subsequent R sessions, so a given font
+#' only needs to be downloaded once per user.
+#'
+#' This function exists to keep the installed package small. Only the
+#' default \code{"lete"} math font is shipped inside the package; the
+#' larger fonts (Latin Modern Math, STIX Two Math, TeX Gyre DejaVu Math)
+#' are fetched on demand.
+#'
+#' @param name Font alias. One of \code{"lm"} / \code{"latinmodern"},
+#'   \code{"stix"} / \code{"stix2"}, or \code{"dejavu"} / \code{"texgyre"}.
+#' @param overwrite If \code{TRUE}, re-download even if cached files are
+#'   already present and valid. Defaults to \code{FALSE}.
+#' @param quiet If \code{TRUE}, suppress \code{download.file()} progress
+#'   messages. Defaults to \code{FALSE} in interactive sessions and
+#'   \code{TRUE} otherwise.
+#' @return Invisibly, a named character vector with the cached
+#'   \code{otf} and \code{clm} paths.
+#' @seealso \code{\link{load_font}}, \code{\link{available_math_fonts}},
+#'   \code{\link{check_fonts}}
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'   download_math_font("stix")
+#'   latex_options(math_font = "stix")
+#' }
+download_math_font <- function(name,
+                               overwrite = FALSE,
+                               quiet     = !interactive()) {
+  entry <- .registry_lookup(name)
+  cache <- .font_cache_dir(create = TRUE)
+
+  otf_dest <- file.path(cache, entry$otf$file)
+  clm_dest <- file.path(cache, entry$clm$file)
+
+  .ensure_asset(entry$otf, otf_dest, overwrite = overwrite, quiet = quiet)
+  .ensure_asset(entry$clm, clm_dest, overwrite = overwrite, quiet = quiet)
+
+  microtex_add_font(clm_dest, otf_dest)
+  invisible(c(otf = otf_dest, clm = clm_dest))
+}
+
+# Registry lookup: accepts canonical key or any alias.
+.registry_lookup <- function(name) {
+  if (is.null(name) || !nzchar(name)) {
+    stop("Please supply a font alias (e.g. \"stix\", \"lm\", \"dejavu\").",
+         call. = FALSE)
+  }
+  lower <- tolower(name)
+  for (entry in .font_registry) {
+    if (lower %in% entry$aliases) return(entry)
+  }
+  keys <- vapply(.font_registry, function(x) x$key, character(1))
+  stop("Unknown downloadable math font '", name, "'. Available: ",
+       paste(keys, collapse = ", "), ".", call. = FALSE)
+}
+
+# Cache directory for user-downloaded fonts.
+.font_cache_dir <- function(create = FALSE) {
+  path <- file.path(tools::R_user_dir("gridmicrotex", "cache"), "fonts")
+  if (create) dir.create(path, recursive = TRUE, showWarnings = FALSE)
+  path
+}
+
+# Ensure a single asset (OTF or CLM) is present at `dest` with matching
+# SHA-256. Downloads if missing, overwritten, or corrupt.
+.ensure_asset <- function(asset, dest, overwrite, quiet) {
+  if (!overwrite && file.exists(dest) &&
+      identical(unname(tools::sha256sum(dest)), asset$sha256)) {
+    return(invisible(dest))
+  }
+
+  tmp <- paste0(dest, ".part")
+  on.exit(unlink(tmp), add = TRUE)
+
+  status <- tryCatch(
+    utils::download.file(asset$url, tmp, mode = "wb", quiet = quiet),
+    error = function(e) {
+      stop("Failed to download ", asset$file, " from ", asset$url,
+           "\n  ", conditionMessage(e), call. = FALSE)
+    }
+  )
+  if (!identical(status, 0L)) {
+    stop("download.file() returned non-zero status (", status,
+         ") for ", asset$url, call. = FALSE)
+  }
+
+  got <- unname(tools::sha256sum(tmp))
+  if (!identical(got, asset$sha256)) {
+    stop("SHA-256 mismatch for ", asset$file, "\n",
+         "  expected: ", asset$sha256, "\n",
+         "  got:      ", got, "\n",
+         "The downloaded file may be corrupt or tampered with. Delete ",
+         tmp, " and try again.", call. = FALSE)
+  }
+
+  if (!file.rename(tmp, dest)) {
+    file.copy(tmp, dest, overwrite = TRUE)
+  }
+  invisible(dest)
+}
+
+# Scan the cache dir and re-register any previously-downloaded fonts.
+# Called from .onLoad so returning users don't need to call
+# download_math_font() every session. Silent on failure -- a startup
+# error would be user-hostile.
+.register_cached_fonts <- function() {
+  if (!exists(".font_registry", envir = asNamespace("gridmicrotex"),
+              inherits = FALSE)) return(invisible())
+
+  cache <- .font_cache_dir(create = FALSE)
+  if (!dir.exists(cache)) return(invisible())
+
+  loaded <- microtex_math_font_names()
+  for (entry in .font_registry) {
+    if (entry$display_name %in% loaded) next
+
+    otf <- file.path(cache, entry$otf$file)
+    clm <- file.path(cache, entry$clm$file)
+    if (!file.exists(otf) || !file.exists(clm)) next
+
+    try(microtex_add_font(clm, otf), silent = TRUE)
+  }
+  invisible()
+}
+
 # Search for a matching CLM file for a given OTF path. Looks next to
 # the OTF first, then in the package's bundled fonts dir; tries .clm2
 # (current format) before .clm1 (legacy, no glyph paths).
@@ -244,13 +376,10 @@ check_fonts <- function() {
     message("  - ", f)
   }
 
-  # Check bundled font files exist
+  # Check bundled default font files exist
   pkg <- "gridmicrotex"
   bundled <- list(
-    "Latin Modern Math" = c("latinmodern-math.clm2", "latinmodern-math.otf"),
-    "STIX Two Math" = c("STIXTwoMath-Regular.clm2", "STIXTwoMath-Regular.otf"),
-    "Lete Sans Math" = c("LeteSansMath.clm2", "LeteSansMath.otf"),
-    "TeX Gyre DejaVu Math" = c("texgyredejavu-math.clm2", "texgyredejavu-math.otf")
+    "Lete Sans Math" = c("LeteSansMath.clm2", "LeteSansMath.otf")
   )
   message("Bundled font files:")
   for (nm in names(bundled)) {
@@ -258,6 +387,16 @@ check_fonts <- function() {
     ok <- all(nchar(system.file("fonts", files, package = pkg)) > 0)
     message("  - ", nm, ": ", if (ok) "found" else "MISSING")
   }
+
+  cache <- .font_cache_dir(create = FALSE)
+  message("Downloadable math fonts (download_math_font()):")
+  for (entry in .font_registry) {
+    otf <- file.path(cache, entry$otf$file)
+    clm <- file.path(cache, entry$clm$file)
+    status <- if (file.exists(otf) && file.exists(clm)) "cached" else "not downloaded"
+    message("  - ", entry$display_name, " (", entry$key, "): ", status)
+  }
+  if (dir.exists(cache)) message("Cache dir: ", cache)
 
   invisible(fonts)
 }

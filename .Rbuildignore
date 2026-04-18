@@ -20,4 +20,6 @@ src/.*\.so$
 src/.*\.dll$
 ^debug_*
 ^tools$
+^data-raw$
 ^\..+$
+^\.Rproj\.user$

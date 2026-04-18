@@ -113,6 +113,9 @@ test_that("editGrob re-parses when gp (fontsize) changes", {
 })
 
 test_that("editGrob re-parses when math_font / tex_style / render_mode change", {
+  skip_if_math_font_unavailable("lm")
+  skip_if_math_font_unavailable("dejavu")
+
   g <- latex_grob("\\frac{a}{b}", render_mode = "path", math_font = "lm")
   g2 <- grid::editGrob(g, math_font = "dejavu")
   expect_false(identical(g$layout_df, g2$layout_df))
@@ -156,6 +159,9 @@ test_that("editGrob keeps viewport just in sync with hjust/vjust", {
 })
 
 test_that("latex_dims respects math_font parameter", {
+  skip_if_math_font_unavailable("lm")
+  skip_if_math_font_unavailable("dejavu")
+
   dims_lm     <- latex_dims("\\frac{a}{b}", math_font = "lm", gp = grid::gpar(fontsize = 20))
   dims_dejavu <- latex_dims("\\frac{a}{b}", math_font = "dejavu", gp = grid::gpar(fontsize = 20))
   w_lm     <- grid::convertWidth(dims_lm$width, "bigpts", valueOnly = TRUE)
