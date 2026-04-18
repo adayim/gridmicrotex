@@ -364,7 +364,8 @@ grid.latex(
   \\end{split}\\\\
   \\rotatebox{30}{\\sum_{n=1}^{+\\infty}}\\quad\\mbox{Mirror rorriM}\\reflectbox{\\mbox{Mirror rorriM}}
 \\end{array}",
-  gp = grid::gpar(fontsize = 22)
+  gp = grid::gpar(fontsize = 22),
+  render_mode = "path"
 )
 ```
 
@@ -488,10 +489,10 @@ head(tr$records, 3)
 #> 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA
 #> 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA
 #> 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA
-#>    lwd text font_style path codepoint
-#> 1   NA <NA>         NA NULL        NA
-#> 2 1.32 <NA>         NA NULL        NA
-#> 3   NA <NA>         NA NULL        NA
+#>    lwd text font_style rotation path codepoint
+#> 1   NA <NA>         NA        0 NULL        NA
+#> 2 1.32 <NA>         NA        0 NULL        NA
+#> 3   NA <NA>         NA        0 NULL        NA
 #>                                                             font_file
 #> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
 #> 2                                                                <NA>

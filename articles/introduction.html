@@ -408,7 +408,8 @@ does not attempt to replace a full LaTeX installation.</p>
 <span><span class="st">  \\end{split}\\\\</span></span>
 <span><span class="st">  \\rotatebox{30}{\\sum_{n=1}^{+\\infty}}\\quad\\mbox{Mirror rorriM}\\reflectbox{\\mbox{Mirror rorriM}}</span></span>
 <span><span class="st">\\end{array}"</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span></span>
+<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span>,</span>
+<span>  render_mode <span class="op">=</span> <span class="st">"path"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/complicated-equation-1.png" class="r-plt" alt="" width="60%"></p>
 </div>
@@ -534,10 +535,10 @@ custom grobs on top of the layout:</p>
 <span><span class="co">#&gt; 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA</span></span>
 <span><span class="co">#&gt; 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA</span></span>
 <span><span class="co">#&gt; 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA</span></span>
-<span><span class="co">#&gt;    lwd text font_style path codepoint</span></span>
-<span><span class="co">#&gt; 1   NA &lt;NA&gt;         NA NULL        NA</span></span>
-<span><span class="co">#&gt; 2 1.32 &lt;NA&gt;         NA NULL        NA</span></span>
-<span><span class="co">#&gt; 3   NA &lt;NA&gt;         NA NULL        NA</span></span>
+<span><span class="co">#&gt;    lwd text font_style rotation path codepoint</span></span>
+<span><span class="co">#&gt; 1   NA &lt;NA&gt;         NA        0 NULL        NA</span></span>
+<span><span class="co">#&gt; 2 1.32 &lt;NA&gt;         NA        0 NULL        NA</span></span>
+<span><span class="co">#&gt; 3   NA &lt;NA&gt;         NA        0 NULL        NA</span></span>
 <span><span class="co">#&gt;                                                             font_file</span></span>
 <span><span class="co">#&gt; 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf</span></span>
 <span><span class="co">#&gt; 2                                                                &lt;NA&gt;</span></span>
