@@ -127,6 +127,9 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
             x = grid::unit(x[i], "bigpts"),
             y = grid::unit(total_h - y[i], "bigpts"),
             just = c("left", "bottom"),
+            # y is flipped to grid's y-up (total_h - y), so rotation sign
+            # flips too: MicroTeX y-down ccw → grid y-up ccw.
+            rot = -layout_df$rotation[i],
             gp = tgp,
             name = paste0("text.", i)
           )

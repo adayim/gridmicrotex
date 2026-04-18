@@ -37,6 +37,7 @@ struct DrawRecord {
     // For TEXT (non-math text from \text{}, etc.)
     std::string text;
     int font_style = 0;  // FontStyle cast to int
+    float rotation = 0;  // radians, extracted from current transform (ccw)
 
     // For LINE / RECT / FILL_RECT / ROUND_RECT / FILL_ROUND_RECT
     float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
@@ -133,5 +134,16 @@ private:
     // Apply current transform to a point
     void transformPoint(float& x, float& y) const;
 };
+
+// Defined in init.cpp. Returns the pre-transform width (in local coords, at
+// the given fontSize) of a text run, using the measurement cache populated
+// by TextLayout_R::getBounds; falls back to a codepoint-based heuristic.
+float measure_cached_text_width(const std::string& text, int fontStyle, float fontSize);
+
+// Defined in init.cpp. Returns the advance width (in world units at the given
+// fontSize) of a single glyph in the font identified by fontFile. Used to
+// shift the draw anchor under a horizontal flip. Returns 0 when the font or
+// glyph is not found.
+float measure_glyph_advance(const std::string& fontFile, u16 glyphId, float fontSize);
 
 }  // namespace microtex

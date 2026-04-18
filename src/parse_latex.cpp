@@ -111,6 +111,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     NumericVector lwd_col(n);
     CharacterVector text_col(n);
     IntegerVector font_style_col(n);
+    NumericVector rotation_col(n);
     IntegerVector codepoint_col(n);
     CharacterVector font_file_col(n);
 
@@ -123,6 +124,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
         // rx/ry are only meaningful for round-rect records; default NA.
         rx_col[i] = NA_REAL;
         ry_col[i] = NA_REAL;
+        // rotation is only populated for TEXT records today; default 0 (deg).
+        rotation_col[i] = 0;
 
         switch (rec.type) {
             case DrawRecord::GLYPH:
@@ -161,6 +164,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 lwd_col[i] = NA_REAL;
                 text_col[i] = rec.text;
                 font_style_col[i] = rec.font_style;
+                // radians → degrees (grid textGrob rot= expects degrees, ccw)
+                rotation_col[i] = rec.rotation * (180.0 / 3.14159265358979323846);
                 codepoint_col[i] = NA_INTEGER;
                 font_file_col[i] = NA_STRING;
                 path_list[i] = R_NilValue;
@@ -321,6 +326,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Named("lwd") = lwd_col,
         Named("text") = text_col,
         Named("font_style") = font_style_col,
+        Named("rotation") = rotation_col,
         Named("path") = path_list,
         Named("codepoint") = codepoint_col,
         Named("font_file") = font_file_col

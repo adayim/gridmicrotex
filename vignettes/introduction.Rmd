@@ -320,7 +320,8 @@ grid.latex(
   \\end{split}\\\\
   \\rotatebox{30}{\\sum_{n=1}^{+\\infty}}\\quad\\mbox{Mirror rorriM}\\reflectbox{\\mbox{Mirror rorriM}}
 \\end{array}",
-  gp = grid::gpar(fontsize = 22)
+  gp = grid::gpar(fontsize = 22),
+  render_mode = "path"
 )
 ```
 

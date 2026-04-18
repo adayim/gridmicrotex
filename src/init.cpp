@@ -3,6 +3,9 @@
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
 #include "unimath/font_src.h"
+#include "unimath/uni_font.h"
+#include "otf/otf.h"
+#include "otf/glyph.h"
 
 #include <array>
 #include <string>
@@ -79,6 +82,70 @@ static bool is_fullwidth(u32 cp) {
         || (cp >= 0x20000 && cp <= 0x2FA1F) // CJK Extension B+ and Compatibility Supplement
         || (cp >= 0xAC00 && cp <= 0xD7AF);  // Hangul Syllables
 }
+
+namespace microtex {
+
+// Cache of fontFile → FontContext id. Built lazily on demand — FontContext
+// assigns sequential ids on addFont(), so a linear scan of getFont(i) finds
+// a match; we memoize so subsequent glyphs hit the cache directly.
+static std::unordered_map<std::string, i32> g_font_id_cache;
+
+static sptr<const OtfFont> lookup_otf_font_by_file(const std::string& fontFile) {
+    if (fontFile.empty()) return nullptr;
+    auto it = g_font_id_cache.find(fontFile);
+    if (it != g_font_id_cache.end()) {
+        return FontContext::getFont(it->second);
+    }
+    for (i32 id = 0; ; ++id) {
+        auto f = FontContext::getFont(id);
+        if (!f) break;
+        if (f->fontFile == fontFile) {
+            g_font_id_cache[fontFile] = id;
+            return f;
+        }
+    }
+    return nullptr;
+}
+
+// Shared with graphic_recorder.cpp: glyph advance width (in world units at
+// fontSize) used to compensate for horizontal flips on drawGlyph.
+float measure_glyph_advance(const std::string& fontFile, u16 glyphId, float fontSize) {
+    auto f = lookup_otf_font_by_file(fontFile);
+    if (!f) return 0.f;
+    const auto& o = f->otf();
+    const Glyph* g = o.glyph(glyphId);
+    if (!g) return 0.f;
+    u16 em = o.em();
+    if (em == 0) return 0.f;
+    return g->metrics().width() * fontSize / static_cast<float>(em);
+}
+
+// Shared with graphic_recorder.cpp: width lookup used to compensate for
+// horizontal flips (e.g. \reflectbox) at drawTextRun time.
+float measure_cached_text_width(const std::string& text, int fontStyle, float fontSize) {
+    if (has_text_measurer()) {
+        std::string key;
+        key.reserve(text.size() + 3);
+        key.push_back(static_cast<char>(fontStyle & 0xFF));
+        key.push_back('\x01');
+        key.append(text);
+        auto it = g_text_measure_cache.find(key);
+        if (it != g_text_measure_cache.end()) {
+            return it->second[0] * fontSize;
+        }
+    }
+    float total = 0.f;
+    const char* p = text.c_str();
+    const char* end = p + text.size();
+    while (p < end) {
+        u32 cp = next_codepoint(p, end);
+        if (cp == 0) break;
+        total += is_fullwidth(cp) ? fontSize : fontSize * 0.55f;
+    }
+    return total;
+}
+
+}  // namespace microtex
 
 // --- TextLayout implementation that emits TEXT records ---
 
@@ -231,6 +298,7 @@ bool microtex_set_default_math_font(std::string name) {
 void microtex_release() {
     if (!s_initialized) return;
     MicroTeX::release();
+    microtex::g_font_id_cache.clear();
     s_initialized = false;
 }
 

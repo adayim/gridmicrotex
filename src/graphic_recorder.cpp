@@ -66,6 +66,15 @@ void Graphics2D_Recorder::transformPoint(float& x, float& y) const {
 }
 
 void Graphics2D_Recorder::drawGlyph(u16 glyph, float x, float y) {
+    auto* fr = dynamic_cast<Font_R*>(_currentFont.get());
+    // Under a horizontal flip (\reflectbox), mirror the same fix as for
+    // drawTextRun: shift the local x by the glyph's advance width so that
+    // transformPoint lands on the visible LEFT edge of the glyph box. Without
+    // this the anchor is at the post-transform RIGHT edge and glyphGrob
+    // (which draws to the right of its anchor) produces overlap.
+    if (_transform.a < 0 && fr && !fr->fontFile.empty()) {
+        x += measure_glyph_advance(fr->fontFile, glyph, _currentFontSize);
+    }
     DrawRecord rec;
     rec.type = DrawRecord::GLYPH;
     transformPoint(x, y);
@@ -76,7 +85,6 @@ void Graphics2D_Recorder::drawGlyph(u16 glyph, float x, float y) {
     rec.col = _currentColor;
 
     // Capture the font file path for glyphGrob rendering
-    auto* fr = dynamic_cast<Font_R*>(_currentFont.get());
     if (fr && !fr->fontFile.empty()) {
         rec.font_file = fr->fontFile;
     }
@@ -160,12 +168,40 @@ void Graphics2D_Recorder::drawLine(float x1, float y1, float x2, float y2) {
     rec.type = DrawRecord::LINE;
     rec.x1 = x1; rec.y1 = y1;
     rec.x2 = x2; rec.y2 = y2;
-    rec.line_width = _currentStroke.lineWidth * this->sx();
+    // Average sx and sy so asymmetric scales (rare in MicroTeX) give a
+    // reasonable thickness instead of following only the x-scale.
+    rec.line_width = _currentStroke.lineWidth * 0.5f * (this->sx() + this->sy());
     rec.col = _currentColor;
     _records.push_back(std::move(rec));
 }
 
+// Test for rotation/shear in the current transform. When true, an
+// axis-aligned rect in local coords becomes a tilted quadrilateral in world
+// coords — grid's rectGrob has no rotation parameter, so we emit the four
+// transformed corners as LINE records (stroked) or a PATH (filled) instead.
+static bool transform_has_rotation(float b, float c) {
+    constexpr float eps = 1e-6f;
+    return std::abs(b) > eps || std::abs(c) > eps;
+}
+
 void Graphics2D_Recorder::drawRect(float x, float y, float w, float h) {
+    if (transform_has_rotation(_transform.b, _transform.c)) {
+        float cx[4] = {x, x + w, x + w, x};
+        float cy[4] = {y, y, y + h, y + h};
+        for (int i = 0; i < 4; ++i) transformPoint(cx[i], cy[i]);
+        float lw = _currentStroke.lineWidth * 0.5f * (this->sx() + this->sy());
+        for (int i = 0; i < 4; ++i) {
+            int j = (i + 1) & 3;
+            DrawRecord rec;
+            rec.type = DrawRecord::LINE;
+            rec.x1 = cx[i]; rec.y1 = cy[i];
+            rec.x2 = cx[j]; rec.y2 = cy[j];
+            rec.line_width = lw;
+            rec.col = _currentColor;
+            _records.push_back(std::move(rec));
+        }
+        return;
+    }
     float sx = this->sx(), sy = this->sy();
     transformPoint(x, y);
     DrawRecord rec;
@@ -173,12 +209,33 @@ void Graphics2D_Recorder::drawRect(float x, float y, float w, float h) {
     rec.x = x; rec.y = y;
     rec.width = w * sx;
     rec.height = h * sy;
-    rec.line_width = _currentStroke.lineWidth * sx;
+    rec.line_width = _currentStroke.lineWidth * 0.5f * (sx + sy);
     rec.col = _currentColor;
     _records.push_back(std::move(rec));
 }
 
 void Graphics2D_Recorder::fillRect(float x, float y, float w, float h) {
+    if (transform_has_rotation(_transform.b, _transform.c)) {
+        float cx[4] = {x, x + w, x + w, x};
+        float cy[4] = {y, y, y + h, y + h};
+        for (int i = 0; i < 4; ++i) transformPoint(cx[i], cy[i]);
+        DrawRecord rec;
+        rec.type = DrawRecord::PATH;
+        rec.col = _currentColor;
+        for (int i = 0; i < 4; ++i) {
+            DrawRecord::PathSegment seg;
+            seg.cmd = (i == 0) ? DrawRecord::PathSegment::MOVE
+                               : DrawRecord::PathSegment::LINE_TO;
+            seg.coords[0] = cx[i];
+            seg.coords[1] = cy[i];
+            rec.path_segments.push_back(seg);
+        }
+        DrawRecord::PathSegment close;
+        close.cmd = DrawRecord::PathSegment::CLOSE;
+        rec.path_segments.push_back(close);
+        _records.push_back(std::move(rec));
+        return;
+    }
     float sx = this->sx(), sy = this->sy();
     transformPoint(x, y);
     DrawRecord rec;
@@ -191,6 +248,13 @@ void Graphics2D_Recorder::fillRect(float x, float y, float w, float h) {
 }
 
 void Graphics2D_Recorder::drawRoundRect(float x, float y, float w, float h, float rx, float ry) {
+    if (transform_has_rotation(_transform.b, _transform.c)) {
+        // Under rotation, drop the rounding and emit a stroked quadrilateral.
+        // Rounded corners under arbitrary rotation would require elliptical
+        // arcs in rotated space, which grid can't render directly.
+        drawRect(x, y, w, h);
+        return;
+    }
     float ssx = this->sx(), ssy = this->sy();
     transformPoint(x, y);
     DrawRecord rec;
@@ -200,12 +264,17 @@ void Graphics2D_Recorder::drawRoundRect(float x, float y, float w, float h, floa
     rec.height = h * ssy;
     rec.rx = rx * ssx;
     rec.ry = ry * ssy;
-    rec.line_width = _currentStroke.lineWidth * ssx;
+    rec.line_width = _currentStroke.lineWidth * 0.5f * (ssx + ssy);
     rec.col = _currentColor;
     _records.push_back(std::move(rec));
 }
 
 void Graphics2D_Recorder::fillRoundRect(float x, float y, float w, float h, float rx, float ry) {
+    if (transform_has_rotation(_transform.b, _transform.c)) {
+        // Same compromise as drawRoundRect: drop the corners under rotation.
+        fillRect(x, y, w, h);
+        return;
+    }
     float ssx = this->sx(), ssy = this->sy();
     transformPoint(x, y);
     DrawRecord rec;
@@ -221,6 +290,22 @@ void Graphics2D_Recorder::fillRoundRect(float x, float y, float w, float h, floa
 
 void Graphics2D_Recorder::drawTextRun(const std::string& text, float x, float y,
                                        int fontStyle, float fontSize) {
+    // Under a horizontal flip (e.g. \reflectbox), transformPoint(x, y) maps
+    // the local LEFT edge of the glyph box to what becomes the visible RIGHT
+    // edge in post-transform coords. textGrob with hjust=0 would then draw
+    // rightward from that right edge, overlapping adjacent glyphs. Shift to
+    // the local RIGHT edge before transforming so the recorded x is the
+    // visible LEFT edge, i.e. where drawing should actually start.
+    if (_transform.a < 0) {
+        x += measure_cached_text_width(text, fontStyle, fontSize);
+    }
+    // Extract rotation separately from any horizontal flip: pure reflect
+    // gives 0 (the flip is already handled by the x shift above), pure
+    // rotate gives atan2(b, a). When a<0 we flip the x column before
+    // atan2 to cancel the reflect component.
+    float rot = (_transform.a < 0)
+        ? std::atan2(-_transform.b, -_transform.a)
+        : std::atan2(_transform.b, _transform.a);
     transformPoint(x, y);
     float s = this->sx();
     DrawRecord rec;
@@ -230,6 +315,7 @@ void Graphics2D_Recorder::drawTextRun(const std::string& text, float x, float y,
     rec.text = text;
     rec.font_style = fontStyle;
     rec.font_size = fontSize * s;
+    rec.rotation = rot;
     rec.col = _currentColor;
     _records.push_back(std::move(rec));
 }
