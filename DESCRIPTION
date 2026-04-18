@@ -6,22 +6,8 @@ Authors@R: c(
            email = "ad938@cam.ac.uk"),
     person("Nano", "Michael", role = "cph",
            comment = "Author of included MicroTeX library"),
-    person("Chenjing", "Bu", role = "cph",
-           comment = "Co-author of included Lete Sans Math font"),
-    person("Daniel", "Flipo", role = "cph",
-           comment = "Co-author of included Lete Sans Math font"),
-    person("B.", "Jackowski", role = "cph",
-           comment = "Co-author of included Latin Modern Math and TeX Gyre DejaVu Math fonts"),
-    person("P.", "Strzelczyk", role = "cph",
-           comment = "Co-author of included Latin Modern Math and TeX Gyre DejaVu Math fonts"),
-    person("P.", "Pianowski", role = "cph",
-           comment = "Co-author of included Latin Modern Math and TeX Gyre DejaVu Math fonts"),
-    person(family = "STIX Fonts Project Authors", role = "cph",
-           comment = "Authors of included STIX Two Math font"),
-    person(family = "Bitstream Inc.", role = "cph",
-           comment = "Copyright holder of Bitstream Vera, the base of included TeX Gyre DejaVu Math font"),
-    person(family = "American Mathematical Society", role = "cph",
-           comment = "Copyright holder of Euler Fraktur letters used in included TeX Gyre DejaVu Math font"))
+    person(family = "Bundled math font authors", role = "cph",
+           comment = "See inst/COPYRIGHTS for the full list of authors of the bundled and downloaded math fonts."))
 Description: Renders LaTeX math equations as native R grid graphics objects
     (grobs) using the MicroTeX C++ library as the layout engine. Produces
     resolution-independent vector output that works on any R graphics device,

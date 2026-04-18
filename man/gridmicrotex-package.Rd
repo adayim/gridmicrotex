@@ -23,14 +23,7 @@ Useful links:
 Other contributors:
 \itemize{
   \item Nano Michael (Author of included MicroTeX library) [copyright holder]
-  \item Chenjing Bu (Co-author of included Lete Sans Math font) [copyright holder]
-  \item Daniel Flipo (Co-author of included Lete Sans Math font) [copyright holder]
-  \item B. Jackowski (Co-author of included Latin Modern Math and TeX Gyre DejaVu Math fonts) [copyright holder]
-  \item P. Strzelczyk (Co-author of included Latin Modern Math and TeX Gyre DejaVu Math fonts) [copyright holder]
-  \item P. Pianowski (Co-author of included Latin Modern Math and TeX Gyre DejaVu Math fonts) [copyright holder]
-  \item  STIX Fonts Project Authors (Authors of included STIX Two Math font) [copyright holder]
-  \item  Bitstream Inc. (Copyright holder of Bitstream Vera, the base of included TeX Gyre DejaVu Math font) [copyright holder]
-  \item  American Mathematical Society (Copyright holder of Euler Fraktur letters used in included TeX Gyre DejaVu Math font) [copyright holder]
+  \item  Bundled math font authors (See inst/COPYRIGHTS for the full list of authors of the bundled and downloaded math fonts.) [copyright holder]
 }
 
 }
