@@ -13,6 +13,10 @@ microtex_init <- function(clm_path, otf_path) {
     invisible(.Call(`_gridmicrotex_microtex_init`, clm_path, otf_path))
 }
 
+microtex_init_from_otf <- function(otf_path, index = 0L) {
+    invisible(.Call(`_gridmicrotex_microtex_init_from_otf`, otf_path, index))
+}
+
 microtex_add_font <- function(clm_path, otf_path) {
     invisible(.Call(`_gridmicrotex_microtex_add_font`, clm_path, otf_path))
 }
@@ -43,6 +47,18 @@ microtex_set_default_main_font <- function(family) {
 
 microtex_main_font_families <- function() {
     .Call(`_gridmicrotex_microtex_main_font_families`)
+}
+
+ot_math_table_bytes <- function(path, index = 0L) {
+    .Call(`_gridmicrotex_ot_math_table_bytes`, path, index)
+}
+
+otf_to_clm_bytes <- function(path, index = 0L) {
+    .Call(`_gridmicrotex_otf_to_clm_bytes`, path, index)
+}
+
+microtex_add_font_from_otf <- function(otf_path, index = 0L) {
+    .Call(`_gridmicrotex_microtex_add_font_from_otf`, otf_path, index)
 }
 
 parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "") {

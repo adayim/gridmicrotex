@@ -1,13 +1,7 @@
-The following third-party components are shipped with, or fetched on
-demand by, this package. Full license texts are reproduced in the
-LICENSE.note file at the package root, and copies of the font licenses
-accompany the fonts in inst/fonts/.
-
-Only Lete Sans Math is bundled inside the installed package. Latin
-Modern Math, STIX Two Math, and TeX Gyre DejaVu Math are downloaded on
-demand by download_math_font() from the package's GitHub releases. All
-three are still redistributed by this project and therefore listed
-here.
+The following third-party components are shipped with this package.
+Full license texts are reproduced in the LICENSE.note file at the
+package root, and copies of the font licenses accompany the fonts in
+inst/fonts/.
 
 -------------------------------------------------------------------------------
 MicroTeX C++ library  (src/MicroTeX/)
@@ -17,7 +11,7 @@ Upstream: https://github.com/NanoMichael/MicroTeX
 License:  MIT License.
 
 -------------------------------------------------------------------------------
-Lete Sans Math  (inst/fonts/LeteSansMath.otf, LeteSansMath.clm2)
+Lete Sans Math  (inst/fonts/LeteSansMath.otf)
 -------------------------------------------------------------------------------
 Copyright (c) 2024-2026 Chenjing Bu and Daniel Flipo.
 Upstream: https://ctan.org/pkg/lete-sans-math
@@ -25,42 +19,9 @@ License:  SIL Open Font License, Version 1.1
           (see inst/fonts/OFL.txt).
 
 -------------------------------------------------------------------------------
-Latin Modern Math  (downloaded to user cache: latinmodern-math.otf,
-                    latinmodern-math.clm2)
--------------------------------------------------------------------------------
-Copyright 2012-2014 for Latin Modern Math OTF by B. Jackowski,
-P. Strzelczyk and P. Pianowski (on behalf of TeX users groups).
-Upstream: https://www.gust.org.pl/projects/e-foundry/lm-math
-License:  GUST Font License, Version 1.0, 22 June 2009
-          (full text reproduced in LICENSE.note at the package root).
-          The GFL is itself conditioned on the LaTeX Project Public
-          License, Version 1.3c (https://www.latex-project.org/lppl.txt).
-
--------------------------------------------------------------------------------
-STIX Two Math  (downloaded to user cache: STIXTwoMath-Regular.otf,
-                STIXTwoMath-Regular.clm2)
+STIX Two Math  (inst/fonts/STIXTwoMath-Regular.otf)
 -------------------------------------------------------------------------------
 Copyright 2001-2021 The STIX Fonts Project Authors.
 Upstream: https://github.com/stipub/stixfonts
 License:  SIL Open Font License, Version 1.1
           (see inst/fonts/OFL.txt).
-
--------------------------------------------------------------------------------
-TeX Gyre DejaVu Math  (downloaded to user cache: texgyredejavu-math.otf,
-                       texgyredejavu-math.clm2)
--------------------------------------------------------------------------------
-Base outlines copyright (c) 2003 Bitstream, Inc. DejaVu changes and the
-math extensions (by B. Jackowski, P. Strzelczyk and P. Pianowski on behalf
-of TeX users groups) are in the public domain. Euler Fraktur letters
-imported from AMSfonts are copyright American Mathematical Society.
-Upstream: https://www.gust.org.pl/projects/e-foundry/tg-math
-License:  Composite - Bitstream Vera Fonts License, DejaVu / TeX Gyre DJV
-          Math public-domain notices, and the AMSFonts v.2.2 notice
-          (full text reproduced in LICENSE.note at the package root).
-
--------------------------------------------------------------------------------
-Notes
--------------------------------------------------------------------------------
-The CLM font data files (*.clm2) are generated from the corresponding
-upstream OTF files by inst/otf2clm.py and inherit the license of the OTF
-they were built from.

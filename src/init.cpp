@@ -8,8 +8,14 @@
 #include "otf/glyph.h"
 
 #include <array>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
+
+// Defined in otf_math_reader.cpp — synthesises a CLM v6 byte blob from
+// a font file using FreeType + our OT MATH parser.
+std::vector<std::uint8_t> a3_build_clm_bytes(const std::string& path, int index);
 
 using namespace microtex;
 
@@ -258,6 +264,34 @@ void microtex_init(std::string clm_path, std::string otf_path) {
     }
 
     // Default to path rendering (universal compatibility)
+    if (MicroTeX::hasGlyphPathRender()) {
+        MicroTeX::setRenderGlyphUsePath(true);
+    }
+
+    s_initialized = true;
+}
+
+// [[Rcpp::export]]
+void microtex_init_from_otf(std::string otf_path, int index = 0) {
+    if (s_initialized) return;
+
+    PlatformFactory::registerFactory("r", std::make_unique<PlatformFactory_R>());
+    PlatformFactory::activate("r");
+
+    std::vector<std::uint8_t> clm;
+    try {
+        clm = a3_build_clm_bytes(otf_path, index);
+    } catch (const std::exception& e) {
+        Rcpp::stop(std::string("Failed to read font '") + otf_path + "': " + e.what());
+    }
+
+    FontSrcData fontSrc(clm.size(), clm.data(), otf_path);
+    try {
+        MicroTeX::init(fontSrc);
+    } catch (const std::exception& e) {
+        Rcpp::stop(std::string("MicroTeX::init failed: ") + e.what());
+    }
+
     if (MicroTeX::hasGlyphPathRender()) {
         MicroTeX::setRenderGlyphUsePath(true);
     }

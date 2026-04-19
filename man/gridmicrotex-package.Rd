@@ -23,7 +23,7 @@ Useful links:
 Other contributors:
 \itemize{
   \item Nano Michael (Author of included MicroTeX library) [copyright holder]
-  \item  Bundled math font authors (See inst/COPYRIGHTS for the full list of authors of the bundled and downloaded math fonts.) [copyright holder]
+  \item  Bundled math font authors (See inst/COPYRIGHTS for the full list of authors of the bundled math fonts.) [copyright holder]
 }
 
 }

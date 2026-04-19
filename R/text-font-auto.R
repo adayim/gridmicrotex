@@ -1,23 +1,22 @@
 # Automatic text-font registration for MicroTeX's `main_font`.
 #
 # When a user passes gp = gpar(fontfamily = "..."), we want MicroTeX to
-# lay out non-math text using the same font that R will draw with. That
-# requires the OTF plus a .clm metrics file. We look up the OTF via the
-# systemfonts package, generate a minimal text-only CLM on first use,
-# cache it under tools::R_user_dir(), and register the pair with
-# MicroTeX. On subsequent calls we reuse the cached CLM.
+# lay out non-math text using the same font that R will draw with. We
+# look up the OTF via the systemfonts package and hand it to the C++
+# A3 path (microtex_add_font_from_otf), which parses metrics in-memory
+# and registers the font with MicroTeX in one step.
+#
+# TrueType Collections (.ttc) are split into a single-face sfnt on
+# first use so systemfonts' glyph-rendering path can also resolve the
+# font_file for drawing — see R/otf-reader.R::.extract_ttc_face.
 #
 # If systemfonts is unavailable or the font can't be resolved we fall
 # back to an empty main_font; MicroTeX then uses the math font's text
 # fallback. Layout and rendering may then drift slightly, but nothing
 # errors.
 
-# Bump this when .write_text_clm's output layout changes. The cache key
-# includes it so stale files are ignored automatically.
-.TEXT_CLM_WRITER_VER <- 1L
-
-# In-process registry of families we've already fed to MicroTeX, keyed
-# by the family name we resolved. Prevents redundant addFont() calls.
+# In-process registry of OTFs we've already fed to MicroTeX, keyed by
+# the on-disk path. Value is the family name MicroTeX registered under.
 .text_font_registered <- new.env(parent = emptyenv())
 
 # Lightweight in-process cache of family-string → resolved family name
@@ -26,8 +25,8 @@
 .text_font_lookup <- new.env(parent = emptyenv())
 
 # Resolve an R fontfamily string to a MicroTeX main_font name, loading
-# a generated CLM on demand. Returns "" if anything goes wrong (caller
-# should treat "" as "use default"). Never throws.
+# the OTF on demand. Returns "" if anything goes wrong (caller should
+# treat "" as "use default"). Never throws.
 .resolve_text_font <- function(family) {
   if (!is.character(family) || length(family) != 1L || !nzchar(family)) {
     family <- "sans"
@@ -86,83 +85,13 @@
   cached_fam <- .text_font_registered[[otf_path]]
   if (!is.null(cached_fam)) return(cached_fam)
 
-  # Parse the OTF once: we need the family name MicroTeX will register
-  # under, and `.ensure_text_clm` needs the same parse on cache miss.
-  meta <- .parse_otf_metrics(otf_path)
-  fam_name <- if (nzchar(meta$family)) meta$family else meta$name
-  if (!nzchar(fam_name)) return("")
+  # C++ parses the OTF, synthesises CLM bytes in memory, and registers
+  # with MicroTeX in one call. Empty string on failure.
+  fam_name <- microtex_add_font_from_otf(otf_path, 0L)
+  if (!is.character(fam_name) || !nzchar(fam_name)) return("")
 
-  # Cache key is tied to the original source + face index so that the
-  # same ttc face always resolves to the same CLM across sessions.
-  clm_key <- .text_clm_cache_key(source_path, face_index)
-  clm_path <- .ensure_text_clm(otf_path, clm_key, meta = meta)
-  if (is.null(clm_path)) return("")
-
-  microtex_add_font(clm_path, otf_path)
   .text_font_registered[[otf_path]] <- fam_name
   fam_name
-}
-
-# Generate or locate a cached .clm1 for otf_path. `key` overrides the
-# cache key — useful when `otf_path` is an intermediate file (e.g. a
-# face extracted from a .ttc) and we want the CLM keyed to the original
-# source. `meta` is the parsed OTF metrics; supplied by the caller so we
-# don't re-parse the OTF on cache miss. Returns the clm path, or NULL.
-.ensure_text_clm <- function(otf_path, key = NULL, meta = NULL) {
-  cache_dir <- .text_clm_cache_dir()
-  if (!dir.exists(cache_dir)) {
-    dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
-  }
-
-  if (is.null(key)) key <- .text_clm_cache_key(otf_path)
-  clm_path <- file.path(cache_dir, paste0(key, ".clm1"))
-
-  if (file.exists(clm_path) &&
-      file.info(clm_path)$size > 0L) {
-    return(clm_path)
-  }
-
-  if (is.null(meta)) meta <- .parse_otf_metrics(otf_path)
-  # Write to a temp file first, then rename — avoids leaving a
-  # half-written CLM on disk if R is interrupted.
-  tmp <- paste0(clm_path, ".tmp")
-  .write_text_clm(meta, tmp)
-  file.rename(tmp, clm_path)
-  clm_path
-}
-
-# Cache key: short hash of (path, mtime, size, face_index, writer-ver,
-# clm-ver). mtime is included so a reinstalled or updated font produces
-# a fresh CLM. face_index distinguishes faces within a .ttc so the same
-# collection with different faces doesn't collide.
-.text_clm_cache_key <- function(otf_path, face_index = 0L) {
-  info <- file.info(otf_path)
-  mtime <- as.numeric(info$mtime)
-  size  <- as.numeric(info$size)
-  base <- tools::file_path_sans_ext(basename(otf_path))
-  hash_input <- paste(
-    normalizePath(otf_path, winslash = "/", mustWork = FALSE),
-    sprintf("%.0f", mtime), sprintf("%.0f", size),
-    as.integer(face_index),
-    .TEXT_CLM_WRITER_VER, .CLM_VER_MAJOR,
-    sep = "|"
-  )
-  paste0(base, "-", substr(.short_hash(hash_input), 1L, 12L))
-}
-
-.text_clm_cache_dir <- function() {
-  tools::R_user_dir("gridmicrotex", which = "cache")
-}
-
-# Small platform-independent hash without pulling in a new dep.
-.short_hash <- function(s) {
-  # Use tools::md5sum on a temp file if available; otherwise a simple
-  # polynomial hash of bytes. md5sum works on file paths only, so we
-  # write the string to a temp file.
-  tmp <- tempfile()
-  on.exit(unlink(tmp), add = TRUE)
-  writeBin(charToRaw(s), tmp)
-  unname(tools::md5sum(tmp))
 }
 
 # For tests and user-facing "clear everything" helpers.

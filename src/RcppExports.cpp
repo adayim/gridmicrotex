@@ -40,6 +40,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// microtex_init_from_otf
+void microtex_init_from_otf(std::string otf_path, int index);
+RcppExport SEXP _gridmicrotex_microtex_init_from_otf(SEXP otf_pathSEXP, SEXP indexSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type otf_path(otf_pathSEXP);
+    Rcpp::traits::input_parameter< int >::type index(indexSEXP);
+    microtex_init_from_otf(otf_path, index);
+    return R_NilValue;
+END_RCPP
+}
 // microtex_add_font
 void microtex_add_font(std::string clm_path, std::string otf_path);
 RcppExport SEXP _gridmicrotex_microtex_add_font(SEXP clm_pathSEXP, SEXP otf_pathSEXP) {
@@ -122,6 +133,42 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// ot_math_table_bytes
+SEXP ot_math_table_bytes(std::string path, int index);
+RcppExport SEXP _gridmicrotex_ot_math_table_bytes(SEXP pathSEXP, SEXP indexSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type path(pathSEXP);
+    Rcpp::traits::input_parameter< int >::type index(indexSEXP);
+    rcpp_result_gen = Rcpp::wrap(ot_math_table_bytes(path, index));
+    return rcpp_result_gen;
+END_RCPP
+}
+// otf_to_clm_bytes
+Rcpp::RawVector otf_to_clm_bytes(std::string path, int index);
+RcppExport SEXP _gridmicrotex_otf_to_clm_bytes(SEXP pathSEXP, SEXP indexSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type path(pathSEXP);
+    Rcpp::traits::input_parameter< int >::type index(indexSEXP);
+    rcpp_result_gen = Rcpp::wrap(otf_to_clm_bytes(path, index));
+    return rcpp_result_gen;
+END_RCPP
+}
+// microtex_add_font_from_otf
+std::string microtex_add_font_from_otf(std::string otf_path, int index);
+RcppExport SEXP _gridmicrotex_microtex_add_font_from_otf(SEXP otf_pathSEXP, SEXP indexSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type otf_path(otf_pathSEXP);
+    Rcpp::traits::input_parameter< int >::type index(indexSEXP);
+    rcpp_result_gen = Rcpp::wrap(microtex_add_font_from_otf(otf_path, index));
+    return rcpp_result_gen;
+END_RCPP
+}
 // parse_latex_cpp
 Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style);
 RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP) {
@@ -146,6 +193,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
     {"_gridmicrotex_microtex_init", (DL_FUNC) &_gridmicrotex_microtex_init, 2},
+    {"_gridmicrotex_microtex_init_from_otf", (DL_FUNC) &_gridmicrotex_microtex_init_from_otf, 2},
     {"_gridmicrotex_microtex_add_font", (DL_FUNC) &_gridmicrotex_microtex_add_font, 2},
     {"_gridmicrotex_microtex_math_font_names", (DL_FUNC) &_gridmicrotex_microtex_math_font_names, 0},
     {"_gridmicrotex_microtex_set_default_math_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_math_font, 1},
@@ -154,6 +202,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_microtex_version", (DL_FUNC) &_gridmicrotex_microtex_version, 0},
     {"_gridmicrotex_microtex_set_default_main_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_main_font, 1},
     {"_gridmicrotex_microtex_main_font_families", (DL_FUNC) &_gridmicrotex_microtex_main_font_families, 0},
+    {"_gridmicrotex_ot_math_table_bytes", (DL_FUNC) &_gridmicrotex_ot_math_table_bytes, 2},
+    {"_gridmicrotex_otf_to_clm_bytes", (DL_FUNC) &_gridmicrotex_otf_to_clm_bytes, 2},
+    {"_gridmicrotex_microtex_add_font_from_otf", (DL_FUNC) &_gridmicrotex_microtex_add_font_from_otf, 2},
     {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 9},
     {NULL, NULL, 0}
 };
