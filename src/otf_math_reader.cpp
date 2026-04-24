@@ -21,7 +21,9 @@
 
 #include "microtex.h"
 #include "unimath/font_src.h"
+#include "otf/otf.h"
 #include "otf/otfconfig.h"
+#include "otf/math_consts.h"
 
 // =============================================================================
 // In-memory OTF → CLM synth
@@ -45,8 +47,15 @@ using u32 = std::uint32_t;
 using i16 = std::int16_t;
 using i32 = std::int32_t;
 
-constexpr u16 CLM_VER_MAJOR_EXPECTED = 6;
-constexpr i16 UNDEFINED_MATH_VALUE   = 0x7FFF;
+// Pull wire-format constants straight from MicroTeX so the writer cannot drift
+// from the reader on a version bump or a semantics change.
+constexpr u16 CLM_VER_MAJOR_EXPECTED = CLM_VER_MAJOR;
+constexpr i16 UNDEFINED_MATH_VALUE   = microtex::Otf::undefinedMathValue;
+constexpr int MATH_CONSTS_COUNT      = TEX_MATH_CONSTS_COUNT;
+static_assert(CLM_SUPPORT_GLYPH_PATH(2),
+              "CLM minor=2 must signal 'has glyph paths' in the reader.");
+static_assert(MATH_CONSTS_COUNT == 57,
+              "MathConsts field count changed — audit read_math_constants.");
 
 // ---------- Big-endian readers over a raw byte span --------------------------
 
@@ -138,8 +147,9 @@ inline i16 read_mvr_value(const BeReader& r, std::size_t off) {
 // (MathConsts::_fields). Field [56] (minConnectorOverlap) is populated from
 // the MathVariants subtable separately.
 
-void read_math_constants(const BeReader& math, std::size_t mc_off, i16 out[57]) {
-    std::fill(out, out + 57, static_cast<i16>(0));
+void read_math_constants(const BeReader& math, std::size_t mc_off,
+                         i16 out[MATH_CONSTS_COUNT]) {
+    std::fill(out, out + MATH_CONSTS_COUNT, static_cast<i16>(0));
     out[0] = math.i16be(mc_off + 0);     // scriptPercentScaleDown
     out[1] = math.i16be(mc_off + 2);     // scriptScriptPercentScaleDown
     out[2] = static_cast<i16>(math.u16be(mc_off + 4));  // delimitedSubFormulaMinHeight (UFWORD)
@@ -338,7 +348,7 @@ u16 parse_math_variants(const BeReader& math, std::size_t mv_off,
 
 struct ParsedMath {
     bool present = false;
-    i16 consts[57]{};
+    i16 consts[MATH_CONSTS_COUNT]{};
     std::vector<GlyphMath> per_glyph;
 };
 
@@ -529,11 +539,18 @@ struct GlyphMetrics { i16 width = 0; i16 height = 0; i16 depth = 0; i16 xMin = 0
 std::vector<GlyphMetrics> read_glyph_metrics(FT_Face face, u16 num_glyphs,
                                              i16 fallback_ascent,
                                              i16 fallback_descent) {
+    // MicroTeX's Metrics treats height/depth as non-negative distances from
+    // the baseline. Clamp fallbacks (and OTF-derived values below) so they
+    // cannot go negative — a negative depth for a glyph that sits entirely
+    // above the baseline under-sizes the enclosing VBox and draws accents /
+    // over-delimiters through the operand instead of above it.
+    const i16 safe_ascent  = std::max<i16>(0, fallback_ascent);
+    const i16 safe_descent = std::max<i16>(0, fallback_descent);
     std::vector<GlyphMetrics> out(num_glyphs);
     for (u16 g = 0; g < num_glyphs; ++g) {
         if (FT_Load_Glyph(face, g, FT_LOAD_NO_SCALE | FT_LOAD_NO_BITMAP) != 0) {
-            out[g].height = fallback_ascent;
-            out[g].depth  = fallback_descent;
+            out[g].height = safe_ascent;
+            out[g].depth  = safe_descent;
             continue;
         }
         const FT_Glyph_Metrics& m = face->glyph->metrics;
@@ -543,10 +560,10 @@ std::vector<GlyphMetrics> read_glyph_metrics(FT_Face face, u16 num_glyphs,
             return static_cast<i16>(v);
         };
         out[g].width  = clamp16(m.horiAdvance);
-        // horiBearingY = distance from baseline to top of ink bbox (positive).
-        // bbox height = m.height; so depth = height_bbox - horiBearingY.
-        out[g].height = clamp16(m.horiBearingY);
-        out[g].depth  = clamp16(m.height - m.horiBearingY);
+        const long yMax = m.horiBearingY;
+        const long yMin = m.horiBearingY - m.height;
+        out[g].height = clamp16(std::max<long>(0, yMax));
+        out[g].depth  = clamp16(std::max<long>(0, -yMin));
         out[g].xMin   = clamp16(m.horiBearingX);
     }
     return out;
@@ -754,7 +771,7 @@ std::vector<u8> build_clm_bytes_impl(const std::string& path, int index) {
 
     // MathConsts (only if math font)
     if (is_math) {
-        for (int i = 0; i < 57; ++i) w.i16v(math.consts[i]);
+        for (int i = 0; i < MATH_CONSTS_COUNT; ++i) w.i16v(math.consts[i]);
     }
 
     // Glyphs
