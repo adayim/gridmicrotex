@@ -377,15 +377,32 @@ ParsedMath parse_math_table(const u8* math_bytes, std::size_t math_len,
 
 // ---------- FreeType helpers -------------------------------------------------
 
+// Private FT_Library owned by this TU. We used to pull faces through
+// systemfonts' `get_cached_face`, but that cache (v1 API) poisons itself on
+// a failed lookup — once any caller passes a bad path, every subsequent
+// lookup of a valid font also fails with the same error. Since our reads
+// are one-shot (metadata + outline decompose) we don't benefit from caching
+// anyway; a direct FT_New_Face is simpler and fully isolated.
+FT_Library& shared_ft_library() {
+    static FT_Library lib = nullptr;
+    static bool initialised = false;
+    if (!initialised) {
+        if (FT_Init_FreeType(&lib) != 0) {
+            lib = nullptr;
+        }
+        initialised = true;
+    }
+    return lib;
+}
+
 FT_Face open_face(const std::string& path, int index) {
-    // Use the systemfonts v1 API (get_cached_face) — compatible with
-    // systemfonts >= 1.2. The v2 API (ver2::get_cached_face2, check_ft_version)
-    // would let us validate FreeType ABI match, but 1.2.x DLLs don't register
-    // those symbols and we don't want to hard-require 1.3+.
-    int err = 0;
-    FT_Face face = ::get_cached_face(path.c_str(),
-                                     index < 0 ? 0 : index,
-                                     12.0, 72.0, &err);
+    FT_Library& lib = shared_ft_library();
+    if (lib == nullptr) {
+        throw std::runtime_error("failed to initialise FreeType");
+    }
+    FT_Face face = nullptr;
+    const FT_Error err = FT_New_Face(lib, path.c_str(),
+                                     index < 0 ? 0 : index, &face);
     if (err != 0 || face == nullptr) {
         throw std::runtime_error("failed to open font '" + path + "'");
     }
