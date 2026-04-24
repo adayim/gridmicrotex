@@ -4,7 +4,13 @@
 test_that(".resolve_text_font registers the system font for a family", {
   gridmicrotex:::.clear_text_font_cache()
   fam <- gridmicrotex:::.resolve_text_font("sans")
-  expect_true(nzchar(fam))
+  # Some CI images (notably minimal Ubuntu runners) resolve fontconfig's
+  # "sans" alias to a font that happens to carry an OT MATH table, in
+  # which case MicroTeX registers it as a *math* font and .resolve_text_font
+  # returns "" so the caller falls back to default text metrics. Skip
+  # the registry check there; the invariant we care about is: if we DID
+  # resolve a text font, it's discoverable via main_font_families().
+  skip_if(!nzchar(fam), "No non-math system font resolvable for 'sans' here.")
   expect_true(fam %in% microtex_main_font_families())
 })
 

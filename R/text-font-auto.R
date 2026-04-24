@@ -90,6 +90,13 @@
   fam_name <- microtex_add_font_from_otf(otf_path, 0L)
   if (!is.character(fam_name) || !nzchar(fam_name)) return("")
 
+  # If systemfonts handed us a font that happens to carry an OT MATH
+  # table (some Linux CI runners alias "sans" to such a font), MicroTeX
+  # registers it as a math font, not a main font — it would never be
+  # found via the main-font lookup. Treat this as "no matching text
+  # font" so the caller falls back to MicroTeX's default text metrics.
+  if (!fam_name %in% microtex_main_font_families()) return("")
+
   .text_font_registered[[otf_path]] <- fam_name
   fam_name
 }

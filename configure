@@ -1,0 +1,23 @@
+#!/bin/sh
+# Resolve FreeType via pkg-config once at install time and expand
+# src/Makevars.in → src/Makevars. Doing this in the Makefile would require
+# $(shell ...), a GNU-make extension R CMD check warns about.
+
+set -e
+
+PKGCONFIG="${PKG_CONFIG:-pkg-config}"
+
+if ! "${PKGCONFIG}" --exists freetype2 2>/dev/null; then
+  echo "configure: pkg-config cannot find freetype2." >&2
+  echo "  Install the FreeType development package (libfreetype-dev on Debian/" >&2
+  echo "  Ubuntu, freetype-devel on Fedora/RHEL, freetype via Homebrew on macOS)" >&2
+  echo "  and ensure it is on PKG_CONFIG_PATH." >&2
+  exit 1
+fi
+
+FT_CFLAGS=$("${PKGCONFIG}" --cflags freetype2)
+FT_LIBS=$("${PKGCONFIG}" --libs freetype2)
+
+sed -e "s|@FT_CFLAGS@|${FT_CFLAGS}|g" \
+    -e "s|@FT_LIBS@|${FT_LIBS}|g" \
+    src/Makevars.in > src/Makevars
