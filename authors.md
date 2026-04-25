@@ -4,10 +4,17 @@
 
 - **Alim Dayim**. Author, maintainer.
 
+- **Nano Michael**. Copyright holder.  
+  Author of included MicroTeX library
+
+- **Bundled math font authors**. Copyright holder.  
+  See inst/COPYRIGHTS for the full list of authors of the bundled math
+  fonts.
+
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/fonts-v1/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/main/DESCRIPTION)
 
 Dayim A (2026). *gridmicrotex: Native LaTeX Math Rendering for Grid
 Graphics*. R package version 0.0.1,

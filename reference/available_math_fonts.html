@@ -33,7 +33,7 @@ latex_grob and grid.latex."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>List available math fonts</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/fonts-v1/R/fonts.R" class="external-link"><code>R/fonts.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/fonts.R" class="external-link"><code>R/fonts.R</code></a></small>
       <div class="d-none name"><code>available_math_fonts.Rd</code></div>
     </div>
 
@@ -58,13 +58,13 @@ These names can be passed to the <code>math_font</code> parameter of
 
 <p>The bundled math fonts have different styles. For a consistent look,
 pair them with a matching <code>fontfamily</code> in <code>gp</code>:</p>
-<table class="table table"><tr><td><strong>Math font</strong></td><td><strong>Style</strong></td><td><strong>Suggested text font</strong></td></tr><tr><td>Lete Sans Math (<code>"lete"</code>, default)</td><td>Sans-serif</td><td><code>"sans"</code></td></tr><tr><td>TeX Gyre DejaVu Math (<code>"dejavu"</code>)</td><td>Sans-serif</td><td><code>"sans"</code></td></tr><tr><td>Latin Modern Math (<code>"lm"</code>)</td><td>Serif</td><td><code>"serif"</code></td></tr><tr><td>STIX Two Math (<code>"stix"</code>)</td><td>Serif</td><td><code>"serif"</code></td></tr></table></div>
+<table class="table table"><tr><td><strong>Math font</strong></td><td><strong>Style</strong></td><td><strong>Suggested text font</strong></td></tr><tr><td>Lete Sans Math (<code>"lete"</code>, default)</td><td>Sans-serif</td><td><code>"sans"</code></td></tr><tr><td>STIX Two Math (<code>"stix"</code>)</td><td>Serif</td><td><code>"serif"</code></td></tr></table><p>Additional math fonts can be loaded with <code><a href="load_font.html">load_font</a></code>.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">available_math_fonts</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "LatinModernMath-Regular"   "Lete Sans Math"           </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "STIX Two Math"             "TeXGyreDejaVuMath-Regular"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Lete Sans Math" "STIX Two Math" </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

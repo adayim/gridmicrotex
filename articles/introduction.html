@@ -53,7 +53,7 @@
       <h1>Introduction to gridmicrotex</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/fonts-v1/vignettes/introduction.Rmd" class="external-link"><code>vignettes/introduction.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/vignettes/introduction.Rmd" class="external-link"><code>vignettes/introduction.Rmd</code></a></small>
       <div class="d-none name"><code>introduction.Rmd</code></div>
     </div>
 
@@ -78,8 +78,10 @@ embedded</li>
 SVG, …)</li>
 <li>Full math support: fractions, roots, integrals, matrices, Greek
 letters, accents, delimiters, and more</li>
-<li>Multiple math fonts (Latin Modern Math, STIX Two Math, Lete Sans
-Math, TeX Gyre DejaVu Math)</li>
+<li>Two bundled math fonts: Lete Sans Math (sans-serif, default) and
+STIX Two Math (serif); additional fonts via
+<code><a href="../reference/load_font.html">load_font()</a></code>
+</li>
 <li>Color support via <code>\textcolor{}</code>
 </li>
 <li>ggplot2 integration with <code><a href="../reference/geom_latex.html">geom_latex()</a></code> and
@@ -131,21 +133,30 @@ grob:</p>
 <div class="section level2">
 <h2 id="math-fonts">Math fonts<a class="anchor" aria-label="anchor" href="#math-fonts"></a>
 </h2>
-<p>The package bundles Lete Sans Math (default — pairs with R’s default
-sans text), Latin Modern Math, STIX Two Math, and TeX Gyre DejaVu Math.
-For most users, the easiest workflow is:</p>
-<ol style="list-style-type: decimal">
-<li>List available math fonts with
-<code><a href="../reference/available_math_fonts.html">available_math_fonts()</a></code>
-</li>
-<li>Select one with <code>latex_options(math_font = ...)</code>
-</li>
-<li>Render formulas normally (no OTF/CLM paths needed)</li>
-</ol>
+<p>The package ships with two math fonts, both loaded automatically:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Alias</th>
+<th>Font</th>
+<th>License</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<code>"lete"</code> (default)</td>
+<td>Lete Sans Math</td>
+<td>SIL Open Font License</td>
+</tr>
+<tr class="even">
+<td><code>"stix"</code></td>
+<td>STIX Two Math</td>
+<td>SIL Open Font License</td>
+</tr>
+</tbody>
+</table>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/available_math_fonts.html">available_math_fonts</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "LatinModernMath-Regular"   "Lete Sans Math"           </span></span>
-<span><span class="co">#&gt; [3] "STIX Two Math"             "TeXGyreDejaVuMath-Regular"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math"</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>math_font <span class="op">=</span> <span class="st">"stix"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -155,7 +166,7 @@ For most users, the easiest workflow is:</p>
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Switch back to the default (Lete Sans Math)</span></span>
 <span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>math_font <span class="op">=</span> <span class="st">"lete"</span><span class="op">)</span></span></code></pre></div>
-<p>You can still override the font per call via
+<p>You can also override the font per call via
 <code>math_font</code>:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -172,13 +183,11 @@ For most users, the easiest workflow is:</p>
 <div class="section level3">
 <h3 id="advanced-loading-custom-fonts">Advanced: loading custom fonts<a class="anchor" aria-label="anchor" href="#advanced-loading-custom-fonts"></a>
 </h3>
-<p>Use <code><a href="../reference/load_font.html">load_font()</a></code> only when you need a custom font that is
-not already bundled/loaded. In the current engine, custom loading still
-needs a matching CLM metrics file (auto-discovered when possible):</p>
+<p>Use <code><a href="../reference/load_font.html">load_font()</a></code> to add any additional OpenType math
+font. The OpenType MATH table is parsed directly in C++ — no companion
+metrics file or external toolchain is required:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/load_font.html">load_font</a></span><span class="op">(</span><span class="st">"path/to/MyFont.otf"</span><span class="op">)</span></span></code></pre></div>
-<p>You can generate your font CLM using the bundled Python script. See
-help for <code><a href="../reference/load_font.html">load_font()</a></code> for instructions.</p>
 </div>
 <div class="section level3">
 <h3 id="render-modes">Render modes<a class="anchor" aria-label="anchor" href="#render-modes"></a>
@@ -206,7 +215,7 @@ or searchable.</p></li>
 <span><span class="co"># Explicit path mode (works everywhere, but text is not selectable)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>, render_mode <span class="op">=</span> <span class="st">"path"</span><span class="op">)</span></span></code></pre></div>
 <blockquote>
-<p><strong>Important: Do not use <code><a href="https://rdrr.io/pkg/showtext/man/showtext_auto.html" class="external-link">showtext::showtext_auto()</a></code>
+<p><strong>Important: Do not use <code>showtext::showtext_auto()</code>
 with typeface mode.</strong> The <a href="https://CRAN.R-project.org/package=showtext" class="external-link">showtext</a> package
 globally intercepts all text rendering and converts it to vector paths.
 This silently defeats typeface mode, causing all math glyphs to appear
@@ -215,7 +224,7 @@ as paths instead of native text — even on devices like
 embedding. If you need showtext for other parts of your plot, disable it
 before drawing LaTeX formulas:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">showtext</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/showtext/man/showtext_auto.html" class="external-link">showtext_auto</a></span><span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu">showtext</span><span class="fu">::</span><span class="fu">showtext_auto</span><span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span>  <span class="co"># typeface mode works correctly</span></span></code></pre></div>
 </blockquote>
 </div>
@@ -238,7 +247,7 @@ expression:</p>
 <span><span class="co">#&gt; [1] 9bigpts</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $baseline</span></span>
-<span><span class="co">#&gt; [1] 9.35305953025818bigpts</span></span>
+<span><span class="co">#&gt; [1] 9.36317294836044bigpts</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $is_split</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
@@ -279,16 +288,6 @@ pair them with a matching <code>fontfamily</code>:</p>
 <td><code>"sans"</code></td>
 </tr>
 <tr class="even">
-<td>TeX Gyre DejaVu Math (<code>"dejavu"</code>)</td>
-<td>Sans-serif</td>
-<td><code>"sans"</code></td>
-</tr>
-<tr class="odd">
-<td>Latin Modern Math (<code>"lm"</code>)</td>
-<td>Serif</td>
-<td><code>"serif"</code></td>
-</tr>
-<tr class="even">
 <td>STIX Two Math (<code>"stix"</code>)</td>
 <td>Serif</td>
 <td><code>"serif"</code></td>
@@ -299,8 +298,8 @@ pair them with a matching <code>fontfamily</code>:</p>
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">"\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0"</span>,</span>
-<span>  math_font <span class="op">=</span> <span class="st">"dejavu"</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"sans"</span>, fontsize <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
+<span>  math_font <span class="op">=</span> <span class="st">"stix"</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"serif"</span>, fontsize <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/font-pairing-1.png" class="r-plt" alt="" width="70%"></p>
 </div>
@@ -531,14 +530,14 @@ custom grobs on top of the layout:</p>
 <span><span class="co">#&gt;     glyph      2</span></span>
 <span><span class="co">#&gt;     line       1</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">tr</span><span class="op">$</span><span class="va">records</span>, <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    type     x      y glyph font_size   color    x2     y2 width height rx ry</span></span>
-<span><span class="co">#&gt; 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA</span></span>
-<span><span class="co">#&gt; 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA</span></span>
-<span><span class="co">#&gt; 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA</span></span>
-<span><span class="co">#&gt;    lwd text font_style rotation path codepoint</span></span>
-<span><span class="co">#&gt; 1   NA &lt;NA&gt;         NA        0 NULL        NA</span></span>
-<span><span class="co">#&gt; 2 1.32 &lt;NA&gt;         NA        0 NULL        NA</span></span>
-<span><span class="co">#&gt; 3   NA &lt;NA&gt;         NA        0 NULL        NA</span></span>
+<span><span class="co">#&gt;    type         x      y glyph font_size   color    x2     y2 width height rx</span></span>
+<span><span class="co">#&gt; 1 glyph 0.1890002  7.196  3628        14 #000000    NA     NA    NA     NA NA</span></span>
+<span><span class="co">#&gt; 2  line 0.0000000 10.596    NA        NA #000000 7.392 10.596    NA     NA NA</span></span>
+<span><span class="co">#&gt; 3 glyph 0.0000000 25.796  3629        14 #000000    NA     NA    NA     NA NA</span></span>
+<span><span class="co">#&gt;   ry  lwd text font_style rotation path codepoint</span></span>
+<span><span class="co">#&gt; 1 NA   NA &lt;NA&gt;         NA        0 NULL        NA</span></span>
+<span><span class="co">#&gt; 2 NA 1.32 &lt;NA&gt;         NA        0 NULL        NA</span></span>
+<span><span class="co">#&gt; 3 NA   NA &lt;NA&gt;         NA        0 NULL        NA</span></span>
 <span><span class="co">#&gt;                                                             font_file</span></span>
 <span><span class="co">#&gt; 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf</span></span>
 <span><span class="co">#&gt; 2                                                                &lt;NA&gt;</span></span>

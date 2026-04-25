@@ -14,37 +14,29 @@ plots:
 [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
 works like
 [`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
-but interprets the `label` aesthetic as a LaTeX math string.
+but interprets the `label` aesthetic as a LaTeX math string. You can
+also map the `size` (font size in points) and `colour` aesthetics as
+usual:
 
 ``` r
 df <- data.frame(
   x = 1:3,
   y = 1:3,
-  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i")
+  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"),
+  col = c("red", "blue", "green")
 )
 
-ggplot(df, aes(x, y, label = eq)) +
-  geom_latex() +
-  theme_minimal()
-```
-
-![](ggplot2-integration_files/figure-html/geom-basic-1.png)
-
-### Controlling size and colour
-
-Map the `size` (font size in points) and `colour` aesthetics as usual:
-
-``` r
-df$col <- c("red", "blue", "darkgreen")
-
-ggplot(df, aes(x, y, label = eq, colour = col, size = c(14, 18, 14))) +
+ggplot(df, aes(x, y, 
+               label = eq, 
+               colour = col, 
+               size = c(14, 18, 14))) +
   geom_latex() +
   scale_colour_identity() +
   scale_size_identity() +
   theme_minimal()
 ```
 
-![](ggplot2-integration_files/figure-html/geom-aesthetics-1.png)
+![](ggplot2-integration_files/figure-html/geom-basic-1.png)
 
 ### Adding equation annotations to a scatter plot
 

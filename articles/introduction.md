@@ -18,8 +18,9 @@ graphics device at any resolution.
   …)
 - Full math support: fractions, roots, integrals, matrices, Greek
   letters, accents, delimiters, and more
-- Multiple math fonts (Latin Modern Math, STIX Two Math, Lete Sans Math,
-  TeX Gyre DejaVu Math)
+- Two bundled math fonts: Lete Sans Math (sans-serif, default) and STIX
+  Two Math (serif); additional fonts via
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
 - Color support via `\textcolor{}`
 - ggplot2 integration with
   [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
@@ -79,19 +80,16 @@ grid.latex(
 
 ## Math fonts
 
-The package bundles Lete Sans Math (default — pairs with R’s default
-sans text), Latin Modern Math, STIX Two Math, and TeX Gyre DejaVu Math.
-For most users, the easiest workflow is:
+The package ships with two math fonts, both loaded automatically:
 
-1.  List available math fonts with
-    [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
-2.  Select one with `latex_options(math_font = ...)`
-3.  Render formulas normally (no OTF/CLM paths needed)
+| Alias              | Font           | License               |
+|--------------------|----------------|-----------------------|
+| `"lete"` (default) | Lete Sans Math | SIL Open Font License |
+| `"stix"`           | STIX Two Math  | SIL Open Font License |
 
 ``` r
 available_math_fonts()
-#> [1] "LatinModernMath-Regular"   "Lete Sans Math"           
-#> [3] "STIX Two Math"             "TeXGyreDejaVuMath-Regular"
+#> [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math"
 ```
 
 ``` r
@@ -108,7 +106,7 @@ grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
 latex_options(math_font = "lete")
 ```
 
-You can still override the font per call via `math_font`:
+You can also override the font per call via `math_font`:
 
 ``` r
 grid::grid.newpage()
@@ -133,18 +131,13 @@ for a diagnostic report.
 
 Use
 [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
-only when you need a custom font that is not already bundled/loaded. In
-the current engine, custom loading still needs a matching CLM metrics
-file (auto-discovered when possible):
+to add any additional OpenType math font. The OpenType MATH table is
+parsed directly in C++ — no companion metrics file or external toolchain
+is required:
 
 ``` r
 load_font("path/to/MyFont.otf")
 ```
-
-You can generate your font CLM using the bundled Python script. See help
-for
-[`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
-for instructions.
 
 ### Render modes
 
@@ -174,16 +167,14 @@ grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24))
 grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24), render_mode = "path")
 ```
 
-> **Important: Do not use
-> [`showtext::showtext_auto()`](https://rdrr.io/pkg/showtext/man/showtext_auto.html)
-> with typeface mode.** The
-> [showtext](https://CRAN.R-project.org/package=showtext) package
-> globally intercepts all text rendering and converts it to vector
-> paths. This silently defeats typeface mode, causing all math glyphs to
-> appear as paths instead of native text — even on devices like
-> `svglite` and `ragg` that fully support font embedding. If you need
-> showtext for other parts of your plot, disable it before drawing LaTeX
-> formulas:
+> **Important: Do not use `showtext::showtext_auto()` with typeface
+> mode.** The [showtext](https://CRAN.R-project.org/package=showtext)
+> package globally intercepts all text rendering and converts it to
+> vector paths. This silently defeats typeface mode, causing all math
+> glyphs to appear as paths instead of native text — even on devices
+> like `svglite` and `ragg` that fully support font embedding. If you
+> need showtext for other parts of your plot, disable it before drawing
+> LaTeX formulas:
 >
 > ``` r
 > showtext::showtext_auto(FALSE)
@@ -208,7 +199,7 @@ dims
 #> [1] 9bigpts
 #> 
 #> $baseline
-#> [1] 9.35305953025818bigpts
+#> [1] 9.36317294836044bigpts
 #> 
 #> $is_split
 #> [1] FALSE
@@ -241,16 +232,14 @@ pair them with a matching `fontfamily`:
 | Math font                          | Style      | Suggested `fontfamily` |
 |------------------------------------|------------|------------------------|
 | Lete Sans Math (`"lete"`, default) | Sans-serif | `"sans"`               |
-| TeX Gyre DejaVu Math (`"dejavu"`)  | Sans-serif | `"sans"`               |
-| Latin Modern Math (`"lm"`)         | Serif      | `"serif"`              |
 | STIX Two Math (`"stix"`)           | Serif      | `"serif"`              |
 
 ``` r
 grid::grid.newpage()
 grid.latex(
   "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",
-  math_font = "dejavu",
-  gp = grid::gpar(fontfamily = "sans", fontsize = 12)
+  math_font = "stix",
+  gp = grid::gpar(fontfamily = "serif", fontsize = 12)
 )
 ```
 
@@ -485,14 +474,14 @@ tr
 #>     glyph      2
 #>     line       1
 head(tr$records, 3)
-#>    type     x      y glyph font_size   color    x2     y2 width height rx ry
-#> 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA
-#> 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA
-#> 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA
-#>    lwd text font_style rotation path codepoint
-#> 1   NA <NA>         NA        0 NULL        NA
-#> 2 1.32 <NA>         NA        0 NULL        NA
-#> 3   NA <NA>         NA        0 NULL        NA
+#>    type         x      y glyph font_size   color    x2     y2 width height rx
+#> 1 glyph 0.1890002  7.196  3628        14 #000000    NA     NA    NA     NA NA
+#> 2  line 0.0000000 10.596    NA        NA #000000 7.392 10.596    NA     NA NA
+#> 3 glyph 0.0000000 25.796  3629        14 #000000    NA     NA    NA     NA NA
+#>   ry  lwd text font_style rotation path codepoint
+#> 1 NA   NA <NA>         NA        0 NULL        NA
+#> 2 NA 1.32 <NA>         NA        0 NULL        NA
+#> 3 NA   NA <NA>         NA        0 NULL        NA
 #>                                                             font_file
 #> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
 #> 2                                                                <NA>

@@ -35,7 +35,7 @@ counting glyphs/paths/rules in a formula."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Inspect the parsed layout of a LaTeX expression</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/fonts-v1/R/latex-tree.R" class="external-link"><code>R/latex-tree.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/latex-tree.R" class="external-link"><code>R/latex-tree.R</code></a></small>
       <div class="d-none name"><code>latex_tree.Rd</code></div>
     </div>
 
@@ -145,14 +145,14 @@ glyph, path, line, rect, or text block). Columns include
 <span class="r-out co"><span class="r-pr">#&gt;</span>     glyph      2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     line       1</span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">tree</span><span class="op">$</span><span class="va">records</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    type     x      y glyph font_size   color    x2     y2 width height rx ry</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 glyph 0.175  7.224  2701        14 #000000    NA     NA    NA     NA NA NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  line 0.000 10.624    NA        NA #000000 7.392 10.624    NA     NA NA NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 glyph 0.000 25.824  2702        14 #000000    NA     NA    NA     NA NA NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    lwd text font_style rotation path codepoint</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   NA &lt;NA&gt;         NA        0 NULL        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 1.32 &lt;NA&gt;         NA        0 NULL        NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   NA &lt;NA&gt;         NA        0 NULL        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    type         x      y glyph font_size   color    x2     y2 width height rx</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 glyph 0.1890002  7.196  3628        14 #000000    NA     NA    NA     NA NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  line 0.0000000 10.596    NA        NA #000000 7.392 10.596    NA     NA NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 glyph 0.0000000 25.796  3629        14 #000000    NA     NA    NA     NA NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   ry  lwd text font_style rotation path codepoint</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 NA   NA &lt;NA&gt;         NA        0 NULL        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 NA 1.32 &lt;NA&gt;         NA        0 NULL        NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 NA   NA &lt;NA&gt;         NA        0 NULL        NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                                             font_file</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2                                                                &lt;NA&gt;</span>

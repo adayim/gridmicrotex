@@ -91,7 +91,7 @@ latex_dims("\\frac{a}{b}")
 #> [1] 9bigpts
 #> 
 #> $baseline
-#> [1] 9.35305953025818bigpts
+#> [1] 9.36317294836044bigpts
 #> 
 #> $is_split
 #> [1] FALSE

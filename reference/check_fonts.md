@@ -19,14 +19,10 @@ Invisibly returns the character vector of available font names.
 ``` r
 check_fonts()
 #> MicroTeX version: 1.0.0
-#> Loaded math fonts (4):
-#>   - LatinModernMath-Regular
+#> Loaded math fonts (2):
 #>   - Lete Sans Math
 #>   - STIX Two Math
-#>   - TeXGyreDejaVuMath-Regular
 #> Bundled font files:
-#>   - Latin Modern Math: found
-#>   - STIX Two Math: found
-#>   - Lete Sans Math: found
-#>   - TeX Gyre DejaVu Math: found
+#>   - LeteSansMath.otf: found
+#>   - STIXTwoMath-Regular.otf: found
 ```

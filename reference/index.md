@@ -44,6 +44,6 @@ Load and configure math and text fonts
 - [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
   : List available math fonts
 - [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
-  : Load a font file into MicroTeX
+  : Load a math font from an OTF file
 - [`check_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_fonts.md)
   : Check font status

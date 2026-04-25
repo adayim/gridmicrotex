@@ -25,14 +25,14 @@ pair them with a matching `fontfamily` in `gp`:
 |------------------------------------|------------|-------------------------|
 | **Math font**                      | **Style**  | **Suggested text font** |
 | Lete Sans Math (`"lete"`, default) | Sans-serif | `"sans"`                |
-| TeX Gyre DejaVu Math (`"dejavu"`)  | Sans-serif | `"sans"`                |
-| Latin Modern Math (`"lm"`)         | Serif      | `"serif"`               |
 | STIX Two Math (`"stix"`)           | Serif      | `"serif"`               |
+
+Additional math fonts can be loaded with
+[`load_font`](https://adayim.github.io/gridmicrotex/reference/load_font.md).
 
 ## Examples
 
 ``` r
 available_math_fonts()
-#> [1] "LatinModernMath-Regular"   "Lete Sans Math"           
-#> [3] "STIX Two Math"             "TeXGyreDejaVuMath-Regular"
+#> [1] "Lete Sans Math" "STIX Two Math" 
 ```

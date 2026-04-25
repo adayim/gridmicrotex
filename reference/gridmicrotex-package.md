@@ -18,3 +18,11 @@ Useful links:
 ## Author
 
 **Maintainer**: Alim Dayim <ad938@cam.ac.uk>
+
+Other contributors:
+
+- Nano Michael (Author of included MicroTeX library) \[copyright
+  holder\]
+
+- Bundled math font authors (See inst/COPYRIGHTS for the full list of
+  authors of the bundled math fonts.) \[copyright holder\]

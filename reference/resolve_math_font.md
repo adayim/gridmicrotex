@@ -1,6 +1,6 @@
 # Resolve a math font name
 
-Translates short aliases (e.g., `"stix"`, `"lm"`) to the full MicroTeX
+Translates short aliases (e.g., `"stix"`, `"lete"`) to the full MicroTeX
 font name. Validates that the font is loaded.
 
 ## Usage
