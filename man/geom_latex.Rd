@@ -85,13 +85,14 @@ wrapping (default: 0, no wrapping).}
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Requires the math font to be installed on the system.
-Falls back to path mode automatically on devices that do not support
-font embedding (e.g., the base \code{pdf()} device).
+Bundled math fonts and any registered via \code{\link{load_font}}
+are read directly from their OTF files --- no system-wide font
+install is required.
+Falls back to path mode automatically on devices that lack the
+R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
+For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
-all devices but text is not selectable in PDF/SVG).
-For PDF output with embedded/selectable text, prefer
-\code{\link[grDevices]{cairo_pdf}}.}
+all devices but text is not selectable in PDF/SVG).}
 
 \item{na.rm}{If \code{FALSE}, the default, missing values are removed with
 a warning. If \code{TRUE}, missing values are silently removed.}

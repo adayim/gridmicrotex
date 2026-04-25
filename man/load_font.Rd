@@ -15,8 +15,9 @@ Invisibly returns \code{NULL}.
 \description{
 Loads an OTF/TTF math font into MicroTeX's internal font registry. The
 font's OpenType MATH table is parsed directly in C++ and the required
-metrics are synthesised on the fly --- no companion \code{.clm2}
-metrics file or FontForge toolchain required.
+metrics are synthesised on the fly. You can download free math fonts like
+Latin Modern Math (default math fonts in LaTeX) and load it with
+\code{load_font()} to use it for math rendering.
 }
 \details{
 The font is also registered with the \pkg{systemfonts} package so it
