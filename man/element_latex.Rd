@@ -33,13 +33,14 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Requires the math font to be installed on the system.
-Falls back to path mode automatically on devices that do not support
-font embedding (e.g., the base \code{pdf()} device).
+Bundled math fonts and any registered via \code{\link{load_font}}
+are read directly from their OTF files --- no system-wide font
+install is required.
+Falls back to path mode automatically on devices that lack the
+R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
+For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
-all devices but text is not selectable in PDF/SVG).
-For PDF output with embedded/selectable text, prefer
-\code{\link[grDevices]{cairo_pdf}}.}
+all devices but text is not selectable in PDF/SVG).}
 
 \item{...}{Additional arguments passed to \code{ggplot2::element_text()}
 (e.g., \code{size}, \code{colour}, \code{hjust}).}
