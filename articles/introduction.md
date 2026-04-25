@@ -145,13 +145,16 @@ gridmicrotex supports two rendering modes for math glyphs:
 
 - **`"typeface"`** (default): Renders glyphs as native text using the
   math font’s typeface. This produces selectable, searchable, and
-  accessible text in PDF and SVG output. Requires the math font (e.g.,
-  Lete Sans Math) to be installed on the system, and a device that
-  supports font embedding (e.g.,
+  accessible text in PDF and SVG output. Bundled math fonts (Lete Sans
+  Math, STIX Two Math) and any registered via
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  are read directly from their OTF files — no system-wide font install
+  is required. Requires a device that supports the R 4.3 glyph engine
+  (e.g.,
   [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html),
   `svglite::svglite()`,
   [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html)).
-  On devices that do not support typeface rendering (e.g., the base
+  On devices that do not (e.g., the base
   [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) device), the package
   automatically falls back to path mode with a warning.
 

@@ -197,11 +197,12 @@ metrics file or external toolchain is required:</p>
 <li><p><strong><code>"typeface"</code></strong> (default): Renders
 glyphs as native text using the math font’s typeface. This produces
 selectable, searchable, and accessible text in PDF and SVG output.
-Requires the math font (e.g., Lete Sans Math) to be installed on the
-system, and a device that supports font embedding (e.g.,
-<code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code>, <code>svglite::svglite()</code>,
-<code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code>). On devices that do not support
-typeface rendering (e.g., the base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> device), the
+Bundled math fonts (Lete Sans Math, STIX Two Math) and any registered
+via <code><a href="../reference/load_font.html">load_font()</a></code> are read directly from their OTF files — no
+system-wide font install is required. Requires a device that supports
+the R 4.3 glyph engine (e.g., <code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code>,
+<code>svglite::svglite()</code>, <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code>).
+On devices that do not (e.g., the base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> device), the
 package automatically falls back to path mode with a warning.</p></li>
 <li><p><strong><code>"path"</code></strong>: Renders each glyph as a
 filled vector path. This works on all R graphics devices and produces

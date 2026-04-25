@@ -140,13 +140,14 @@ wrapping (default: 0, no wrapping).</p></dd>
 <dd><p>Character string: <code>"typeface"</code> (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Requires the math font to be installed on the system.
-Falls back to path mode automatically on devices that do not support
-font embedding (e.g., the base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> device).
+Bundled math fonts and any registered via <code><a href="load_font.html">load_font</a></code>
+are read directly from their OTF files — no system-wide font
+install is required.
+Falls back to path mode automatically on devices that lack the
+R \(\geq\) 4.3 glyph engine (e.g., the base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> device).
+For selectable PDF output, prefer <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf</a></code>.
 <code>"path"</code> renders math symbols as filled vector paths (works on
-all devices but text is not selectable in PDF/SVG).
-For PDF output with embedded/selectable text, prefer
-<code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf</a></code>.</p></dd>
+all devices but text is not selectable in PDF/SVG).</p></dd>
 
 
 <dt id="arg-na-rm">na.rm<a class="anchor" aria-label="anchor" href="#arg-na-rm"></a></dt>

@@ -2,8 +2,9 @@
 
 Loads an OTF/TTF math font into MicroTeX's internal font registry. The
 font's OpenType MATH table is parsed directly in C++ and the required
-metrics are synthesised on the fly — no companion `.clm2` metrics file
-or FontForge toolchain required.
+metrics are synthesised on the fly. You can download free math fonts
+like Latin Modern Math (default math fonts in LaTeX) and load it with
+`load_font()` to use it for math rendering.
 
 ## Usage
 
