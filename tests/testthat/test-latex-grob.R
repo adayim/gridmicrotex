@@ -113,11 +113,8 @@ test_that("editGrob re-parses when gp (fontsize) changes", {
 })
 
 test_that("editGrob re-parses when math_font / tex_style / render_mode change", {
-  skip_if_math_font_unavailable("lm")
-  skip_if_math_font_unavailable("dejavu")
-
-  g <- latex_grob("\\frac{a}{b}", render_mode = "path", math_font = "lm")
-  g2 <- grid::editGrob(g, math_font = "dejavu")
+  g <- latex_grob("\\frac{a}{b}", render_mode = "path", math_font = "lete")
+  g2 <- grid::editGrob(g, math_font = "stix")
   expect_false(identical(g$layout_df, g2$layout_df))
 
   g3 <- latex_grob("\\sum_{i=1}^{n} i", render_mode = "path", tex_style = "text")
@@ -159,15 +156,12 @@ test_that("editGrob keeps viewport just in sync with hjust/vjust", {
 })
 
 test_that("latex_dims respects math_font parameter", {
-  skip_if_math_font_unavailable("lm")
-  skip_if_math_font_unavailable("dejavu")
-
-  dims_lm     <- latex_dims("\\frac{a}{b}", math_font = "lm", gp = grid::gpar(fontsize = 20))
-  dims_dejavu <- latex_dims("\\frac{a}{b}", math_font = "dejavu", gp = grid::gpar(fontsize = 20))
-  w_lm     <- grid::convertWidth(dims_lm$width, "bigpts", valueOnly = TRUE)
-  w_dejavu <- grid::convertWidth(dims_dejavu$width, "bigpts", valueOnly = TRUE)
-  # Different fonts should produce different (but both positive) widths
-  expect_true(w_lm > 0)
-  expect_true(w_dejavu > 0)
-  expect_false(w_lm == w_dejavu)
+  expr <- "\\int_0^1 f(x)\\,dx + x + y"
+  dims_lete <- latex_dims(expr, math_font = "lete", gp = grid::gpar(fontsize = 20))
+  dims_stix <- latex_dims(expr, math_font = "stix", gp = grid::gpar(fontsize = 20))
+  w_lete <- grid::convertWidth(dims_lete$width, "bigpts", valueOnly = TRUE)
+  w_stix <- grid::convertWidth(dims_stix$width, "bigpts", valueOnly = TRUE)
+  expect_true(w_lete > 0)
+  expect_true(w_stix > 0)
+  expect_false(w_lete == w_stix)
 })

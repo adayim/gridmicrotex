@@ -1,0 +1,22 @@
+#!/bin/sh
+# Windows counterpart of ./configure — Rtools ships pkg-config and a
+# freetype2.pc, so the same lookup works. Writing src/Makevars.win at
+# install time avoids $(shell ...) in the Makefile (GNU-make-only).
+
+set -e
+
+PKGCONFIG="${PKG_CONFIG:-pkg-config}"
+
+FT_CFLAGS=$("${PKGCONFIG}" --cflags freetype2 2>/dev/null || true)
+FT_LIBS=$("${PKGCONFIG}" --libs freetype2 2>/dev/null || true)
+
+if [ -z "${FT_LIBS}" ]; then
+  echo "configure.win: pkg-config could not resolve freetype2." >&2
+  echo "  Ensure Rtools45 (or later) is installed; it ships pkg-config +" >&2
+  echo "  a freetype2.pc under x86_64-w64-mingw32.static.posix." >&2
+  exit 1
+fi
+
+sed -e "s|@FT_CFLAGS@|${FT_CFLAGS}|g" \
+    -e "s|@FT_LIBS@|${FT_LIBS}|g" \
+    src/Makevars.win.in > src/Makevars.win

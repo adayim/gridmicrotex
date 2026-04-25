@@ -22,10 +22,9 @@ pair them with a matching \code{fontfamily} in \code{gp}:
 \tabular{lll}{
 \strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
 Lete Sans Math (\code{"lete"}, default) \tab Sans-serif \tab \code{"sans"} \cr
-TeX Gyre DejaVu Math (\code{"dejavu"}) \tab Sans-serif \tab \code{"sans"} \cr
-Latin Modern Math (\code{"lm"}) \tab Serif  \tab \code{"serif"} \cr
 STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
 }
+Additional math fonts can be loaded with \code{\link{load_font}}.
 }
 
 \examples{

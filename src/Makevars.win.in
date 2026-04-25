@@ -75,8 +75,8 @@ MICROTEX_OBJECTS = $(MICROTEX_SOURCES:.cpp=.o)
 # install time (it runs pkg-config once and writes Makevars.win from
 # Makevars.win.in). Doing the lookup here would use `$(shell ...)`, a
 # GNU-make extension CRAN flags.
-FT_CFLAGS = -IC:/rtools45/x86_64-w64-mingw32.static.posix/include/freetype2 -IC:/rtools45/x86_64-w64-mingw32.static.posix/include 
-FT_LIBS = -LC:/rtools45/x86_64-w64-mingw32.static.posix/lib -lharfbuzz -lfreetype -lbz2 -lpng16 -lbrotlicommon -lharfbuzz_too -lfreetype_too -lglib-2.0 -lintl -liconv -latomic -lm -lws2_32 -lwinmm -pthread -lole32 -lshlwapi -luuid -lpcre2-8 -lz -lbrotlidec -LC:/rtools45/x86_64-w64-mingw32.static.posix/lib -lbrotlicommon 
+FT_CFLAGS = @FT_CFLAGS@
+FT_LIBS = @FT_LIBS@
 
 PKG_CPPFLAGS = -I. -I$(MICROTEX_DIR) \
 	-DGLYPH_RENDER_TYPE=0 \

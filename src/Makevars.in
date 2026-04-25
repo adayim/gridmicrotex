@@ -71,15 +71,22 @@ MICROTEX_SOURCES = \
 
 MICROTEX_OBJECTS = $(MICROTEX_SOURCES:.cpp=.o)
 
+# FT_CFLAGS / FT_LIBS are substituted in by the `configure` script at install
+# time (it runs pkg-config once and writes Makevars from Makevars.in). Doing
+# the lookup here would use `$(shell ...)`, a GNU-make extension CRAN flags.
+FT_CFLAGS = @FT_CFLAGS@
+FT_LIBS = @FT_LIBS@
+
 PKG_CPPFLAGS = -I. -I$(MICROTEX_DIR) \
 	-DGLYPH_RENDER_TYPE=0 \
-	-include microtexconfig.h
+	-include microtexconfig.h \
+	$(FT_CFLAGS)
 
 # PKG_CXXFLAGS_EXTRA is an opt-in slot for dev-time flags (e.g.
 # `-Wextra -Wpedantic`). CRAN builds leave it empty; devs can set it via
 # `Sys.setenv(PKG_CXXFLAGS_EXTRA = "-Wextra -Wpedantic")` before R CMD INSTALL.
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(PKG_CXXFLAGS_EXTRA)
 
-PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(FT_LIBS)
 
-OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o $(MICROTEX_OBJECTS)
+OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o otf_math_reader.o $(MICROTEX_OBJECTS)

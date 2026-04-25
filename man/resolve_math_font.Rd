@@ -13,7 +13,7 @@ resolve_math_font(name)
 The resolved font name.
 }
 \description{
-Translates short aliases (e.g., \code{"stix"}, \code{"lm"}) to the
+Translates short aliases (e.g., \code{"stix"}, \code{"lete"}) to the
 full MicroTeX font name. Validates that the font is loaded.
 }
 \keyword{internal}

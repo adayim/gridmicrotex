@@ -18,8 +18,13 @@
 src/.*\.o$
 src/.*\.so$
 src/.*\.dll$
+# configure / configure.win generate src/Makevars[.win] at install time from
+# the .in templates. Ship only the templates + configure scripts; any locally
+# materialised Makevars is a build artefact, not a source file.
+^src/Makevars$
+^src/Makevars\.win$
 ^debug_*
 ^tools$
-^data-raw$
 ^\..+$
 ^\.Rproj\.user$
+
