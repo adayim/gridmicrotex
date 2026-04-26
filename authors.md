@@ -3,6 +3,7 @@
 ## Authors
 
 - **Alim Dayim**. Author, maintainer.
+  [](https://orcid.org/0000-0001-9998-7463)
 
 - **Nano Michael**. Copyright holder.  
   Author of included MicroTeX library
