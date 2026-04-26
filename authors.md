@@ -3,6 +3,7 @@
 ## Authors
 
 - **Alim Dayim**. Author, maintainer.
+  [](https://orcid.org/0000-0001-9998-7463)
 
 - **Nano Michael**. Copyright holder.  
   Author of included MicroTeX library
@@ -14,7 +15,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/v0.0.1/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/main/DESCRIPTION)
 
 Dayim A (2026). *gridmicrotex: Native LaTeX Math Rendering for Grid
 Graphics*. R package version 0.0.1,
