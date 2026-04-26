@@ -720,7 +720,7 @@ void Parser::parse() {
           _formula->add(sptrOf<BreakMarkAtom>());
           while (_pos < _len) {
             ch = _latex[_pos];
-            if (ch != ' ' || ch != '\t' || ch != '\r') break;
+            if (ch != ' ' && ch != '\t' && ch != '\r') break;
             _pos++;
           }
         }
