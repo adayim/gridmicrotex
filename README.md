@@ -146,30 +146,6 @@ ggplot(df, aes(x, y, label = eq)) +
 ggplot2 is a soft dependency — the core functions work without it. See
 `vignette("ggplot2-integration")` for more examples.
 
-## Features
-
-- Full LaTeX math: fractions, roots, integrals, matrices, Greek,
-  accents, extensible delimiters
-- Two bundled math fonts: Lete Sans Math (default) and STIX Two Math
-  - Lete Sans is sans-serif — pair with `gpar(fontfamily = "sans")` (the
-    R default)
-  - STIX Two is serif — pair with `gpar(fontfamily = "serif")`
-  - Additional math fonts can be loaded via `load_font()`
-- Color support: `\textcolor{}`, `\color{}`
-- Font variants: `\mathbb{}`, `\mathcal{}`, `\mathfrak{}`
-- CJK/multilingual text in `\text{}`
-- ggplot2 geom, annotation, and theme element (S7-compatible with
-  ggplot2 \>= 4.0)
-- Resolution-independent vector output on all R devices
-- No external LaTeX installation required
-- Project-wide defaults via `latex_options()` (math font, fontsize,
-  render mode, line spacing)
-- User-defined macros (`define_macro()`) for reusable notation
-- LRU layout cache for repeated formulas (`latex_cache_info()` /
-  `latex_cache_limit()` / `latex_cache_clear()`)
-- Formula introspection with `latex_tree()`; alignment overlay with
-  `latex_grob(..., debug = TRUE)`
-
 ## Comparison
 
 | Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
