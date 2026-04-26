@@ -160,6 +160,36 @@
 <p>ggplot2 is a soft dependency — the core functions work without it. See <code><a href="articles/ggplot2-integration.html">vignette("ggplot2-integration")</a></code> for more examples.</p>
 </div>
 <div class="section level2">
+<h2 id="features">Features<a class="anchor" aria-label="anchor" href="#features"></a>
+</h2>
+<ul>
+<li>Full LaTeX math: fractions, roots, integrals, matrices, Greek, accents, extensible delimiters</li>
+<li>Two bundled math fonts: Lete Sans Math (default) and STIX Two Math
+<ul>
+<li>Lete Sans is sans-serif — pair with <code>gpar(fontfamily = "sans")</code> (the R default)</li>
+<li>STIX Two is serif — pair with <code>gpar(fontfamily = "serif")</code>
+</li>
+<li>Additional math fonts can be loaded via <code><a href="reference/load_font.html">load_font()</a></code>
+</li>
+</ul>
+</li>
+<li>Color support: <code>\textcolor{}</code>, <code>\color{}</code>
+</li>
+<li>Font variants: <code>\mathbb{}</code>, <code>\mathcal{}</code>, <code>\mathfrak{}</code>
+</li>
+<li>CJK/multilingual text in <code>\text{}</code>
+</li>
+<li>ggplot2 geom, annotation, and theme element (S7-compatible with ggplot2 &gt;= 4.0)</li>
+<li>Resolution-independent vector output on all R devices</li>
+<li>No external LaTeX installation required</li>
+<li>Project-wide defaults via <code><a href="reference/latex_options.html">latex_options()</a></code> (math font, fontsize, render mode, line spacing)</li>
+<li>User-defined macros (<code><a href="reference/define_macro.html">define_macro()</a></code>) for reusable notation</li>
+<li>LRU layout cache for repeated formulas (<code><a href="reference/latex_cache_limit.html">latex_cache_info()</a></code> / <code><a href="reference/latex_cache_limit.html">latex_cache_limit()</a></code> / <code><a href="reference/latex_cache_limit.html">latex_cache_clear()</a></code>)</li>
+<li>Formula introspection with <code><a href="reference/latex_tree.html">latex_tree()</a></code>; alignment overlay with <code>latex_grob(..., debug = TRUE)</code>
+</li>
+</ul>
+</div>
+<div class="section level2">
 <h2 id="comparison">Comparison<a class="anchor" aria-label="anchor" href="#comparison"></a>
 </h2>
 <table class="table">
@@ -309,7 +339,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Alim Dayim <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0001-9998-7463" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Alim Dayim <br><small class="roles"> Author, maintainer </small>   </li>
 <li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
