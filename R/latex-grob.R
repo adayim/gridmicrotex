@@ -21,6 +21,16 @@
 #'   (default; let the parser decide), \code{"display"}, \code{"text"},
 #'   \code{"script"}, or \code{"scriptscript"}. See
 #'   \code{\link{latex_grob}} for the semantics of each value.
+#' @param input_mode How \code{tex} is interpreted before being parsed.
+#'   \code{"math"} (default) is the standard MicroTeX behaviour --- the
+#'   whole string is treated as math, so unwrapped prose renders as
+#'   spaced math italics. \code{"text"} wraps the input in
+#'   \code{\\text{...}} so the string reads as ordinary text and
+#'   \code{$...$} (or \code{\\(...\\)}) opens math mode, matching
+#'   document-level LaTeX semantics. Useful for labels that arrive from
+#'   external sources mixing prose and math without explicit
+#'   \code{\\text{}} markers. The default can be changed globally via
+#'   \code{\link{latex_options}(input_mode = "text")}.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
@@ -138,17 +148,20 @@ latex_grob <- function(tex,
                        math_font = "",
                        max_width = 0,
                        tex_style = "",
+                       input_mode = c("math", "text"),
                        render_mode = c("typeface", "path"),
                        debug = FALSE,
                        name = NULL,
                        gp = grid::gpar()) {
 
-  .apply_opts("math_font", "render_mode", "tex_style")
+  .apply_opts("math_font", "render_mode", "tex_style", "input_mode")
   render_mode <- match.arg(render_mode)
+  input_mode <- match.arg(input_mode)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
+    input_mode = input_mode,
     with_path_fallback = TRUE
   )
 
@@ -182,6 +195,7 @@ latex_grob <- function(tex,
     math_font = math_font,
     max_width = max_width,
     tex_style = tex_style,
+    input_mode = input_mode,
     text_gp = parsed$text_gp,
     render_mode = parsed$render_mode,
     path_layout_df = parsed$path_layout,
@@ -206,11 +220,17 @@ latex_grob <- function(tex,
 # `gp` safe to attach to child grobs (fontsize/cex/lineheight removed
 # so they don't re-scale at draw time).
 .parse_from_gp <- function(tex, gp, math_font, max_width, tex_style,
-                           render_mode, with_path_fallback = FALSE) {
+                           render_mode, input_mode = "math",
+                           with_path_fallback = FALSE) {
   .check_tex_style(tex_style)
+  input_mode <- match.arg(input_mode, c("math", "text"))
   if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
 
   tex <- .expand_macros(tex)
+  # The user-facing `tex` stays as the macro-expanded source so that
+  # editDetails() can re-parse without doubling up the \text{} wrap.
+  # `parse_input` is the actual string handed to the MicroTeX parser.
+  parse_input <- if (input_mode == "text") paste0("\\text{", tex, "}") else tex
   math_font <- resolve_math_font(math_font)
 
   fg_color <- if (!is.null(gp$col)) {
@@ -241,7 +261,7 @@ latex_grob <- function(tex,
   on.exit(clear_text_measurer(), add = TRUE)
 
   layout <- .parse_latex_cached(
-    tex = tex, text_size = fontsize, line_space = line_space,
+    tex = parse_input, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
     tex_style = tex_style
@@ -250,7 +270,7 @@ latex_grob <- function(tex,
   path_layout <- NULL
   if (with_path_fallback && render_mode == "typeface") {
     path_layout <- .parse_latex_cached(
-      tex = tex, text_size = fontsize, line_space = line_space,
+      tex = parse_input, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style
     )
@@ -324,7 +344,7 @@ makeContent.latexgrob <- function(x) {
 # Fields whose values feed .parse_from_gp(); editing any of them forces a
 # re-parse so the layout/bbox/text metrics stay in sync with the inputs.
 .latex_parse_fields <- c("tex", "math_font", "max_width", "tex_style",
-                         "render_mode", "gp")
+                         "input_mode", "render_mode", "gp")
 
 #' @method editDetails latexgrob
 #' @export
@@ -338,6 +358,7 @@ editDetails.latexgrob <- function(x, specs) {
     parsed <- .parse_from_gp(
       tex = x$tex, gp = x$gp, math_font = x$math_font,
       max_width = x$max_width, tex_style = x$tex_style,
+      input_mode = x$input_mode %||% "math",
       render_mode = x$render_mode, with_path_fallback = TRUE
     )
     layout <- parsed$layout
@@ -521,14 +542,17 @@ grid.latex <- function(tex, ...) {
 #' latex_dims("\\frac{a}{b}")
 latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
+                       input_mode = c("math", "text"),
                        render_mode = c("typeface", "path"),
                        gp = grid::gpar()) {
-  .apply_opts("math_font", "render_mode", "tex_style")
+  .apply_opts("math_font", "render_mode", "tex_style", "input_mode")
   render_mode <- match.arg(render_mode)
+  input_mode <- match.arg(input_mode)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
-    tex_style = tex_style, render_mode = render_mode
+    tex_style = tex_style, render_mode = render_mode,
+    input_mode = input_mode
   )
   layout <- parsed$layout
   bbox_h <- attr(layout, "bbox_height")

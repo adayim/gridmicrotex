@@ -67,10 +67,12 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
                        position = "identity", ...,
                        fontsize = 11, math_font = "",
                        lineheight = 1.2, max_width = 0,
+                       input_mode = c("math", "text"),
                        render_mode = c("typeface", "path"),
                        na.rm = FALSE, show.legend = NA,
                        inherit.aes = TRUE) {
   render_mode <- match.arg(render_mode)
+  input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required for geom_latex(). ",
          "Please install it with install.packages('ggplot2').",
@@ -90,6 +92,7 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
       math_font = math_font,
       lineheight = lineheight,
       max_width = max_width,
+      input_mode = input_mode,
       render_mode = render_mode,
       na.rm = na.rm,
       ...
@@ -146,8 +149,10 @@ GeomLatex <- NULL
 #' }
 element_latex <- function(math_font = "", fontsize = NULL,
                          lineheight = 1.2, max_width = 0,
+                         input_mode = c("math", "text"),
                          render_mode = c("typeface", "path"), ...) {
   render_mode <- match.arg(render_mode)
+  input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required for element_latex(). ",
          "Please install it with install.packages('ggplot2').",
@@ -158,7 +163,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
   if (!is.null(fontsize)) {
     dots$size <- fontsize
   }
-  do.call(.element_latex_class, c(list(math_font = math_font, lineheight = lineheight, max_width = max_width, render_mode = render_mode), dots))
+  do.call(.element_latex_class, c(list(math_font = math_font, lineheight = lineheight, max_width = max_width, input_mode = input_mode, render_mode = render_mode), dots))
 }
 
 # Placeholder — replaced in .onLoad_ggplot2() with the real S7 constructor
@@ -188,6 +193,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
 
     draw_panel = function(data, panel_params, coord, fontsize = 11,
                           math_font = "", lineheight = 1.2, max_width = 0,
+                          input_mode = "math",
                           render_mode = "typeface",
                           na.rm = FALSE) {
       coords <- coord$transform(data, panel_params)
@@ -213,6 +219,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
           rot = row$angle %||% 0,
           math_font = math_font,
           max_width = max_width,
+          input_mode = input_mode,
           render_mode = render_mode,
           gp = grid::gpar(col = col, fontsize = fs, lineheight = lineheight)
         )
@@ -230,6 +237,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
       math_font = S7::new_property(S7::class_character, default = ""),
       lineheight = S7::new_property(S7::class_numeric, default = 1.2),
       max_width = S7::new_property(S7::class_numeric, default = 0),
+      input_mode = S7::new_property(S7::class_character, default = "math"),
       render_mode = S7::new_property(S7::class_character, default = "typeface")
     )
   )
@@ -265,11 +273,19 @@ element_latex <- function(math_font = "", fontsize = NULL,
   math_font <- element@math_font %||% ""
   lineheight <- element@lineheight %||% 1.2
   max_width <- element@max_width %||% 0
+  input_mode <- element@input_mode %||% "math"
   render_mode <- element@render_mode %||% "typeface"
+
+  # In math mode, strip enclosing $...$ that users add by analogy with
+  # plotmath-style labels. In text mode, $ toggles math sub-spans, so
+  # leave them intact.
+  strip_dollars <- function(s) {
+    if (input_mode == "text") s else gsub("^\\$|\\$$", "", s)
+  }
 
   # Single label (axis title, strip text) — render one grob
   if (length(label) == 1L) {
-    label <- gsub("^\\$|\\$$", "", label)
+    label <- strip_dollars(label)
     if (is.null(x)) x <- grid::unit(0.5, "npc")
     if (is.null(y)) y <- grid::unit(0.5, "npc")
     return(latex_grob(
@@ -277,13 +293,14 @@ element_latex <- function(math_font = "", fontsize = NULL,
       hjust = hjust, vjust = vjust,
       math_font = math_font,
       max_width = max_width,
+      input_mode = input_mode,
       render_mode = render_mode,
       gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
     ))
   }
 
   # Multiple labels (axis tick labels) — render a gTree of grobs
-  label <- gsub("^\\$|\\$$", "", label)
+  label <- strip_dollars(label)
   n <- length(label)
   if (is.null(x)) x <- grid::unit(seq(0, 1, length.out = n), "npc")
   if (is.null(y)) y <- grid::unit(seq(0, 1, length.out = n), "npc")
@@ -299,6 +316,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
       hjust = hjust, vjust = vjust,
       math_font = math_font,
       max_width = max_width,
+      input_mode = input_mode,
       render_mode = render_mode,
       gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight),
       name = paste0("ticklabel.", i)

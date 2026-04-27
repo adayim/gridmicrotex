@@ -5,7 +5,12 @@
 \alias{reset_latex_options}
 \title{Set or query package-wide LaTeX rendering defaults}
 \usage{
-latex_options(math_font = NULL, render_mode = NULL, tex_style = NULL)
+latex_options(
+  math_font = NULL,
+  render_mode = NULL,
+  tex_style = NULL,
+  input_mode = NULL
+)
 
 reset_latex_options()
 }
@@ -20,6 +25,16 @@ decide), \code{"display"}, \code{"text"}, \code{"script"}, or
 \code{"scriptscript"}. \code{"display"} forces large operators with
 limits placed over/under, useful for inline labels that should still
 look like display equations.}
+
+\item{input_mode}{How the input string is interpreted before being
+handed to MicroTeX. \code{"math"} (default) treats the whole string
+as math --- the standard MicroTeX behaviour, where letters render as
+math italics and unwrapped prose looks wrong. \code{"text"} wraps
+the string in \code{\\text{...}} so it reads as ordinary text, with
+\code{$...$} (and \code{\\(...\\)}) opening math mode --- the
+document-level LaTeX convention. Useful when consuming labels from
+other packages that mix prose and math without explicit
+\code{\\text{}} markers.}
 }
 \value{
 Invisibly returns the previous settings (a list). With no

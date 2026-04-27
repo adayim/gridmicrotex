@@ -7,7 +7,8 @@
 .latex_options$values <- list(
   math_font   = NULL,
   render_mode = NULL,
-  tex_style   = NULL
+  tex_style   = NULL,
+  input_mode  = NULL
 )
 
 #' Set or query package-wide LaTeX rendering defaults
@@ -34,6 +35,15 @@
 #'   \code{"scriptscript"}. \code{"display"} forces large operators with
 #'   limits placed over/under, useful for inline labels that should still
 #'   look like display equations.
+#' @param input_mode How the input string is interpreted before being
+#'   handed to MicroTeX. \code{"math"} (default) treats the whole string
+#'   as math --- the standard MicroTeX behaviour, where letters render as
+#'   math italics and unwrapped prose looks wrong. \code{"text"} wraps
+#'   the string in \code{\\text{...}} so it reads as ordinary text, with
+#'   \code{$...$} (and \code{\\(...\\)}) opening math mode --- the
+#'   document-level LaTeX convention. Useful when consuming labels from
+#'   other packages that mix prose and math without explicit
+#'   \code{\\text{}} markers.
 #' @return Invisibly returns the previous settings (a list). With no
 #'   arguments, returns the current settings visibly.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}}
@@ -46,7 +56,7 @@
 #'   reset_latex_options()
 #' }
 latex_options <- function(math_font = NULL, render_mode = NULL,
-                          tex_style = NULL) {
+                          tex_style = NULL, input_mode = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -66,6 +76,10 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     .check_tex_style(tex_style)
     .latex_options$values$tex_style <- tex_style
   }
+  if (!is.null(input_mode)) {
+    input_mode <- match.arg(input_mode, c("math", "text"))
+    .latex_options$values$input_mode <- input_mode
+  }
   invisible(old)
 }
 
@@ -76,7 +90,8 @@ reset_latex_options <- function() {
   .latex_options$values <- list(
     math_font   = NULL,
     render_mode = NULL,
-    tex_style   = NULL
+    tex_style   = NULL,
+    input_mode  = NULL
   )
   invisible(NULL)
 }

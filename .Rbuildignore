@@ -28,3 +28,7 @@ src/.*\.dll$
 ^\..+$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
+^\.Rproj\.user$
+^\.positai$
+^\.claude$
+^CLAUDE\.md$
