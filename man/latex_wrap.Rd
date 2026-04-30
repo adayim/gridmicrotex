@@ -45,17 +45,13 @@ escape character for \verb{\\$} is automatically resolved for MicroTex compatibi
 \examples{
 # "mixed" mode (default) safely wraps text and preserves inline math
 latex_wrap(r"(The equation \(E=mc^2\) is famous)")
-# Output: \\text{The equation }\\(E=mc^2\\)\\text{ is famous}
 
 # "mixed" mode handles user-escaped characters seamlessly
 latex_wrap(r"(Cost: \$100 for $x$ items)")
-# Output: \\text{Cost: $100 for }$x$\\text{ items}
 
 # "mixed" mode converts R newlines to stacked text blocks
 latex_wrap(r"(Line 1\nLine 2)")
-# Output: \\text{Line 1 \\\\Line 2}
 
 # "math" mode returns the string completely unmodified
 latex_wrap(r"(\frac{\alpha}{\beta})", input_mode = "math")
-# Output: \\frac{\\alpha}{\\beta}
 }
