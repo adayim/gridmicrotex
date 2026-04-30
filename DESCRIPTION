@@ -10,7 +10,7 @@ Authors@R: c(
     person(family = "Bundled math font authors", role = "cph",
            comment = "See inst/COPYRIGHTS for the full list of authors of the bundled math fonts."))
 Description: Renders 'LaTeX' math equations as native R grid graphics objects
-    (grobs) using the 'MicroTeX' C++ library as the layout engine. Produces
+    (grobs) using the 'MicroTeX' 'C++' library as the layout engine. Produces
     resolution-independent vector output that works on any R graphics device,
     with no external 'LaTeX' installation required.
 License: MIT + file LICENSE

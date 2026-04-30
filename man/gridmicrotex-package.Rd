@@ -6,7 +6,7 @@
 \alias{gridmicrotex-package}
 \title{gridmicrotex: Native 'LaTeX' Math Rendering for Grid Graphics}
 \description{
-Renders 'LaTeX' math equations as native R grid graphics objects (grobs) using the 'MicroTeX' C++ library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external 'LaTeX' installation required.
+Renders 'LaTeX' math equations as native R grid graphics objects (grobs) using the 'MicroTeX' 'C++' library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external 'LaTeX' installation required.
 }
 \seealso{
 Useful links:

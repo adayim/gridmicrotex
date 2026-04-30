@@ -45,16 +45,25 @@ library(gridmicrotex)
 library(grid)
 
 grid.newpage()
-grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", gp = grid::gpar(fontsize = 30))
+grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", 
+           gp = grid::gpar(fontsize = 30))
 ```
 
 <img src="man/figures/README-example-basic-1.png" alt="" width="50%" />
+
+By default, the input is treated as LaTeX math mode, which treats string
+as text by default and use `$...$` or `\\(...\\)` delimiters to render
+math. The `"x = "` in the equation above treated as text. Use
+`input_mode = "math"` to treat the whole string as math mode and render
+text with `\\text{}`. You can change this with global option
+`latex_options(input_mode = "math")`.
 
 ### Composing with other grobs
 
 The grob can be placed alongside other grid objects:
 
 ``` r
+latex_options(input_mode = "math")
 g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
 grid.newpage()
 # A blue box behind the formula

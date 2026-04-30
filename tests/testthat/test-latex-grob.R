@@ -156,7 +156,7 @@ test_that("editGrob keeps viewport just in sync with hjust/vjust", {
 })
 
 test_that("latex_dims respects math_font parameter", {
-  expr <- "\\int_0^1 f(x)\\,dx + x + y"
+  expr <- "$\\int_0^1 f(x)\\,dx + x + y$"
   dims_lete <- latex_dims(expr, math_font = "lete", gp = grid::gpar(fontsize = 20))
   dims_stix <- latex_dims(expr, math_font = "stix", gp = grid::gpar(fontsize = 20))
   w_lete <- grid::convertWidth(dims_lete$width, "bigpts", valueOnly = TRUE)

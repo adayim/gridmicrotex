@@ -38,7 +38,7 @@
 #' @param input_mode How the input string is interpreted before being
 #'   handed to MicroTeX. \code{"math"} (default) treats the whole string
 #'   as math --- the standard MicroTeX behaviour, where letters render as
-#'   math italics and unwrapped prose looks wrong. \code{"text"} wraps
+#'   math italics and unwrapped prose looks wrong. \code{"mixed"} wraps
 #'   the string in \code{\\text{...}} so it reads as ordinary text, with
 #'   \code{$...$} (and \code{\\(...\\)}) opening math mode --- the
 #'   document-level LaTeX convention. Useful when consuming labels from
@@ -77,7 +77,7 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     .latex_options$values$tex_style <- tex_style
   }
   if (!is.null(input_mode)) {
-    input_mode <- match.arg(input_mode, c("math", "text"))
+    input_mode <- match.arg(input_mode, c("math", "mixed"))
     .latex_options$values$input_mode <- input_mode
   }
   invisible(old)

@@ -118,10 +118,14 @@ available_math_fonts <- function() {
 #' @export
 #'
 #' @examples
-#' \donttest{
-#'   # Load a custom math font from OTF:
-#'   # load_font("path/to/font.otf")
+#' if (interactive()) {
+#'   # We will download and load Latin Modern Math   
+#'   url <- "https://mirrors.ctan.org/fonts/lm-math/opentype/latinmodern-math.otf"
+#'   download.file(url = url, destfile = "latinmodern-math.otf", mode = "wb")
+#'   load_font("latinmodern-math.otf")
 #' }
+#' 
+#' available_math_fonts()
 load_font <- function(otf_path) {
   if (!file.exists(otf_path)) {
     stop("Font file not found: ", otf_path, call. = FALSE)

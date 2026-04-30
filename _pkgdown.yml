@@ -40,6 +40,10 @@ reference:
       - available_math_fonts
       - load_font
       - check_fonts
+  - title: Misc utilities
+    desc: Utilities for working with LaTeX strings and rendering
+    contents:
+      - latex_wrap
 
 articles:
   - title: Getting started

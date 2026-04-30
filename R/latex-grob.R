@@ -22,15 +22,15 @@
 #'   \code{"script"}, or \code{"scriptscript"}. See
 #'   \code{\link{latex_grob}} for the semantics of each value.
 #' @param input_mode How \code{tex} is interpreted before being parsed.
-#'   \code{"math"} (default) is the standard MicroTeX behaviour --- the
-#'   whole string is treated as math, so unwrapped prose renders as
-#'   spaced math italics. \code{"text"} wraps the input in
-#'   \code{\\text{...}} so the string reads as ordinary text and
-#'   \code{$...$} (or \code{\\(...\\)}) opens math mode, matching
-#'   document-level LaTeX semantics. Useful for labels that arrive from
-#'   external sources mixing prose and math without explicit
-#'   \code{\\text{}} markers. The default can be changed globally via
-#'   \code{\link{latex_options}(input_mode = "text")}.
+#'   \code{"mixed"} wraps the input in \code{\\text{...}} so the string
+#'   reads as ordinary text and \code{$...$} (or \code{\\(...\\)}) opens
+#'   math mode, matching document-level LaTeX semantics. Useful for labels 
+#'   that arrive from external sources mixing prose and math without explicit
+#'   \code{\\text{}} markers. \code{"math"} (default) is the standard 
+#'   MicroTeX behaviour --- the whole string is treated as math, so unwrapped 
+#'   prose renders as spaced math italics. The default can be changed globally via
+#'   \code{\link{latex_options}(input_mode = "mixed")}. See \code{\link{latex_wrap}}
+#'  for details on the wrapping process.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
@@ -123,7 +123,8 @@
 #'
 #' @return A \code{grid} grob of class \code{"latexgrob"}.
 #' @seealso \code{\link{grid.latex}}, \code{\link{latex_dims}},
-#'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}}
+#'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}}, 
+#' \code{\link{latex_wrap}}, \code{\link{latex_options}}
 #' @export
 #' 
 #' @examples
@@ -148,7 +149,7 @@ latex_grob <- function(tex,
                        math_font = "",
                        max_width = 0,
                        tex_style = "",
-                       input_mode = c("math", "text"),
+                       input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
                        debug = FALSE,
                        name = NULL,
@@ -220,17 +221,17 @@ latex_grob <- function(tex,
 # `gp` safe to attach to child grobs (fontsize/cex/lineheight removed
 # so they don't re-scale at draw time).
 .parse_from_gp <- function(tex, gp, math_font, max_width, tex_style,
-                           render_mode, input_mode = "math",
+                           render_mode, input_mode = "mixed",
                            with_path_fallback = FALSE) {
   .check_tex_style(tex_style)
-  input_mode <- match.arg(input_mode, c("math", "text"))
+  input_mode <- match.arg(input_mode, c("math", "mixed"))
   if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
 
   tex <- .expand_macros(tex)
   # The user-facing `tex` stays as the macro-expanded source so that
   # editDetails() can re-parse without doubling up the \text{} wrap.
   # `parse_input` is the actual string handed to the MicroTeX parser.
-  parse_input <- if (input_mode == "text") paste0("\\text{", tex, "}") else tex
+  parse_input <- latex_wrap(tex, input_mode = input_mode)
   math_font <- resolve_math_font(math_font)
 
   fg_color <- if (!is.null(gp$col)) {
@@ -542,7 +543,7 @@ grid.latex <- function(tex, ...) {
 #' latex_dims("\\frac{a}{b}")
 latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
-                       input_mode = c("math", "text"),
+                       input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
                        gp = grid::gpar()) {
   .apply_opts("math_font", "render_mode", "tex_style", "input_mode")

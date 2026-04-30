@@ -62,15 +62,19 @@ Control placement with `x`, `y`, `hjust`, and `vjust`:
 
 ```{r positioning, fig.height=1.2, fig.width=2, out.width="50%"}
 grid::grid.newpage()
-grid.latex("E = mc^2", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
-grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("Famous $E = mc^2$", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24), input_mode = "math")
 ```
+
+By default, the input is treated as LaTeX math mode, which treats string as text by default and use `$...$` or `\\(...\\)` delimiters to render math. The `"Famous"` in the first equation above treated as text. The `mixed` mode converts the input to math mode to reduce the user burden for typing `\\text{}` and the conversion might not be perfect, but it should handle most common cases without user intervention. Use `input_mode = "math"` to treat the whole string as math mode (the second example) or if you find a problem with the conversion and render text with `\\text{}`. You can change this with global `latex_options(input_mode = "math")` for heavy math or users who wants to the advantages LaTex macros, etc.
+
 
 ## Colors
 
 Set the formula color via `gp`, or use `\textcolor{}` within the LaTeX:
 
 ```{r colors, fig.height=0.6, fig.width=2, out.width="40%"}
+latex_options(input_mode = "math")
 grid::grid.newpage()
 grid.latex(
   "\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma",

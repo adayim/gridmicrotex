@@ -67,7 +67,7 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
                        position = "identity", ...,
                        fontsize = 11, math_font = "",
                        lineheight = 1.2, max_width = 0,
-                       input_mode = c("math", "text"),
+                       input_mode = c("math", "mixed"),
                        render_mode = c("typeface", "path"),
                        na.rm = FALSE, show.legend = NA,
                        inherit.aes = TRUE) {
@@ -149,7 +149,7 @@ GeomLatex <- NULL
 #' }
 element_latex <- function(math_font = "", fontsize = NULL,
                          lineheight = 1.2, max_width = 0,
-                         input_mode = c("math", "text"),
+                         input_mode = c("math", "mixed"),
                          render_mode = c("typeface", "path"), ...) {
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
@@ -280,7 +280,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
   # plotmath-style labels. In text mode, $ toggles math sub-spans, so
   # leave them intact.
   strip_dollars <- function(s) {
-    if (input_mode == "text") s else gsub("^\\$|\\$$", "", s)
+    if (input_mode == "mixed") s else gsub("^\\$|\\$$", "", s)
   }
 
   # Single label (axis title, strip text) — render one grob
