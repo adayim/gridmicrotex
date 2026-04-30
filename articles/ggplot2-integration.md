@@ -19,10 +19,11 @@ also map the `size` (font size in points) and `colour` aesthetics as
 usual:
 
 ``` r
+
 df <- data.frame(
   x = 1:3,
   y = 1:3,
-  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"),
+  eq = c("$x^2$", "\\frac{a}{b}", "$\\sum_{i=1}^n x_i$"),
   col = c("red", "blue", "green")
 )
 
@@ -46,12 +47,13 @@ delegates to `GeomLatex` internally but avoids creating a data frame and
 automatically hides the legend.
 
 ``` r
+
 fit <- lm(mpg ~ wt, data = mtcars)
 b0 <- round(coef(fit)[1], 1)
 b1 <- round(coef(fit)[2], 1)
 r2 <- round(summary(fit)$r.squared, 3)
 
-eq_label <- sprintf("\\hat{y} = %s %s x, \\quad R^2 = %s",
+eq_label <- sprintf("$\\hat{y} = %s %s x, \\quad R^2 = %s$",
                      b0, b1, r2)
 
 ggplot(mtcars, aes(wt, mpg)) +
@@ -71,6 +73,7 @@ replaces a text theme element so that its label is rendered as LaTeX
 math.
 
 ``` r
+
 ggplot(mtcars, aes(wt, mpg)) +
   geom_point() +
   labs(

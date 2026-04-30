@@ -26,6 +26,7 @@ latex_grob(
   math_font = "",
   max_width = 0,
   tex_style = "",
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
   debug = FALSE,
   name = NULL,
@@ -76,6 +77,21 @@ grid.latex(tex, ...)
   Character: TeX style override. One of `""` (default; let the parser
   decide), `"display"`, `"text"`, `"script"`, or `"scriptscript"`. See
   `latex_grob` for the semantics of each value.
+
+- input_mode:
+
+  How `tex` is interpreted before being parsed. `"mixed"` wraps the
+  input in `\text{...}` so the string reads as ordinary text and `$...$`
+  (or `\(...\)`) opens math mode, matching document-level LaTeX
+  semantics. Useful for labels that arrive from external sources mixing
+  prose and math without explicit `\text{}` markers. `"math"` (default)
+  is the standard MicroTeX behaviour — the whole string is treated as
+  math, so unwrapped prose renders as spaced math italics. The default
+  can be changed globally via
+  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "mixed")`.
+  See
+  [`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
+  for details on the wrapping process.
 
 - render_mode:
 
@@ -199,7 +215,9 @@ sub-expression from within `tex`, use the inline TeX commands
 `grid.latex`,
 [`latex_dims`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md),
 [`geom_latex`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md),
-[`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
+[`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md),
+[`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md),
+[`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
 
 ## Examples
 

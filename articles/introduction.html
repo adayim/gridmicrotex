@@ -113,9 +113,22 @@ grob:</p>
 <code>hjust</code>, and <code>vjust</code>:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"E = mc^2"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.7</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"F = ma"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.3</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"Famous $E = mc^2$"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.7</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"F = ma"</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.3</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>, input_mode <span class="op">=</span> <span class="st">"math"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/positioning-1.png" class="r-plt" alt="" width="50%"></p>
+<p>By default, the input is treated as LaTeX math mode, which treats
+string as text by default and use <code>$...$</code> or
+<code>\\(...\\)</code> delimiters to render math. The
+<code>"Famous"</code> in the first equation above treated as text. The
+<code>mixed</code> mode converts the input to math mode to reduce the
+user burden for typing <code>\\text{}</code> and the conversion might
+not be perfect, but it should handle most common cases without user
+intervention. Use <code>input_mode = "math"</code> to treat the whole
+string as math mode (the second example) or if you find a problem with
+the conversion and render text with <code>\\text{}</code>. You can
+change this with global <code>latex_options(input_mode = "math")</code>
+for heavy math or users who wants to the advantages LaTex macros,
+etc.</p>
 </div>
 <div class="section level2">
 <h2 id="colors">Colors<a class="anchor" aria-label="anchor" href="#colors"></a>
@@ -123,7 +136,8 @@ grob:</p>
 <p>Set the formula color via <code>gp</code>, or use
 <code>\textcolor{}</code> within the LaTeX:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>input_mode <span class="op">=</span> <span class="st">"math"</span><span class="op">)</span></span>
+<span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">"\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma"</span>,</span>
 <span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">28</span><span class="op">)</span></span>

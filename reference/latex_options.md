@@ -12,7 +12,12 @@ Options set here are applied only when the corresponding argument is
 ## Usage
 
 ``` r
-latex_options(math_font = NULL, render_mode = NULL, tex_style = NULL)
+latex_options(
+  math_font = NULL,
+  render_mode = NULL,
+  tex_style = NULL,
+  input_mode = NULL
+)
 
 reset_latex_options()
 ```
@@ -34,6 +39,17 @@ reset_latex_options()
   `"text"`, `"script"`, or `"scriptscript"`. `"display"` forces large
   operators with limits placed over/under, useful for inline labels that
   should still look like display equations.
+
+- input_mode:
+
+  How the input string is interpreted before being handed to MicroTeX.
+  `"math"` (default) treats the whole string as math — the standard
+  MicroTeX behaviour, where letters render as math italics and unwrapped
+  prose looks wrong. `"mixed"` wraps the string in `\text{...}` so it
+  reads as ordinary text, with `$...$` (and `\(...\)`) opening math mode
+  — the document-level LaTeX convention. Useful when consuming labels
+  from other packages that mix prose and math without explicit `\text{}`
+  markers.
 
 ## Value
 

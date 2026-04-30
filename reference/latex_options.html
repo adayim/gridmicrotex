@@ -51,7 +51,12 @@ supplied at the call site, so explicit arguments always win.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">latex_options</span><span class="op">(</span>math_font <span class="op">=</span> <span class="cn">NULL</span>, render_mode <span class="op">=</span> <span class="cn">NULL</span>, tex_style <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">latex_options</span><span class="op">(</span></span>
+<span>  math_font <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  render_mode <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  tex_style <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  input_mode <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">reset_latex_options</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -75,6 +80,18 @@ decide), <code>"display"</code>, <code>"text"</code>, <code>"script"</code>, or
 <code>"scriptscript"</code>. <code>"display"</code> forces large operators with
 limits placed over/under, useful for inline labels that should still
 look like display equations.</p></dd>
+
+
+<dt id="arg-input-mode">input_mode<a class="anchor" aria-label="anchor" href="#arg-input-mode"></a></dt>
+<dd><p>How the input string is interpreted before being
+handed to MicroTeX. <code>"math"</code> (default) treats the whole string
+as math — the standard MicroTeX behaviour, where letters render as
+math italics and unwrapped prose looks wrong. <code>"mixed"</code> wraps
+the string in <code>\text{...}</code> so it reads as ordinary text, with
+<code>$...$</code> (and <code>\(...\)</code>) opening math mode — the
+document-level LaTeX convention. Useful when consuming labels from
+other packages that mix prose and math without explicit
+<code>\text{}</code> markers.</p></dd>
 
 </dl></div>
     <div class="section level2">

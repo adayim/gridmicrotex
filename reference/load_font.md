@@ -44,8 +44,13 @@ automatically by systemfonts from the `gp$fontfamily` argument — no
 ## Examples
 
 ``` r
-# \donttest{
-  # Load a custom math font from OTF:
-  # load_font("path/to/font.otf")
-# }
+if (interactive()) {
+  # We will download and load Latin Modern Math   
+  url <- "https://mirrors.ctan.org/fonts/lm-math/opentype/latinmodern-math.otf"
+  download.file(url = url, destfile = "latinmodern-math.otf", mode = "wb")
+  load_font("latinmodern-math.otf")
+}
+
+available_math_fonts()
+#> [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math" 
 ```

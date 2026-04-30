@@ -25,6 +25,7 @@ community are very welcome.
 Install the development version from GitHub:
 
 ``` r
+
 # install.packages("devtools")
 devtools::install_github("adayim/gridmicrotex")
 ```
@@ -32,20 +33,31 @@ devtools::install_github("adayim/gridmicrotex")
 ## Examples
 
 ``` r
+
 library(gridmicrotex)
 library(grid)
 
 grid.newpage()
-grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", gp = grid::gpar(fontsize = 30))
+grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", 
+           gp = grid::gpar(fontsize = 30))
 ```
 
 ![](reference/figures/README-example-basic-1.png)
+
+By default, the input is treated as LaTeX math mode, which treats string
+as text by default and use `$...$` or `\\(...\\)` delimiters to render
+math. The `"x = "` in the equation above treated as text. Use
+`input_mode = "math"` to treat the whole string as math mode and render
+text with `\\text{}`. You can change this with global option
+`latex_options(input_mode = "math")`.
 
 ### Composing with other grobs
 
 The grob can be placed alongside other grid objects:
 
 ``` r
+
+latex_options(input_mode = "math")
 g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
 grid.newpage()
 # A blue box behind the formula
@@ -65,6 +77,7 @@ grid.draw(g)
 ### Multiple expressions
 
 ``` r
+
 exprs <- c(
   "E = mc^{2}",
   "e^{i\\pi} + 1 = 0",
@@ -90,6 +103,7 @@ for (i in seq_along(exprs)) {
 Use `\text{}` to embed regular text within math expressions:
 
 ``` r
+
 grid.newpage()
 grid.latex(
   "f(x) = \\begin{cases} x^2 & \\text{if } x \\geq 0 \\\\ -x & \\text{otherwise} \\end{cases}",
@@ -106,6 +120,7 @@ settings from `gp` (`fontfamily`, `fontface`) apply to text only — math
 rendering always uses the selected math font:
 
 ``` r
+
 grid.newpage()
 grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2",
            gp = gpar(fontsize = 24, fontfamily = "sans"))
@@ -122,6 +137,7 @@ to place LaTeX labels at data coordinates, and
 for LaTeX-rendered axis titles:
 
 ``` r
+
 library(ggplot2)
 # Add a LaTeX table as an annotation
 tab_str <- "\\begin{tabular}{c|c} \\text{A} & \\text{B} \\\\ \\hline 1 & \\cellcolor{#00bde5}2 \\\\ 3 & 4 \\end{tabular}"
@@ -193,6 +209,7 @@ To avoid this, switch to a modern graphics backend that uses
 resolution:
 
 ``` r
+
 # For knitr / R Markdown — add to your setup chunk:
 knitr::opts_chunk$set(dev = "ragg_png")
 
@@ -202,11 +219,11 @@ options(device = function(...) ragg::agg_png(tempfile(fileext = ".png"), ...))
 
 Recommended backends:
 
-| Backend                                                            | Format | Package                                               |
-|:-------------------------------------------------------------------|:-------|:------------------------------------------------------|
-| [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG    | [ragg](https://CRAN.R-project.org/package=ragg)       |
-| `svglite::svglite()`                                               | SVG    | [svglite](https://CRAN.R-project.org/package=svglite) |
-| [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF    | Base R (Cairo build)                                  |
+| Backend | Format | Package |
+|:---|:---|:---|
+| [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG | [ragg](https://CRAN.R-project.org/package=ragg) |
+| `svglite::svglite()` | SVG | [svglite](https://CRAN.R-project.org/package=svglite) |
+| [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF | Base R (Cairo build) |
 
 Alternatively, use `render_mode = "path"` to bypass font lookup entirely
 — glyphs are drawn as vector paths, which works on all devices but

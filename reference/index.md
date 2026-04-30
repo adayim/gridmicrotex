@@ -47,3 +47,10 @@ Load and configure math and text fonts
   : Load a math font from an OTF file
 - [`check_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_fonts.md)
   : Check font status
+
+## Misc utilities
+
+Utilities for working with LaTeX strings and rendering
+
+- [`latex_wrap()`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
+  : Wrap standard text for math-first LaTeX renderers

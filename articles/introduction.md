@@ -35,6 +35,7 @@ The core function is
 which returns a grid grob:
 
 ``` r
+
 g <- latex_grob("\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", gp = grid::gpar(fontsize = 24))
 grid::grid.newpage()
 grid::grid.draw(g)
@@ -46,6 +47,7 @@ For quick rendering, use
 [`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md):
 
 ``` r
+
 grid::grid.newpage()
 grid.latex("\\sum_{i=1}^{n} x_i^2", gp = grid::gpar(fontsize = 28))
 ```
@@ -57,18 +59,33 @@ grid.latex("\\sum_{i=1}^{n} x_i^2", gp = grid::gpar(fontsize = 28))
 Control placement with `x`, `y`, `hjust`, and `vjust`:
 
 ``` r
+
 grid::grid.newpage()
-grid.latex("E = mc^2", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
-grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("Famous $E = mc^2$", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24), input_mode = "math")
 ```
 
 ![](introduction_files/figure-html/positioning-1.png)
+
+By default, the input is treated as LaTeX math mode, which treats string
+as text by default and use `$...$` or `\\(...\\)` delimiters to render
+math. The `"Famous"` in the first equation above treated as text. The
+`mixed` mode converts the input to math mode to reduce the user burden
+for typing `\\text{}` and the conversion might not be perfect, but it
+should handle most common cases without user intervention. Use
+`input_mode = "math"` to treat the whole string as math mode (the second
+example) or if you find a problem with the conversion and render text
+with `\\text{}`. You can change this with global
+`latex_options(input_mode = "math")` for heavy math or users who wants
+to the advantages LaTex macros, etc.
 
 ## Colors
 
 Set the formula color via `gp`, or use `\textcolor{}` within the LaTeX:
 
 ``` r
+
+latex_options(input_mode = "math")
 grid::grid.newpage()
 grid.latex(
   "\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma",
@@ -88,11 +105,13 @@ The package ships with two math fonts, both loaded automatically:
 | `"stix"`           | STIX Two Math  | SIL Open Font License |
 
 ``` r
+
 available_math_fonts()
 #> [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math"
 ```
 
 ``` r
+
 latex_options(math_font = "stix")
 grid::grid.newpage()
 grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
@@ -102,6 +121,7 @@ grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
 
 ``` r
 
+
 # Switch back to the default (Lete Sans Math)
 latex_options(math_font = "lete")
 ```
@@ -109,6 +129,7 @@ latex_options(math_font = "lete")
 You can also override the font per call via `math_font`:
 
 ``` r
+
 grid::grid.newpage()
 grid::pushViewport(grid::viewport(layout = grid::grid.layout(2, 1)))
 grid::pushViewport(grid::viewport(layout.pos.row = 1))
@@ -136,6 +157,7 @@ parsed directly in C++ — no companion metrics file or external toolchain
 is required:
 
 ``` r
+
 load_font("path/to/MyFont.otf")
 ```
 
@@ -163,6 +185,7 @@ gridmicrotex supports two rendering modes for math glyphs:
   text in PDF/SVG output is not selectable or searchable.
 
 ``` r
+
 # Default typeface mode (selectable text in PDF/SVG)
 grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24))
 
@@ -180,6 +203,7 @@ grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24), render_mode = "path")
 > LaTeX formulas:
 >
 > ``` r
+>
 > showtext::showtext_auto(FALSE)
 > grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24))  # typeface mode works correctly
 > ```
@@ -190,6 +214,7 @@ grid.latex("E = mc^2", gp = grid::gpar(fontsize = 24), render_mode = "path")
 returns the bounding box of an expression:
 
 ``` r
+
 dims <- latex_dims("\\frac{a}{b}", gp = grid::gpar(fontsize = 20))
 dims
 #> $width
@@ -218,6 +243,7 @@ text-rendering system. This means `gp$fontfamily` controls the font for
 other script your R graphics device supports:
 
 ``` r
+
 grid::grid.newpage()
 grid.latex("x^2 + \\text{你好}", gp = grid::gpar(fontsize = 24, fontfamily = "sans"))
 ```
@@ -238,6 +264,7 @@ pair them with a matching `fontfamily`:
 | STIX Two Math (`"stix"`)           | Serif      | `"serif"`              |
 
 ``` r
+
 grid::grid.newpage()
 grid.latex(
   "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",
@@ -258,6 +285,7 @@ attempt to replace a full LaTeX installation.
 ### Complicated examples
 
 ``` r
+
 grid::grid.newpage()
 grid.latex(paste0(
       "\\begin{array}{l}",
@@ -282,6 +310,7 @@ grid.latex(paste0(
 ![](introduction_files/figure-html/complex-formula-1.png)
 
 ``` r
+
 grid::grid.newpage()
 
 grid.latex(
@@ -312,6 +341,7 @@ grid.latex(
 ![](introduction_files/figure-html/table-multicolumn-1.png)
 
 ``` r
+
 grid::grid.newpage()
 grid.latex(
   "\\definecolor{gris}{gray}{0.9}
@@ -398,6 +428,7 @@ Size is controlled at the grob level via `gp$fontsize` / `gp$lineheight`
 (see *Basic usage*).
 
 ``` r
+
 latex_options(math_font = "stix", render_mode = "typeface")
 
 # Later calls pick these up automatically
@@ -423,6 +454,7 @@ substitution before the expression reaches MicroTeX. Handy for recurring
 notation:
 
 ``` r
+
 define_macro("RR", "\\mathbb{R}")
 define_macro("eps", "\\varepsilon")
 
@@ -433,6 +465,7 @@ grid.latex("\\forall \\eps > 0, \\eps \\in \\RR", gp = grid::gpar(fontsize = 24)
 ![](introduction_files/figure-html/macros-1.png)
 
 ``` r
+
 
 clear_macros()
 ```
@@ -452,6 +485,7 @@ formula — for example, the same axis label across many plots — reuses
 the cached layout:
 
 ``` r
+
 latex_cache_info()       # size / max_size / hits / misses
 latex_cache_limit(1024)  # raise or lower the LRU capacity
 latex_cache_clear()      # wipe the cache (e.g. after re-loading fonts)
@@ -467,6 +501,7 @@ debugging alignment, counting glyphs, or building custom grobs on top of
 the layout:
 
 ``` r
+
 tr <- latex_tree("\\frac{a}{b}")
 tr
 #> <latex_tree>
@@ -503,6 +538,7 @@ origin. Useful for checking vertical alignment between a formula and
 surrounding grobs:
 
 ``` r
+
 grid::grid.newpage()
 grid.latex("x^{2} + y_{i}", gp = grid::gpar(fontsize = 30), debug = TRUE)
 ```
@@ -533,6 +569,7 @@ To avoid this, switch to a modern graphics backend that uses
 resolution:
 
 ``` r
+
 # For knitr / R Markdown --- add to your setup chunk:
 knitr::opts_chunk$set(dev = "ragg_png")
 
@@ -542,11 +579,11 @@ options(device = function(...) ragg::agg_png(tempfile(fileext = ".png"), ...))
 
 Recommended backends:
 
-| Backend                                                            | Format | Package                                               |
-|:-------------------------------------------------------------------|:-------|:------------------------------------------------------|
-| [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG    | [ragg](https://CRAN.R-project.org/package=ragg)       |
-| `svglite::svglite()`                                               | SVG    | [svglite](https://CRAN.R-project.org/package=svglite) |
-| [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF    | Base R (Cairo build)                                  |
+| Backend | Format | Package |
+|:---|:---|:---|
+| [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG | [ragg](https://CRAN.R-project.org/package=ragg) |
+| `svglite::svglite()` | SVG | [svglite](https://CRAN.R-project.org/package=svglite) |
+| [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF | Base R (Cairo build) |
 
 Alternatively, use `render_mode = "path"` to bypass font lookup entirely
 — glyphs are drawn as vector paths, which works on all devices but
