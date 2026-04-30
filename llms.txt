@@ -44,9 +44,10 @@ grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}",
 
 ![](reference/figures/README-example-basic-1.png)
 
-By default, the input is treated as LaTeX math mode, which treats string
-as text by default and use `$...$` or `\\(...\\)` delimiters to render
-math. The `"x = "` in the equation above treated as text. Use
+By default, the input is treated as LaTeX math mode (“mixed” mode),
+which wraps non-math text in `\text{}` and preserves math expressions
+as-is. Use `$...$` or `\\(...\\)` delimiters to render math. The
+`"x = "` in the equation above treated as text. Use
 `input_mode = "math"` to treat the whole string as math mode and render
 text with `\\text{}`. You can change this with global option
 `latex_options(input_mode = "math")`.
@@ -100,13 +101,15 @@ for (i in seq_along(exprs)) {
 
 ### Mixed text and math
 
-Use `\text{}` to embed regular text within math expressions:
+You can use `r"()"` raw strings to write LaTeX with regular newlines and
+quotes without escaping. Use `\text{}` to embed regular text within math
+expressions:
 
 ``` r
 
 grid.newpage()
 grid.latex(
-  "f(x) = \\begin{cases} x^2 & \\text{if } x \\geq 0 \\\\ -x & \\text{otherwise} \\end{cases}",
+  r"(f(x) = \begin{cases} x^2 & \text{if } x \geq 0 \\ -x & \text{otherwise} \end{cases})",
   gp = grid::gpar(fontsize = 26)
 )
 ```
@@ -122,7 +125,7 @@ rendering always uses the selected math font:
 ``` r
 
 grid.newpage()
-grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2",
+grid.latex(r"(\text{如果 } x > 0 \text{ 则 } y = x^2)",
            gp = gpar(fontsize = 24, fontfamily = "sans"))
 ```
 
@@ -140,7 +143,7 @@ for LaTeX-rendered axis titles:
 
 library(ggplot2)
 # Add a LaTeX table as an annotation
-tab_str <- "\\begin{tabular}{c|c} \\text{A} & \\text{B} \\\\ \\hline 1 & \\cellcolor{#00bde5}2 \\\\ 3 & 4 \\end{tabular}"
+tab_str <- r"(\begin{tabular}{c|c} \text{A} & B^2 \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 
 df <- data.frame(x = 1:3, y = 1:3,
                  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))

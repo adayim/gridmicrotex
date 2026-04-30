@@ -77,18 +77,22 @@ should handle most common cases without user intervention. Use
 example) or if you find a problem with the conversion and render text
 with `\\text{}`. You can change this with global
 `latex_options(input_mode = "math")` for heavy math or users who wants
-to the advantages LaTex macros, etc.
+to the advantages LaTex macros, etc. The vignette from next example will
+set the input mode to `math` globally and render the whole string as
+math mode.
 
 ## Colors
 
-Set the formula color via `gp`, or use `\textcolor{}` within the LaTeX:
+You can use `r"()"` raw strings to write LaTeX with regular newlines and
+quotes without escaping. Set the formula color via `gp`, or use
+`\textcolor{}` within the LaTeX:
 
 ``` r
 
-latex_options(input_mode = "math")
+latex_options(input_mode = "math") # Set math mode globally
 grid::grid.newpage()
 grid.latex(
-  "\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma",
+  r"(\textcolor{red}{\alpha} + \textcolor{blue}{\beta} = \gamma)",
   gp = grid::gpar(fontsize = 28)
 )
 ```
@@ -114,7 +118,7 @@ available_math_fonts()
 
 latex_options(math_font = "stix")
 grid::grid.newpage()
-grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
+grid.latex(r"(\int_0^1 f(x)\,dx)", gp = grid::gpar(fontsize = 24))
 ```
 
 ![](introduction_files/figure-html/fonts-default-1.png)
@@ -133,10 +137,10 @@ You can also override the font per call via `math_font`:
 grid::grid.newpage()
 grid::pushViewport(grid::viewport(layout = grid::grid.layout(2, 1)))
 grid::pushViewport(grid::viewport(layout.pos.row = 1))
-grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24))
+grid.latex(r"(\int_0^1 f(x)\,dx)", gp = grid::gpar(fontsize = 24))
 grid::upViewport()
 grid::pushViewport(grid::viewport(layout.pos.row = 2))
-grid.latex("\\int_0^1 f(x)\\,dx", gp = grid::gpar(fontsize = 24), math_font = "stix")
+grid.latex(r"(\int_0^1 f(x)\,dx)", gp = grid::gpar(fontsize = 24), math_font = "stix")
 grid::upViewport(2)
 ```
 

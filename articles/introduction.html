@@ -127,19 +127,21 @@ intervention. Use <code>input_mode = "math"</code> to treat the whole
 string as math mode (the second example) or if you find a problem with
 the conversion and render text with <code>\\text{}</code>. You can
 change this with global <code>latex_options(input_mode = "math")</code>
-for heavy math or users who wants to the advantages LaTex macros,
-etc.</p>
+for heavy math or users who wants to the advantages LaTex macros, etc.
+The vignette from next example will set the input mode to
+<code>math</code> globally and render the whole string as math mode.</p>
 </div>
 <div class="section level2">
 <h2 id="colors">Colors<a class="anchor" aria-label="anchor" href="#colors"></a>
 </h2>
-<p>Set the formula color via <code>gp</code>, or use
-<code>\textcolor{}</code> within the LaTeX:</p>
+<p>You can use <code>r"()"</code> raw strings to write LaTeX with
+regular newlines and quotes without escaping. Set the formula color via
+<code>gp</code>, or use <code>\textcolor{}</code> within the LaTeX:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>input_mode <span class="op">=</span> <span class="st">"math"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>input_mode <span class="op">=</span> <span class="st">"math"</span><span class="op">)</span> <span class="co"># Set math mode globally</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
-<span>  <span class="st">"\\textcolor{red}{\\alpha} + \\textcolor{blue}{\\beta} = \\gamma"</span>,</span>
+<span>  <span class="st">r"(\textcolor{red}{\alpha} + \textcolor{blue}{\beta} = \gamma)"</span>,</span>
 <span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">28</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/colors-1.png" class="r-plt" alt="" width="40%"></p>
@@ -174,7 +176,7 @@ etc.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>math_font <span class="op">=</span> <span class="st">"stix"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\int_0^1 f(x)\,dx)"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-default-1.png" class="r-plt" alt="" width="50%"></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
@@ -186,10 +188,10 @@ etc.</p>
 <code class="sourceCode R"><span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/grid.layout.html" class="external-link">grid.layout</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\int_0^1 f(x)\,dx)"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"\\int_0^1 f(x)\\,dx"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>, math_font <span class="op">=</span> <span class="st">"stix"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\int_0^1 f(x)\,dx)"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>, math_font <span class="op">=</span> <span class="st">"stix"</span><span class="op">)</span></span>
 <span><span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="introduction_files/figure-html/fonts-1.png" class="r-plt" alt="" width="50%"></p>
 <p>Use <code><a href="../reference/available_math_fonts.html">available_math_fonts()</a></code> to list loaded fonts and
