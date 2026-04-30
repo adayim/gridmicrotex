@@ -4,7 +4,7 @@
 \alias{latex_wrap}
 \title{Wrap standard text for math-first LaTeX renderers}
 \usage{
-latex_wrap(tex, input_mode = c("text", "math"))
+latex_wrap(tex, input_mode = c("mixed", "math"))
 }
 \arguments{
 \item{tex}{\code{character}. The string or vector of strings to be processed.}

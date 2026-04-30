@@ -50,7 +50,7 @@
 #' latex_wrap(r"(\frac{\alpha}{\beta})", input_mode = "math")
 #' # Output: \\frac{\\alpha}{\\beta}
 
-latex_wrap <- function(tex, input_mode = c("text", "math")) {
+latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   input_mode <- match.arg(input_mode)
   if (input_mode == "math" || !nzchar(tex)) return(tex)
 

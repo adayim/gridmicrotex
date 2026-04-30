@@ -9,7 +9,7 @@ latex_tree(
   math_font = "",
   max_width = 0,
   tex_style = "",
-  input_mode = c("math", "text"),
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
   gp = grid::gpar()
 )
