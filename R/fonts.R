@@ -97,7 +97,7 @@ available_math_fonts <- function() {
 #' Loads an OTF/TTF math font into MicroTeX's internal font registry. The
 #' font's OpenType MATH table is parsed directly in C++ and the required
 #' metrics are synthesised on the fly. You can download free math fonts like
-#' Latin Modern Math (default math fonts in LaTeX) and load it with 
+#' Latin Modern Math (default math fonts in LaTeX) and load it with
 #' \code{load_font()} to use it for math rendering.
 #'
 #' The font is also registered with the \pkg{systemfonts} package so it
@@ -118,14 +118,17 @@ available_math_fonts <- function() {
 #' @export
 #'
 #' @examples
-#' if (interactive()) {
-#'   # We will download and load Latin Modern Math   
+#' \donttest{
+#'   # We will download and load Latin Modern Math
 #'   url <- "https://mirrors.ctan.org/fonts/lm-math/opentype/latinmodern-math.otf"
-#'   download.file(url = url, destfile = "latinmodern-math.otf", mode = "wb")
-#'   load_font("latinmodern-math.otf")
-#' }
+#'   math_fnt <- file.path(tempdir(), "latinmodern-math.otf")
+#'   download.file(url = url, destfile = math_fnt, mode = "wb")
+#'   load_font(math_fnt)
 #' 
-#' available_math_fonts()
+#'   available_math_fonts()
+#' }
+#'
+#' 
 load_font <- function(otf_path) {
   if (!file.exists(otf_path)) {
     stop("Font file not found: ", otf_path, call. = FALSE)

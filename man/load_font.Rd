@@ -34,14 +34,17 @@ blocks are resolved automatically by \pkg{systemfonts} from the
 }
 
 \examples{
-if (interactive()) {
-  # We will download and load Latin Modern Math   
+\donttest{
+  # We will download and load Latin Modern Math
   url <- "https://mirrors.ctan.org/fonts/lm-math/opentype/latinmodern-math.otf"
-  download.file(url = url, destfile = "latinmodern-math.otf", mode = "wb")
-  load_font("latinmodern-math.otf")
+  math_fnt <- file.path(tempdir(), "latinmodern-math.otf")
+  download.file(url = url, destfile = math_fnt, mode = "wb")
+  load_font(math_fnt)
+
+  available_math_fonts()
 }
 
-available_math_fonts()
+
 }
 \seealso{
 \code{\link{available_math_fonts}}, \code{\link{latex_options}},
