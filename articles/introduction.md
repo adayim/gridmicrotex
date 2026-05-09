@@ -49,7 +49,7 @@ For quick rendering, use
 ``` r
 
 grid::grid.newpage()
-grid.latex("\\sum_{i=1}^{n} x_i^2", gp = grid::gpar(fontsize = 28))
+grid.latex("$\\sum_{i=1}^{n} x_i^2$", gp = grid::gpar(fontsize = 28))
 ```
 
 ![](introduction_files/figure-html/quick-1.png)
@@ -61,8 +61,8 @@ Control placement with `x`, `y`, `hjust`, and `vjust`:
 ``` r
 
 grid::grid.newpage()
-grid.latex("Famous $E = mc^2$", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
-grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24), input_mode = "math")
+grid.latex("Famous $E = mc^2$", x = 0.1, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("F = ma", x = 0.1, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24), input_mode = "math")
 ```
 
 ![](introduction_files/figure-html/positioning-1.png)

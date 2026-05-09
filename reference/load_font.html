@@ -90,15 +90,19 @@ blocks are resolved automatically by <span class="pkg">systemfonts</span> from t
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>  <span class="co"># We will download and load Latin Modern Math   </span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span>  <span class="co"># We will download and load Latin Modern Math</span></span></span>
 <span class="r-in"><span>  <span class="va">url</span> <span class="op">&lt;-</span> <span class="st">"https://mirrors.ctan.org/fonts/lm-math/opentype/latinmodern-math.otf"</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/download.file.html" class="external-link">download.file</a></span><span class="op">(</span>url <span class="op">=</span> <span class="va">url</span>, destfile <span class="op">=</span> <span class="st">"latinmodern-math.otf"</span>, mode <span class="op">=</span> <span class="st">"wb"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu">load_font</span><span class="op">(</span><span class="st">"latinmodern-math.otf"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span>  <span class="va">math_fnt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"latinmodern-math.otf"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/download.file.html" class="external-link">download.file</a></span><span class="op">(</span>url <span class="op">=</span> <span class="va">url</span>, destfile <span class="op">=</span> <span class="va">math_fnt</span>, mode <span class="op">=</span> <span class="st">"wb"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">load_font</span><span class="op">(</span><span class="va">math_fnt</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu"><a href="available_math_fonts.html">available_math_fonts</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math" </span>
+<span class="r-in"><span>  <span class="fu"><a href="available_math_fonts.html">available_math_fonts</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "DejaVu Sans"       "Latin Modern Math" "Lete Sans Math"   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4] "STIX Two Math"    </span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

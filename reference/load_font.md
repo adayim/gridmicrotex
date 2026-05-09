@@ -44,13 +44,16 @@ automatically by systemfonts from the `gp$fontfamily` argument — no
 ## Examples
 
 ``` r
-if (interactive()) {
-  # We will download and load Latin Modern Math   
+# \donttest{
+  # We will download and load Latin Modern Math
   url <- "https://mirrors.ctan.org/fonts/lm-math/opentype/latinmodern-math.otf"
-  download.file(url = url, destfile = "latinmodern-math.otf", mode = "wb")
-  load_font("latinmodern-math.otf")
-}
+  math_fnt <- file.path(tempdir(), "latinmodern-math.otf")
+  download.file(url = url, destfile = math_fnt, mode = "wb")
+  load_font(math_fnt)
 
-available_math_fonts()
-#> [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math" 
+  available_math_fonts()
+#> [1] "DejaVu Sans"       "Latin Modern Math" "Lete Sans Math"   
+#> [4] "STIX Two Math"    
+# }
+
 ```
