@@ -51,19 +51,19 @@ grid::grid.draw(g)
 
 For quick rendering, use `grid.latex()`:
 
-```{r quick, fig.height=0.8, fig.width=2, out.width="50%"}
+```{r quick, fig.height=0.8, fig.width=3, out.width="40%"}
 grid::grid.newpage()
-grid.latex("\\sum_{i=1}^{n} x_i^2", gp = grid::gpar(fontsize = 28))
+grid.latex("$\\sum_{i=1}^{n} x_i^2$", gp = grid::gpar(fontsize = 28))
 ```
 
 ## Positioning and justification
 
 Control placement with `x`, `y`, `hjust`, and `vjust`:
 
-```{r positioning, fig.height=1.2, fig.width=2, out.width="50%"}
+```{r positioning, fig.height=1.2, fig.width=3.5, out.width="40%"}
 grid::grid.newpage()
-grid.latex("Famous $E = mc^2$", x = 0.2, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
-grid.latex("F = ma", x = 0.2, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24), input_mode = "math")
+grid.latex("Famous $E = mc^2$", x = 0.1, y = 0.7, hjust = 0, gp = grid::gpar(fontsize = 24))
+grid.latex("F = ma", x = 0.1, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24), input_mode = "math")
 ```
 
 By default, the input is treated as LaTeX math mode, which treats string as text by default and use `$...$` or `\\(...\\)` delimiters to render math. The `"Famous"` in the first equation above treated as text. The `mixed` mode converts the input to math mode to reduce the user burden for typing `\\text{}` and the conversion might not be perfect, but it should handle most common cases without user intervention. Use `input_mode = "math"` to treat the whole string as math mode (the second example) or if you find a problem with the conversion and render text with `\\text{}`. You can change this with global `latex_options(input_mode = "math")` for heavy math or users who wants to the advantages LaTex macros, etc. The vignette from next example will set the input mode to `math` globally and render the whole string as math mode.
@@ -206,7 +206,7 @@ pair them with a matching `fontfamily`:
 | Lete Sans Math (`"lete"`, default) | Sans-serif | `"sans"` |
 | STIX Two Math (`"stix"`) | Serif | `"serif"` |
 
-```{r font-pairing, fig.height = 1, fig.width = 6, out.width="70%"}
+```{r font-pairing, fig.height = 0.4, fig.width = 2, out.width="70%"}
 grid::grid.newpage()
 grid.latex(
   "\\text{Theorem: } \\forall x \\in \\mathbb{R},\\; x^2 \\geq 0",
