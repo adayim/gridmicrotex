@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,7 +32,16 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="articles/index.html">Articles</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
+    <li><a class="dropdown-item" href="articles/01-introduction.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
+    <li><a class="dropdown-item" href="articles/02-ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+  </ul>
+</li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -144,10 +153,27 @@
 <p><img src="reference/figures/README-example-mixed-cjk-math-1.png" alt="" width="50%"></p>
 </div>
 <div class="section level2">
+<h2 id="user-defined-macros">User-defined macros<a class="anchor" aria-label="anchor" href="#user-defined-macros"></a>
+</h2>
+<p>Use <code><a href="reference/define_macro.html">define_macro()</a></code> for zero-argument shorthands that persist across plots in the session, and plain-TeX <code>\def</code> for parameterised macros local to a single expression:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/define_macro.html">define_macro</a></span><span class="op">(</span><span class="st">"RR"</span>, <span class="st">"\\mathbb{R}"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
+<span>  <span class="st">r"(\def\norm#1{\left\lVert #1 \right\rVert}</span></span>
+<span><span class="st">      \forall \vec{v} \in \RR^n,\ \norm{\vec{v}} \geq 0)"</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-macros-1.png" alt="" width="60%"></p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/define_macro.html">clear_macros</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>See <code><a href="reference/define_macro.html">?define_macro</a></code> and <code><a href="articles/01-introduction.html">vignette("01-introduction")</a></code> for details.</p>
+</div>
+<div class="section level2">
 <h2 id="ggplot2-integration">ggplot2 integration<a class="anchor" aria-label="anchor" href="#ggplot2-integration"></a>
 </h2>
 <p>Use <code><a href="reference/geom_latex.html">geom_latex()</a></code> to place LaTeX labels at data coordinates, and <code><a href="reference/element_latex.html">element_latex()</a></code> for LaTeX-rendered axis titles:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="co"># Add a LaTeX table as an annotation</span></span>
 <span><span class="va">tab_str</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tabular}{c|c} \text{A} &amp; B^2 \\ \hline 1 &amp; \cellcolor{#00bde5}2 \\ 3 &amp; 4 \end{tabular})"</span></span>
@@ -160,7 +186,7 @@
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"$\\beta_1 \\cdot x + \\beta_0$"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>axis.title.x <span class="op">=</span> <span class="fu"><a href="reference/element_latex.html">element_latex</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-example-ggplot2-geom-1.png" alt="" width="80%"></p>
-<p>ggplot2 is a soft dependency — the core functions work without it. See <code><a href="articles/ggplot2-integration.html">vignette("ggplot2-integration")</a></code> for more examples.</p>
+<p>ggplot2 is a soft dependency — the core functions work without it. See <code><a href="articles/02-ggplot2-integration.html">vignette("02-ggplot2-integration")</a></code> for more examples.</p>
 </div>
 <div class="section level2">
 <h2 id="comparison">Comparison<a class="anchor" aria-label="anchor" href="#comparison"></a>
@@ -244,9 +270,9 @@
 <h2 id="graphics-backend">Graphics backend<a class="anchor" aria-label="anchor" href="#graphics-backend"></a>
 </h2>
 <p>The default graphics device on Windows (<code>windows()</code>) and macOS (<code><a href="https://rdrr.io/r/grDevices/quartz.html" class="external-link">quartz()</a></code>) may not find the bundled math fonts, producing warnings like:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>font family not found <span class="cf">in</span> Windows font database</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>font family not found <span class="cf">in</span> Windows font database</span></code></pre></div>
 <p>To avoid this, switch to a modern graphics backend that uses <a href="https://CRAN.R-project.org/package=systemfonts" class="external-link">systemfonts</a> for font resolution:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># For knitr / R Markdown — add to your setup chunk:</span></span>
 <span><span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html" class="external-link">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>dev <span class="op">=</span> <span class="st">"ragg_png"</span><span class="op">)</span></span>
 <span></span>
@@ -323,6 +349,7 @@
 <ul class="list-unstyled">
 <li><a href="https://github.com/adayim/gridmicrotex/actions" class="external-link"><img src="https://github.com/adayim/gridmicrotex/workflows/R-CMD-check/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://CRAN.R-project.org/package=gridmicrotex" class="external-link"><img src="https://www.r-pkg.org/badges/version/gridmicrotex" alt="CRAN status"></a></li>
+<li><a href="https://cran.r-project.org/package=gridmicrotex" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex" alt="CRAN download"></a></li>
 <li><a href="https://app.codecov.io/gh/adayim/gridmicrotex" class="external-link"><img src="https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc" alt="codecov"></a></li>
 </ul>
 </div>

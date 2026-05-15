@@ -18,13 +18,13 @@ Source:
 [`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/main/DESCRIPTION)
 
 Dayim A (2026). *gridmicrotex: Native 'LaTeX' Math Rendering for Grid
-Graphics*. R package version 0.0.1,
+Graphics*. R package version 0.0.2,
 <https://github.com/adayim/gridmicrotex>.
 
     @Manual{,
       title = {gridmicrotex: Native 'LaTeX' Math Rendering for Grid Graphics},
       author = {Alim Dayim},
       year = {2026},
-      note = {R package version 0.0.1},
+      note = {R package version 0.0.2},
       url = {https://github.com/adayim/gridmicrotex},
     }

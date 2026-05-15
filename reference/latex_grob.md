@@ -52,7 +52,13 @@ grid.latex(tex, ...)
 
 - hjust, vjust:
 
-  Horizontal/vertical justification (0-1).
+  Horizontal/vertical justification. Accepts the usual numeric values in
+  `[0, 1]`. As a convenience, `hjust` also accepts the strings
+  `"left"`/`"bbleft"`, `"center"`/`"centre"`/ `"middle"`/`"bbcentre"`,
+  and `"right"`/`"bbright"`; `vjust` accepts `"bottom"`,
+  `"center"`/`"centre"`/`"middle"`, `"top"`, and `"baseline"`.
+  `"baseline"` aligns the formula's math baseline with the anchor point
+  — handy for placing a formula in flowing text.
 
 - rot:
 
@@ -223,18 +229,27 @@ sub-expression from within `tex`, use the inline TeX commands
 
 ``` r
 # \donttest{
-  g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
+  g <- latex_grob(r"($\fcolorbox{red}{yellow}{\frac{a}{b}}$)",
+                  x = grid::unit(0.3, "npc"),
+                  y = grid::unit(0.3, "npc"),
+                  gp = grid::gpar(fontsize = 30))
   grid::grid.draw(g)
-
   # Red formula
-  grid::grid.draw(latex_grob("x^{2}", gp = grid::gpar(col = "red")))
+  grid::grid.draw(latex_grob("$x^{2}$",
+                             x = grid::unit(0.3, "npc"),
+                             y = grid::unit(0.8, "npc"),
+                             gp = grid::gpar(col = "red")))
 
-  # Rotated formula
-  grid::grid.draw(latex_grob("x^{2} + y^{2}",
-                             gp = grid::gpar(fontsize = 24), rot = 45))
-# }
-# \donttest{
-  grid.latex("x^{2} + y^{2} = z^{2}")
+                             # Rotated formula
+  grid::grid.draw(latex_grob(r"($\colorbox{BurntOrange}{x^{2}} + y^{2}$)",
+                             x = grid::unit(0.6, "npc"),
+                             y = grid::unit(0.3, "npc"),
+                             gp = grid::gpar(fontsize = 24),
+                             rot = 45))
+
+  grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
+             x = grid::unit(0.6, "npc"),
+             y = grid::unit(0.8, "npc"),)
 
 # }
 ```

@@ -11,6 +11,8 @@ Create and draw LaTeX math as grid grobs
   : Get dimensions of a LaTeX expression
 - [`latex_tree()`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md)
   : Inspect the parsed layout of a LaTeX expression
+- [`grobMark()`](https://adayim.github.io/gridmicrotex/reference/grobMark.md)
+  : Look up a named anchor inside a LaTeX grob
 
 ## Options, macros, and cache
 

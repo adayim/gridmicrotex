@@ -131,6 +131,38 @@ grid.latex(r"(\text{如果 } x > 0 \text{ 则 } y = x^2)",
 
 ![](reference/figures/README-example-mixed-cjk-math-1.png)
 
+## User-defined macros
+
+Use
+[`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
+for zero-argument shorthands that persist across plots in the session,
+and plain-TeX `\def` for parameterised macros local to a single
+expression:
+
+``` r
+
+define_macro("RR", "\\mathbb{R}")
+grid.newpage()
+grid.latex(
+  r"(\def\norm#1{\left\lVert #1 \right\rVert}
+      \forall \vec{v} \in \RR^n,\ \norm{\vec{v}} \geq 0)",
+  gp = grid::gpar(fontsize = 22)
+)
+```
+
+![](reference/figures/README-example-macros-1.png)
+
+``` r
+
+clear_macros()
+```
+
+See
+[`?define_macro`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
+and
+[`vignette("01-introduction")`](https://adayim.github.io/gridmicrotex/articles/01-introduction.md)
+for details.
+
 ## ggplot2 integration
 
 Use
@@ -157,7 +189,7 @@ ggplot(df, aes(x, y, label = eq)) +
 ![](reference/figures/README-example-ggplot2-geom-1.png)
 
 ggplot2 is a soft dependency — the core functions work without it. See
-[`vignette("ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md)
+[`vignette("02-ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/02-ggplot2-integration.md)
 for more examples.
 
 ## Comparison
