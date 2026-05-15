@@ -12,10 +12,10 @@ navbar:
       menu:
       - text: "Getting started"
       - text: Introduction to gridmicrotex
-        href: articles/01-introduction.html
+        href: articles/getting-started.html
       - text: "ggplot2"
       - text: Using LaTeX Math in ggplot2
-        href: articles/02-ggplot2-integration.html
+        href: articles/ggplot2-integration.html
 
 reference:
   - title: Core rendering
@@ -59,7 +59,7 @@ reference:
 articles:
   - title: Getting started
     contents:
-      - 01-introduction
+      - getting-started
   - title: ggplot2
     contents:
-      - 02-ggplot2-integration
+      - ggplot2-integration

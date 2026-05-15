@@ -8,7 +8,7 @@
 #
 # TrueType Collections (.ttc) are split into a single-face sfnt on
 # first use so systemfonts' glyph-rendering path can also resolve the
-# font_file for drawing — see R/otf-reader.R::.extract_ttc_face.
+# font_file for drawing — see R/ttc-splitter.R::.extract_ttc_face.
 #
 # If systemfonts is unavailable or the font can't be resolved we fall
 # back to an empty main_font; MicroTeX then uses the math font's text

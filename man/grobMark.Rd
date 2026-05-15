@@ -25,7 +25,7 @@ drawing functions to anchor other graphics on parts of the formula.
 }
 \examples{
 \donttest{
-  g <- latex_grob(r"(a\mark{eq}^2 = b + c)",
+  g <- latex_grob(r"($a\mark{eq}^2 = b + c^2$)",
                   x = grid::unit(0.5, "npc"),
                   y = grid::unit(0.5, "npc"))
   grid::grid.newpage(); grid::grid.draw(g)

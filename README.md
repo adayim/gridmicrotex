@@ -158,7 +158,7 @@ grid.latex(
 clear_macros()
 ```
 
-See `?define_macro` and `vignette("01-introduction")` for details.
+See `?define_macro` and `vignette("getting-started")` for details.
 
 ## ggplot2 integration
 
@@ -182,7 +182,7 @@ ggplot(df, aes(x, y, label = eq)) +
 <img src="man/figures/README-example-ggplot2-geom-1.png" alt="" width="80%" />
 
 ggplot2 is a soft dependency — the core functions work without it. See
-`vignette("02-ggplot2-integration")` for more examples.
+`vignette("ggplot2-integration")` for more examples.
 
 ## Comparison
 
