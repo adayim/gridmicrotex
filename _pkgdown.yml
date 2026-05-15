@@ -4,8 +4,18 @@ template:
 
 navbar:
   structure:
-    left: [intro, reference, articles]
+    left: [intro, reference, articles, news]
     right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: "Getting started"
+      - text: Introduction to gridmicrotex
+        href: articles/01-introduction.html
+      - text: "ggplot2"
+      - text: Using LaTeX Math in ggplot2
+        href: articles/02-ggplot2-integration.html
 
 reference:
   - title: Core rendering
@@ -15,6 +25,7 @@ reference:
       - grid.latex
       - latex_dims
       - latex_tree
+      - grobMark
 
   - title: Options, macros, and cache
     desc: Project-wide defaults and advanced tooling
@@ -48,7 +59,7 @@ reference:
 articles:
   - title: Getting started
     contents:
-      - introduction
+      - 01-introduction
   - title: ggplot2
     contents:
-      - ggplot2-integration
+      - 02-ggplot2-integration

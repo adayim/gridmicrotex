@@ -4,6 +4,8 @@
 .httr-oauth
 .DS_Store
 .quarto
+Rplots.pdf
+**/Rplots.pdf
 mytest/*
 README.html
 src/*.o

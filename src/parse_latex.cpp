@@ -3,6 +3,7 @@
 #include "microtex.h"
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
+#include "macro/macro.h"
 
 using namespace microtex;
 using namespace Rcpp;
@@ -53,6 +54,12 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
     }
 
+    // Each parse starts from a clean slate of user-defined macros so that
+    // (a) \newcommand/\def in one R call doesn't leak into the next and
+    // (b) the typeface mode's automatic path-fallback parse doesn't fail
+    // with "Command already exists!" when re-processing the same input.
+    NewCommandMacro::clearUserMacros();
+
     // Toggle glyph rendering mode (guard restores default on any exit)
     RenderModeGuard render_guard;
     MicroTeX::setRenderGlyphUsePath(use_path);
@@ -95,8 +102,21 @@ Rcpp::List parse_latex_cpp(std::string tex,
     Graphics2D_Recorder recorder;
     render->draw(recorder, 0, 0);
 
-    // Convert records to R data structures
-    const auto& records = recorder.records();
+    // Convert records to R data structures. MARK records are pulled out
+    // into a separate marks list so the main layout data frame stays
+    // ink-only — most expressions have zero marks, and downstream code
+    // shouldn't have to filter them out of every row scan.
+    const auto& all_records = recorder.records();
+    std::vector<const DrawRecord*> records;
+    records.reserve(all_records.size());
+    std::vector<const DrawRecord*> mark_records;
+    for (const auto& r : all_records) {
+        if (r.type == DrawRecord::MARK) {
+            mark_records.push_back(&r);
+        } else {
+            records.push_back(&r);
+        }
+    }
     int n = static_cast<int>(records.size());
 
     // Columns for the layout data.frame
@@ -119,7 +139,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     Rcpp::List path_list(n);
 
     for (int i = 0; i < n; i++) {
-        const auto& rec = records[i];
+        const auto& rec = *records[i];
 
         // rx/ry are only meaningful for round-rect records; default NA.
         rx_col[i] = NA_REAL;
@@ -332,7 +352,11 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Named("font_file") = font_file_col
     );
     result.attr("class") = "data.frame";
-    result.attr("row.names") = Rcpp::seq(1, n);
+    if (n > 0) {
+        result.attr("row.names") = Rcpp::seq(1, n);
+    } else {
+        result.attr("row.names") = Rcpp::IntegerVector::create();
+    }
 
     // Attach bounding box as attributes
     result.attr("bbox_width") = width;
@@ -340,6 +364,30 @@ Rcpp::List parse_latex_cpp(std::string tex,
     result.attr("bbox_depth") = depth;
     result.attr("bbox_baseline") = baseline;
     result.attr("bbox_is_split") = is_split;
+
+    // Marks (\mark{name}) — stored as a small data.frame attribute keyed by
+    // name, with x/y in the same world coords as the bounding box (so the
+    // R-side gTree can place them in bigpts from the bbox top-left).
+    int m = static_cast<int>(mark_records.size());
+    CharacterVector mark_name_col(m);
+    NumericVector mark_x_col(m), mark_y_col(m);
+    for (int i = 0; i < m; i++) {
+        mark_name_col[i] = mark_records[i]->mark_name;
+        mark_x_col[i] = mark_records[i]->x;
+        mark_y_col[i] = mark_records[i]->y;
+    }
+    Rcpp::List marks_df = Rcpp::List::create(
+        Named("name") = mark_name_col,
+        Named("x") = mark_x_col,
+        Named("y") = mark_y_col
+    );
+    marks_df.attr("class") = "data.frame";
+    if (m > 0) {
+        marks_df.attr("row.names") = Rcpp::seq(1, m);
+    } else {
+        marks_df.attr("row.names") = Rcpp::IntegerVector::create();
+    }
+    result.attr("marks") = marks_df;
 
     return result;
 }

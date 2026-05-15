@@ -2,6 +2,7 @@
 #include "microtex.h"
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
+#include "mark_atom.h"
 #include "unimath/font_src.h"
 #include "unimath/uni_font.h"
 #include "otf/otf.h"
@@ -268,6 +269,7 @@ void microtex_init(std::string clm_path, std::string otf_path) {
         MicroTeX::setRenderGlyphUsePath(true);
     }
 
+    register_mark_macro();
     s_initialized = true;
 }
 
@@ -296,6 +298,7 @@ void microtex_init_from_otf(std::string otf_path, int index = 0) {
         MicroTeX::setRenderGlyphUsePath(true);
     }
 
+    register_mark_macro();
     s_initialized = true;
 }
 

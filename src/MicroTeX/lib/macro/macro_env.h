@@ -161,14 +161,19 @@ inline macro(cellcolor) {
 }
 
 inline macro(color) {
-  // We do not care the \color command in non-array mode, since we did pass a color as a parameter
-  // when parsing a LaTeX string, it is useless to specify a global foreground color again, but in
-  // array mode, the \color command is useful to specify the foreground color of the columns.
   if (tp.isArrayMode()) {
     color c = ColorAtom::getColor(args[1]);
     return sptrOf<CellForegroundAtom>(c);
   }
-  return nullptr;
+  // Outside array mode, \color is a LaTeX declaration that changes the
+  // current foreground colour for every atom until the end of the
+  // enclosing group. Approximate that here by consuming the remainder
+  // of the current group and wrapping it in a ColorAtom — so
+  // `{\color{blue} E = mc^2}` colours the whole inner formula and
+  // `\color{blue} E = mc^2` colours the rest of the top-level input.
+  const std::string rest = tp.forwardBalancedGroup();
+  auto a = Formula(tp, rest, false, tp.isMathMode())._root;
+  return sptrOf<ColorAtom>(a, TRANSPARENT, ColorAtom::getColor(args[1]));
 }
 
 inline macro(newcolumntype) {

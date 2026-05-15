@@ -16,7 +16,7 @@ geom_latex(
   math_font = "",
   lineheight = 1.2,
   max_width = 0,
-  input_mode = c("math", "mixed"),
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
   na.rm = FALSE,
   show.legend = NA,
@@ -160,7 +160,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
   # Use annotate() for single annotations (no legend, no data frame needed)
   ggplot(mtcars, aes(wt, mpg)) + geom_point() +
     annotate("latex", x = 4, y = 30,
-             label = "\\\\hat{y} = \\\\beta_0 + \\\\beta_1 x")
+             label = r"($\hat{y} = \beta_0 + \beta_1 x$)")
 }
 }
 }

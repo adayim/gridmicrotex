@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
   dpi = 300,
   dev = "ragg_png"
 )
-library(gridmicrotex)
+
 ```
 
 ## What is gridmicrotex?
@@ -28,6 +28,7 @@ this layout data and maps it to native grid primitives (`pathGrob`,
 on any R graphics device at any resolution.
 
 **Key features:**
+
 
 - No external LaTeX installation required --- MicroTeX is fully embedded
 - Resolution-independent vector output on all R devices (PNG, PDF, SVG, ...)
@@ -44,6 +45,9 @@ on any R graphics device at any resolution.
 The core function is `latex_grob()`, which returns a grid grob:
 
 ```{r basic, fig.height=0.8, fig.width=2, out.width="50%"}
+library(gridmicrotex)
+library(grid)
+
 g <- latex_grob("\\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}", gp = grid::gpar(fontsize = 24))
 grid::grid.newpage()
 grid::grid.draw(g)
@@ -68,6 +72,87 @@ grid.latex("F = ma", x = 0.1, y = 0.3, hjust = 0, gp = grid::gpar(fontsize = 24)
 
 By default, the input is treated as LaTeX math mode, which treats string as text by default and use `$...$` or `\\(...\\)` delimiters to render math. The `"Famous"` in the first equation above treated as text. The `mixed` mode converts the input to math mode to reduce the user burden for typing `\\text{}` and the conversion might not be perfect, but it should handle most common cases without user intervention. Use `input_mode = "math"` to treat the whole string as math mode (the second example) or if you find a problem with the conversion and render text with `\\text{}`. You can change this with global `latex_options(input_mode = "math")` for heavy math or users who wants to the advantages LaTex macros, etc. The vignette from next example will set the input mode to `math` globally and render the whole string as math mode.
 
+### Aligning to the math baseline
+
+In addition to numeric justifications in `[0, 1]`, `hjust` and `vjust`
+also accept named values. The most useful one is `vjust = "baseline"`,
+which places the formula's math baseline (not the bbox centre) on the
+anchor point — so a formula sits next to surrounding text the way it
+would in a typeset document.
+
+```{r baseline-align, fig.height=0.8, fig.width=4.5, out.width="60%"}
+grid::grid.newpage()
+y <- 0.5
+grid::grid.segments(unit(0, "npc"), unit(y, "npc"),
+                    unit(1, "npc"), unit(y, "npc"),
+                    gp = grid::gpar(col = "grey80"))
+grid::grid.text("if ", x = 0.10, y = y, just = c(0, 0.5),
+                gp = grid::gpar(fontsize = 16))
+grid.latex("$x \\geq \\sqrt{2\\pi}$",
+           x = 0.22, y = y,
+           hjust = "left", vjust = "baseline",
+           gp = grid::gpar(fontsize = 16))
+grid::grid.text(", then proceed.", x = 0.62, y = y, just = c(0, 0.5),
+                gp = grid::gpar(fontsize = 16))
+```
+
+`hjust` accepts `"left"`/`"bbleft"`, `"center"`/`"centre"`/`"middle"`/
+`"bbcentre"`, and `"right"`/`"bbright"`. `vjust` accepts `"bottom"`,
+`"center"`/`"centre"`/`"middle"`, `"top"`, and `"baseline"`.
+
+### Named anchors with `\mark{}`
+
+The `\mark{name}` macro records a named anchor at its position inside
+the formula. `grobMark()` then resolves the anchor to a pair of grid
+units, ready to drive an arrow, callout, or any other grob.
+
+A mark works at any nesting level — between top-level tokens, on a
+compound sub-expression like `b^2`, even inside a superscript or
+fraction. The position inherits the surrounding transform (font shrink
+for scripts, scaling, rotation), so the anchor lands on the rendered
+glyph rather than a pre-layout offset.
+
+```{r mark, fig.height=2.4, fig.width=5, out.width="70%"}
+g <- latex_grob(
+  r"($a^2 + b\mark{term}^2 \mark{equals}= c^2$)",
+  x = 0.5, y = 0.4,
+  gp = grid::gpar(fontsize = 28)
+)
+grid::grid.newpage()
+grid::grid.draw(g)
+
+# Callout 1: the "=" sign, pointed at from above.
+mk_eq <- grobMark(g, "equals")
+grid::grid.segments(mk_eq$x, mk_eq$y + unit(15, "mm"),
+                    mk_eq$x, mk_eq$y + unit(3, "mm"),
+                    arrow = grid::arrow(length = unit(2, "mm"), type = "closed"),
+                    gp = grid::gpar(col = "red"))
+grid::grid.text("equals", x = mk_eq$x, y = mk_eq$y + unit(18, "mm"),
+                gp = grid::gpar(col = "red", fontsize = 11))
+
+# Callout 2: the b^2 term, pointed at from below — the mark sits at the
+# end of the term, including the superscript's smaller scale.
+mk_bsq <- grobMark(g, "term")
+grid::grid.segments(mk_bsq$x - unit(6, "mm"), mk_bsq$y - unit(15, "mm"),
+                    mk_bsq$x - unit(2, "mm"), mk_bsq$y - unit(3, "mm"),
+                    arrow = grid::arrow(length = unit(2, "mm"), type = "closed"),
+                    gp = grid::gpar(col = "blue"))
+grid::grid.text("b² term",
+                x = mk_bsq$x - unit(7, "mm"),
+                y = mk_bsq$y - unit(18, "mm"),
+                just = "right",
+                gp = grid::gpar(col = "blue", fontsize = 11))
+```
+
+Because the returned units carry the grob's viewport position and
+`hjust`/`vjust`, you can pass them straight to `grid.points`,
+`grid.segments`, or any other grid drawing function — no manual offset
+arithmetic.
+
+`\mark` records a single point, not a span. To centre a callout over a
+multi-glyph term, place the mark at the term's end and shift in your
+drawing code, or place a pair of marks (`\mark{l}…\mark{r}`) and use
+their midpoint.
 
 ## Colors
 
@@ -393,6 +478,24 @@ Macro names must be ASCII letters. Expansion iterates to a fixed point,
 so macros can reference other macros. Use `list_macros()` to see
 currently registered ones, and `clear_macros()` (with no arguments) to
 drop them all.
+
+For parameterised macros (0--9 arguments) scoped to a single
+expression, MicroTeX also accepts plain-TeX `\def`:
+
+```{r def-inline, fig.height=0.7, fig.width=4, out.width="60%"}
+grid::grid.newpage()
+grid.latex(
+  r"(\def\norm#1{\left\lVert #1 \right\rVert}
+      \def\inner#1#2{\langle #1, #2 \rangle}
+      \norm{\vec{v}} = \sqrt{\inner{\vec{v}}{\vec{v}}})",
+  gp = grid::gpar(fontsize = 24)
+)
+```
+
+`\def` definitions live only for the duration of the expression they
+appear in, so they are the right tool for a parameterised abbreviation
+local to one label. Reach for `define_macro()` instead when you want a
+shorthand to persist across many plots in the same R session.
 
 ## Layout caching
 

@@ -60,7 +60,7 @@
 #'   # Use annotate() for single annotations (no legend, no data frame needed)
 #'   ggplot(mtcars, aes(wt, mpg)) + geom_point() +
 #'     annotate("latex", x = 4, y = 30,
-#'              label = "\\hat{y} = \\beta_0 + \\beta_1 x")
+#'              label = r"($\hat{y} = \beta_0 + \beta_1 x$)")
 #' }
 #' }
 geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",

@@ -1,7 +1,5 @@
 ^LICENSE\.md$
 ^README\.Rmd$
-^README\.md$
-^man/figures/.*$
 ^gridmicrotex\.Rproj$
 ^mytest/.*$
 ^src/MicroTeX/lib/CMakeLists\.txt$

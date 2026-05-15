@@ -65,6 +65,16 @@ void Graphics2D_Recorder::transformPoint(float& x, float& y) const {
     y = ny;
 }
 
+void Graphics2D_Recorder::recordMark(const std::string& name, float x, float y) {
+    DrawRecord rec;
+    rec.type = DrawRecord::MARK;
+    transformPoint(x, y);
+    rec.x = x;
+    rec.y = y;
+    rec.mark_name = name;
+    _records.push_back(std::move(rec));
+}
+
 void Graphics2D_Recorder::drawGlyph(u16 glyph, float x, float y) {
     auto* fr = dynamic_cast<Font_R*>(_currentFont.get());
     // Under a horizontal flip (\reflectbox), mirror the same fix as for

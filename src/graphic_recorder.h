@@ -24,7 +24,7 @@ public:
 
 // One recorded draw operation
 struct DrawRecord {
-    enum Type { GLYPH, LINE, RECT, FILL_RECT, ROUND_RECT, FILL_ROUND_RECT, PATH, TEXT };
+    enum Type { GLYPH, LINE, RECT, FILL_RECT, ROUND_RECT, FILL_ROUND_RECT, PATH, TEXT, MARK };
     Type type = GLYPH;
 
     // For GLYPH
@@ -38,6 +38,10 @@ struct DrawRecord {
     std::string text;
     int font_style = 0;  // FontStyle cast to int
     float rotation = 0;  // radians, extracted from current transform (ccw)
+
+    // For MARK (\mark{name}) — a named anchor inside the formula. Position
+    // is in the same world coordinates as glyph records; carries no ink.
+    std::string mark_name;
 
     // For LINE / RECT / FILL_RECT / ROUND_RECT / FILL_ROUND_RECT
     float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
@@ -105,6 +109,10 @@ public:
 
     // --- Text run (called by TextLayout_R) ---
     void drawTextRun(const std::string& text, float x, float y, int fontStyle, float fontSize);
+
+    // --- Mark (called by MarkBox::draw via dynamic_cast) ---
+    // Emits a MARK record at the transformed (x, y) carrying a user name.
+    void recordMark(const std::string& name, float x, float y);
 
     // --- Extraction ---
     const std::vector<DrawRecord>& records() const { return _records; }

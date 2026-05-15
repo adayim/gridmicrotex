@@ -6,6 +6,8 @@
 [![R-CMD-check](https://github.com/adayim/gridmicrotex/workflows/R-CMD-check/badge.svg)](https://github.com/adayim/gridmicrotex/actions)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/gridmicrotex)](https://CRAN.R-project.org/package=gridmicrotex)
+[![CRAN
+download](https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex)](https://cran.r-project.org/package=gridmicrotex)
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
@@ -134,6 +136,30 @@ grid.latex(r"(\text{如果 } x > 0 \text{ 则 } y = x^2)",
 
 <img src="man/figures/README-example-mixed-cjk-math-1.png" alt="" width="50%" />
 
+## User-defined macros
+
+Use `define_macro()` for zero-argument shorthands that persist across
+plots in the session, and plain-TeX `\def` for parameterised macros
+local to a single expression:
+
+``` r
+define_macro("RR", "\\mathbb{R}")
+grid.newpage()
+grid.latex(
+  r"(\def\norm#1{\left\lVert #1 \right\rVert}
+      \forall \vec{v} \in \RR^n,\ \norm{\vec{v}} \geq 0)",
+  gp = grid::gpar(fontsize = 22)
+)
+```
+
+<img src="man/figures/README-example-macros-1.png" alt="" width="60%" />
+
+``` r
+clear_macros()
+```
+
+See `?define_macro` and `vignette("01-introduction")` for details.
+
 ## ggplot2 integration
 
 Use `geom_latex()` to place LaTeX labels at data coordinates, and
@@ -156,7 +182,7 @@ ggplot(df, aes(x, y, label = eq)) +
 <img src="man/figures/README-example-ggplot2-geom-1.png" alt="" width="80%" />
 
 ggplot2 is a soft dependency — the core functions work without it. See
-`vignette("ggplot2-integration")` for more examples.
+`vignette("02-ggplot2-integration")` for more examples.
 
 ## Comparison
 

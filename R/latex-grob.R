@@ -8,7 +8,13 @@
 #' @param tex Character string of LaTeX math code.
 #' @param x,y Position in grid coordinates.
 #' @param default.units Units for x, y if given as numeric.
-#' @param hjust,vjust Horizontal/vertical justification (0-1).
+#' @param hjust,vjust Horizontal/vertical justification. Accepts the
+#'   usual numeric values in `[0, 1]`. As a convenience, `hjust` also
+#'   accepts the strings `"left"`/`"bbleft"`, `"center"`/`"centre"`/
+#'   `"middle"`/`"bbcentre"`, and `"right"`/`"bbright"`; `vjust` accepts
+#'   `"bottom"`, `"center"`/`"centre"`/`"middle"`, `"top"`, and
+#'   `"baseline"`. `"baseline"` aligns the formula's math baseline with
+#'   the anchor point — handy for placing a formula in flowing text.
 #' @param rot Rotation angle in degrees, counter-clockwise (default: 0).
 #'   Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.
 #' @param math_font Name of the math font to use (e.g., \code{"stix"}).
@@ -24,10 +30,10 @@
 #' @param input_mode How \code{tex} is interpreted before being parsed.
 #'   \code{"mixed"} wraps the input in \code{\\text{...}} so the string
 #'   reads as ordinary text and \code{$...$} (or \code{\\(...\\)}) opens
-#'   math mode, matching document-level LaTeX semantics. Useful for labels 
+#'   math mode, matching document-level LaTeX semantics. Useful for labels
 #'   that arrive from external sources mixing prose and math without explicit
-#'   \code{\\text{}} markers. \code{"math"} (default) is the standard 
-#'   MicroTeX behaviour --- the whole string is treated as math, so unwrapped 
+#'   \code{\\text{}} markers. \code{"math"} (default) is the standard
+#'   MicroTeX behaviour --- the whole string is treated as math, so unwrapped
 #'   prose renders as spaced math italics. The default can be changed globally via
 #'   \code{\link{latex_options}(input_mode = "mixed")}. See \code{\link{latex_wrap}}
 #'  for details on the wrapping process.
@@ -123,21 +129,33 @@
 #'
 #' @return A \code{grid} grob of class \code{"latexgrob"}.
 #' @seealso \code{\link{grid.latex}}, \code{\link{latex_dims}},
-#'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}}, 
+#'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}},
 #' \code{\link{latex_wrap}}, \code{\link{latex_options}}
 #' @export
-#' 
+#'
 #' @examples
 #' \donttest{
-#'   g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
+#'   g <- latex_grob(r"($\fcolorbox{red}{yellow}{\frac{a}{b}}$)",
+#'                   x = grid::unit(0.3, "npc"),
+#'                   y = grid::unit(0.3, "npc"),
+#'                   gp = grid::gpar(fontsize = 30))
 #'   grid::grid.draw(g)
-#'
 #'   # Red formula
-#'   grid::grid.draw(latex_grob("x^{2}", gp = grid::gpar(col = "red")))
+#'   grid::grid.draw(latex_grob("$x^{2}$",
+#'                              x = grid::unit(0.3, "npc"),
+#'                              y = grid::unit(0.8, "npc"),
+#'                              gp = grid::gpar(col = "red")))
 #'
-#'   # Rotated formula
-#'   grid::grid.draw(latex_grob("x^{2} + y^{2}",
-#'                              gp = grid::gpar(fontsize = 24), rot = 45))
+#'                              # Rotated formula
+#'   grid::grid.draw(latex_grob(r"($\colorbox{BurntOrange}{x^{2}} + y^{2}$)",
+#'                              x = grid::unit(0.6, "npc"),
+#'                              y = grid::unit(0.3, "npc"),
+#'                              gp = grid::gpar(fontsize = 24),
+#'                              rot = 45))
+#'
+#'   grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
+#'              x = grid::unit(0.6, "npc"),
+#'              y = grid::unit(0.8, "npc"),)
 #' }
 latex_grob <- function(tex,
                        x = grid::unit(0.5, "npc"),
@@ -179,6 +197,9 @@ latex_grob <- function(tex,
   bbox_bl_bp <- bbox_h * (1 - attr(layout, "bbox_baseline"))
   is_split <- isTRUE(attr(layout, "bbox_is_split"))
 
+  just <- .resolve_just(hjust, vjust, bbox_bl_bp = bbox_bl_bp, bbox_h = bbox_h)
+  marks <- .extract_marks(layout, bbox_h = bbox_h)
+
   grid::gTree(
     tex = parsed$tex,
     layout_df = layout,
@@ -187,9 +208,12 @@ latex_grob <- function(tex,
     bbox_d = bbox_d,
     bbox_bl_bp = bbox_bl_bp,
     is_split = is_split,
+    marks = marks,
     fontsize = parsed$fontsize,
-    hjust = hjust,
-    vjust = vjust,
+    hjust = just$hjust,
+    vjust = just$vjust,
+    hjust_input = hjust,
+    vjust_input = vjust,
     # Input parameters kept on the grob so editGrob() can re-parse when
     # any of them change. Resolved/baked values live in the parsed fields
     # above; these fields hold the user-facing inputs.
@@ -208,8 +232,139 @@ latex_grob <- function(tex,
       x = x, y = y,
       width = grid::unit(bbox_w, "bigpts"),
       height = grid::unit(bbox_h, "bigpts"),
-      just = c(hjust, vjust),
+      just = c(just$hjust, just$vjust),
       angle = rot
+    )
+  )
+}
+
+# Extract \mark{name} anchors from a parsed layout. MicroTeX's y axis is
+# top-down; flip to grid's bottom-up so the values can be added directly
+# to a bigpts-from-bbox-bottom-left reference like the children grobs use.
+# Returns a data.frame with columns (name, x, y) in bigpts, or NULL when
+# no marks were emitted.
+.extract_marks <- function(layout, bbox_h) {
+  m <- attr(layout, "marks")
+  if (is.null(m) || nrow(m) == 0L) return(NULL)
+  data.frame(
+    name = as.character(m$name),
+    x    = as.numeric(m$x),
+    y    = bbox_h - as.numeric(m$y),
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Look up a named anchor inside a LaTeX grob
+#'
+#' Resolves a \code{\\mark\{name\}} that was placed inside the LaTeX
+#' source to a pair of \pkg{grid} units in the grob's parent viewport.
+#' The returned units already account for the grob's viewport position
+#' and \code{hjust}/\code{vjust}, so you can pass them directly to grid
+#' drawing functions to anchor other graphics on parts of the formula.
+#'
+#' @param grob A \code{latexgrob} returned by \code{\link{latex_grob}}.
+#' @param name The mark name (the argument to \code{\\mark\{...\}}).
+#' @return A list with elements \code{x} and \code{y}, each a
+#'   \code{\link[grid]{unit}}. Mark coordinates are evaluated in the
+#'   grob's parent viewport.
+#' @seealso \code{\link{latex_grob}}
+#' @export
+#'
+#' @examples
+#' \donttest{
+#'   g <- latex_grob(r"(a\mark{eq}^2 = b + c)",
+#'                   x = grid::unit(0.5, "npc"),
+#'                   y = grid::unit(0.5, "npc"))
+#'   grid::grid.newpage(); grid::grid.draw(g)
+#'   mk <- grobMark(g, "eq")
+#'   grid::grid.points(mk$x, mk$y, pch = 19,
+#'                     gp = grid::gpar(col = "red"))
+#' }
+grobMark <- function(grob, name) {
+  if (!inherits(grob, "latexgrob")) {
+    stop("grob must be a latexgrob (returned by latex_grob()).", call. = FALSE)
+  }
+  marks <- grob$marks
+  if (is.null(marks) || nrow(marks) == 0L) {
+    stop("This grob has no marks. Place \\mark{name} inside the LaTeX source.",
+         call. = FALSE)
+  }
+  idx <- match(name, marks$name)
+  if (is.na(idx)) {
+    stop(
+      "Mark '", name, "' not found. Available: ",
+      paste(sprintf("'%s'", marks$name), collapse = ", "),
+      call. = FALSE
+    )
+  }
+  vp <- grob$vp
+  bbox_w <- grob$bbox_w
+  bbox_h <- grob$bbox_h
+  # bbox bottom-left in the parent viewport, expressed as a unit
+  # expression so it resolves lazily at draw time.
+  left   <- vp$x - grid::unit(grob$hjust * bbox_w, "bigpts")
+  bottom <- vp$y - grid::unit(grob$vjust * bbox_h, "bigpts")
+  list(
+    x = left   + grid::unit(marks$x[idx], "bigpts"),
+    y = bottom + grid::unit(marks$y[idx], "bigpts")
+  )
+}
+
+# Translate string-valued hjust/vjust into the [0,1] viewport just values
+# grid expects. Numeric inputs pass through unchanged. "baseline" (vjust
+# only) places the formula's math baseline at the anchor point — using
+# bbox_bl_bp / bbox_h, the same baseline that grobs query via
+# `ascentDetails()`/`descentDetails()`.
+.resolve_just <- function(hjust, vjust, bbox_bl_bp, bbox_h) {
+  hj <- .resolve_hjust(hjust)
+  vj <- .resolve_vjust(vjust, bbox_bl_bp = bbox_bl_bp, bbox_h = bbox_h)
+  list(hjust = hj, vjust = vj)
+}
+
+.hjust_strings <- c(
+  left     = 0,
+  bbleft   = 0,
+  center   = 0.5,
+  centre   = 0.5,
+  middle   = 0.5,
+  bbcentre = 0.5,
+  right    = 1,
+  bbright  = 1
+)
+
+.resolve_hjust <- function(hjust) {
+  if (is.numeric(hjust)) return(hjust)
+  if (!is.character(hjust) || length(hjust) != 1L) {
+    stop("hjust must be a numeric or a single string.", call. = FALSE)
+  }
+  v <- .hjust_strings[hjust]
+  if (is.na(v)) {
+    stop(
+      "hjust must be numeric or one of: ",
+      paste(sprintf("'%s'", names(.hjust_strings)), collapse = ", "),
+      call. = FALSE
+    )
+  }
+  unname(v)
+}
+
+.resolve_vjust <- function(vjust, bbox_bl_bp, bbox_h) {
+  if (is.numeric(vjust)) return(vjust)
+  if (!is.character(vjust) || length(vjust) != 1L) {
+    stop("vjust must be a numeric or a single string.", call. = FALSE)
+  }
+  switch(
+    vjust,
+    bottom = 0,
+    center = ,
+    centre = ,
+    middle = 0.5,
+    top = 1,
+    baseline = if (bbox_h > 0) bbox_bl_bp / bbox_h else 0.5,
+    stop(
+      "vjust must be numeric or one of: 'bottom', 'center'/'centre'/'middle', ",
+      "'top', 'baseline'.",
+      call. = FALSE
     )
   )
 }
@@ -370,6 +525,7 @@ editDetails.latexgrob <- function(x, specs) {
     x$bbox_d         <- attr(layout, "bbox_depth")
     x$bbox_bl_bp     <- x$bbox_h * (1 - attr(layout, "bbox_baseline"))
     x$is_split       <- isTRUE(attr(layout, "bbox_is_split"))
+    x$marks          <- .extract_marks(layout, bbox_h = x$bbox_h)
     x$fontsize       <- parsed$fontsize
     x$text_gp        <- parsed$text_gp
     x$render_mode    <- parsed$render_mode
@@ -377,13 +533,26 @@ editDetails.latexgrob <- function(x, specs) {
     x$gp             <- parsed$gp
   }
 
+  # When the user edits hjust/vjust, the spec value is the new raw input
+  # (potentially a string like "baseline"). Stash it so a later parse-only
+  # edit can re-resolve correctly against the new bbox.
+  if ("hjust" %in% names(specs)) x$hjust_input <- specs$hjust
+  if ("vjust" %in% names(specs)) x$vjust_input <- specs$vjust
+
   if ((parse_changed || just_changed) && !is.null(x$vp)) {
+    just <- .resolve_just(
+      x$hjust_input %||% x$hjust,
+      x$vjust_input %||% x$vjust,
+      bbox_bl_bp = x$bbox_bl_bp, bbox_h = x$bbox_h
+    )
+    x$hjust <- just$hjust
+    x$vjust <- just$vjust
     old_vp <- x$vp
     x$vp <- grid::viewport(
       x = old_vp$x, y = old_vp$y,
       width  = grid::unit(x$bbox_w, "bigpts"),
       height = grid::unit(x$bbox_h, "bigpts"),
-      just   = c(x$hjust, x$vjust),
+      just   = c(just$hjust, just$vjust),
       angle  = old_vp$angle
     )
   }
@@ -513,10 +682,6 @@ yDetails.latexgrob <- function(x, theta) {
 #' @rdname latex_grob
 #' @export
 #'
-#' @examples
-#' \donttest{
-#'   grid.latex("x^{2} + y^{2} = z^{2}")
-#' }
 grid.latex <- function(tex, ...) {
   g <- latex_grob(tex, ...)
   grid::grid.draw(g)

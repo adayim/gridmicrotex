@@ -603,6 +603,11 @@ void Parser::preprocess(string& cmd, Args& args, int& pos) {
     preprocessNewCmd(cmd, args, pos);
   } else if (cmd == "newenvironment" || cmd == "renewenvironment") {
     preprocessNewCmd(cmd, args, pos);
+  } else if (cmd == "def") {
+    // Plain-TeX \def: register and erase here so subsequent passes never
+    // mistake the body's tokens (including the name being defined, if
+    // a previous parse left it in _codes) for macro invocations to inflate.
+    preprocessNewCmd(cmd, args, pos);
   } else if (NewCommandMacro::isMacro(cmd)) {
     inflateNewCmd(cmd, args, pos);
   } else if (cmd == "begin") {

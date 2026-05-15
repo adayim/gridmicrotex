@@ -32,7 +32,13 @@ grid.latex(tex, ...)
 
 \item{default.units}{Units for x, y if given as numeric.}
 
-\item{hjust, vjust}{Horizontal/vertical justification (0-1).}
+\item{hjust, vjust}{Horizontal/vertical justification. Accepts the
+usual numeric values in \verb{[0, 1]}. As a convenience, \code{hjust} also
+accepts the strings \code{"left"}/\code{"bbleft"}, \code{"center"}/\code{"centre"}/
+\code{"middle"}/\code{"bbcentre"}, and \code{"right"}/\code{"bbright"}; \code{vjust} accepts
+\code{"bottom"}, \code{"center"}/\code{"centre"}/\code{"middle"}, \code{"top"}, and
+\code{"baseline"}. \code{"baseline"} aligns the formula's math baseline with
+the anchor point — handy for placing a formula in flowing text.}
 
 \item{rot}{Rotation angle in degrees, counter-clockwise (default: 0).
 Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.}
@@ -176,18 +182,27 @@ inter-line gap is \code{(lineheight - 1) * fontsize} big points.
 }
 \examples{
 \donttest{
-  g <- latex_grob("\\\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
+  g <- latex_grob(r"($\fcolorbox{red}{yellow}{\frac{a}{b}}$)",
+                  x = grid::unit(0.3, "npc"),
+                  y = grid::unit(0.3, "npc"),
+                  gp = grid::gpar(fontsize = 30))
   grid::grid.draw(g)
-
   # Red formula
-  grid::grid.draw(latex_grob("x^{2}", gp = grid::gpar(col = "red")))
+  grid::grid.draw(latex_grob("$x^{2}$",
+                             x = grid::unit(0.3, "npc"),
+                             y = grid::unit(0.8, "npc"),
+                             gp = grid::gpar(col = "red")))
 
-  # Rotated formula
-  grid::grid.draw(latex_grob("x^{2} + y^{2}",
-                             gp = grid::gpar(fontsize = 24), rot = 45))
-}
-\donttest{
-  grid.latex("x^{2} + y^{2} = z^{2}")
+                             # Rotated formula
+  grid::grid.draw(latex_grob(r"($\colorbox{BurntOrange}{x^{2}} + y^{2}$)",
+                             x = grid::unit(0.6, "npc"),
+                             y = grid::unit(0.3, "npc"),
+                             gp = grid::gpar(fontsize = 24),
+                             rot = 45))
+
+  grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
+             x = grid::unit(0.6, "npc"),
+             y = grid::unit(0.8, "npc"),)
 }
 }
 \seealso{

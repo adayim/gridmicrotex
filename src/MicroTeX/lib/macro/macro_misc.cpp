@@ -124,11 +124,19 @@ macro(renewcommand) {
 }
 
 macro(def) {
-  // Plain-TeX \def\name<pattern>{body}: framework reads only the control-sequence
-  // name as args[1]; we then parse a sequential parameter pattern (#1#2..#N,
-  // up to #9) and the brace-delimited body manually. Delimited parameters are
-  // not supported. Silently overwrites any existing definition.
-  const string& name = args[1];
+  // Plain-TeX \def\name<pattern>{body}. Registered with argc=0 because we
+  // can't let the framework read the name through the standard arg reader
+  // — that path calls getCmdWithArgs(), which greedily consumes following
+  // braces if the name happens to already exist in the macro table (e.g.
+  // from a previous parse sharing MicroTeX's static state). The name must
+  // be a bare control sequence, so we read it ourselves with getCmd().
+  tp.skipWhiteSpace();
+  if (tp.atEnd() || tp.peek() != '\\')
+    throw ex_parse("\\def: expected '\\' before the name");
+  const string raw = tp.getCmd();
+  if (raw.empty())
+    throw ex_parse("\\def: expected a control-sequence name after '\\def'");
+  const string name = "\\" + raw;
   if (!tp.isValidCmd(name))
     throw ex_parse("\\def: invalid control sequence name '" + name + "'");
 

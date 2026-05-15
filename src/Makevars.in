@@ -89,4 +89,4 @@ PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(PKG_CXXFLAGS_EXTRA)
 
 PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(FT_LIBS)
 
-OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o otf_math_reader.o $(MICROTEX_OBJECTS)
+OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o mark_atom.o otf_math_reader.o $(MICROTEX_OBJECTS)

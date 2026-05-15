@@ -77,8 +77,12 @@ test_that("device support detection and typeface fallback work", {
 
 # --- edge cases: empty and invalid input ---
 
-test_that("latex_grob handles empty input", {
-  expect_error(latex_grob(""))
+test_that("latex_grob handles empty input as a zero-size grob", {
+  g <- latex_grob("")
+  expect_s3_class(g, "latexgrob")
+  expect_equal(g$bbox_w, 0)
+  expect_equal(g$bbox_h, 0)
+  expect_equal(nrow(g$layout_df), 0L)
 })
 
 test_that("latex_grob handles invalid LaTeX commands gracefully", {

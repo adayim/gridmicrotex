@@ -36,7 +36,11 @@ map<string, MacroInfo*> MacroInfo::_commands{
 #define mac mac4
   mac(2, 2, macro_newcommand, "newcommand"),
   mac(2, 2, macro_renewcommand, "renewcommand"),
-  mac(1, 0, macro_def, "def"),
+  // \def takes its name, pattern, and body via custom parsing inside
+  // macro_def — argc=0 so the framework's standard arg reader, which
+  // would expand any already-defined macro it finds at the cursor, is
+  // bypassed entirely.
+  mac(0, 0, macro_def, "def"),
   mac(2, 1, macro_rule, "rule"),
   mac(1, 1, macro_includegraphics, "includegraphics"),
   mac(2, 1, macro_cfrac, "cfrac"),
@@ -203,6 +207,14 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_mathds, "mathds"),
   mac(1, macro_bold, "bold"),
   mac(1, macro_bold, "boldsymbol"),
+  // \bm (from the bm package) and \pmb (from amsbsy) are the canonical
+  // bold-math commands in modern LaTeX. Both alias to the same
+  // bold-font switch as \boldsymbol so real-world source compiles
+  // without needing user-side rewrites. The visual output is identical
+  // to \mathbf for the glyphs we ship; that's a closer match to LaTeX
+  // semantics than the previous behaviour of leaving them undefined.
+  mac(1, macro_bold, "bm"),
+  mac(1, macro_bold, "pmb"),
   mac(2, macro_addfont, "addfont"),
   // endregion
   // region nested styles
@@ -343,6 +355,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
 
 map<string, string> NewCommandMacro::_codes;
 map<string, string> NewCommandMacro::_replacements;
+std::set<std::string> NewCommandMacro::_builtin_names;
 Macro* NewCommandMacro::_instance = new NewCommandMacro();
 
 inline static void env(int argc, const string& name, const string& begDef, const string& endDef) {
@@ -416,4 +429,8 @@ void NewCommandMacro::_init_() {
     "}}"
   );
   // endregion
+
+  // Lock in the set of built-in names so clearUserMacros() can later
+  // drop user-defined macros without touching these.
+  snapshotBuiltins();
 }

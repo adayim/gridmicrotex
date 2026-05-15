@@ -9,7 +9,7 @@ element_latex(
   fontsize = NULL,
   lineheight = 1.2,
   max_width = 0,
-  input_mode = c("math", "mixed"),
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
   ...
 )
