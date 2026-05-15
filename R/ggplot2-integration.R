@@ -67,10 +67,11 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
                        position = "identity", ...,
                        fontsize = 11, math_font = "",
                        lineheight = 1.2, max_width = 0,
-                       input_mode = c("math", "mixed"),
+                       input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
                        na.rm = FALSE, show.legend = NA,
                        inherit.aes = TRUE) {
+  .apply_opts("math_font", "render_mode", "input_mode")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -149,8 +150,9 @@ GeomLatex <- NULL
 #' }
 element_latex <- function(math_font = "", fontsize = NULL,
                          lineheight = 1.2, max_width = 0,
-                         input_mode = c("math", "mixed"),
+                         input_mode = c("mixed", "math"),
                          render_mode = c("typeface", "path"), ...) {
+  .apply_opts("math_font", "render_mode", "input_mode")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -193,7 +195,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
 
     draw_panel = function(data, panel_params, coord, fontsize = 11,
                           math_font = "", lineheight = 1.2, max_width = 0,
-                          input_mode = "math",
+                          input_mode = "mixed",
                           render_mode = "typeface",
                           na.rm = FALSE) {
       coords <- coord$transform(data, panel_params)
@@ -237,7 +239,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
       math_font = S7::new_property(S7::class_character, default = ""),
       lineheight = S7::new_property(S7::class_numeric, default = 1.2),
       max_width = S7::new_property(S7::class_numeric, default = 0),
-      input_mode = S7::new_property(S7::class_character, default = "math"),
+      input_mode = S7::new_property(S7::class_character, default = "mixed"),
       render_mode = S7::new_property(S7::class_character, default = "typeface")
     )
   )
@@ -273,7 +275,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
   math_font <- element@math_font %||% ""
   lineheight <- element@lineheight %||% 1.2
   max_width <- element@max_width %||% 0
-  input_mode <- element@input_mode %||% "math"
+  input_mode <- element@input_mode %||% "mixed"
   render_mode <- element@render_mode %||% "typeface"
 
   # In math mode, strip enclosing $...$ that users add by analogy with
@@ -283,11 +285,14 @@ element_latex <- function(math_font = "", fontsize = NULL,
     if (input_mode == "mixed") s else gsub("^\\$|\\$$", "", s)
   }
 
-  # Single label (axis title, strip text) — render one grob
+  # Single label (axis title, strip text) — render one grob.
+  # When x/y aren't supplied, anchor to (hjust, vjust) npc so the grob
+  # sits flush with the cell edge implied by the theme's justification
+  # (matches what ggplot2:::titleGrob does for plain text).
   if (length(label) == 1L) {
     label <- strip_dollars(label)
-    if (is.null(x)) x <- grid::unit(0.5, "npc")
-    if (is.null(y)) y <- grid::unit(0.5, "npc")
+    if (is.null(x)) x <- grid::unit(hjust, "npc")
+    if (is.null(y)) y <- grid::unit(vjust, "npc")
     return(latex_grob(
       tex = label, x = x, y = y,
       hjust = hjust, vjust = vjust,

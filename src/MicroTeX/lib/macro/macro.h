@@ -52,6 +52,13 @@ public:
     const std::string& def
   );
 
+  /**
+   * Define or silently overwrite a macro with plain-TeX \def semantics.
+   * Supports the sequential parameter form \def\foo#1#2{body} (argc 0..9).
+   * No conflict check is performed.
+   */
+  static void addDefCommand(const std::string& name, const std::string& code, int argc);
+
   static bool isMacro(const std::string& name);
 
   static void _init_();

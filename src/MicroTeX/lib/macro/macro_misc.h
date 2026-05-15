@@ -188,6 +188,8 @@ macro(newcommand);
 
 macro(renewcommand);
 
+macro(def);
+
 macro(raisebox);
 
 macro(romannumeral);

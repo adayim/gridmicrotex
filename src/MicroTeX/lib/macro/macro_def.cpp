@@ -36,6 +36,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
 #define mac mac4
   mac(2, 2, macro_newcommand, "newcommand"),
   mac(2, 2, macro_renewcommand, "renewcommand"),
+  mac(1, 0, macro_def, "def"),
   mac(2, 1, macro_rule, "rule"),
   mac(1, 1, macro_includegraphics, "includegraphics"),
   mac(2, 1, macro_cfrac, "cfrac"),

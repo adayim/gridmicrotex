@@ -123,6 +123,40 @@ macro(renewcommand) {
   );
 }
 
+macro(def) {
+  // Plain-TeX \def\name<pattern>{body}: framework reads only the control-sequence
+  // name as args[1]; we then parse a sequential parameter pattern (#1#2..#N,
+  // up to #9) and the brace-delimited body manually. Delimited parameters are
+  // not supported. Silently overwrites any existing definition.
+  const string& name = args[1];
+  if (!tp.isValidCmd(name))
+    throw ex_parse("\\def: invalid control sequence name '" + name + "'");
+
+  const string pattern = tp.forward([](char c) { return c != '{'; });
+  int argc = 0;
+  for (size_t i = 0; i < pattern.size(); i++) {
+    const char c = pattern[i];
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') continue;
+    if (c != '#')
+      throw ex_parse(
+        "\\def: unexpected character '" + string(1, c) + "' in parameter pattern"
+      );
+    if (i + 1 >= pattern.size())
+      throw ex_parse("\\def: '#' at end of parameter pattern");
+    const char d = pattern[++i];
+    if (d < '1' || d > '9')
+      throw ex_parse("\\def: '#' must be followed by a digit 1..9");
+    const int n = d - '0';
+    if (n != argc + 1)
+      throw ex_parse("\\def: parameters must be sequential starting at #1");
+    argc = n;
+  }
+
+  const string body = tp.getGroup('{', '}');
+  NewCommandMacro::addDefCommand(name.substr(1), body, argc);
+  return nullptr;
+}
+
 macro(raisebox) {
   auto r = Units::getDimen(args[1]);
   auto h = Units::getDimen(args[3]);

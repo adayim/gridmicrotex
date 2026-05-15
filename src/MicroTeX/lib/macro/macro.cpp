@@ -60,6 +60,11 @@ void NewCommandMacro::addRenewCommand(
   MacroInfo::add(name, new InflationMacroInfo(_instance, argc, 1));
 }
 
+void NewCommandMacro::addDefCommand(const string& name, const string& code, int argc) {
+  _codes[name] = code;
+  MacroInfo::add(name, new InflationMacroInfo(_instance, argc));
+}
+
 void NewCommandMacro::execute(Parser& tp, vector<string>& args) {
   string code = _codes[args[0]];
   string rep;
