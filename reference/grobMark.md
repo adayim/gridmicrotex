@@ -37,10 +37,9 @@ evaluated in the grob's parent viewport.
 
 ``` r
 # \donttest{
-  g <- latex_grob(r"(a\mark{eq}^2 = b + c)",
+  g <- latex_grob(r"($a\mark{eq}^2 = b + c^2$)",
                   x = grid::unit(0.5, "npc"),
                   y = grid::unit(0.5, "npc"))
-
   grid::grid.newpage(); grid::grid.draw(g)
   mk <- grobMark(g, "eq")
   grid::grid.points(mk$x, mk$y, pch = 19,

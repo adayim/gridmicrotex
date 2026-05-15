@@ -160,7 +160,7 @@ clear_macros()
 See
 [`?define_macro`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
 and
-[`vignette("01-introduction")`](https://adayim.github.io/gridmicrotex/articles/01-introduction.md)
+[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)
 for details.
 
 ## ggplot2 integration
@@ -189,7 +189,7 @@ ggplot(df, aes(x, y, label = eq)) +
 ![](reference/figures/README-example-ggplot2-geom-1.png)
 
 ggplot2 is a soft dependency — the core functions work without it. See
-[`vignette("02-ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/02-ggplot2-integration.md)
+[`vignette("ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md)
 for more examples.
 
 ## Comparison
