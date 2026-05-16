@@ -2,6 +2,8 @@
 
 ## gridmicrotex 0.0.2
 
+CRAN release: 2026-05-16
+
 - Support the `\def` command
 - New function `grobMark`.
 - Bug fix `ggplot2` intergration.
