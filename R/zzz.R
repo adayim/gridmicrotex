@@ -18,18 +18,13 @@
 
   microtex_init_from_otf(otf_path)
 
-  # Register Lete with systemfonts so gp = gpar(fontfamily = "Lete Sans Math")
-  # (and the "lete" alias) resolves to our bundled OTF without the user
-  # having to install the font system-wide.
-  .register_font_with_systemfonts(otf_path, "Lete Sans Math", aliases = "lete")
-
-  # Register the bundled STIX Two Math font the same way.
+  # Add the bundled STIX Two Math font to MicroTeX's registry. The
+  # systemfonts registration (so gp$fontfamily = "lete"/"stix" resolves
+  # to the bundled OTF) is deferred to first render — see
+  # .ensure_bundled_fonts_registered() in R/fonts.R for why.
   stix_path <- system.file("fonts", "STIXTwoMath-Regular.otf", package = pkgname)
   if (nzchar(stix_path)) {
-    display <- microtex_add_font_from_otf(stix_path, 0L)
-    if (nzchar(display)) {
-      .register_font_with_systemfonts(stix_path, display, aliases = "stix")
-    }
+    microtex_add_font_from_otf(stix_path, 0L)
   }
 
   # Initialize ggplot2 integration if ggplot2 is available

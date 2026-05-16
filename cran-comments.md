@@ -1,7 +1,5 @@
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
+0 errors | 0 warnings | 0 note
 
-* This is a new release.
-
-No references for this package. All 'LaTex' and 'C++' has been quoted in the DESCRIPTION file.
+2 new functions and 2 bug fix.

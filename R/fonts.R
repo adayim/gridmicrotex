@@ -180,6 +180,31 @@ load_font <- function(otf_path) {
   invisible()
 }
 
+# Session-level flag for the bundled-font systemfonts registration. Kept
+# out of .onLoad so we don't touch Core Text at namespace-load time on
+# macOS — older SDKs print "XType: Using static font registry." to stderr,
+# which R CMD check captures and flags across many check phases. Running
+# this lazily on first render keeps the check log clean.
+.fonts_state <- new.env(parent = emptyenv())
+.fonts_state$registered <- FALSE
+
+.ensure_bundled_fonts_registered <- function() {
+  if (isTRUE(.fonts_state$registered)) return(invisible())
+  .fonts_state$registered <- TRUE  # set first so a failure isn't retried each call
+
+  lete <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
+  if (nzchar(lete)) {
+    .register_font_with_systemfonts(lete, "Lete Sans Math", aliases = "lete")
+  }
+
+  stix <- system.file("fonts", "STIXTwoMath-Regular.otf", package = "gridmicrotex")
+  if (nzchar(stix)) {
+    .register_font_with_systemfonts(stix, "STIX Two Math", aliases = "stix")
+  }
+
+  invisible()
+}
+
 #' Check font status
 #'
 #' Reports which math fonts are loaded and available for rendering.

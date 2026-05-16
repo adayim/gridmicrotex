@@ -378,6 +378,7 @@ grobMark <- function(grob, name) {
 .parse_from_gp <- function(tex, gp, math_font, max_width, tex_style,
                            render_mode, input_mode = "mixed",
                            with_path_fallback = FALSE) {
+  .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
   input_mode <- match.arg(input_mode, c("math", "mixed"))
   if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
