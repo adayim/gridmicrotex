@@ -31,8 +31,9 @@ in plots:
 ## Annotating plots with `geom_latex()`
 
 `geom_latex()` works like `geom_text()` but interprets the `label`
-aesthetic as a LaTeX math string. You can also map the `size` (font size in points) and `colour` aesthetics as usual:
-
+aesthetic as a LaTeX math string. You can also map the `size` (font size in points) 
+and `colour` aesthetics as usual. `element_latex()` replaces a text theme element so that its label is
+rendered as LaTeX math.
 
 ```{r geom-basic, out.width="70%"}
 df <- data.frame(
@@ -49,8 +50,18 @@ ggplot(df, aes(x, y,
   geom_latex() +
   scale_colour_identity() +
   scale_size_identity() +
-  theme_minimal()
+  labs(
+    x = "$\\beta_1 \\cdot x + \\beta_0$",
+    y = "$\\mathrm{mpg}$"
+  ) +
+  theme(
+    axis.title.x = element_latex(fontsize = 14),
+    axis.title.y = element_latex(fontsize = 14)
+  )
 ```
+
+Dollar-sign delimiters (`$...$`) are stripped automatically, so both
+`"\\frac{a}{b}"` and `"$\\frac{a}{b}$"` produce the same output.
 
 
 ### Adding equation annotations to a scatter plot
@@ -76,24 +87,7 @@ ggplot(mtcars, aes(wt, mpg)) +
   theme_minimal()
 ```
 
-## LaTeX axis titles with `element_latex()`
 
-`element_latex()` replaces a text theme element so that its label is
-rendered as LaTeX math.
 
-```{r element-axis, out.width="70%"}
-ggplot(mtcars, aes(wt, mpg)) +
-  geom_point() +
-  labs(
-    x = "$\\beta_1 \\cdot x + \\beta_0$",
-    y = "$\\mathrm{mpg}$"
-  ) +
-  theme(
-    axis.title.x = element_latex(fontsize = 14),
-    axis.title.y = element_latex(fontsize = 14)
-  )
-```
 
-Dollar-sign delimiters (`$...$`) are stripped automatically, so both
-`"\\frac{a}{b}"` and `"$\\frac{a}{b}$"` produce the same output.
 
