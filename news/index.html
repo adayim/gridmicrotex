@@ -47,6 +47,7 @@
 <li>Bug fix coloring body.</li>
 <li>
 <code>ggplot2</code> integration respects <code>latex_options</code>.</li>
+<li>Defer <code>systemfonts</code> registration of the bundled Lete and STIX fonts to first render. This avoids the <code>XType: Using static font registry.</code> notice that older macOS SDKs emit on Core Text font registration, which had caused spurious WARN/NOTEs on <code>r-oldrel-macos-arm64</code>.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.1" id="gridmicrotex-001">gridmicrotex 0.0.1<a class="anchor" aria-label="anchor" href="#gridmicrotex-001"></a></h2><p class="text-muted">CRAN release: 2026-05-08</p>
