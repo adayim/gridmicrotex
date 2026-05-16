@@ -16,7 +16,10 @@ works like
 [`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
 but interprets the `label` aesthetic as a LaTeX math string. You can
 also map the `size` (font size in points) and `colour` aesthetics as
-usual:
+usual.
+[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
+replaces a text theme element so that its label is rendered as LaTeX
+math.
 
 ``` r
 
@@ -34,10 +37,20 @@ ggplot(df, aes(x, y,
   geom_latex() +
   scale_colour_identity() +
   scale_size_identity() +
-  theme_minimal()
+  labs(
+    x = "$\\beta_1 \\cdot x + \\beta_0$",
+    y = "$\\mathrm{mpg}$"
+  ) +
+  theme(
+    axis.title.x = element_latex(fontsize = 14),
+    axis.title.y = element_latex(fontsize = 14)
+  )
 ```
 
 ![](ggplot2-integration_files/figure-html/geom-basic-1.png)
+
+Dollar-sign delimiters (`$...$`) are stripped automatically, so both
+`"\\frac{a}{b}"` and `"$\\frac{a}{b}$"` produce the same output.
 
 ### Adding equation annotations to a scatter plot
 
@@ -65,28 +78,3 @@ ggplot(mtcars, aes(wt, mpg)) +
 ```
 
 ![](ggplot2-integration_files/figure-html/regression-annotation-1.png)
-
-## LaTeX axis titles with `element_latex()`
-
-[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
-replaces a text theme element so that its label is rendered as LaTeX
-math.
-
-``` r
-
-ggplot(mtcars, aes(wt, mpg)) +
-  geom_point() +
-  labs(
-    x = "$\\beta_1 \\cdot x + \\beta_0$",
-    y = "$\\mathrm{mpg}$"
-  ) +
-  theme(
-    axis.title.x = element_latex(fontsize = 14),
-    axis.title.y = element_latex(fontsize = 14)
-  )
-```
-
-![](ggplot2-integration_files/figure-html/element-axis-1.png)
-
-Dollar-sign delimiters (`$...$`) are stripped automatically, so both
-`"\\frac{a}{b}"` and `"$\\frac{a}{b}$"` produce the same output.
