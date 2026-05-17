@@ -65,6 +65,10 @@ inline macro(xcancel) {
   return _cancel(CancelAtom::CROSS, tp, args);
 }
 
+inline macro(sout) {
+  return _cancel(CancelAtom::HORIZONTAL, tp, args);
+}
+
 inline macro(underscore) {
   return SymbolAtom::get("_");
 }
@@ -187,6 +191,8 @@ macro(rule);
 macro(newcommand);
 
 macro(renewcommand);
+
+macro(providecommand);
 
 macro(def);
 

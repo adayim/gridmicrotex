@@ -1,6 +1,6 @@
 Package: gridmicrotex
 Title: Native 'LaTeX' Math Rendering for Grid Graphics
-Version: 0.0.2
+Version: 0.0.3
 Authors@R: c(
     person("Alim", "Dayim", role = c("aut", "cre"),
            email = "ad938@cam.ac.uk",

@@ -123,6 +123,26 @@ macro(renewcommand) {
   );
 }
 
+macro(providecommand) {
+  // \providecommand{\name}[argc][default]{def} — like \newcommand, but
+  // silently no-ops if \name is already defined (built-in or user).
+  const string& newcmd = args[1];
+  if (tp.isValidCmd(newcmd) && MacroInfo::get(newcmd.substr(1)) != nullptr) {
+    return nullptr;
+  }
+  return _def_cmd(
+    tp,
+    args,
+    [](bool hasOption, const string& cmd, const string& def, int argc, const string& opt) {
+      if (!hasOption) {
+        NewCommandMacro::addNewCommand(cmd, def, argc);
+      } else {
+        NewCommandMacro::addNewCommand(cmd, def, argc, opt);
+      }
+    }
+  );
+}
+
 macro(def) {
   // Plain-TeX \def\name<pattern>{body}. Registered with argc=0 because we
   // can't let the framework read the name through the standard arg reader

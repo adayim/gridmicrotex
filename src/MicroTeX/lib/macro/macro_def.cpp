@@ -36,6 +36,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
 #define mac mac4
   mac(2, 2, macro_newcommand, "newcommand"),
   mac(2, 2, macro_renewcommand, "renewcommand"),
+  mac(2, 2, macro_providecommand, "providecommand"),
   // \def takes its name, pattern, and body via custom parsing inside
   // macro_def — argc=0 so the framework's standard arg reader, which
   // would expand any already-defined macro it finds at the cursor, is
@@ -332,6 +333,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_cancel, "cancel"),
   mac(1, macro_bcancel, "bcancel"),
   mac(1, macro_xcancel, "xcancel"),
+  mac(1, macro_sout, "sout"),
   mac(6, macro_zstack, "stackinset"),
   mac(0, macro_nbsp, "nbsp"),
   mac(1, macro_sqrt, "sqrtsign"),
