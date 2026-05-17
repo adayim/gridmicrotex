@@ -45,15 +45,15 @@ automatically by systemfonts from the `gp$fontfamily` argument — no
 
 ``` r
 # \donttest{
-  # We will download and load Latin Modern Math
-  url <- "https://mirrors.ctan.org/fonts/lm-math/opentype/latinmodern-math.otf"
-  math_fnt <- file.path(tempdir(), "latinmodern-math.otf")
-  download.file(url = url, destfile = math_fnt, mode = "wb")
-  load_font(math_fnt)
-
+  # Load a math font from a local OTF file. Here we point at the
+  # bundled STIX font so the example is self-contained and loaded.
+  # You don't need to load the bundled fonts to use them — they're registered
+  # with systemfonts on first render — but this shows how to load a custom font.
+  # in practice you would pass the path to any OTF with an OpenType MATH table.
+  otf <- system.file("fonts", "STIXTwoMath-Regular.otf",
+                     package = "gridmicrotex")
+  load_font(otf)
   available_math_fonts()
-#> [1] "DejaVu Sans"       "Latin Modern Math" "Lete Sans Math"   
-#> [4] "STIX Two Math"    
+#> [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math" 
 # }
-
 ```

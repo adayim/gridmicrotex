@@ -1,5 +1,13 @@
 # Changelog
 
+## gridmicrotex 0.0.3
+
+- Self-contained
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  example so CRAN’s donttest additional checks no longer fail on the
+  unreliable CTAN font download.
+- New commands.
+
 ## gridmicrotex 0.0.2
 
 CRAN release: 2026-05-16
