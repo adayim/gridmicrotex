@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,7 +40,14 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.3" id="gridmicrotex-003">gridmicrotex 0.0.3<a class="anchor" aria-label="anchor" href="#gridmicrotex-003"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.0.4" id="gridmicrotex-004">gridmicrotex 0.0.4<a class="anchor" aria-label="anchor" href="#gridmicrotex-004"></a></h2>
+<ul><li>Accept raw latex code from other package, liek <code>print.xtable()</code> / <code><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">knitr::kable()</a></code> / booktabs output.</li>
+<li>New MicroTeX commands <code>\thickhline</code> and <code>\cline{a-b}</code>.</li>
+<li>Bug fix: <code>$…$</code> inside tabular cells no longer chops the table.</li>
+<li>Bug fix: starred alignment envs (<code>align*</code>, <code>eqnarray*</code>, …) now render.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.3" id="gridmicrotex-003">gridmicrotex 0.0.3<a class="anchor" aria-label="anchor" href="#gridmicrotex-003"></a></h2><p class="text-muted">CRAN release: 2026-05-18</p>
 <ul><li>Self-contained <code><a href="../reference/load_font.html">load_font()</a></code> example so CRAN’s donttest additional checks no longer fail on the unreliable CTAN font download.</li>
 <li>New commands.</li>
 </ul></div>

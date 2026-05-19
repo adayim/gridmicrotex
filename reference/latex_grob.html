@@ -19,7 +19,7 @@ grid.draw."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -259,6 +259,38 @@ semantics when <code>gp</code> is set explicitly).</p></li>
 <li><p><code>lineheight</code>: controls multi-line spacing (default 1.2). The
 inter-line gap is <code>(lineheight - 1) * fontsize</code> big points.</p></li>
 </ul></div>
+
+<div class="section">
+<h3 id="latex-document-level-wrappers">LaTeX document-level wrappers<a class="anchor" aria-label="anchor" href="#latex-document-level-wrappers"></a></h3>
+
+
+<p>The parser accepts raw output from <code>print.xtable()</code>,
+<code><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">knitr::kable()</a></code>, and similar functions that emit complete
+<code>tabular</code> LaTeX. The following document-level constructs are
+recognized and rewritten silently before the input reaches MicroTeX:</p>
+<p><strong>Removed (no visual effect):</strong></p><ul><li><p><code>%</code>-to-end-of-line comments (escaped <code>\%</code> is preserved)</p></li>
+<li><p>preamble: <code>\documentclass[...]{...}</code>, <code>\usepackage[...]{...}</code>,
+<code>\begin{document}</code> / <code>\end{document}</code></p></li>
+<li><p>title metadata: <code>\maketitle</code>, <code>\title{...}</code>, <code>\author{...}</code></p></li>
+<li><p>cross-reference labels: <code>\label{...}</code></p></li>
+<li><p>float wrappers: <code>\begin{table}</code> / <code>\end{table}</code>, <code>\begin{figure}</code> /
+<code>\end{figure}</code> (and starred variants)</p></li>
+<li><p>layout scopes: <code>\centering</code>, <code>\raggedright</code>, <code>\raggedleft</code>,
+<code>\flushleft</code>, <code>\flushright</code></p></li>
+</ul><p><strong>Rewritten:</strong></p><ul><li><p>booktabs rules: <code>\toprule</code>, <code>\midrule</code>, <code>\bottomrule</code>, <code>\cmidrule</code>
+are mapped to <code>\hline</code>. The optional column-range and trim
+arguments of <code>\cmidrule</code> are discarded (MicroTeX has no concept of
+partial-column rules).</p></li>
+<li><p><code>\caption[short]{X}</code> is extracted as <code>\text{X}\\</code> at its source
+position. The caption renders where it appears in the input
+(typically below the <code>tabular</code> for <code>xtable</code>, above for
+<code>kable</code>); expect a slight visual difference from full LaTeX,
+which positions the caption above or below the float regardless of
+source order.</p></li>
+</ul><p>Anything not in this list is passed to MicroTeX unchanged. Unknown
+commands render as literal text, which is useful for spotting
+unsupported markup.</p>
+</div>
 
     </div>
     <div class="section level2">

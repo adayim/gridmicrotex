@@ -1,6 +1,17 @@
 # Changelog
 
+## gridmicrotex 0.0.4
+
+- Accept raw latex code from other package, liek `print.xtable()` /
+  [`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html) /
+  booktabs output.
+- New MicroTeX commands `\thickhline` and `\cline{a-b}`.
+- Bug fix: `$…$` inside tabular cells no longer chops the table.
+- Bug fix: starred alignment envs (`align*`, `eqnarray*`, …) now render.
+
 ## gridmicrotex 0.0.3
+
+CRAN release: 2026-05-18
 
 - Self-contained
   [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)

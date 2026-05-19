@@ -216,6 +216,48 @@ sub-expression from within `tex`, use the inline TeX commands
 - `lineheight`: controls multi-line spacing (default 1.2). The
   inter-line gap is `(lineheight - 1) * fontsize` big points.
 
+### LaTeX document-level wrappers
+
+The parser accepts raw output from `print.xtable()`,
+[`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html), and
+similar functions that emit complete `tabular` LaTeX. The following
+document-level constructs are recognized and rewritten silently before
+the input reaches MicroTeX:
+
+**Removed (no visual effect):**
+
+- `%`-to-end-of-line comments (escaped `\%` is preserved)
+
+- preamble: `\documentclass[...]{...}`, `\usepackage[...]{...}`,
+  `\begin{document}` / `\end{document}`
+
+- title metadata: `\maketitle`, `\title{...}`, `\author{...}`
+
+- cross-reference labels: `\label{...}`
+
+- float wrappers: `\begin{table}` / `\end{table}`, `\begin{figure}` /
+  `\end{figure}` (and starred variants)
+
+- layout scopes: `\centering`, `\raggedright`, `\raggedleft`,
+  `\flushleft`, `\flushright`
+
+**Rewritten:**
+
+- booktabs rules: `\toprule`, `\midrule`, `\bottomrule`, `\cmidrule` are
+  mapped to `\hline`. The optional column-range and trim arguments of
+  `\cmidrule` are discarded (MicroTeX has no concept of partial-column
+  rules).
+
+- `\caption[short]{X}` is extracted as `\text{X}\\` at its source
+  position. The caption renders where it appears in the input (typically
+  below the `tabular` for `xtable`, above for `kable`); expect a slight
+  visual difference from full LaTeX, which positions the caption above
+  or below the float regardless of source order.
+
+Anything not in this list is passed to MicroTeX unchanged. Unknown
+commands render as literal text, which is useful for spotting
+unsupported markup.
+
 ## See also
 
 `grid.latex`,
