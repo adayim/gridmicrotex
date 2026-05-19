@@ -144,6 +144,33 @@ inline macro(hline) {
   return sptrOf<HlineAtom>();
 }
 
+inline macro(thickhline) {
+  if (!tp.isArrayMode())
+    throw ex_parse("The macro \\thickhline only available in array mode!");
+  auto a = sptrOf<HlineAtom>();
+  a->setThicknessScale(2.f);
+  return a;
+}
+
+inline macro(cline) {
+  if (!tp.isArrayMode())
+    throw ex_parse("The macro \\cline only available in array mode!");
+  const std::string& spec = args[1];
+  int a = 0, b = 0;
+  const auto dash = spec.find('-');
+  if (dash == std::string::npos) {
+    valueOf(spec, a);
+    b = a;
+  } else {
+    valueOf(spec.substr(0, dash), a);
+    valueOf(spec.substr(dash + 1), b);
+  }
+  auto at = sptrOf<HlineAtom>();
+  // LaTeX columns are 1-indexed; HlineAtom uses 0-indexed.
+  at->setColumnRange(a - 1, b - 1);
+  return at;
+}
+
 inline macro(multirow) {
   if (!tp.isArrayMode()) throw ex_parse("Command \\multirow must used in array environment!");
   int n = 0;

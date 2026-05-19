@@ -93,6 +93,8 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(2, macro_gatheredATATenv, "gathered@@env"),
   mac(3, macro_multicolumn, "multicolumn"),
   mac(0, macro_hline, "hline"),
+  mac(0, macro_thickhline, "thickhline"),
+  mac(1, macro_cline, "cline"),
   mac(3, macro_multirow, "multirow"),
   mac(1, macro_rowcolor, "rowcolor"),
   mac(1, macro_columnbg, "columncolor"),

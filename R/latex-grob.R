@@ -127,6 +127,40 @@
 #' - `lineheight`: controls multi-line spacing (default 1.2). The
 #'   inter-line gap is `(lineheight - 1) * fontsize` big points.
 #'
+#' ## LaTeX document-level wrappers
+#'
+#' The parser accepts raw output from \code{print.xtable()},
+#' \code{knitr::kable()}, and similar functions that emit complete
+#' `tabular` LaTeX. The following document-level constructs are
+#' recognized and rewritten silently before the input reaches MicroTeX:
+#'
+#' **Removed (no visual effect):**
+#' * `%`-to-end-of-line comments (escaped `\%` is preserved)
+#' * preamble: `\documentclass[...]{...}`, `\usepackage[...]{...}`,
+#'   `\begin{document}` / `\end{document}`
+#' * title metadata: `\maketitle`, `\title{...}`, `\author{...}`
+#' * cross-reference labels: `\label{...}`
+#' * float wrappers: `\begin{table}` / `\end{table}`, `\begin{figure}` /
+#'   `\end{figure}` (and starred variants)
+#' * layout scopes: `\centering`, `\raggedright`, `\raggedleft`,
+#'   `\flushleft`, `\flushright`
+#'
+#' **Rewritten:**
+#' * booktabs rules: `\toprule`, `\midrule`, `\bottomrule`, `\cmidrule`
+#'   are mapped to `\hline`. The optional column-range and trim
+#'   arguments of `\cmidrule` are discarded (MicroTeX has no concept of
+#'   partial-column rules).
+#' * `\caption[short]{X}` is extracted as `\text{X}\\` at its source
+#'   position. The caption renders where it appears in the input
+#'   (typically below the `tabular` for \code{xtable}, above for
+#'   \code{kable}); expect a slight visual difference from full LaTeX,
+#'   which positions the caption above or below the float regardless of
+#'   source order.
+#'
+#' Anything not in this list is passed to MicroTeX unchanged. Unknown
+#' commands render as literal text, which is useful for spotting
+#' unsupported markup.
+#'
 #' @return A \code{grid} grob of class \code{"latexgrob"}.
 #' @seealso \code{\link{grid.latex}}, \code{\link{latex_dims}},
 #'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}},
@@ -383,6 +417,7 @@ grobMark <- function(grob, name) {
   input_mode <- match.arg(input_mode, c("math", "mixed"))
   if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
 
+  tex <- .strip_document_wrappers(tex)
   tex <- .expand_macros(tex)
   # The user-facing `tex` stays as the macro-expanded source so that
   # editDetails() can re-parse without doubling up the \text{} wrap.

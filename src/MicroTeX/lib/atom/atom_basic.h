@@ -129,16 +129,31 @@ public:
 class HlineAtom : public Atom {
 private:
   float _width, _shift;
+  float _thicknessScale;
+  int _colStart, _colEnd;
   color _color;
 
 public:
-  HlineAtom() noexcept : _width(0), _shift(0), _color(transparent) { _type = AtomType::hline; }
+  HlineAtom() noexcept
+      : _width(0), _shift(0), _thicknessScale(1.f),
+        _colStart(-1), _colEnd(-1), _color(transparent) {
+    _type = AtomType::hline;
+  }
 
   inline void setWidth(float w) { _width = w; }
 
   inline void setShift(float s) { _shift = s; }
 
   inline void setColor(color c) { _color = c; }
+
+  inline void setThicknessScale(float s) { _thicknessScale = s; }
+
+  /** 0-indexed inclusive column range; -1 (the default) means full width. */
+  inline void setColumnRange(int s, int e) { _colStart = s; _colEnd = e; }
+
+  inline int colStart() const { return _colStart; }
+
+  inline int colEnd() const { return _colEnd; }
 
   sptr<Box> createBox(Env& env) override;
 };

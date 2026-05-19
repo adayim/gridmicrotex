@@ -1,3 +1,10 @@
+# gridmicrotex 0.0.4
+
+- Accept raw latex code from other package, liek `print.xtable()` / `knitr::kable()` / booktabs output.
+- New MicroTeX commands `\thickhline` and `\cline{a-b}`.
+- Bug fix: `$…$` inside tabular cells no longer chops the table.
+- Bug fix: starred alignment envs (`align*`, `eqnarray*`, …) now render.
+
 # gridmicrotex 0.0.3
 
 - Self-contained `load_font()` example so CRAN's donttest additional checks no longer fail on the unreliable CTAN font download.

@@ -179,6 +179,45 @@ semantics when \code{gp} is set explicitly).
 inter-line gap is \code{(lineheight - 1) * fontsize} big points.
 }
 }
+
+\subsection{LaTeX document-level wrappers}{
+
+The parser accepts raw output from \code{print.xtable()},
+\code{knitr::kable()}, and similar functions that emit complete
+\code{tabular} LaTeX. The following document-level constructs are
+recognized and rewritten silently before the input reaches MicroTeX:
+
+\strong{Removed (no visual effect):}
+\itemize{
+\item \verb{\%}-to-end-of-line comments (escaped \verb{\\\%} is preserved)
+\item preamble: \verb{\\documentclass[...]\{...\}}, \verb{\\usepackage[...]\{...\}},
+\verb{\\begin\{document\}} / \verb{\\end\{document\}}
+\item title metadata: \verb{\\maketitle}, \verb{\\title\{...\}}, \verb{\\author\{...\}}
+\item cross-reference labels: \verb{\\label\{...\}}
+\item float wrappers: \verb{\\begin\{table\}} / \verb{\\end\{table\}}, \verb{\\begin\{figure\}} /
+\verb{\\end\{figure\}} (and starred variants)
+\item layout scopes: \verb{\\centering}, \verb{\\raggedright}, \verb{\\raggedleft},
+\verb{\\flushleft}, \verb{\\flushright}
+}
+
+\strong{Rewritten:}
+\itemize{
+\item booktabs rules: \verb{\\toprule}, \verb{\\midrule}, \verb{\\bottomrule}, \verb{\\cmidrule}
+are mapped to \verb{\\hline}. The optional column-range and trim
+arguments of \verb{\\cmidrule} are discarded (MicroTeX has no concept of
+partial-column rules).
+\item \verb{\\caption[short]\{X\}} is extracted as \verb{\\text\{X\}\\\\} at its source
+position. The caption renders where it appears in the input
+(typically below the \code{tabular} for \code{xtable}, above for
+\code{kable}); expect a slight visual difference from full LaTeX,
+which positions the caption above or below the float regardless of
+source order.
+}
+
+Anything not in this list is passed to MicroTeX unchanged. Unknown
+commands render as literal text, which is useful for spotting
+unsupported markup.
+}
 }
 \examples{
 \donttest{
