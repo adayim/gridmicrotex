@@ -91,6 +91,8 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(2, macro_multlineATATenv, "multline@@env"),
   mac(2, macro_gatherATATenv, "gather@@env"),
   mac(2, macro_gatheredATATenv, "gathered@@env"),
+  mac(1, macro_itemizeATATenv, "itemize@@env"),
+  mac(1, macro_enumerateATATenv, "enumerate@@env"),
   mac(3, macro_multicolumn, "multicolumn"),
   mac(0, macro_hline, "hline"),
   mac(0, macro_thickhline, "thickhline"),
@@ -393,6 +395,8 @@ void NewCommandMacro::_init_() {
   env(0, "split", "\\begin{array}{r@{\\;}l}", "\\end{array}");
   env(0, "gather", "\\gather@@env{", "}");
   env(0, "gathered", "\\gathered@@env{", "}");
+  env(0, "itemize", "\\itemize@@env{", "}");
+  env(0, "enumerate", "\\enumerate@@env{", "}");
   env(0, "math", "\\(", "\\)");
   env(0, "displaymath", "\\[", "\\]");
   env(0, "equation", "\\begin{align}", "\\end{align}");

@@ -70,7 +70,9 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
     "multline", "multline*",
     # paragraph-like
     "gather", "gather*", "gathered",
-    "split", "cases", "rcases"
+    "split", "cases", "rcases",
+    # list environments
+    "itemize", "enumerate"
   )
 
   chars <- strsplit(tex, "", fixed = TRUE)[[1]]

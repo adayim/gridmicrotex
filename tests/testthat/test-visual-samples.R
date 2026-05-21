@@ -98,3 +98,33 @@ test_that("visual: continued fraction", {
     )
   })
 })
+
+test_that("visual: list environments and table rules", {
+  skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
+  # One enumerate exercising: a custom \Roman* counter, a nested itemize, a
+  # nested enumerate with an \alph* counter, and an item whose content is an
+  # array using the \thickhline and \cline rules.
+  vdiffr::expect_doppelganger("lists-and-rules", function() {
+    grid.latex(paste0(
+      "\\begin{enumerate}[\\Roman*.]",
+      "  \\item \\text{Limit: }\\forall\\varepsilon>0\\ \\exists\\eta>0",
+      "  \\item \\text{Bullets:}\\ ",
+      "        \\begin{itemize}",
+      "          \\item e^{i\\pi}+1=0",
+      "          \\item \\sum_{k=1}^n k=\\tfrac{n(n+1)}{2}",
+      "        \\end{itemize}",
+      "  \\item \\text{Lettered:}\\ ",
+      "        \\begin{enumerate}[\\alph*)]",
+      "          \\item \\alpha^2 \\item \\sqrt{\\beta} \\item \\gamma_0",
+      "        \\end{enumerate}",
+      "  \\item \\text{Ruled table:}\\ ",
+      "        \\begin{array}{|c|c|c|}",
+      "          \\thickhline x^2&y^2&z^2\\\\",
+      "          \\cline{1-2} a&b&c\\\\\\thickhline",
+      "        \\end{array}",
+      "\\end{enumerate}"
+    ), render_mode = "path", gp = grid::gpar(fontsize = 15),
+    input_mode = "math")
+  })
+})
