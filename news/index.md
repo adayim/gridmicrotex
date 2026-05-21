@@ -2,10 +2,12 @@
 
 ## gridmicrotex 0.0.4
 
-- Accept raw latex code from other package, liek `print.xtable()` /
+- Accept raw latex code from other package, liek
+  `xtable::print.xtable()` /
   [`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html) /
   booktabs output.
 - New MicroTeX commands `\thickhline` and `\cline{a-b}`.
+- New `itemize` and `enumerate` list environments. Lists may nest.
 - Bug fix: `$…$` inside tabular cells no longer chops the table.
 - Bug fix: starred alignment envs (`align*`, `eqnarray*`, …) now render.
 
