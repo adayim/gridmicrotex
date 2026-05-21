@@ -64,7 +64,8 @@ struct BeReader {
     std::size_t len;
 
     bool in_bounds(std::size_t off, std::size_t n) const {
-        return off + n <= len;
+        // Phrased to avoid off + n overflowing size_t on a malformed font.
+        return off <= len && n <= (len - off);
     }
 
     u16 u16be(std::size_t off) const {
@@ -412,6 +413,9 @@ FT_Face open_face(const std::string& path, int index) {
 std::vector<u8> read_sfnt_table(FT_Face face, FT_ULong tag) {
     FT_ULong len = 0;
     if (FT_Load_Sfnt_Table(face, tag, 0, nullptr, &len) != 0 || len == 0) return {};
+    // sfnt metadata tables are at most a few MB; reject absurd sizes from a
+    // corrupt font rather than attempting a multi-GB heap allocation.
+    if (len > 50u * 1024u * 1024u) return {};
     std::vector<u8> buf(len);
     if (FT_Load_Sfnt_Table(face, tag, 0, buf.data(), &len) != 0) return {};
     return buf;
@@ -836,8 +840,13 @@ SEXP ot_math_table_bytes(std::string path, int index = 0) {
     } catch (const std::exception& e) {
         Rcpp::stop(e.what());
     }
+    // RAII so the face is freed even if a later step throws, matching
+    // build_clm_bytes_impl's FaceGuard pattern.
+    struct FaceGuard {
+        FT_Face f;
+        ~FaceGuard() { if (f) FT_Done_Face(f); }
+    } guard{face};
     auto buf = read_sfnt_table(face, TTAG_MATH);
-    FT_Done_Face(face);
     if (buf.empty()) return R_NilValue;
     Rcpp::RawVector out(buf.size());
     std::memcpy(&out[0], buf.data(), buf.size());

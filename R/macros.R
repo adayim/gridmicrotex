@@ -67,16 +67,26 @@ list_macros <- function() {
 .expand_macros <- function(tex) {
   defs <- .latex_macros$defs
   if (length(defs) == 0L) return(tex)
+  patterns <- paste0("\\\\", names(defs), "(?![A-Za-z])")
   for (depth in seq_len(8L)) {
     before <- tex
-    for (name in names(defs)) {
-      pattern <- paste0("\\\\", name, "(?![A-Za-z])")
+    for (i in seq_along(defs)) {
       # Escape backslashes in the replacement so gsub treats them
       # literally rather than as backreference escapes.
-      replacement <- gsub("\\\\", "\\\\\\\\", defs[[name]])
-      tex <- gsub(pattern, replacement, tex, perl = TRUE)
+      replacement <- gsub("\\\\", "\\\\\\\\", defs[[i]])
+      tex <- gsub(patterns[i], replacement, tex, perl = TRUE)
     }
     if (identical(tex, before)) break
+  }
+  # A defined macro token still present means expansion never resolved --
+  # either a circular definition (\a -> \b -> \a) or one too deep for the
+  # 8-iteration cap. Either way the output is wrong, so warn.
+  if (any(vapply(patterns, grepl, logical(1), x = tex, perl = TRUE))) {
+    warning(
+      "Macro expansion did not resolve; check for circular macro ",
+      "definitions.",
+      call. = FALSE
+    )
   }
   tex
 }

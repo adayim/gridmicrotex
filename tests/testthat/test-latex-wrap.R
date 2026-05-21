@@ -12,6 +12,27 @@ test_that("latex_wrap converts correctly", {
                "\\text{Line 1 \\\\Line 2}")
 })
 
+test_that("latex_wrap is vectorized over its input", {
+  # Documented contract: vector in, vector of the same length out.
+  expect_equal(
+    latex_wrap(c("plain text", "It is $x^2$", "")),
+    c("\\text{plain text}", "\\text{It is }x^2", "")
+  )
+  # math mode bypasses every element unmodified
+  expect_equal(
+    latex_wrap(c("\\frac{a}{b}", "x^2"), input_mode = "math"),
+    c("\\frac{a}{b}", "x^2")
+  )
+  expect_equal(latex_wrap(character(0)), character(0))
+})
+
+test_that("latex_wrap rejects NA input", {
+  expect_error(latex_wrap(NA_character_), "must not contain NA")
+  expect_error(latex_wrap(c("a", NA, "b")), "must not contain NA")
+  expect_error(latex_wrap(NA_character_, input_mode = "math"),
+               "must not contain NA")
+})
+
 test_that(".find_close_brace balances nested and escaped braces", {
   fcb <- gridmicrotex:::.find_close_brace
   expect_equal(fcb("a}b", 1L), 2L)

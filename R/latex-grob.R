@@ -161,6 +161,14 @@
 #' commands render as literal text, which is useful for spotting
 #' unsupported markup.
 #'
+#' ## Parallelism
+#' The MicroTeX engine keeps mutable C++ state for font caching and text
+#' measurement. Rendering is safe single-threaded and under separate-process
+#' backends such as \code{future::plan(multisession)}. It is \emph{not} safe
+#' under forked backends (\code{parallel::mclapply()},
+#' \code{future::plan(multicore)}) on Unix, because forked workers share that
+#' state without synchronisation. Use a socket/multisession backend instead.
+#'
 #' @return A \code{grid} grob of class \code{"latexgrob"}.
 #' @seealso \code{\link{grid.latex}}, \code{\link{latex_dims}},
 #'   \code{\link{geom_latex}}, \code{\link{available_math_fonts}},
@@ -426,7 +434,17 @@ grobMark <- function(grob, name) {
   math_font <- resolve_math_font(math_font)
 
   fg_color <- if (!is.null(gp$col)) {
-    grDevices::rgb(t(grDevices::col2rgb(gp$col)), maxColorValue = 255)
+    # parse_latex_cpp takes a single colour; use the first if a vector
+    # slipped through gpar().
+    rgba <- grDevices::col2rgb(gp$col[[1]], alpha = TRUE)[, 1]
+    if (rgba[["alpha"]] >= 255L) {
+      sprintf("#%02X%02X%02X", rgba[["red"]], rgba[["green"]], rgba[["blue"]])
+    } else {
+      # MicroTeX's decodeColor() reads 9-char hex as #AARRGGBB, not the
+      # #RRGGBBAA that grDevices::rgb() would emit.
+      sprintf("#%02X%02X%02X%02X", rgba[["alpha"]],
+              rgba[["red"]], rgba[["green"]], rgba[["blue"]])
+    }
   } else {
     "#000000"
   }

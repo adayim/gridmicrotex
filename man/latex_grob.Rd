@@ -218,6 +218,16 @@ Anything not in this list is passed to MicroTeX unchanged. Unknown
 commands render as literal text, which is useful for spotting
 unsupported markup.
 }
+
+\subsection{Parallelism}{
+
+The MicroTeX engine keeps mutable C++ state for font caching and text
+measurement. Rendering is safe single-threaded and under separate-process
+backends such as \code{future::plan(multisession)}. It is \emph{not} safe
+under forked backends (\code{parallel::mclapply()},
+\code{future::plan(multicore)}) on Unix, because forked workers share that
+state without synchronisation. Use a socket/multisession backend instead.
+}
 }
 \examples{
 \donttest{

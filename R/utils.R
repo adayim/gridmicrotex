@@ -48,7 +48,17 @@
 
 latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   input_mode <- match.arg(input_mode)
-  if (input_mode == "math" || !nzchar(tex)) return(tex)
+  if (anyNA(tex)) {
+    stop("`tex` must not contain NA values.", call. = FALSE)
+  }
+  if (input_mode == "math") return(tex)
+  # The state-machine below operates on a single string; recurse so the
+  # documented "vector in, vector of the same length out" contract holds.
+  if (length(tex) != 1L) {
+    return(vapply(tex, latex_wrap, character(1),
+                  input_mode = input_mode, USE.NAMES = FALSE))
+  }
+  if (!nzchar(tex)) return(tex)
 
   # Authoritative list: every environment MicroTeX registers in
   # src/MicroTeX/lib/macro/macro_def.cpp env(...) calls, plus the

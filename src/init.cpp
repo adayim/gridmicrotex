@@ -336,6 +336,9 @@ void microtex_release() {
     if (!s_initialized) return;
     MicroTeX::release();
     microtex::g_font_id_cache.clear();
+    // release() rebuilds the macro registry on the next init(); drop the
+    // \mark guard so register_mark_macro() runs again.
+    microtex::reset_mark_macro();
     s_initialized = false;
 }
 
