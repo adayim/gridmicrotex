@@ -292,6 +292,18 @@ commands render as literal text, which is useful for spotting
 unsupported markup.</p>
 </div>
 
+<div class="section">
+<h3 id="parallelism">Parallelism<a class="anchor" aria-label="anchor" href="#parallelism"></a></h3>
+
+
+<p>The MicroTeX engine keeps mutable C++ state for font caching and text
+measurement. Rendering is safe single-threaded and under separate-process
+backends such as <code>future::plan(multisession)</code>. It is <em>not</em> safe
+under forked backends (<code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply()</a></code>,
+<code>future::plan(multicore)</code>) on Unix, because forked workers share that
+state without synchronisation. Use a socket/multisession backend instead.</p>
+</div>
+
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

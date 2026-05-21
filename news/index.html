@@ -46,6 +46,11 @@
 <li>New <code>itemize</code> and <code>enumerate</code> list environments. Lists may nest.</li>
 <li>Bug fix: <code>$…$</code> inside tabular cells no longer chops the table.</li>
 <li>Bug fix: starred alignment envs (<code>align*</code>, <code>eqnarray*</code>, …) now render.</li>
+<li>Bug fix: <code><a href="../reference/latex_wrap.html">latex_wrap()</a></code> is now vectorised over its input, matching its documented contract, and errors on <code>NA</code> input instead of rendering “NA”.</li>
+<li>Bug fix: the <code>\mark{}</code> macro survives a <code>microtex_release()</code> / re-init cycle.</li>
+<li>
+<code>gp$col</code> transparency is now honoured (alpha passed through to MicroTeX).</li>
+<li>Macro expansion warns on circular definitions instead of silently producing wrong output.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.3" id="gridmicrotex-003">gridmicrotex 0.0.3<a class="anchor" aria-label="anchor" href="#gridmicrotex-003"></a></h2><p class="text-muted">CRAN release: 2026-05-18</p>
