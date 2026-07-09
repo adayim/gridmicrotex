@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.5</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,8 +40,18 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.4" id="gridmicrotex-004">gridmicrotex 0.0.4<a class="anchor" aria-label="anchor" href="#gridmicrotex-004"></a></h2>
-<ul><li>Accept raw latex code from other package, liek <code>xtable::print.xtable()</code> / <code><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">knitr::kable()</a></code> / booktabs output.</li>
+<h2 class="pkg-version" data-toc-text="development version" id="gridmicrotex-development-version">gridmicrotex (development version)<a class="anchor" aria-label="anchor" href="#gridmicrotex-development-version"></a></h2>
+<ul><li>Bug fix: correct <code><a href="https://rdrr.io/r/grid/grobX.html" class="external-link">grobX()</a></code>/<code><a href="https://rdrr.io/r/grid/grobX.html" class="external-link">grobY()</a></code> boundary points.</li>
+<li>Bug fix: <code>geom_latex(fontsize = )</code> was ignored.</li>
+<li>Bug fix: spurious “font metrics unknown” warnings in <code>"mixed"</code> mode.</li>
+<li>Bug fix: CJK fallback width on Windows was ~6x too narrow.</li>
+<li>Bug fix: layout-cache collisions between unresolved text fonts.</li>
+<li>Hardened the OTF MATH reader against malformed fonts that could hang R.</li>
+<li>Docs: <code>input_mode</code> defaults to <code>"mixed"</code>; use <code>\textbf{}</code> etc. instead of <code>gp$fontface</code>.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.4" id="gridmicrotex-004">gridmicrotex 0.0.4<a class="anchor" aria-label="anchor" href="#gridmicrotex-004"></a></h2><p class="text-muted">CRAN release: 2026-06-01</p>
+<ul><li>Accept raw latex code from other packages, like <code>xtable::print.xtable()</code> / <code><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">knitr::kable()</a></code> / booktabs output.</li>
 <li>New MicroTeX commands <code>\thickhline</code> and <code>\cline{a-b}</code>.</li>
 <li>New <code>itemize</code> and <code>enumerate</code> list environments. Lists may nest.</li>
 <li>Bug fix: <code>$…$</code> inside tabular cells no longer chops the table.</li>
@@ -61,7 +71,7 @@
 <h2 class="pkg-version" data-toc-text="0.0.2" id="gridmicrotex-002">gridmicrotex 0.0.2<a class="anchor" aria-label="anchor" href="#gridmicrotex-002"></a></h2><p class="text-muted">CRAN release: 2026-05-16</p>
 <ul><li>Support the <code>\def</code> command</li>
 <li>New function <code>grobMark</code>.</li>
-<li>Bug fix <code>ggplot2</code> intergration.</li>
+<li>Bug fix <code>ggplot2</code> integration.</li>
 <li>Bug fix coloring body.</li>
 <li>
 <code>ggplot2</code> integration respects <code>latex_options</code>.</li>
@@ -80,7 +90,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

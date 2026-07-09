@@ -1,8 +1,24 @@
 # Changelog
 
+## gridmicrotex (development version)
+
+- Bug fix: correct
+  [`grobX()`](https://rdrr.io/r/grid/grobX.html)/[`grobY()`](https://rdrr.io/r/grid/grobX.html)
+  boundary points.
+- Bug fix: `geom_latex(fontsize = )` was ignored.
+- Bug fix: spurious “font metrics unknown” warnings in `"mixed"` mode.
+- Bug fix: CJK fallback width on Windows was ~6x too narrow.
+- Bug fix: layout-cache collisions between unresolved text fonts.
+- Hardened the OTF MATH reader against malformed fonts that could hang
+  R.
+- Docs: `input_mode` defaults to `"mixed"`; use `\textbf{}` etc. instead
+  of `gp$fontface`.
+
 ## gridmicrotex 0.0.4
 
-- Accept raw latex code from other package, liek
+CRAN release: 2026-06-01
+
+- Accept raw latex code from other packages, like
   `xtable::print.xtable()` /
   [`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html) /
   booktabs output.
@@ -37,7 +53,7 @@ CRAN release: 2026-05-16
 
 - Support the `\def` command
 - New function `grobMark`.
-- Bug fix `ggplot2` intergration.
+- Bug fix `ggplot2` integration.
 - Bug fix coloring body.
 - `ggplot2` integration respects `latex_options`.
 - Defer `systemfonts` registration of the bundled Lete and STIX fonts to

@@ -14,8 +14,9 @@ accurate font metrics for `\text{}` blocks.
 
 - text_gp:
 
-  A [`gpar`](https://rdrr.io/r/grid/gpar.html) object with font settings
-  (`fontfamily`, `fontface`) to use for measurement.
+  A [`gpar`](https://rdrr.io/r/grid/gpar.html) object whose `fontfamily`
+  is used for measurement. The face comes from MicroTeX's per-run
+  `font_style`, not from `text_gp`.
 
 ## Value
 

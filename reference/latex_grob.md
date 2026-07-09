@@ -86,15 +86,15 @@ grid.latex(tex, ...)
 
 - input_mode:
 
-  How `tex` is interpreted before being parsed. `"mixed"` wraps the
-  input in `\text{...}` so the string reads as ordinary text and `$...$`
-  (or `\(...\)`) opens math mode, matching document-level LaTeX
-  semantics. Useful for labels that arrive from external sources mixing
-  prose and math without explicit `\text{}` markers. `"math"` (default)
-  is the standard MicroTeX behaviour — the whole string is treated as
-  math, so unwrapped prose renders as spaced math italics. The default
-  can be changed globally via
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "mixed")`.
+  How `tex` is interpreted before being parsed. `"mixed"` (default)
+  wraps the input in `\text{...}` so the string reads as ordinary text
+  and `$...$` (or `\(...\)`) opens math mode, matching document-level
+  LaTeX semantics. Useful for labels that arrive from external sources
+  mixing prose and math without explicit `\text{}` markers. `"math"` is
+  the classic MicroTeX behaviour — the whole string is treated as math,
+  so unwrapped prose renders as spaced math italics. The default can be
+  changed globally via
+  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "math")`.
   See
   [`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
   for details on the wrapping process.
@@ -128,10 +128,10 @@ grid.latex(tex, ...)
 - gp:
 
   Graphical parameters (see [`gpar`](https://rdrr.io/r/grid/gpar.html)).
-  Common entries: `col` (formula foreground), `fontfamily` / `fontface`
-  (text font), `fontsize` / `cex` (formula size), and `lineheight`
-  (multi-line spacing). See `latex_grob` for how each of these flows
-  through MicroTeX.
+  Common entries: `col` (formula foreground), `fontfamily` (text font),
+  `fontsize` / `cex` (formula size), and `lineheight` (multi-line
+  spacing). See `latex_grob` for how each of these flows through
+  MicroTeX.
 
 - ...:
 
@@ -190,12 +190,17 @@ sub-expression from within `tex`, use the inline TeX commands
   can still be overridden with an inline `\textcolor` command in the
   LaTeX string.
 
-- `fontfamily` / `fontface`: control the appearance of text inside
-  `\text` and `\mbox` blocks. For example, `gpar(fontfamily = "serif")`
-  renders `\text` content in R's serif family. Any font available to R's
-  graphics system works — base families (`"sans"`, `"serif"`, `"mono"`)
-  as well as fonts registered via showtext or systemfonts. Math symbols
-  always use the selected math font (see `math_font`).
+- `fontfamily`: controls the font of text inside `\text` and `\mbox`
+  blocks. For example, `gpar(fontfamily = "serif")` renders `\text`
+  content in R's serif family. Any font available to R's graphics system
+  works — base families (`"sans"`, `"serif"`, `"mono"`) as well as fonts
+  registered via showtext or systemfonts. Math symbols always use the
+  selected math font (see `math_font`). Bold/italic text is controlled
+  from within the LaTeX source (`\textbf{}`, `\textit{}`, `\bf`, ...),
+  not via `gp$fontface` — MicroTeX needs the style at layout time to
+  size each run correctly, so a
+  [`gpar()`](https://rdrr.io/r/grid/gpar.html)-level face is not
+  consulted.
 
   `fontfamily` *also* drives MicroTeX's layout metrics for non-math
   text: the matching system font is resolved via systemfonts, a minimal

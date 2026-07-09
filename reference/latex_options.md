@@ -43,13 +43,13 @@ reset_latex_options()
 - input_mode:
 
   How the input string is interpreted before being handed to MicroTeX.
-  `"math"` (default) treats the whole string as math — the standard
+  `"mixed"` (default) wraps the string in `\text{...}` so it reads as
+  ordinary text, with `$...$` (and `\(...\)`) opening math mode — the
+  document-level LaTeX convention. Useful when consuming labels from
+  other packages that mix prose and math without explicit `\text{}`
+  markers. `"math"` treats the whole string as math — the classic
   MicroTeX behaviour, where letters render as math italics and unwrapped
-  prose looks wrong. `"mixed"` wraps the string in `\text{...}` so it
-  reads as ordinary text, with `$...$` (and `\(...\)`) opening math mode
-  — the document-level LaTeX convention. Useful when consuming labels
-  from other packages that mix prose and math without explicit `\text{}`
-  markers.
+  prose looks wrong.
 
 ## Value
 

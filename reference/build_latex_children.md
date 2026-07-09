@@ -32,7 +32,8 @@ build_latex_children(
 - text_gp:
 
   Optional [`gpar`](https://rdrr.io/r/grid/gpar.html) for text grobs
-  (from `\text{}` blocks). Controls fontfamily and fontface.
+  (from `\text{}` blocks). Controls fontfamily; the face comes from each
+  record's MicroTeX `font_style`.
 
 - render_mode:
 

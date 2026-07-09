@@ -119,15 +119,15 @@ geom_latex(
 
 - input_mode:
 
-  How `tex` is interpreted before being parsed. `"mixed"` wraps the
-  input in `\text{...}` so the string reads as ordinary text and `$...$`
-  (or `\(...\)`) opens math mode, matching document-level LaTeX
-  semantics. Useful for labels that arrive from external sources mixing
-  prose and math without explicit `\text{}` markers. `"math"` (default)
-  is the standard MicroTeX behaviour — the whole string is treated as
-  math, so unwrapped prose renders as spaced math italics. The default
-  can be changed globally via
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "mixed")`.
+  How `tex` is interpreted before being parsed. `"mixed"` (default)
+  wraps the input in `\text{...}` so the string reads as ordinary text
+  and `$...$` (or `\(...\)`) opens math mode, matching document-level
+  LaTeX semantics. Useful for labels that arrive from external sources
+  mixing prose and math without explicit `\text{}` markers. `"math"` is
+  the classic MicroTeX behaviour — the whole string is treated as math,
+  so unwrapped prose renders as spaced math italics. The default can be
+  changed globally via
+  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "math")`.
   See
   [`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
   for details on the wrapping process.

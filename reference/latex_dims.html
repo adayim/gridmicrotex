@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.5</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -86,14 +86,14 @@ line wrapping.  Use <code>0</code> (default) for no wrapping.</p></dd>
 
 <dt id="arg-input-mode">input_mode<a class="anchor" aria-label="anchor" href="#arg-input-mode"></a></dt>
 <dd><p>How <code>tex</code> is interpreted before being parsed.
-<code>"mixed"</code> wraps the input in <code>\text{...}</code> so the string
-reads as ordinary text and <code>$...$</code> (or <code>\(...\)</code>) opens
-math mode, matching document-level LaTeX semantics. Useful for labels
-that arrive from external sources mixing prose and math without explicit
-<code>\text{}</code> markers. <code>"math"</code> (default) is the standard
+<code>"mixed"</code> (default) wraps the input in <code>\text{...}</code> so the
+string reads as ordinary text and <code>$...$</code> (or <code>\(...\)</code>)
+opens math mode, matching document-level LaTeX semantics. Useful for
+labels that arrive from external sources mixing prose and math without
+explicit <code>\text{}</code> markers. <code>"math"</code> is the classic
 MicroTeX behaviour — the whole string is treated as math, so unwrapped
 prose renders as spaced math italics. The default can be changed globally via
-<code><a href="latex_options.html">latex_options</a>(input_mode = "mixed")</code>. See <code><a href="latex_wrap.html">latex_wrap</a></code>
+<code><a href="latex_options.html">latex_options</a>(input_mode = "math")</code>. See <code><a href="latex_wrap.html">latex_wrap</a></code>
 for details on the wrapping process.</p></dd>
 
 
@@ -114,7 +114,7 @@ all devices but text is not selectable in PDF/SVG).</p></dd>
 <dt id="arg-gp">gp<a class="anchor" aria-label="anchor" href="#arg-gp"></a></dt>
 <dd><p>Graphical parameters (see <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></code>).
 Common entries: <code>col</code> (formula foreground), <code>fontfamily</code>
-/ <code>fontface</code> (text font), <code>fontsize</code> / <code>cex</code>
+(text font), <code>fontsize</code> / <code>cex</code>
 (formula size), and <code>lineheight</code> (multi-line spacing). See
 <code><a href="latex_grob.html">latex_grob</a></code> for how each of these flows through
 MicroTeX.</p></dd>
@@ -161,7 +161,7 @@ across multiple lines (only possible when <code>max_width &gt; 0</code>).</p></l
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

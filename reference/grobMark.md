@@ -27,7 +27,8 @@ grobMark(grob, name)
 
 A list with elements `x` and `y`, each a
 [`unit`](https://rdrr.io/r/grid/unit.html). Mark coordinates are
-evaluated in the grob's parent viewport.
+evaluated in the grob's parent viewport. They assume an unrotated grob:
+with `rot != 0` the returned position does not account for the rotation.
 
 ## See also
 

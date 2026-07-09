@@ -20,6 +20,11 @@ Useful links:
 **Maintainer**: Alim Dayim <ad938@cam.ac.uk>
 ([ORCID](https://orcid.org/0000-0001-9998-7463))
 
+Authors:
+
+- Alim Dayim <ad938@cam.ac.uk>
+  ([ORCID](https://orcid.org/0000-0001-9998-7463))
+
 Other contributors:
 
 - Nano Michael (Author of included 'MicroTeX' library) \[copyright
