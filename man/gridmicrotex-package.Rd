@@ -20,6 +20,11 @@ Useful links:
 \author{
 \strong{Maintainer}: Alim Dayim \email{ad938@cam.ac.uk} (\href{https://orcid.org/0000-0001-9998-7463}{ORCID})
 
+Authors:
+\itemize{
+  \item Alim Dayim \email{ad938@cam.ac.uk} (\href{https://orcid.org/0000-0001-9998-7463}{ORCID})
+}
+
 Other contributors:
 \itemize{
   \item Nano Michael (Author of included 'MicroTeX' library) [copyright holder]

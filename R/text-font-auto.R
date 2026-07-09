@@ -10,10 +10,9 @@
 # first use so systemfonts' glyph-rendering path can also resolve the
 # font_file for drawing — see R/ttc-splitter.R::.extract_ttc_face.
 #
-# If systemfonts is unavailable or the font can't be resolved we fall
-# back to an empty main_font; MicroTeX then uses the math font's text
-# fallback. Layout and rendering may then drift slightly, but nothing
-# errors.
+# If the font can't be resolved we fall back to an empty main_font;
+# MicroTeX then uses the math font's text fallback. Layout and rendering
+# may then drift slightly, but nothing errors.
 
 # In-process registry of OTFs we've already fed to MicroTeX, keyed by
 # the on-disk path. Value is the family name MicroTeX registered under.
@@ -51,16 +50,6 @@
 }
 
 .do_resolve_text_font <- function(family) {
-  if (!requireNamespace("systemfonts", quietly = TRUE)) {
-    # systemfonts is a soft dep (via ragg/svglite); advise but don't error.
-    warning(
-      "Package 'systemfonts' is not installed; cannot auto-resolve text font '",
-      family, "'. Install it for matching text metrics.",
-      call. = FALSE
-    )
-    return("")
-  }
-
   # match_fonts() always returns *something* (a system fallback) so we
   # don't need an extra existence check. `index` identifies the face
   # within a TrueType Collection (.ttc); for a single-face file it's 0.

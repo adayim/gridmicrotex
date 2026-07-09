@@ -28,14 +28,14 @@
 #'   \code{"script"}, or \code{"scriptscript"}. See
 #'   \code{\link{latex_grob}} for the semantics of each value.
 #' @param input_mode How \code{tex} is interpreted before being parsed.
-#'   \code{"mixed"} wraps the input in \code{\\text{...}} so the string
-#'   reads as ordinary text and \code{$...$} (or \code{\\(...\\)}) opens
-#'   math mode, matching document-level LaTeX semantics. Useful for labels
-#'   that arrive from external sources mixing prose and math without explicit
-#'   \code{\\text{}} markers. \code{"math"} (default) is the standard
+#'   \code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
+#'   string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
+#'   opens math mode, matching document-level LaTeX semantics. Useful for
+#'   labels that arrive from external sources mixing prose and math without
+#'   explicit \code{\\text{}} markers. \code{"math"} is the classic
 #'   MicroTeX behaviour --- the whole string is treated as math, so unwrapped
 #'   prose renders as spaced math italics. The default can be changed globally via
-#'   \code{\link{latex_options}(input_mode = "mixed")}. See \code{\link{latex_wrap}}
+#'   \code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
 #'  for details on the wrapping process.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
@@ -56,7 +56,7 @@
 #' @param name Optional grob name.
 #' @param gp Graphical parameters (see \code{\link[grid]{gpar}}).
 #'   Common entries: \code{col} (formula foreground), \code{fontfamily}
-#'   / \code{fontface} (text font), \code{fontsize} / \code{cex}
+#'   (text font), \code{fontsize} / \code{cex}
 #'   (formula size), and \code{lineheight} (multi-line spacing). See
 #'   \code{\link{latex_grob}} for how each of these flows through
 #'   MicroTeX.
@@ -102,13 +102,16 @@
 #' - `col`: default foreground color for the formula. Individual
 #'   elements can still be overridden with an inline `\textcolor`
 #'   command in the LaTeX string.
-#' - `fontfamily` / `fontface`: control the appearance of text inside
-#'   `\text` and `\mbox` blocks. For example, `gpar(fontfamily =
-#'   "serif")` renders `\text` content in R's serif family. Any font
-#'   available to R's graphics system works --- base families
-#'   (`"sans"`, `"serif"`, `"mono"`) as well as fonts registered via
-#'   \pkg{showtext} or \pkg{systemfonts}. Math symbols always use the
-#'   selected math font (see `math_font`).
+#' - `fontfamily`: controls the font of text inside `\text` and `\mbox`
+#'   blocks. For example, `gpar(fontfamily = "serif")` renders `\text`
+#'   content in R's serif family. Any font available to R's graphics
+#'   system works --- base families (`"sans"`, `"serif"`, `"mono"`) as
+#'   well as fonts registered via \pkg{showtext} or \pkg{systemfonts}.
+#'   Math symbols always use the selected math font (see `math_font`).
+#'   Bold/italic text is controlled from within the LaTeX source
+#'   (`\textbf{}`, `\textit{}`, `\bf`, ...), not via `gp$fontface` ---
+#'   MicroTeX needs the style at layout time to size each run correctly,
+#'   so a `gpar()`-level face is not consulted.
 #'
 #'   `fontfamily` *also* drives MicroTeX's layout metrics for non-math
 #'   text: the matching system font is resolved via \pkg{systemfonts},
@@ -308,7 +311,9 @@ latex_grob <- function(tex,
 #' @param name The mark name (the argument to \code{\\mark\{...\}}).
 #' @return A list with elements \code{x} and \code{y}, each a
 #'   \code{\link[grid]{unit}}. Mark coordinates are evaluated in the
-#'   grob's parent viewport.
+#'   grob's parent viewport. They assume an unrotated grob: with
+#'   \code{rot != 0} the returned position does not account for the
+#'   rotation.
 #' @seealso \code{\link{latex_grob}}
 #' @export
 #'
@@ -412,7 +417,7 @@ grobMark <- function(grob, name) {
 }
 
 # Shared parse pipeline used by latex_grob(), latex_dims(), latex_tree().
-# Resolves fontsize/cex/lineheight/fontfamily/fontface/col out of `gp`,
+# Resolves fontsize/cex/lineheight/fontfamily/col out of `gp`,
 # runs MicroTeX parse via the cache, optionally also runs a path-mode
 # parse for device-fallback. Returns the layout and the stripped-down
 # `gp` safe to attach to child grobs (fontsize/cex/lineheight removed
@@ -460,9 +465,11 @@ grobMark <- function(grob, name) {
   gp$cex <- NULL
   gp$lineheight <- NULL
 
+  # Only fontfamily matters for \text{} blocks: bold/italic runs come from
+  # the LaTeX source (\textbf, \textit, ...) as per-record font_style, so a
+  # gpar()-level fontface is not consulted.
   text_gp <- grid::gpar()
   if (!is.null(gp$fontfamily)) text_gp$fontfamily <- gp$fontfamily
-  if (!is.null(gp$fontface))   text_gp$fontface <- gp$fontface
 
   main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
 
@@ -470,11 +477,13 @@ grobMark <- function(grob, name) {
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
 
+  text_family <- text_gp$fontfamily %||% ""
+
   layout <- .parse_latex_cached(
     tex = parse_input, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
-    tex_style = tex_style
+    tex_style = tex_style, text_family = text_family
   )
 
   path_layout <- NULL
@@ -482,7 +491,8 @@ grobMark <- function(grob, name) {
     path_layout <- .parse_latex_cached(
       tex = parse_input, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
-      main_font = main_font, use_path = TRUE, tex_style = tex_style
+      main_font = main_font, use_path = TRUE, tex_style = tex_style,
+      text_family = text_family
     )
   }
 
@@ -691,36 +701,26 @@ descentDetails.latexgrob <- function(x) {
   grid::unit(x$bbox_d, "bigpts")
 }
 
+# grid resolves grobx/groby units by pushing this grob's viewport, calling
+# xDetails() AND yDetails() with the same theta, and transforming the
+# resulting (x, y) location back through the viewport (position, just,
+# rotation). The formula's bounding box *is* the viewport, so the boundary
+# point is the boundary of the unit square in the pushed context — exactly
+# what grid's own rect method computes (ray from the centre at angle theta,
+# intersected with the edges). Delegating keeps us identical to a
+# rectGrob drawn in the same viewport; note this means theta is measured
+# in the formula's own frame, so for rot != 0 it rotates with the grob.
+
 #' @method xDetails latexgrob
 #' @export
 xDetails.latexgrob <- function(x, theta) {
-  gx <- grid::convertX(x$vp$x, "native", valueOnly = TRUE)
-  w <- grid::convertWidth(grid::unit(x$bbox_w, "bigpts"), "native", valueOnly = TRUE)
-  hjust <- x$hjust
-  left <- gx - hjust * w
-  right <- left + w
-  theta_deg <- (theta %% 360)
-  if (theta_deg >= 90 && theta_deg <= 270) {
-    grid::unit(left, "native")
-  } else {
-    grid::unit(right, "native")
-  }
+  grid::xDetails(grid::rectGrob(), theta)
 }
 
 #' @method yDetails latexgrob
 #' @export
 yDetails.latexgrob <- function(x, theta) {
-  gy <- grid::convertY(x$vp$y, "native", valueOnly = TRUE)
-  h <- grid::convertHeight(grid::unit(x$bbox_h, "bigpts"), "native", valueOnly = TRUE)
-  vjust <- x$vjust
-  bottom <- gy - vjust * h
-  top <- bottom + h
-  theta_deg <- (theta %% 360)
-  if (theta_deg > 0 && theta_deg < 180) {
-    grid::unit(top, "native")
-  } else {
-    grid::unit(bottom, "native")
-  }
+  grid::yDetails(grid::rectGrob(), theta)
 }
 
 
@@ -789,7 +789,8 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
 
 # On some Windows locale/font combinations, stringWidth() can error for CJK text.
 # Keep layout flowing with a simple width fallback instead of failing hard.
-.measure_text_bigpts <- function(text) {
+# `em` is the font size the measurement runs at (the measurer's ref_size).
+.measure_text_bigpts <- function(text, em = 72) {
   out <- tryCatch(
     grid::convertWidth(grid::stringWidth(text), "bigpts", valueOnly = TRUE),
     error = function(e) {
@@ -797,7 +798,9 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
       if (is.na(w)) {
         w <- base::nchar(text, type = "chars")
       }
-      as.numeric(w) * 6
+      # Half an em per terminal width cell: narrow chars ~0.5 em, CJK
+      # (2 cells) ~1 em — matching the C++ heuristic in src/init.cpp.
+      as.numeric(w) * 0.5 * em
     }
   )
   as.numeric(out)
@@ -810,8 +813,9 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
 #' The closure is called from C++ during \code{parse_latex_cpp()} to get
 #' accurate font metrics for \code{\\text\{\}} blocks.
 #'
-#' @param text_gp A \code{\link[grid]{gpar}} object with font settings
-#'   (\code{fontfamily}, \code{fontface}) to use for measurement.
+#' @param text_gp A \code{\link[grid]{gpar}} object whose
+#'   \code{fontfamily} is used for measurement. The face comes from
+#'   MicroTeX's per-run \code{font_style}, not from \code{text_gp}.
 #' @return A function taking \code{(text, font_style)} that returns
 #'   \code{c(width_ratio, ascent_ratio, height_ratio)} where ratios
 #'   are relative to the font size.
@@ -832,6 +836,18 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     key <- paste0(as.integer(font_style), "\x1f", text)
     hit <- cache[[key]]
     if (!is.null(hit)) return(hit)
+
+    # MicroTeX probes C-style escapes while tokenising \text{} content
+    # (e.g. the leading "\f" of \frac arrives here as a form feed before
+    # the parser backtracks to the real command). Control characters have
+    # no metrics on some devices (grid warns, e.g. cp1252 pdf()) and the
+    # probe never reaches the final layout — answer without touching the
+    # device.
+    if (grepl("^[[:cntrl:]]*$", text)) {
+      result <- c(0, 0.8, 1)
+      cache[[key]] <- result
+      return(result)
+    }
 
     face <- .resolve_text_face(as.integer(font_style))
 
@@ -855,7 +871,7 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     }, add = TRUE)
 
     # Measure width in bigpts
-    w <- .measure_text_bigpts(text)
+    w <- .measure_text_bigpts(text, em = ref_size)
 
     # Measure ascent and descent (with Windows/CJK locale fallback)
     ad <- tryCatch({

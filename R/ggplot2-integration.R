@@ -203,6 +203,17 @@ element_latex <- function(math_font = "", fontsize = NULL,
 
     draw_key = ggplot2::draw_key_text,
 
+    # default_aes is applied after setup_data, so a missing `size` column
+    # here means the aesthetic was not mapped — fill it from the fontsize
+    # parameter. (In draw_panel the column is always populated, so the
+    # parameter could never win there.)
+    setup_data = function(data, params) {
+      if (is.null(data$size)) {
+        data$size <- params$fontsize %||% 11
+      }
+      data
+    },
+
     draw_panel = function(data, panel_params, coord, fontsize = 11,
                           math_font = "", lineheight = 1.2, max_width = 0,
                           input_mode = "mixed",

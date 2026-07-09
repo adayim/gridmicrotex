@@ -31,14 +31,14 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 \code{\link{latex_grob}} for the semantics of each value.}
 
 \item{input_mode}{How \code{tex} is interpreted before being parsed.
-\code{"mixed"} wraps the input in \code{\\text{...}} so the string
-reads as ordinary text and \code{$...$} (or \code{\\(...\\)}) opens
-math mode, matching document-level LaTeX semantics. Useful for labels
-that arrive from external sources mixing prose and math without explicit
-\code{\\text{}} markers. \code{"math"} (default) is the standard
+\code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
+string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
+opens math mode, matching document-level LaTeX semantics. Useful for
+labels that arrive from external sources mixing prose and math without
+explicit \code{\\text{}} markers. \code{"math"} is the classic
 MicroTeX behaviour --- the whole string is treated as math, so unwrapped
 prose renders as spaced math italics. The default can be changed globally via
-\code{\link{latex_options}(input_mode = "mixed")}. See \code{\link{latex_wrap}}
+\code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
 for details on the wrapping process.}
 
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
@@ -55,7 +55,7 @@ all devices but text is not selectable in PDF/SVG).}
 
 \item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
 Common entries: \code{col} (formula foreground), \code{fontfamily}
-/ \code{fontface} (text font), \code{fontsize} / \code{cex}
+(text font), \code{fontsize} / \code{cex}
 (formula size), and \code{lineheight} (multi-line spacing). See
 \code{\link{latex_grob}} for how each of these flows through
 MicroTeX.}

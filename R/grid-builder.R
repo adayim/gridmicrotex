@@ -7,7 +7,8 @@
 #' @param total_h Total height of the formula (height + depth) in bigpts.
 #' @param depth Depth below the baseline in bigpts (default 0).
 #' @param text_gp Optional \code{\link[grid]{gpar}} for text grobs
-#'   (from \code{\\text\{\}} blocks). Controls fontfamily and fontface.
+#'   (from \code{\\text\{\}} blocks). Controls fontfamily; the face comes
+#'   from each record's MicroTeX \code{font_style}.
 #' @param render_mode Character string: \code{"path"} or \code{"typeface"}.
 #'   In typeface mode, glyph records are rendered via \code{glyphGrob}.
 #' @return A \code{grid::gList} of child grobs.

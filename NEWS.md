@@ -1,6 +1,16 @@
+# gridmicrotex (development version)
+
+- Bug fix: correct `grobX()`/`grobY()` boundary points.
+- Bug fix: `geom_latex(fontsize = )` was ignored.
+- Bug fix: spurious "font metrics unknown" warnings in `"mixed"` mode.
+- Bug fix: CJK fallback width on Windows was ~6x too narrow.
+- Bug fix: layout-cache collisions between unresolved text fonts.
+- Hardened the OTF MATH reader against malformed fonts that could hang R.
+- Docs: `input_mode` defaults to `"mixed"`; use `\textbf{}` etc. instead of `gp$fontface`.
+
 # gridmicrotex 0.0.4
 
-- Accept raw latex code from other package, liek `xtable::print.xtable()` / `knitr::kable()` / booktabs output.
+- Accept raw latex code from other packages, like `xtable::print.xtable()` / `knitr::kable()` / booktabs output.
 - New MicroTeX commands `\thickhline` and `\cline{a-b}`.
 - New `itemize` and `enumerate` list environments. Lists may nest.
 - Bug fix: `$…$` inside tabular cells no longer chops the table.
@@ -22,7 +32,7 @@
 
 - Support the `\def` command
 - New function `grobMark`.
-- Bug fix `ggplot2` intergration.
+- Bug fix `ggplot2` integration.
 - Bug fix coloring body.
 - `ggplot2` integration respects `latex_options`.
 - Defer `systemfonts` registration of the bundled Lete and STIX fonts to first render. This avoids the `XType: Using static font registry.` notice that older macOS SDKs emit on Core Text font registration, which had caused spurious WARN/NOTEs on `r-oldrel-macos-arm64`.

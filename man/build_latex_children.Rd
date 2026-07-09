@@ -20,7 +20,8 @@ build_latex_children(
 \item{depth}{Depth below the baseline in bigpts (default 0).}
 
 \item{text_gp}{Optional \code{\link[grid]{gpar}} for text grobs
-(from \code{\\text\{\}} blocks). Controls fontfamily and fontface.}
+(from \code{\\text\{\}} blocks). Controls fontfamily; the face comes
+from each record's MicroTeX \code{font_style}.}
 
 \item{render_mode}{Character string: \code{"path"} or \code{"typeface"}.
 In typeface mode, glyph records are rendered via \code{glyphGrob}.}

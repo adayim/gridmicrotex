@@ -145,3 +145,93 @@ test_that("\\newcommand and \\def do not leak between independent latex_grob cal
     "latexgrob"
   )
 })
+
+# --- grobX / grobY boundary points ---
+
+test_that("grobX/grobY cardinal points hit the bbox edges (rot = 0)", {
+  grDevices::pdf(NULL, width = 8, height = 6)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  grid::grid.newpage()
+
+  g <- latex_grob("x^2", x = grid::unit(2, "in"), y = grid::unit(1.5, "in"),
+                  hjust = 0, vjust = 0, gp = grid::gpar(fontsize = 20))
+  w <- grid::convertWidth(grid::grobWidth(g), "inches", valueOnly = TRUE)
+  h <- grid::convertHeight(grid::grobHeight(g), "inches", valueOnly = TRUE)
+
+  bx <- function(th) grid::convertX(grid::grobX(g, th), "inches", valueOnly = TRUE)
+  by <- function(th) grid::convertY(grid::grobY(g, th), "inches", valueOnly = TRUE)
+
+  # Boundary point = ray from the bbox centre at angle theta.
+  expect_equal(bx(0),   2 + w,     tolerance = 1e-6)   # east: right edge
+  expect_equal(by(0),   1.5 + h/2, tolerance = 1e-6)   #       centre y
+  expect_equal(bx(90),  2 + w/2,   tolerance = 1e-6)   # north: centre x
+  expect_equal(by(90),  1.5 + h,   tolerance = 1e-6)   #        top edge
+  expect_equal(bx(180), 2,         tolerance = 1e-6)   # west: left edge
+  expect_equal(by(180), 1.5 + h/2, tolerance = 1e-6)
+  expect_equal(bx(270), 2 + w/2,   tolerance = 1e-6)   # south: centre x
+  expect_equal(by(270), 1.5,       tolerance = 1e-6)   #        bottom edge
+
+  # Character theta as accepted by grobX/grobY
+  expect_equal(grid::convertX(grid::grobX(g, "east"), "inches", valueOnly = TRUE),
+               2 + w, tolerance = 1e-6)
+  expect_equal(grid::convertY(grid::grobY(g, "north"), "inches", valueOnly = TRUE),
+               1.5 + h, tolerance = 1e-6)
+
+  # 45-degree ray leaves through the top edge (bbox is wider than tall)
+  expect_equal(by(45), 1.5 + h, tolerance = 1e-6)
+  expect_equal(bx(45), 2 + w/2 + h/2, tolerance = 1e-6)
+})
+
+test_that("grobX/grobY match a rectGrob with identical geometry across theta", {
+  grDevices::pdf(NULL, width = 8, height = 6)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  grid::grid.newpage()
+
+  dims <- latex_dims("\frac{a}{b}", gp = grid::gpar(fontsize = 20))
+  thetas <- c(0, 30, 45, 90, 135, 180, 225, 270, 315)
+
+  for (just in list(c(0, 0), c(0.5, 0.5), c(1, 0.25))) {
+    g <- latex_grob("\frac{a}{b}",
+                    x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
+                    hjust = just[1], vjust = just[2],
+                    gp = grid::gpar(fontsize = 20))
+    r <- grid::rectGrob(x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
+                        width = dims$width, height = dims$height, just = just)
+    for (th in thetas) {
+      expect_equal(grid::convertX(grid::grobX(g, th), "in", valueOnly = TRUE),
+                   grid::convertX(grid::grobX(r, th), "in", valueOnly = TRUE),
+                   tolerance = 1e-6)
+      expect_equal(grid::convertY(grid::grobY(g, th), "in", valueOnly = TRUE),
+                   grid::convertY(grid::grobY(r, th), "in", valueOnly = TRUE),
+                   tolerance = 1e-6)
+    }
+  }
+})
+
+test_that("grobX/grobY on a rotated grob match a rectGrob in the same viewport", {
+  grDevices::pdf(NULL, width = 8, height = 6)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  grid::grid.newpage()
+
+  dims <- latex_dims("x^2", gp = grid::gpar(fontsize = 20))
+
+  for (rot in c(37, 90, 180)) {
+    g <- latex_grob("x^2", x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
+                    hjust = 0, vjust = 0, rot = rot, gp = grid::gpar(fontsize = 20))
+    # grid's reference behaviour for a grob whose rotation comes from its
+    # viewport: theta is measured in the grob's own (rotated) frame.
+    r <- grid::rectGrob(vp = grid::viewport(
+      x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
+      width = dims$width, height = dims$height,
+      just = c(0, 0), angle = rot
+    ))
+    for (th in c(0, 45, 90, 180, 270)) {
+      expect_equal(grid::convertX(grid::grobX(g, th), "in", valueOnly = TRUE),
+                   grid::convertX(grid::grobX(r, th), "in", valueOnly = TRUE),
+                   tolerance = 1e-6)
+      expect_equal(grid::convertY(grid::grobY(g, th), "in", valueOnly = TRUE),
+                   grid::convertY(grid::grobY(r, th), "in", valueOnly = TRUE),
+                   tolerance = 1e-6)
+    }
+  }
+})

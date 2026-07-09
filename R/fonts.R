@@ -166,10 +166,10 @@ load_font <- function(otf_path) {
 
 # Register a math font with systemfonts so gp$fontfamily = <name> (or any
 # alias) resolves to `otf_path` for grid text drawing. Silent on failure
-# — systemfonts is a soft dep and missing it is not a blocker.
+# — registration is best-effort; failing only means gp$fontfamily won't
+# resolve to the bundled OTF.
 .register_font_with_systemfonts <- function(otf_path, display_name,
                                             aliases = character(0)) {
-  if (!requireNamespace("systemfonts", quietly = TRUE)) return(invisible())
   names <- unique(c(display_name, aliases))
   for (nm in names) {
     try(

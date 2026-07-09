@@ -27,14 +27,14 @@ limits placed over/under, useful for inline labels that should still
 look like display equations.}
 
 \item{input_mode}{How the input string is interpreted before being
-handed to MicroTeX. \code{"math"} (default) treats the whole string
-as math --- the standard MicroTeX behaviour, where letters render as
-math italics and unwrapped prose looks wrong. \code{"mixed"} wraps
-the string in \code{\\text{...}} so it reads as ordinary text, with
-\code{$...$} (and \code{\\(...\\)}) opening math mode --- the
-document-level LaTeX convention. Useful when consuming labels from
-other packages that mix prose and math without explicit
-\code{\\text{}} markers.}
+handed to MicroTeX. \code{"mixed"} (default) wraps the string in
+\code{\\text{...}} so it reads as ordinary text, with \code{$...$}
+(and \code{\\(...\\)}) opening math mode --- the document-level
+LaTeX convention. Useful when consuming labels from other packages
+that mix prose and math without explicit \code{\\text{}} markers.
+\code{"math"} treats the whole string as math --- the classic
+MicroTeX behaviour, where letters render as math italics and
+unwrapped prose looks wrong.}
 }
 \value{
 Invisibly returns the previous settings (a list). With no

@@ -20,6 +20,24 @@ test_that("geom_latex creates layers and renders with various options", {
   expect_no_error(ggplot2::ggsave(tmp, p_na, width = 6, height = 4, dpi = 72))
 })
 
+test_that("geom_latex fontsize parameter sets size when the aesthetic is unmapped", {
+  skip_if_not_installed("ggplot2")
+
+  df <- data.frame(x = 1, y = 1, eq = "x^2")
+
+  # fontsize parameter fills the size column
+  p20 <- ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
+    geom_latex(fontsize = 20)
+  expect_equal(ggplot2::ggplot_build(p20)$data[[1]]$size, 20)
+
+  # a mapped size aesthetic wins over the parameter
+  df$s <- 30
+  p_mapped <- ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq, size = s)) +
+    geom_latex(fontsize = 20) +
+    ggplot2::scale_size_identity()
+  expect_equal(ggplot2::ggplot_build(p_mapped)$data[[1]]$size, 30)
+})
+
 # --- annotate('latex') ---
 
 test_that("annotate('latex') renders on a plot", {

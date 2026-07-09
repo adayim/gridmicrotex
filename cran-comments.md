@@ -2,4 +2,4 @@
 
 0 errors | 0 warnings | 0 note
 
-Fix CRAN issue
+4 bug fix and some improvements

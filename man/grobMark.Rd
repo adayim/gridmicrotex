@@ -14,7 +14,9 @@ grobMark(grob, name)
 \value{
 A list with elements \code{x} and \code{y}, each a
 \code{\link[grid]{unit}}. Mark coordinates are evaluated in the
-grob's parent viewport.
+grob's parent viewport. They assume an unrotated grob: with
+\code{rot != 0} the returned position does not account for the
+rotation.
 }
 \description{
 Resolves a \code{\\mark\{name\}} that was placed inside the LaTeX
