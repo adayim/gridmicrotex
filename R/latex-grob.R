@@ -787,12 +787,13 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
 }
 
 
-# On some Windows locale/font combinations, stringWidth() can error for CJK text.
+# On some Windows locale/font combinations, measuring can error for CJK text.
 # Keep layout flowing with a simple width fallback instead of failing hard.
-# `em` is the font size the measurement runs at (the measurer's ref_size).
-.measure_text_bigpts <- function(text, em = 72) {
+# `tg` is a textGrob carrying the measurement gp; `em` is the font size the
+# measurement runs at (the measurer's ref_size).
+.measure_text_bigpts <- function(tg, text, em = 72) {
   out <- tryCatch(
-    grid::convertWidth(grid::stringWidth(text), "bigpts", valueOnly = TRUE),
+    grid::convertWidth(grid::grobWidth(tg), "bigpts", valueOnly = TRUE),
     error = function(e) {
       w <- tryCatch(base::nchar(text, type = "width"), error = function(...) NA_real_)
       if (is.na(w)) {
@@ -828,8 +829,8 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
 
   # Per-closure cache keyed on (font_style, text). Lifetime = one parse
   # (the closure is created fresh per parse in latex_grob/latex_dims), so
-  # graphics state can't drift between calls. Hits avoid a push/pop
-  # viewport + grid::convertHeight round trip per repeated span.
+  # graphics state can't drift between calls. Hits avoid a textGrob
+  # construction + grid::convertHeight round trip per repeated span.
   cache <- new.env(parent = emptyenv())
 
   function(text, font_style) {
@@ -860,32 +861,32 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     needs_dev <- grDevices::dev.cur() == 1L
     if (needs_dev) {
       grDevices::pdf(NULL)
+      on.exit(grDevices::dev.off(), add = TRUE)
     }
 
-    # Push temporary viewport with our font settings
-    grid::pushViewport(grid::viewport(gp = gp))
-    # Pop viewport before closing device (order matters)
-    on.exit({
-      grid::popViewport()
-      if (needs_dev) grDevices::dev.off()
-    }, add = TRUE)
+    # Carry the font settings on a throwaway textGrob rather than pushing a
+    # viewport. pushViewport() writes to the device's display list (6 records
+    # per push/pop), which makes a caller's device look like it holds a plot:
+    # knitr then snapshots that page as a spurious blank figure before the
+    # real plot's grid.newpage(). grob* queries below only read metrics.
+    tg <- grid::textGrob(text, gp = gp)
 
     # Measure width in bigpts
-    w <- .measure_text_bigpts(text, em = ref_size)
+    w <- .measure_text_bigpts(tg, text, em = ref_size)
 
     # Measure ascent and descent (with Windows/CJK locale fallback)
     ad <- tryCatch({
       if (has_ascent_fn) {
         asc <- grid::convertHeight(
-          get("stringAscent", envir = asNamespace("grid"))(text),
+          get("grobAscent", envir = asNamespace("grid"))(tg),
           "bigpts", valueOnly = TRUE
         )
         desc <- grid::convertHeight(
-          get("stringDescent", envir = asNamespace("grid"))(text),
+          get("grobDescent", envir = asNamespace("grid"))(tg),
           "bigpts", valueOnly = TRUE
         )
       } else {
-        h <- grid::convertHeight(grid::stringHeight(text), "bigpts", valueOnly = TRUE)
+        h <- grid::convertHeight(grid::grobHeight(tg), "bigpts", valueOnly = TRUE)
         asc <- h * 0.8
         desc <- h - asc
       }

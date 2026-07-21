@@ -59,3 +59,26 @@ test_that("measurer cache returns identical values to a fresh measurement", {
   expect_identical(bold_cached, bold_fresh)
   expect_false(identical(first, bold_cached))
 })
+
+test_that("measuring leaves the caller's display list untouched", {
+  # Measuring used to pushViewport() on whatever device the caller had open.
+  # Viewport pushes are recorded on the graphics engine display list, so the
+  # device then looks like it holds a plot and knitr snapshots a spurious
+  # blank figure before the real plot's grid.newpage().
+  dl_len <- function() length(grDevices::recordPlot()[[1]])
+
+  pdf(NULL)
+  on.exit(dev.off(), add = TRUE)
+  grDevices::dev.control("enable")
+  expect_identical(dl_len(), 0L)
+
+  m <- gridmicrotex:::.make_text_measurer(grid::gpar())
+  m("Heterogeneity", 0L)
+  expect_identical(dl_len(), 0L)
+
+  # Same for a full grob construction, which is what callers actually do.
+  latex_grob("\\text{This is study A}\\\\\\text{This is study B}",
+             input_mode = "math", render_mode = "path",
+             gp = grid::gpar(fontsize = 8))
+  expect_identical(dl_len(), 0L)
+})
