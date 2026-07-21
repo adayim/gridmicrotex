@@ -40,12 +40,13 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="gridmicrotex-development-version">gridmicrotex (development version)<a class="anchor" aria-label="anchor" href="#gridmicrotex-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.0.5" id="gridmicrotex-005">gridmicrotex 0.0.5<a class="anchor" aria-label="anchor" href="#gridmicrotex-005"></a></h2><p class="text-muted">CRAN release: 2026-07-21</p>
 <ul><li>Bug fix: correct <code><a href="https://rdrr.io/r/grid/grobX.html" class="external-link">grobX()</a></code>/<code><a href="https://rdrr.io/r/grid/grobX.html" class="external-link">grobY()</a></code> boundary points.</li>
 <li>Bug fix: <code>geom_latex(fontsize = )</code> was ignored.</li>
 <li>Bug fix: spurious “font metrics unknown” warnings in <code>"mixed"</code> mode.</li>
 <li>Bug fix: CJK fallback width on Windows was ~6x too narrow.</li>
 <li>Bug fix: layout-cache collisions between unresolved text fonts.</li>
+<li>Bug fix: measuring <code>\text{}</code> runs no longer pushes a viewport on the caller’s device. The push/pop was recorded on the graphics engine display list, so the device looked like it already held a plot and <code>knitr</code> emitted a spurious blank figure ahead of the real one.</li>
 <li>Hardened the OTF MATH reader against malformed fonts that could hang R.</li>
 <li>Docs: <code>input_mode</code> defaults to <code>"mixed"</code>; use <code>\textbf{}</code> etc. instead of <code>gp$fontface</code>.</li>
 </ul></div>
