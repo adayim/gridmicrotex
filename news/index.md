@@ -1,8 +1,6 @@
 # Changelog
 
-## gridmicrotex 0.0.5
-
-CRAN release: 2026-07-21
+## gridmicrotex (development version)
 
 - Bug fix: correct
   [`grobX()`](https://rdrr.io/r/grid/grobX.html)/[`grobY()`](https://rdrr.io/r/grid/grobX.html)
@@ -11,10 +9,6 @@ CRAN release: 2026-07-21
 - Bug fix: spurious “font metrics unknown” warnings in `"mixed"` mode.
 - Bug fix: CJK fallback width on Windows was ~6x too narrow.
 - Bug fix: layout-cache collisions between unresolved text fonts.
-- Bug fix: measuring `\text{}` runs no longer pushes a viewport on the
-  caller’s device. The push/pop was recorded on the graphics engine
-  display list, so the device looked like it already held a plot and
-  `knitr` emitted a spurious blank figure ahead of the real one.
 - Hardened the OTF MATH reader against malformed fonts that could hang
   R.
 - Docs: `input_mode` defaults to `"mixed"`; use `\textbf{}` etc. instead
