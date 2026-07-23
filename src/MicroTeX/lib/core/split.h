@@ -49,6 +49,28 @@ private:
   static bool justifyLine(const sptr<Box>& line, float width);
 
   /**
+   * Every legal break of `hb`, as cumulative widths from the start of
+   * the paragraph, in increasing order.
+   *
+   * canBreak() only reports a break when the content overruns the
+   * ceiling it is handed, so this walks the ceiling down from the
+   * natural width to enumerate them one at a time.
+   */
+  static std::vector<float> enumerateBreakWidths(const sptr<HBox>& hb);
+
+  /**
+   * Choose where to break so the paragraph as a whole reads best,
+   * rather than filling each line in turn and never reconsidering.
+   *
+   * Returns one target width per line, always <= `width`. Feeding those
+   * back to canBreak() is what makes this safe: it breaks at the last
+   * position within the target, so a line can never exceed the measure
+   * however the choice was made. An empty result means "no better plan
+   * than greedy", and the caller falls back.
+   */
+  static std::vector<float> optimalLineTargets(const sptr<HBox>& hb, float width);
+
+  /**
    * Split every over-wide row of a vertical box. Added so that content
    * carrying an explicit line break -- `\\`, array/gather/align, and the
    * itemize/enumerate environments, which all produce a VBox at the top
@@ -81,6 +103,21 @@ public:
    * Set it under a scope guard so it cannot leak into the next parse.
    */
   static bool _justify;
+
+  /**
+   * Break paragraphs by total fit rather than first fit.
+   *
+   * The default splitter is greedy: it fills each line as far as it can
+   * and never reconsiders, so pulling one word down early -- which would
+   * improve every later line -- is not something it can see. With this
+   * on, the breaks are chosen together to minimise the summed badness of
+   * the paragraph, in the spirit of Knuth-Plass. The last line is free,
+   * as it is in TeX.
+   *
+   * Off by default, and a static toggle guarded per parse, exactly like
+   * _justify.
+   */
+  static bool _optimalBreak;
 
   static std::pair<bool, sptr<Box>> split(const sptr<Box>& box, float width, float lineSpace);
 };

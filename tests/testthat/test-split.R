@@ -194,3 +194,121 @@ test_that("a line of one long word is left alone", {
   solid <- paste0("\\text{", strrep("x", 80), "}")
   expect_no_error(latex_dims(solid, max_width = 100, justify = TRUE))
 })
+
+# --- optimal (total-fit) line breaking ---------------------------------
+#
+# The default splitter is greedy: it fills each line as far as it can and
+# never reconsiders. "optimal" chooses the breaks together, minimising
+# summed TeX-style demerits, so pulling a word down early can improve
+# every later line.
+
+opt_para <- paste0(
+  "\\text{",
+  paste(rep("The quick brown fox jumps over the lazy dog.", 4), collapse = " "),
+  "}"
+)
+
+opt_edges <- function(g) {
+  df <- g$layout_df
+  ys <- sort(unique(round(df$y, 1)))
+  vapply(ys, function(yy) {
+    s <- abs(round(df$y, 1) - yy) < 0.01
+    max(df$x[s] + ifelse(is.na(df$width[s]), 0, df$width[s]))
+  }, numeric(1))
+}
+
+test_that("greedy remains the default and is untouched", {
+  for (w in c(200, 260, 300)) {
+    a <- latex_dims(opt_para, max_width = w)
+    b <- latex_dims(opt_para, max_width = w, line_break = "greedy")
+    expect_equal(as.numeric(a$width), as.numeric(b$width), tolerance = 1e-6)
+    expect_equal(as.numeric(a$height), as.numeric(b$height), tolerance = 1e-6)
+  }
+})
+
+test_that("optimal never overflows more than greedy does", {
+  # canBreak() can settle on a first line wider than the measure for text
+  # spread over several runs. Total fit picks among the breaks canBreak
+  # offers, so it inherits that but must never make it worse.
+  for (w in seq(140, 360, by = 20)) {
+    g <- as.numeric(latex_dims(opt_para, max_width = w,
+                               line_break = "greedy")$width)
+    o <- as.numeric(latex_dims(opt_para, max_width = w,
+                               line_break = "optimal")$width)
+    expect_lte(o, max(g, w) + 0.51)
+  }
+})
+
+test_that("optimal does not make the paragraph taller", {
+  # The per-line penalty in the demerits stops it buying evenness by
+  # adding a line.
+  for (w in c(180, 220, 260, 300, 340)) {
+    g <- as.numeric(latex_dims(opt_para, max_width = w,
+                               line_break = "greedy")$height)
+    o <- as.numeric(latex_dims(opt_para, max_width = w,
+                               line_break = "optimal")$height)
+    expect_lte(o, g + 0.51)
+  }
+})
+
+test_that("optimal is at least as even as greedy", {
+  spread <- function(g) {
+    e <- head(opt_edges(g), -1)   # last line is deliberately short
+    if (length(e) < 2) return(0)
+    stats::sd(e)
+  }
+  for (w in c(220, 260, 300, 340)) {
+    sg <- spread(latex_grob(opt_para, max_width = w, line_break = "greedy"))
+    so <- spread(latex_grob(opt_para, max_width = w, line_break = "optimal"))
+    expect_lte(so, sg + 1e-6)
+  }
+})
+
+test_that("optimal measurably improves at least one width", {
+  # Pins the feature actually doing something, so a regression that
+  # silently disabled it would be caught.
+  g <- latex_grob(opt_para, max_width = 300, line_break = "greedy")
+  o <- latex_grob(opt_para, max_width = 300, line_break = "optimal")
+  expect_lt(stats::sd(head(opt_edges(o), -1)),
+            stats::sd(head(opt_edges(g), -1)))
+})
+
+test_that("optimal composes with justify", {
+  g <- latex_grob(opt_para, max_width = 300,
+                  line_break = "optimal", justify = TRUE)
+  expect_equal(g$bbox_w, 300, tolerance = 1e-6)
+})
+
+test_that("line_break is validated, settable and does not leak", {
+  expect_error(latex_dims("x", line_break = "nope"))
+
+  before <- as.numeric(latex_dims(opt_para, max_width = 300)$width)
+  invisible(latex_dims(opt_para, max_width = 300, line_break = "optimal"))
+  expect_equal(as.numeric(latex_dims(opt_para, max_width = 300)$width),
+               before, tolerance = 1e-6)
+
+  latex_options(line_break = "optimal")
+  expect_equal(latex_options()$line_break, "optimal")
+  reset_latex_options()
+  expect_null(latex_options()$line_break)
+})
+
+test_that("greedy and optimal layouts are cached separately", {
+  latex_cache_clear()
+  a <- latex_dims(opt_para, max_width = 300, line_break = "greedy")
+  b <- latex_dims(opt_para, max_width = 300, line_break = "optimal")
+  # Same measure, but the two must not share a cache entry: differing
+  # line shape at equal width is exactly the collision to avoid.
+  expect_false(identical(a$is_split, NA))
+  expect_equal(latex_cache_info()$size, 2L)
+})
+
+test_that("content with nothing to break is unaffected", {
+  solid <- paste0("\\text{", strrep("x", 60), "}")
+  expect_no_error(latex_dims(solid, max_width = 100, line_break = "optimal"))
+  expect_equal(
+    as.numeric(latex_dims(solid, max_width = 100, line_break = "optimal")$width),
+    as.numeric(latex_dims(solid, max_width = 100, line_break = "greedy")$width),
+    tolerance = 1e-6
+  )
+})

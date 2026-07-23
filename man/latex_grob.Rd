@@ -19,6 +19,7 @@ latex_grob(
   input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
   justify = FALSE,
+  line_break = c("greedy", "optimal"),
   debug = FALSE,
   name = NULL,
   gp = grid::gpar()
@@ -87,6 +88,14 @@ lines the wrapper produces, so it does nothing on its own.
 \code{FALSE} (default) leaves the right edge ragged, matching R's own
 text drawing. gridmicrotex does not hyphenate, so justifying a narrow
 column opens noticeably wide word spaces.}
+
+\item{line_break}{How lines are chosen when wrapping.
+\code{"greedy"} (default) fills each line as far as it will go and
+never reconsiders. \code{"optimal"} chooses the breaks together so
+the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+pulling one word down early can improve every later line, which a
+greedy pass cannot see. Requires \code{max_width}, and costs a
+little more layout time.}
 
 \item{debug}{Logical; if \code{TRUE}, draws diagnostic overlays on the
 grob --- the full bounding box (dashed gray), the baseline (solid

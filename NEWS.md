@@ -5,6 +5,7 @@
 - `max_width` is now honoured by content containing `\\` line breaks.
 - New `geom_markdown()` and `element_markdown()` for ggplot2.
 - New `justify` argument stretches wrapped lines to fill `max_width`.
+- New `line_break = "optimal"` chooses paragraph breaks by total fit.
 - Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room
   and they overlapped the axis title.
 

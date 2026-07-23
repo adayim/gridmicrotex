@@ -9,7 +9,8 @@
   render_mode = NULL,
   tex_style   = NULL,
   input_mode  = NULL,
-  justify     = NULL
+  justify     = NULL,
+  line_break  = NULL
 )
 
 # Validate the `justify` argument. Kept here so latex_grob(),
@@ -61,6 +62,13 @@
 #'   (default) leaves the right edge ragged, matching R's own text
 #'   drawing. Note that gridmicrotex does not hyphenate, so justifying a
 #'   narrow column opens noticeably wide word spaces.
+#' @param line_break How lines are chosen when wrapping.
+#'   \code{"greedy"} (default) fills each line as far as it will go and
+#'   never reconsiders. \code{"optimal"} chooses the breaks together so
+#'   the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+#'   pulling one word down early can improve every later line, which a
+#'   greedy pass cannot see. Requires \code{max_width}, and costs a
+#'   little more layout time.
 #' @return Invisibly returns the previous settings (a list). With no
 #'   arguments, returns the current settings visibly.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}}
@@ -74,7 +82,7 @@
 #' }
 latex_options <- function(math_font = NULL, render_mode = NULL,
                           tex_style = NULL, input_mode = NULL,
-                          justify = NULL) {
+                          justify = NULL, line_break = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -102,6 +110,10 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     .check_justify(justify)
     .latex_options$values$justify <- justify
   }
+  if (!is.null(line_break)) {
+    line_break <- match.arg(line_break, c("greedy", "optimal"))
+    .latex_options$values$line_break <- line_break
+  }
   invisible(old)
 }
 
@@ -114,7 +126,8 @@ reset_latex_options <- function() {
     render_mode = NULL,
     tex_style   = NULL,
     input_mode  = NULL,
-    justify     = NULL
+    justify     = NULL,
+    line_break  = NULL
   )
   invisible(NULL)
 }

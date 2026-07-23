@@ -18,7 +18,10 @@ struct RenderModeGuard {
 // it on every exit path -- otherwise one justified call would silently
 // justify every parse that followed it.
 struct JustifyGuard {
-    ~JustifyGuard() { BoxSplitter::_justify = false; }
+    ~JustifyGuard() {
+        BoxSplitter::_justify = false;
+        BoxSplitter::_optimalBreak = false;
+    }
 };
 
 // Helper: convert ARGB color to R hex string "#RRGGBB" or "#RRGGBBAA"
@@ -57,7 +60,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            std::string main_font = "",
                            bool use_path = true,
                            std::string tex_style = "",
-                           bool justify = false) {
+                           bool justify = false,
+                           bool optimal_break = false) {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
@@ -77,6 +81,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // applied to the lines the splitter produces.
     JustifyGuard justify_guard;
     BoxSplitter::_justify = justify;
+    BoxSplitter::_optimalBreak = optimal_break;
 
     // Decode foreground color
     color fg = decodeColor(fg_color);
