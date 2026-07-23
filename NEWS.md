@@ -1,6 +1,8 @@
 # gridmicrotex (development version)
 
 - New `markdown_grob()` and `grid.markdown()` render markdown with inline LaTeX math.
+- New `markdown_box_grob()` renders block markdown in a padded, filled box.
+- `max_width` is now honoured by content containing `\\` line breaks.
 
 # gridmicrotex 0.0.5
 

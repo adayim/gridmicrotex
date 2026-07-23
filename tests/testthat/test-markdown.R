@@ -104,3 +104,141 @@ test_that("grid.markdown() draws and returns the grob invisibly", {
   grid::grid.newpage()
   expect_invisible(grid.markdown("**hi** $x$"))
 })
+
+# --- block-level markdown (markdown_box_grob) ------------------------
+
+md_doc <- paste(
+  "# Title", "",
+  "First paragraph that is long enough to need wrapping when the box",
+  "is narrow.", "",
+  "## Section", "",
+  "- alpha", "- beta", "",
+  "1. one", "2. two", "",
+  "> quoted", "",
+  "```", "x <- 1", "y <- 2", "```", "",
+  "| a | b |", "|---|---|", "| 1 | 2 |", "",
+  "---",
+  sep = "\n"
+)
+
+test_that("every block type is recognised", {
+  types <- vapply(.md_parse_blocks(md_doc), function(b) b$type, character(1))
+  expect_setequal(
+    types,
+    c("heading", "paragraph", "heading", "list", "list",
+      "block_quote", "code_block", "table", "thematic_break")
+  )
+  blks <- .md_parse_blocks(md_doc)
+  expect_equal(blks[[1]]$level, 1L)
+  expect_equal(blks[[3]]$level, 2L)
+  expect_false(Filter(function(b) b$type == "list", blks)[[1]]$ordered)
+  expect_true(Filter(function(b) b$type == "list", blks)[[2]]$ordered)
+})
+
+test_that("a markdown table becomes a real tabular", {
+  tex <- Filter(function(b) b$type == "table", .md_parse_blocks(md_doc))[[1]]$tex
+  expect_match(tex, "\\begin{tabular}", fixed = TRUE)
+  expect_match(tex, "\\thickhline", fixed = TRUE)
+  expect_match(tex, "\\hline", fixed = TRUE)
+  expect_match(tex, "&", fixed = TRUE)
+  # It must be renderable, not just well-formed.
+  expect_gt(as.numeric(latex_dims(tex, input_mode = "math")$width), 0)
+})
+
+test_that("measuring and drawing agree, so blocks stay inside the box", {
+  # latex_dims() defaults to input_mode = "mixed"; measuring a run that
+  # the AST walker already wrapped would double-wrap it and report a
+  # width the drawn grob does not have. Blocks then overflow the border.
+  skip_if_not_installed("ragg")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  tex <- .md_parse_blocks("Some *emphasised* prose with $x^2$ inside it.")[[1]]$tex
+  gp <- grid::gpar(fontsize = 13)
+  for (w in c(120, 200, 280)) {
+    m <- .md_measure(tex, w, gp)
+    g <- latex_grob(tex, max_width = m$mw, input_mode = "math", gp = gp)
+    expect_equal(m$w, g$bbox_w, tolerance = 1e-6)
+    expect_lte(g$bbox_w, w + 0.5)
+  }
+})
+
+test_that("a soft line break renders as a word space", {
+  # In math mode a bare space between two \text{} runs is discarded, so
+  # the words either side would be run together ("islong").
+  tex <- .md_parse_blocks("alpha\nbeta")[[1]]$tex
+  expect_match(tex, "\\text{ }", fixed = TRUE)
+  spaced <- latex_grob(tex, input_mode = "math")$bbox_w
+  joined <- latex_grob("\\text{alpha}\\text{beta}", input_mode = "math")$bbox_w
+  expect_gt(spaced, joined)
+})
+
+test_that("the box grows taller as it is made narrower", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  h <- vapply(c(6, 4, 3), function(wi) {
+    g <- markdown_box_grob(md_doc, width = grid::unit(wi, "in"))
+    grid::convertHeight(grid::grobHeight(g), "in", valueOnly = TRUE)
+  }, numeric(1))
+  expect_true(all(diff(h) > 0))
+})
+
+test_that("padding and margin enlarge the reported size", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  bare <- markdown_box_grob("text", width = grid::unit(3, "in"))
+  padded <- markdown_box_grob("text", width = grid::unit(3, "in"),
+                              padding = grid::unit(12, "pt"))
+  hb <- grid::convertHeight(grid::grobHeight(bare), "bigpts", valueOnly = TRUE)
+  hp <- grid::convertHeight(grid::grobHeight(padded), "bigpts", valueOnly = TRUE)
+  expect_gt(hp, hb)
+  # Width is the requested width; padding eats into the content, not out.
+  expect_equal(
+    grid::convertWidth(grid::grobWidth(padded), "in", valueOnly = TRUE), 3,
+    tolerance = 1e-6
+  )
+})
+
+test_that("padding and margin reject bad units", {
+  expect_error(markdown_box_grob("x", padding = 5), "grid unit")
+  expect_error(markdown_box_grob("x", margin = grid::unit(c(1, 2), "pt")),
+               "length 1 or 4")
+})
+
+test_that("makeContent produces a box plus the stacked content", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_box_grob(md_doc, width = grid::unit(4, "in"),
+                         box_gp = grid::gpar(fill = "grey95"))
+  kids <- grid::makeContent(g)$children
+  expect_length(kids, 2L)                      # box rect + content tree
+  expect_gt(length(kids[[2]]$children), 5L)    # one grob per block/line
+  # With no box_gp there is no rect.
+  g2 <- markdown_box_grob(md_doc, width = grid::unit(4, "in"))
+  expect_length(grid::makeContent(g2)$children, 1L)
+})
+
+test_that("markdown_box_grob validates its input", {
+  expect_error(markdown_box_grob(NA_character_), "must not be NA")
+  expect_error(markdown_box_grob(c("a", "b")), "single character string")
+  expect_s3_class(markdown_box_grob("ok"), "markdownbox")
+})
+
+test_that("it draws without error", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  grid::grid.newpage()
+  expect_silent(grid::grid.draw(markdown_box_grob(
+    md_doc, width = grid::unit(4, "in"),
+    padding = grid::unit(8, "pt"),
+    box_gp = grid::gpar(fill = "grey95", col = "grey40")
+  )))
+})
+
+test_that("visual: markdown document box", {
+  skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
+  vdiffr::expect_doppelganger("markdown-box", function() {
+    grid::grid.draw(markdown_box_grob(
+      md_doc,
+      width = grid::unit(4.4, "in"),
+      padding = grid::unit(10, "pt"),
+      box_gp = grid::gpar(fill = "grey96", col = "grey40"),
+      gp = grid::gpar(fontsize = 13)
+    ))
+  })
+})

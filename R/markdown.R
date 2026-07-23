@@ -137,7 +137,11 @@
       link          = .md_inline_to_tex(k, spans),
       # Images cannot be drawn by a text grob; keep the alt text.
       image         = .md_inline_to_tex(k, spans),
-      softbreak     = " ",
+      # A soft line break is a word space. It has to be an explicit
+      # \text{ } box: the output is consumed in math mode, where a bare
+      # space between two \text{} runs is discarded outright -- the
+      # words either side would be run together ("islong").
+      softbreak     = "\\text{ }",
       linebreak     = "\\\\",
       # html_inline and anything else unknown: drop the markup, keep text.
       html_inline   = "",
@@ -147,15 +151,11 @@
   paste(parts, collapse = "")
 }
 
-# Convert markdown to a LaTeX string suitable for input_mode = "math".
-# Only inline content is handled here; block structure is Phase 3.
-# Multiple paragraphs are joined with `\\` line breaks.
-#
-# NOTE: emitting `\\` disables MicroTeX's max_width wrapping for the
-# whole expression (the top box becomes a VBox, which the splitter
-# currently declines to descend into), so a multi-paragraph string will
-# not wrap. Single-paragraph input -- the common case for a label --
-# wraps normally.
+# Convert markdown to a single LaTeX string for input_mode = "math",
+# flattening block structure: paragraphs are joined with `\\` line
+# breaks and headings/lists/quotes lose their block formatting. This is
+# what markdown_grob() uses. markdown_box_grob() keeps block structure
+# by stacking each block as its own grob instead.
 .md_to_tex <- function(md) {
   if (!requireNamespace("commonmark", quietly = TRUE) ||
       !requireNamespace("xml2", quietly = TRUE)) {
@@ -229,4 +229,567 @@ grid.markdown <- function(md, ...) {
   g <- markdown_grob(md, ...)
   grid::grid.draw(g)
   invisible(g)
+}
+
+
+# ---------------------------------------------------------------------
+# Block-level markdown
+#
+# MicroTeX cannot lay a document out in one parse: a `\` puts a VBox at
+# the top of the box tree and, inside matrix/array cells, max_width is
+# not honoured at all (see the note in BoxSplitter::split). So block
+# structure is assembled here instead -- one latex_grob per block,
+# stacked in grid -- which is also where boxes, padding, background
+# fills and rules have to live, none of which MicroTeX models.
+# ---------------------------------------------------------------------
+
+# Heading level -> MicroTeX size macro. All ten of the \tiny..\Huge
+# family are registered (macro_def.cpp); these six are the ones a
+# markdown heading can reach.
+.MD_HEADING_SIZE <- c("\\Huge", "\\huge", "\\LARGE",
+                      "\\Large", "\\large", "\\normalsize")
+
+# Parse markdown into a list of block descriptors. Recurses through
+# containers (lists, block quotes) so nesting is preserved.
+.md_blocks <- function(nodes, spans) {
+  out <- list()
+  for (nd in nodes) {
+    nm <- xml2::xml_name(nd)
+    blk <- switch(nm,
+      paragraph = list(type = "paragraph",
+                       tex = .md_inline_to_tex(nd, spans)),
+      heading = list(type = "heading",
+                     level = .md_heading_level(nd),
+                     tex = .md_inline_to_tex(nd, spans)),
+      block_quote = list(type = "block_quote",
+                         blocks = .md_blocks(xml2::xml_children(nd), spans)),
+      code_block = list(type = "code_block",
+                        lines = .md_code_lines(nd)),
+      list = .md_list_block(nd, spans),
+      table = list(type = "table", tex = .md_table_tex(nd, spans)),
+      thematic_break = list(type = "thematic_break"),
+      # html_block and anything unrecognised is dropped rather than
+      # passed through: MicroTeX would typeset the raw markup.
+      NULL
+    )
+    if (!is.null(blk)) out[[length(out) + 1L]] <- blk
+  }
+  out
+}
+
+.md_heading_level <- function(nd) {
+  lvl <- suppressWarnings(as.integer(xml2::xml_attr(nd, "level")))
+  if (is.na(lvl)) lvl <- 1L
+  min(max(lvl, 1L), 6L)
+}
+
+# Code blocks are literal. MicroTeX has no verbatim environment, so each
+# source line becomes its own \texttt{} block and the stacker puts them
+# on separate rows; that also keeps indentation from being collapsed.
+.md_code_lines <- function(nd) {
+  txt <- xml2::xml_text(nd)
+  lines <- strsplit(txt, "\n", fixed = TRUE)[[1]]
+  if (length(lines) == 0L) return(character(0))
+  # A trailing newline yields a spurious empty final line.
+  if (length(lines) > 1L && !nzchar(lines[length(lines)])) {
+    lines <- lines[-length(lines)]
+  }
+  lines
+}
+
+.md_list_block <- function(nd, spans) {
+  ordered <- identical(xml2::xml_attr(nd, "type"), "ordered")
+  start <- suppressWarnings(as.integer(xml2::xml_attr(nd, "start")))
+  if (is.na(start)) start <- 1L
+  items <- lapply(xml2::xml_children(nd), function(it) {
+    .md_blocks(xml2::xml_children(it), spans)
+  })
+  list(type = "list", ordered = ordered, start = start,
+       tight = identical(xml2::xml_attr(nd, "tight"), "true"),
+       items = items)
+}
+
+# Build a `tabular` from the GFM table extension. MicroTeX supports
+# tabular natively along with \hline and the \thickhline added for
+# booktabs output, so a markdown table becomes a real typeset table
+# rather than an image -- something marquee cannot do at all.
+.md_table_tex <- function(nd, spans) {
+  rows <- xml2::xml_children(nd)
+  if (length(rows) == 0L) return("")
+  cells_of <- function(r) {
+    vapply(xml2::xml_children(r), .md_inline_to_tex, character(1),
+           spans = spans)
+  }
+  header <- NULL
+  body <- list()
+  for (r in rows) {
+    cs <- cells_of(r)
+    if (identical(xml2::xml_name(r), "table_header")) {
+      header <- cs
+    } else {
+      body[[length(body) + 1L]] <- cs
+    }
+  }
+  ncol <- max(c(length(header), vapply(body, length, integer(1))), 0L)
+  if (ncol == 0L) return("")
+  pad <- function(cs) c(cs, rep("", ncol - length(cs)))
+  line <- function(cs) paste(pad(cs), collapse = " & ")
+
+  parts <- c("\\begin{tabular}{", strrep("l", ncol), "}", "\\thickhline ")
+  if (!is.null(header)) {
+    parts <- c(parts, line(header), "\\\\", "\\hline ")
+  }
+  for (b in body) parts <- c(parts, line(b), "\\\\")
+  parts <- c(parts, "\\thickhline", "\\end{tabular}")
+  paste(parts, collapse = "")
+}
+
+# Parse a markdown string into block descriptors.
+.md_parse_blocks <- function(md) {
+  if (!requireNamespace("commonmark", quietly = TRUE) ||
+      !requireNamespace("xml2", quietly = TRUE)) {
+    stop("Markdown support requires the 'commonmark' and 'xml2' packages.",
+         call. = FALSE)
+  }
+  masked <- .md_mask_math(md)
+  doc <- xml2::read_xml(
+    commonmark::markdown_xml(masked$text, extensions = TRUE)
+  )
+  xml2::xml_ns_strip(doc)
+  .md_blocks(xml2::xml_children(doc), masked$spans)
+}
+
+# Marker text for list item `n`.
+.md_list_marker <- function(ordered, start, n) {
+  if (ordered) {
+    paste0("\\text{", start + n - 1L, ".}")
+  } else {
+    "\\bullet"
+  }
+}
+
+# ---------------------------------------------------------------------
+# Layout
+#
+# Each block is measured with latex_dims() at the available width and
+# placed at an offset from the top of the stack. Offsets grow downward;
+# makeContent turns them into viewports. Working top-down means the
+# total height does not have to be known in advance.
+#
+# All distances are big points, matching what latex_dims() reports.
+# ---------------------------------------------------------------------
+
+# One entry in the laid-out stack.
+.md_item <- function(grob, x, y, w, h) {
+  list(grob = grob, x = x, y = y, w = w, h = h)
+}
+
+# Measure a run, and return the max_width that achieved that measurement
+# so the caller can draw with exactly the same setting.
+#
+# input_mode MUST match .md_run_grob(). latex_dims() defaults to
+# "mixed", which would run latex_wrap() over LaTeX the AST walker has
+# already wrapped -- measuring a different (double-wrapped) string from
+# the one drawn. That mismatch shows up as blocks overflowing the box.
+#
+# The retry works around MicroTeX's line breaker, which is greedy
+# first-fit: it takes the last break position that fits and never
+# reconsiders, so text spread over several \text{} runs can settle on a
+# first line wider than the limit. Asking for a slightly narrower line
+# finds a different, fitting set of breaks. Bounded, so genuinely
+# unbreakable content (one long word, a table) still returns promptly.
+.md_measure <- function(tex, width, gp) {
+  d <- latex_dims(tex, max_width = width, input_mode = "math", gp = gp)
+  w <- as.numeric(d$width)
+  if (width > 0 && w > width) {
+    target <- width
+    for (i in seq_len(6L)) {
+      target <- target * 0.94
+      d2 <- latex_dims(tex, max_width = target, input_mode = "math", gp = gp)
+      if (as.numeric(d2$width) <= width) {
+        return(list(w = as.numeric(d2$width), h = as.numeric(d2$height),
+                    mw = target))
+      }
+    }
+  }
+  list(w = w, h = as.numeric(d$height), mw = width)
+}
+
+# Build the grob for a run of LaTeX at a given offset. `y` is the
+# distance from the top of the content area; vjust = 1 (top) makes the
+# offset land on the block's top edge, so stacking is just addition.
+.md_run_grob <- function(tex, x, y, width, gp) {
+  latex_grob(
+    tex,
+    x = grid::unit(x, "bigpts"),
+    y = grid::unit(1, "npc") - grid::unit(y, "bigpts"),
+    hjust = 0, vjust = 1,
+    max_width = width,
+    input_mode = "math",
+    gp = gp
+  )
+}
+
+# Lay out a list of blocks into positioned items.
+#
+# Returns list(items = <list of .md_item>, height = <total bigpts>).
+# `indent` shifts everything right, which is how nested lists and block
+# quotes are built -- each recursion re-measures its content at the
+# reduced width so text still wraps inside the indent.
+.md_layout <- function(blocks, width, gp, fontsize, indent = 0, first = TRUE) {
+  items <- list()
+  y <- 0
+  gap_para <- 0.55 * fontsize
+  # A heading opens a section, so it gets more air above it than the gap
+  # between two paragraphs, not less.
+  gap_head <- 0.95 * fontsize
+  # Code lines advance by a fixed leading rather than by their measured
+  # height: a line with no descender measures shorter, and stacking on
+  # that would let the next line's ascenders collide with it.
+  code_lh <- 1.15 * fontsize
+
+  add <- function(it) items[[length(items) + 1L]] <<- it
+
+  for (i in seq_along(blocks)) {
+    blk <- blocks[[i]]
+    if (!(first && i == 1L)) {
+      y <- y + if (identical(blk$type, "heading")) gap_head else gap_para
+    }
+    avail <- width - indent
+
+    if (identical(blk$type, "paragraph")) {
+      if (!nzchar(blk$tex)) next
+      m <- .md_measure(blk$tex, avail, gp)
+      # Draw at m$mw, not avail: .md_measure() may have had to narrow the
+      # request to get a fitting set of line breaks, and drawing at a
+      # different width would re-break the text and undo the fit.
+      add(.md_item(.md_run_grob(blk$tex, indent, y, m$mw, gp),
+                   indent, y, m$w, m$h))
+      y <- y + m$h
+
+    } else if (identical(blk$type, "heading")) {
+      tex <- paste0(.MD_HEADING_SIZE[blk$level], "{}\\textbf{", blk$tex, "}")
+      m <- .md_measure(tex, avail, gp)
+      add(.md_item(.md_run_grob(tex, indent, y, m$mw, gp),
+                   indent, y, m$w, m$h))
+      y <- y + m$h
+
+    } else if (identical(blk$type, "code_block")) {
+      for (ln in blk$lines) {
+        tex <- paste0("\\texttt{\\text{", .md_escape_tex(ln), "}}")
+        # An empty source line still occupies a row.
+        if (!nzchar(ln)) tex <- "\\texttt{\\text{ }}"
+        m <- .md_measure(tex, 0, gp)
+        add(.md_item(.md_run_grob(tex, indent, y, 0, gp),
+                     indent, y, m$w, code_lh))
+        y <- y + code_lh
+      }
+
+    } else if (identical(blk$type, "table")) {
+      if (!nzchar(blk$tex)) next
+      # Tables are not wrapped: max_width does not reach inside tabular
+      # cells (see BoxSplitter::split), so asking would silently do
+      # nothing and a wide table simply overflows.
+      m <- .md_measure(blk$tex, 0, gp)
+      add(.md_item(.md_run_grob(blk$tex, indent, y, 0, gp),
+                   indent, y, m$w, m$h))
+      y <- y + m$h
+
+    } else if (identical(blk$type, "thematic_break")) {
+      h <- 0.5 * fontsize
+      rule <- grid::rectGrob(
+        x = grid::unit(indent, "bigpts"),
+        y = grid::unit(1, "npc") - grid::unit(y + h / 2, "bigpts"),
+        width = grid::unit(avail, "bigpts"),
+        height = grid::unit(max(1, fontsize / 20), "bigpts"),
+        hjust = 0, vjust = 0.5,
+        gp = grid::gpar(fill = gp$col %||% "black", col = NA)
+      )
+      add(.md_item(rule, indent, y, avail, h))
+      y <- y + h
+
+    } else if (identical(blk$type, "block_quote")) {
+      bar <- 0.25 * fontsize
+      inner <- .md_layout(blk$blocks, width, gp, fontsize,
+                          indent = indent + bar * 3, first = TRUE)
+      for (it in inner$items) {
+        it$grob$vp$y <- it$grob$vp$y - grid::unit(y, "bigpts")
+        add(.md_item(it$grob, it$x, y + it$y, it$w, it$h))
+      }
+      # The rule spans the quoted content, drawn after so it is measured
+      # against the final height.
+      add(.md_item(
+        grid::rectGrob(
+          x = grid::unit(indent, "bigpts"),
+          y = grid::unit(1, "npc") - grid::unit(y, "bigpts"),
+          width = grid::unit(max(1, bar / 2), "bigpts"),
+          height = grid::unit(inner$height, "bigpts"),
+          hjust = 0, vjust = 1,
+          gp = grid::gpar(fill = gp$col %||% "grey60", col = NA)
+        ),
+        indent, y, bar / 2, inner$height
+      ))
+      y <- y + inner$height
+
+    } else if (identical(blk$type, "list")) {
+      gap_item <- if (isTRUE(blk$tight)) 0.25 * fontsize else gap_para
+      for (j in seq_along(blk$items)) {
+        if (j > 1L) y <- y + gap_item
+        marker <- .md_list_marker(blk$ordered, blk$start, j)
+        mm <- .md_measure(marker, 0, gp)
+        # Hanging indent: the marker sits at the current indent and the
+        # item body is measured at the reduced width, so continuation
+        # lines line up under the text rather than under the marker.
+        # This is the reason lists are stacked here instead of being
+        # handed to MicroTeX's itemize -- max_width does not reach into
+        # its cells.
+        body_indent <- indent + mm$w + 0.4 * fontsize
+        inner <- .md_layout(blk$items[[j]], width, gp, fontsize,
+                            indent = body_indent, first = TRUE)
+        add(.md_item(.md_run_grob(marker, indent, y, 0, gp),
+                     indent, y, mm$w, mm$h))
+        for (it in inner$items) {
+          it$grob$vp$y <- it$grob$vp$y - grid::unit(y, "bigpts")
+          add(.md_item(it$grob, it$x, y + it$y, it$w, it$h))
+        }
+        y <- y + max(mm$h, inner$height)
+      }
+    }
+  }
+
+  list(items = items, height = y)
+}
+
+# Validate a trbl unit. Split out from .md_trbl() so the constructor can
+# reject a bad padding/margin immediately, rather than at draw time when
+# the error surfaces far from the call that caused it.
+.md_check_trbl <- function(u, what) {
+  if (is.null(u)) return(invisible(NULL))
+  if (!grid::is.unit(u)) {
+    stop("`", what, "` must be a grid unit.", call. = FALSE)
+  }
+  if (!length(u) %in% c(1L, 4L)) {
+    stop("`", what, "` must have length 1 or 4 (top, right, bottom, left).",
+         call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# Resolve a length-1 or length-4 unit into trbl big points.
+.md_trbl <- function(u, what) {
+  if (is.null(u)) return(c(0, 0, 0, 0))
+  .md_check_trbl(u, what)
+  n <- length(u)
+  v <- vapply(seq_len(n), function(i) {
+    # Vertical and horizontal components are converted with the matching
+    # function so relative units resolve against the right dimension.
+    if (i %% 2L == 1L) {
+      grid::convertHeight(u[i], "bigpts", valueOnly = TRUE)
+    } else {
+      grid::convertWidth(u[i], "bigpts", valueOnly = TRUE)
+    }
+  }, numeric(1))
+  if (n == 1L) rep(v, 4L) else v
+}
+
+# Do the geometry once: resolve the box, lay the blocks out, and report
+# every dimension makeContent() and the *Details() methods need. Must run
+# at draw time, because the width may be relative and because measuring
+# text needs an open device.
+.md_box_layout <- function(x) {
+  margin <- .md_trbl(x$margin, "margin")
+  padding <- .md_trbl(x$padding, "padding")
+
+  total_w <- grid::convertWidth(x$width, "bigpts", valueOnly = TRUE)
+  box_w <- total_w - margin[2] - margin[4]
+  content_w <- max(box_w - padding[2] - padding[4], 1)
+
+  gp <- x$gp %||% grid::gpar()
+  fontsize <- gp$fontsize %||% 20
+  if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
+
+  laid <- .md_layout(x$blocks, content_w, gp, fontsize)
+
+  content_h <- laid$height
+  box_h <- content_h + padding[1] + padding[3]
+  total_h <- if (is.null(x$height)) {
+    box_h + margin[1] + margin[3]
+  } else {
+    grid::convertHeight(x$height, "bigpts", valueOnly = TRUE)
+  }
+  if (!is.null(x$height)) box_h <- total_h - margin[1] - margin[3]
+
+  list(margin = margin, padding = padding,
+       total_w = total_w, total_h = total_h,
+       box_w = box_w, box_h = box_h,
+       content_w = content_w, content_h = content_h,
+       items = laid$items)
+}
+
+#' @export
+makeContent.markdownbox <- function(x) {
+  lay <- .md_box_layout(x)
+  kids <- list()
+
+  # Background / border, inset by the margin.
+  if (!is.null(x$box_gp)) {
+    rr <- x$r %||% grid::unit(0, "pt")
+    common <- list(
+      x = grid::unit(lay$margin[4], "bigpts"),
+      y = grid::unit(1, "npc") - grid::unit(lay$margin[1], "bigpts"),
+      width = grid::unit(lay$box_w, "bigpts"),
+      height = grid::unit(lay$box_h, "bigpts"),
+      hjust = 0, vjust = 1, gp = x$box_gp
+    )
+    box <- if (grid::convertWidth(rr, "bigpts", valueOnly = TRUE) > 0) {
+      do.call(grid::roundrectGrob, c(common, list(r = rr)))
+    } else {
+      do.call(grid::rectGrob, common)
+    }
+    kids[[length(kids) + 1L]] <- box
+  }
+
+  # Vertical placement of the content inside a taller fixed box.
+  slack <- max(lay$box_h - lay$padding[1] - lay$padding[3] - lay$content_h, 0)
+  voff <- slack * (1 - (x$valign %||% 1))
+
+  halign <- x$halign %||% 0
+  content <- lapply(lay$items, function(it) {
+    g <- it$grob
+    if (halign != 0 && !is.null(g$vp)) {
+      # Slack to the right of this item, so halign cooperates with the
+      # per-block indent instead of fighting it.
+      shift <- (lay$content_w - it$x - it$w) * halign
+      g$vp$x <- g$vp$x + grid::unit(shift, "bigpts")
+    }
+    g
+  })
+
+  kids <- c(kids, list(grid::gTree(
+    children = do.call(grid::gList, content),
+    vp = grid::viewport(
+      x = grid::unit(lay$margin[4] + lay$padding[4], "bigpts"),
+      y = grid::unit(1, "npc") -
+        grid::unit(lay$margin[1] + lay$padding[1] + voff, "bigpts"),
+      width = grid::unit(lay$content_w, "bigpts"),
+      height = grid::unit(lay$content_h, "bigpts"),
+      just = c(0, 1)
+    )
+  )))
+
+  grid::setChildren(x, do.call(grid::gList, kids))
+}
+
+#' @export
+widthDetails.markdownbox <- function(x) {
+  grid::unit(.md_box_layout(x)$total_w, "bigpts")
+}
+
+#' @export
+heightDetails.markdownbox <- function(x) {
+  grid::unit(.md_box_layout(x)$total_h, "bigpts")
+}
+
+#' Render a markdown document as a boxed grid grob
+#'
+#' @description
+#' Lays markdown out as a block document --- headings, paragraphs, lists,
+#' block quotes, code blocks, tables and horizontal rules --- inside an
+#' optional padded, filled and bordered box. Prose wraps to the requested
+#' width, and \code{$...$} math is typeset by MicroTeX as usual.
+#'
+#' @details
+#' Where \code{\link{markdown_grob}} flattens everything into a single
+#' run, this stacks one grob per block. That is what makes headings, list
+#' indentation, block-quote rules and background fills possible:
+#' MicroTeX has no concept of any of them, and its line breaking does not
+#' reach inside the cells it uses for list and table layout.
+#'
+#' Two consequences worth knowing. Table cells and code lines are not
+#' wrapped, so a wide table overflows rather than reflowing. And list
+#' items are stacked here rather than handed to MicroTeX's
+#' \code{itemize}, which is what gives them a proper hanging indent.
+#'
+#' @param md Character string of markdown.
+#' @param x,y Position of the box in the parent viewport.
+#' @param width Width of the box, including \code{margin}.
+#' @param height Fixed height, or \code{NULL} (default) to take whatever
+#'   height the content needs.
+#' @param hjust,vjust Justification of the whole box about \code{x} and
+#'   \code{y}.
+#' @param halign Horizontal alignment of blocks within the box:
+#'   \code{0} left (default), \code{0.5} centred, \code{1} right.
+#' @param valign Vertical alignment of the content when \code{height}
+#'   leaves room to spare: \code{1} top (default), \code{0} bottom.
+#' @param padding,margin A \code{\link[grid]{unit}} of length 1 or 4
+#'   giving top, right, bottom and left. Padding is inside the box,
+#'   margin outside it.
+#' @param box_gp Graphical parameters for the box itself, e.g.
+#'   \code{gpar(fill = "grey95", col = "black")}. \code{NULL} (default)
+#'   draws no box.
+#' @param r Corner radius; a non-zero value draws a rounded box.
+#' @param name Optional grob name.
+#' @param gp Graphical parameters for the text. \code{fontsize} also sets
+#'   the scale for block spacing and list indentation.
+#' @param vp Optional viewport.
+#' @return A \code{markdownbox} gTree.
+#' @seealso \code{\link{markdown_grob}}, \code{\link{latex_grob}}
+#' @export
+#'
+#' @examples
+#' \donttest{
+#'   md <- paste(
+#'     "# Results", "",
+#'     "The slope is $\\beta_1$ with *p* < 0.001.", "",
+#'     "- first point", "- second point",
+#'     sep = "\n"
+#'   )
+#'   grid::grid.newpage()
+#'   grid::grid.draw(markdown_box_grob(
+#'     md,
+#'     width = grid::unit(4, "in"),
+#'     padding = grid::unit(8, "pt"),
+#'     box_gp = grid::gpar(fill = "grey95", col = "grey40")
+#'   ))
+#' }
+markdown_box_grob <- function(md,
+                              x = grid::unit(0.5, "npc"),
+                              y = grid::unit(0.5, "npc"),
+                              width = grid::unit(1, "npc"),
+                              height = NULL,
+                              hjust = 0.5, vjust = 0.5,
+                              halign = 0, valign = 1,
+                              padding = grid::unit(0, "pt"),
+                              margin = grid::unit(0, "pt"),
+                              box_gp = NULL,
+                              r = grid::unit(0, "pt"),
+                              name = NULL,
+                              gp = grid::gpar(),
+                              vp = NULL) {
+  if (!is.character(md) || length(md) != 1L) {
+    stop("`md` must be a single character string.", call. = FALSE)
+  }
+  if (is.na(md)) {
+    stop("`md` must not be NA.", call. = FALSE)
+  }
+  .md_check_trbl(padding, "padding")
+  .md_check_trbl(margin, "margin")
+  # Parse once at construction; the layout is redone at draw time, when
+  # relative widths resolve and a device is available for measuring.
+  blocks <- .md_parse_blocks(md)
+
+  grid::gTree(
+    md = md, blocks = blocks,
+    width = width, height = height,
+    halign = halign, valign = valign,
+    padding = padding, margin = margin,
+    box_gp = box_gp, r = r,
+    gp = gp, name = name, cl = "markdownbox",
+    vp = vp %||% grid::viewport(
+      x = x, y = y,
+      width = width,
+      height = height %||% grid::unit(1, "npc"),
+      just = c(hjust, vjust)
+    )
+  )
 }
