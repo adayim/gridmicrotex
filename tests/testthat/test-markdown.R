@@ -242,3 +242,23 @@ test_that("visual: markdown document box", {
     ))
   })
 })
+
+test_that("a raw HTML block is dropped, not typeset", {
+  # An html_block holds raw markup as its text. Walking into it typeset
+  # the tags and the unparsed markdown inside them, and the inline path
+  # and the block path disagreed about the same document.
+  md <- "Before\n\n<div class='x'>raw **html** block</div>\n\nAfter"
+  tex <- .md_to_tex(md)
+  expect_false(grepl("<div", tex, fixed = TRUE))
+  expect_false(grepl("**html**", tex, fixed = TRUE))
+  expect_match(tex, "Before", fixed = TRUE)
+  expect_match(tex, "After", fixed = TRUE)
+
+  # Both entry points must reach the same conclusion.
+  types <- vapply(.md_parse_blocks(md), function(b) b$type, character(1))
+  expect_setequal(types, c("paragraph", "paragraph"))
+
+  g <- markdown_grob(md)
+  expect_false(grepl("<div", paste(stats::na.omit(g$layout_df$text),
+                                   collapse = ""), fixed = TRUE))
+})

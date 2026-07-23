@@ -184,6 +184,11 @@
   blocks <- xml2::xml_children(doc)
   if (length(blocks) == 0L) return("")
   parts <- vapply(blocks, function(b) {
+    # An html_block holds raw markup as its text, so walking into it
+    # would typeset the tags -- and the markdown inside them, unparsed.
+    # Drop it, matching html_inline here and .md_blocks() on the block
+    # path, which would otherwise disagree about the same document.
+    if (identical(xml2::xml_name(b), "html_block")) return("")
     .md_inline_to_tex(b, masked$spans)
   }, character(1))
   parts <- parts[nzchar(parts)]
