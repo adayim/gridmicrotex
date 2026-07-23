@@ -170,8 +170,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // parse_latex_cpp
-Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style);
-RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP) {
+Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style, bool justify);
+RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP, SEXP justifySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -184,7 +184,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type main_font(main_fontSEXP);
     Rcpp::traits::input_parameter< bool >::type use_path(use_pathSEXP);
     Rcpp::traits::input_parameter< std::string >::type tex_style(tex_styleSEXP);
-    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style));
+    Rcpp::traits::input_parameter< bool >::type justify(justifySEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -205,7 +206,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_ot_math_table_bytes", (DL_FUNC) &_gridmicrotex_ot_math_table_bytes, 2},
     {"_gridmicrotex_otf_to_clm_bytes", (DL_FUNC) &_gridmicrotex_otf_to_clm_bytes, 2},
     {"_gridmicrotex_microtex_add_font_from_otf", (DL_FUNC) &_gridmicrotex_microtex_add_font_from_otf, 2},
-    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 9},
+    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 10},
     {NULL, NULL, 0}
 };
 

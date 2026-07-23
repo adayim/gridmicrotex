@@ -8,8 +8,18 @@
   math_font   = NULL,
   render_mode = NULL,
   tex_style   = NULL,
-  input_mode  = NULL
+  input_mode  = NULL,
+  justify     = NULL
 )
+
+# Validate the `justify` argument. Kept here so latex_grob(),
+# latex_dims() and latex_options() all reject the same things.
+.check_justify <- function(justify) {
+  if (!is.logical(justify) || length(justify) != 1L || is.na(justify)) {
+    stop("`justify` must be TRUE or FALSE.", call. = FALSE)
+  }
+  invisible(TRUE)
+}
 
 #' Set or query package-wide LaTeX rendering defaults
 #'
@@ -44,6 +54,13 @@
 #'   \code{"math"} treats the whole string as math --- the classic
 #'   MicroTeX behaviour, where letters render as math italics and
 #'   unwrapped prose looks wrong.
+#' @param justify Logical. When \code{TRUE}, wrapped text is stretched at
+#'   its interword spaces so every line but the last fills
+#'   \code{max_width} exactly. Has no effect without \code{max_width},
+#'   since it acts on the lines the wrapper produces. \code{FALSE}
+#'   (default) leaves the right edge ragged, matching R's own text
+#'   drawing. Note that gridmicrotex does not hyphenate, so justifying a
+#'   narrow column opens noticeably wide word spaces.
 #' @return Invisibly returns the previous settings (a list). With no
 #'   arguments, returns the current settings visibly.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}}
@@ -56,7 +73,8 @@
 #'   reset_latex_options()
 #' }
 latex_options <- function(math_font = NULL, render_mode = NULL,
-                          tex_style = NULL, input_mode = NULL) {
+                          tex_style = NULL, input_mode = NULL,
+                          justify = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -80,6 +98,10 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     input_mode <- match.arg(input_mode, c("math", "mixed"))
     .latex_options$values$input_mode <- input_mode
   }
+  if (!is.null(justify)) {
+    .check_justify(justify)
+    .latex_options$values$justify <- justify
+  }
   invisible(old)
 }
 
@@ -91,7 +113,8 @@ reset_latex_options <- function() {
     math_font   = NULL,
     render_mode = NULL,
     tex_style   = NULL,
-    input_mode  = NULL
+    input_mode  = NULL,
+    justify     = NULL
   )
   invisible(NULL)
 }

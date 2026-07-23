@@ -89,3 +89,108 @@ test_that("list and matrix cells do not wrap (documented limitation)", {
     expect_false(narrow$split)
   }
 })
+
+# --- justification -----------------------------------------------------
+#
+# Interword spaces used to be rigid StrutBoxes, so a line had nothing to
+# stretch. They are GlueBoxes now, carrying TeX's half-space stretch;
+# nothing reads that unless justify = TRUE, so ragged output is
+# unchanged (the visual snapshots are the wider guard on that).
+
+just_para <- paste0(
+  "\\text{",
+  paste(rep("The quick brown fox jumps over the lazy dog.", 4), collapse = " "),
+  "}"
+)
+
+# Right edge of each rendered line. Text records carry no width, so this
+# is the last glyph's origin -- fine for comparing lines with each other,
+# which is all these tests do.
+line_edges <- function(g) {
+  df <- g$layout_df
+  ys <- sort(unique(round(df$y, 1)))
+  vapply(ys, function(yy) {
+    s <- abs(round(df$y, 1) - yy) < 0.01
+    max(df$x[s] + ifelse(is.na(df$width[s]), 0, df$width[s]))
+  }, numeric(1))
+}
+
+test_that("justified text fills the measure exactly", {
+  for (w in c(200, 300, 400)) {
+    d <- latex_dims(just_para, max_width = w, justify = TRUE)
+    expect_equal(as.numeric(d$width), w, tolerance = 1e-6)
+  }
+})
+
+test_that("justification evens the lines out", {
+  g_just <- latex_grob(just_para, max_width = 300, justify = TRUE)
+  g_rag  <- latex_grob(just_para, max_width = 300, justify = FALSE)
+  # Drop the last line: it is deliberately left ragged.
+  e_just <- head(line_edges(g_just), -1)
+  e_rag  <- head(line_edges(g_rag), -1)
+  expect_gt(length(e_just), 2)
+  # Justified lines end at nearly the same place; ragged ones do not.
+  expect_lt(diff(range(e_just)), 0.25 * diff(range(e_rag)))
+})
+
+test_that("the last line stays ragged", {
+  g <- latex_grob(just_para, max_width = 300, justify = TRUE)
+  e <- line_edges(g)
+  expect_lt(e[length(e)], min(head(e, -1)) - 10)
+})
+
+test_that("justification does not change how tall the text is", {
+  for (w in c(200, 300)) {
+    r <- latex_dims(just_para, max_width = w, justify = FALSE)
+    j <- latex_dims(just_para, max_width = w, justify = TRUE)
+    expect_equal(as.numeric(j$height), as.numeric(r$height), tolerance = 1e-6)
+    expect_equal(j$is_split, r$is_split)
+  }
+})
+
+test_that("justify does nothing without max_width", {
+  # It acts on the lines the wrapper produces, so with nothing to wrap
+  # there is nothing to justify.
+  a <- latex_dims(just_para, justify = FALSE)
+  b <- latex_dims(just_para, justify = TRUE)
+  expect_equal(as.numeric(b$width), as.numeric(a$width), tolerance = 1e-6)
+})
+
+test_that("the justify flag does not leak into later parses", {
+  # It is a global on the splitter, guarded in C++; a leak would justify
+  # every subsequent render in the session.
+  before <- as.numeric(latex_dims(just_para, max_width = 300)$width)
+  invisible(latex_dims(just_para, max_width = 300, justify = TRUE))
+  after <- as.numeric(latex_dims(just_para, max_width = 300)$width)
+  expect_equal(after, before, tolerance = 1e-6)
+  expect_lt(after, 300)  # still ragged
+})
+
+test_that("justified and ragged layouts are cached separately", {
+  # The cache key must include justify, or the second call returns the
+  # first one's layout.
+  latex_cache_clear()
+  r <- as.numeric(latex_dims(just_para, max_width = 300, justify = FALSE)$width)
+  j <- as.numeric(latex_dims(just_para, max_width = 300, justify = TRUE)$width)
+  expect_lt(r, j)
+  expect_equal(j, 300, tolerance = 1e-6)
+})
+
+test_that("justify is validated and settable as an option", {
+  expect_error(latex_dims("x", justify = "yes"), "TRUE or FALSE")
+  expect_error(latex_dims("x", justify = NA), "TRUE or FALSE")
+  expect_error(latex_dims("x", justify = c(TRUE, FALSE)), "TRUE or FALSE")
+
+  latex_options(justify = TRUE)
+  expect_true(latex_options()$justify)
+  expect_equal(as.numeric(latex_dims(just_para, max_width = 300)$width), 300,
+               tolerance = 1e-6)
+  reset_latex_options()
+  expect_null(latex_options()$justify)
+})
+
+test_that("a line of one long word is left alone", {
+  # No interword glue to stretch, and nothing should crash or blow up.
+  solid <- paste0("\\text{", strrep("x", 80), "}")
+  expect_no_error(latex_dims(solid, max_width = 100, justify = TRUE))
+})

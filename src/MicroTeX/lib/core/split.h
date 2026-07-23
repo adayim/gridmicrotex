@@ -39,6 +39,16 @@ private:
   static std::pair<bool, sptr<Box>> split(const sptr<HBox>& hb, float width, float lineSpace);
 
   /**
+   * Stretch a line's interword glue so it fills `width` exactly.
+   *
+   * Only glue reached through a chain of HBoxes is touched, so spaces
+   * buried inside a fraction or a matrix cell keep the width their own
+   * layout gave them. Returns false when the line has no glue to give,
+   * or is already at or past the target, in which case it is left alone.
+   */
+  static bool justifyLine(const sptr<Box>& line, float width);
+
+  /**
    * Split every over-wide row of a vertical box. Added so that content
    * carrying an explicit line break -- `\\`, array/gather/align, and the
    * itemize/enumerate environments, which all produce a VBox at the top
@@ -60,6 +70,18 @@ private:
   );
 
 public:
+  /**
+   * Stretch interword glue so every line but the last of a wrapped
+   * paragraph fills the measure exactly. Off by default: ragged right is
+   * what R's own text drawing does, and justification without
+   * hyphenation opens ugly gaps in a narrow column.
+   *
+   * A static toggle, matching how the engine already handles layout
+   * modes (RowAtom::_breakEverywhere, MicroTeX::setRenderGlyphUsePath).
+   * Set it under a scope guard so it cannot leak into the next parse.
+   */
+  static bool _justify;
+
   static std::pair<bool, sptr<Box>> split(const sptr<Box>& box, float width, float lineSpace);
 };
 

@@ -48,6 +48,13 @@
 #'   For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 #'   \code{"path"} renders math symbols as filled vector paths (works on
 #'   all devices but text is not selectable in PDF/SVG).
+#' @param justify Logical. When \code{TRUE}, wrapped text is stretched at
+#'   its interword spaces so every line but the last fills
+#'   \code{max_width} exactly. Requires \code{max_width}: it acts on the
+#'   lines the wrapper produces, so it does nothing on its own.
+#'   \code{FALSE} (default) leaves the right edge ragged, matching R's own
+#'   text drawing. gridmicrotex does not hyphenate, so justifying a narrow
+#'   column opens noticeably wide word spaces.
 #' @param debug Logical; if \code{TRUE}, draws diagnostic overlays on the
 #'   grob --- the full bounding box (dashed gray), the baseline (solid
 #'   red), the depth line (dashed gray), and a small dot at each
@@ -214,19 +221,22 @@ latex_grob <- function(tex,
                        tex_style = "",
                        input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
+                       justify = FALSE,
                        debug = FALSE,
                        name = NULL,
                        gp = grid::gpar()) {
 
-  .apply_opts("math_font", "render_mode", "tex_style", "input_mode")
+  .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
+              "justify")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
+  .check_justify(justify)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
     input_mode = input_mode,
-    with_path_fallback = TRUE
+    with_path_fallback = TRUE, justify = justify
   )
 
   # Convert numeric x/y to units
@@ -266,6 +276,7 @@ latex_grob <- function(tex,
     max_width = max_width,
     tex_style = tex_style,
     input_mode = input_mode,
+    justify = justify,
     text_gp = parsed$text_gp,
     render_mode = parsed$render_mode,
     path_layout_df = parsed$path_layout,
@@ -424,7 +435,7 @@ grobMark <- function(grob, name) {
 # so they don't re-scale at draw time).
 .parse_from_gp <- function(tex, gp, math_font, max_width, tex_style,
                            render_mode, input_mode = "mixed",
-                           with_path_fallback = FALSE) {
+                           with_path_fallback = FALSE, justify = FALSE) {
   .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
   input_mode <- match.arg(input_mode, c("math", "mixed"))
@@ -483,7 +494,7 @@ grobMark <- function(grob, name) {
     tex = parse_input, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
-    tex_style = tex_style, text_family = text_family
+    tex_style = tex_style, text_family = text_family, justify = justify
   )
 
   path_layout <- NULL
@@ -492,7 +503,7 @@ grobMark <- function(grob, name) {
       tex = parse_input, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style,
-      text_family = text_family
+      text_family = text_family, justify = justify
     )
   }
 
@@ -564,7 +575,7 @@ makeContent.latexgrob <- function(x) {
 # Fields whose values feed .parse_from_gp(); editing any of them forces a
 # re-parse so the layout/bbox/text metrics stay in sync with the inputs.
 .latex_parse_fields <- c("tex", "math_font", "max_width", "tex_style",
-                         "input_mode", "render_mode", "gp")
+                         "input_mode", "render_mode", "justify", "gp")
 
 #' @method editDetails latexgrob
 #' @export
@@ -579,7 +590,8 @@ editDetails.latexgrob <- function(x, specs) {
       tex = x$tex, gp = x$gp, math_font = x$math_font,
       max_width = x$max_width, tex_style = x$tex_style,
       input_mode = x$input_mode %||% "math",
-      render_mode = x$render_mode, with_path_fallback = TRUE
+      render_mode = x$render_mode, with_path_fallback = TRUE,
+      justify = isTRUE(x$justify)
     )
     layout <- parsed$layout
     x$tex            <- parsed$tex
@@ -764,15 +776,18 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
                        input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
+                       justify = FALSE,
                        gp = grid::gpar()) {
-  .apply_opts("math_font", "render_mode", "tex_style", "input_mode")
+  .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
+              "justify")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
+  .check_justify(justify)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
-    input_mode = input_mode
+    input_mode = input_mode, justify = justify
   )
   layout <- parsed$layout
   bbox_h <- attr(layout, "bbox_height")

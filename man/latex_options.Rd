@@ -9,7 +9,8 @@ latex_options(
   math_font = NULL,
   render_mode = NULL,
   tex_style = NULL,
-  input_mode = NULL
+  input_mode = NULL,
+  justify = NULL
 )
 
 reset_latex_options()
@@ -35,6 +36,14 @@ that mix prose and math without explicit \code{\\text{}} markers.
 \code{"math"} treats the whole string as math --- the classic
 MicroTeX behaviour, where letters render as math italics and
 unwrapped prose looks wrong.}
+
+\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
+its interword spaces so every line but the last fills
+\code{max_width} exactly. Has no effect without \code{max_width},
+since it acts on the lines the wrapper produces. \code{FALSE}
+(default) leaves the right edge ragged, matching R's own text
+drawing. Note that gridmicrotex does not hyphenate, so justifying a
+narrow column opens noticeably wide word spaces.}
 }
 \value{
 Invisibly returns the previous settings (a list). With no

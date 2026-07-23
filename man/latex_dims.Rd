@@ -11,6 +11,7 @@ latex_dims(
   tex_style = "",
   input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
+  justify = FALSE,
   gp = grid::gpar()
 )
 }
@@ -52,6 +53,14 @@ R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
 For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).}
+
+\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
+its interword spaces so every line but the last fills
+\code{max_width} exactly. Requires \code{max_width}: it acts on the
+lines the wrapper produces, so it does nothing on its own.
+\code{FALSE} (default) leaves the right edge ragged, matching R's own
+text drawing. gridmicrotex does not hyphenate, so justifying a narrow
+column opens noticeably wide word spaces.}
 
 \item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
 Common entries: \code{col} (formula foreground), \code{fontfamily}

@@ -108,11 +108,11 @@ latex_cache_info <- function() {
 # callback, so they can produce different layouts and must not share a key.
 .parse_cache_key <- function(tex, text_size, line_space, fg_color, max_width,
                              math_font, main_font, text_family, use_path,
-                             tex_style) {
+                             tex_style, justify) {
   paste(
     tex, "|", text_size, "|", line_space, "|", fg_color, "|",
     max_width, "|", math_font, "|", main_font, "|", text_family, "|",
-    as.integer(use_path), "|", tex_style,
+    as.integer(use_path), "|", tex_style, "|", as.integer(justify),
     sep = ""
   )
 }
@@ -121,16 +121,18 @@ latex_cache_info <- function() {
 # (key-only, not forwarded to C++), transparent cache.
 .parse_latex_cached <- function(tex, text_size, line_space, fg_color,
                                 max_width, math_font, main_font, use_path,
-                                tex_style = "", text_family = "") {
+                                tex_style = "", text_family = "",
+                                justify = FALSE) {
   key <- .parse_cache_key(tex, text_size, line_space, fg_color, max_width,
                           math_font, main_font, text_family, use_path,
-                          tex_style)
+                          tex_style, justify)
   hit <- .cache_get(key)
   if (!is.null(hit)) return(hit)
   layout <- parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
-    main_font = main_font, use_path = use_path, tex_style = tex_style
+    main_font = main_font, use_path = use_path, tex_style = tex_style,
+    justify = justify
   )
   .cache_put(key, layout)
   layout
