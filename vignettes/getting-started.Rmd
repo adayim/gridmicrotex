@@ -39,6 +39,8 @@ on any R graphics device at any resolution.
 - Color support via `\textcolor{}`
 - ggplot2 integration with `geom_latex()` and `element_latex()`
 - CJK and multilingual text in `\text{}` blocks
+- Markdown rendering with inline math, via `markdown_grob()` and
+  `markdown_box_grob()` --- see `vignette("markdown")`
 
 ## Basic usage
 
