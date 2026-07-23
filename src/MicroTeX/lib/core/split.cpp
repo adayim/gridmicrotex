@@ -61,29 +61,102 @@ void microtex::printBox(const sptr<Box>& box) {
 
 #endif  // HAVE_LOG
 
-std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<Box>& b, float width, float lineSpace) {
+std::pair<bool, sptr<Box>> BoxSplitter::splitDispatch(
+  const sptr<Box>& b,
+  float width,
+  float lineSpace,
+  int depth
+) {
+  if (depth > MAX_SPLIT_DEPTH) return {false, b};
   auto h = dynamic_pointer_cast<HBox>(b);
-  sptr<Box> box;
-  if (h != nullptr) {
-    auto [splitted, box] = split(h, width, lineSpace);
-#ifdef HAVE_LOG
-    if (box != b) {
-      logv("[BEFORE SPLIT]:\n");
-      printBox(b);
-      logv("[AFTER SPLIT]:\n");
-      printBox(box);
-    } else {
-      logv("[BOX TREE]:\n");
-      printBox(box);
-    }
-#endif
-    return {splitted, box};
-  }
-#ifdef HAVE_LOG
-  logv("[BOX TREE]:\n");
-  printBox(b);
-#endif
+  if (h != nullptr) return split(h, width, lineSpace);
+  auto v = dynamic_pointer_cast<VBox>(b);
+  if (v != nullptr) return split(v, width, lineSpace, depth);
   return {false, b};
+}
+
+std::pair<bool, sptr<Box>> BoxSplitter::split(
+  const sptr<VBox>& vb,
+  float width,
+  float lineSpace,
+  int depth
+) {
+  if (width <= 0) return {false, vb};
+
+  // Cheap rejection: if every row already fits there is nothing to do,
+  // and the box is returned untouched so unsplit content keeps its
+  // original object identity and metrics exactly.
+  bool needsSplit = false;
+  for (const auto& child : vb->_children) {
+    if (child->_width > width) {
+      needsSplit = true;
+      break;
+    }
+  }
+  if (!needsSplit) return {false, vb};
+
+  // A VBox is positioned by its height/depth split, not just its total
+  // extent, and callers such as MatrixAtom::createBox overwrite both to
+  // centre the box on the math axis after building it. Recover that
+  // offset now so it can be reapplied to the taller box below --
+  // rebuilding without it silently shifts the baseline of every
+  // multi-row formula.
+  const float oldTotal = vb->_height + vb->_depth;
+  const float axis = vb->_height - oldTotal / 2;
+
+  // NOTE ON REACH: this splits rows that are plain HBoxes, which covers
+  // content separated by `\\` at the top level. It deliberately does NOT
+  // reach inside matrix/array cells, and so does not wrap long items in
+  // itemize/enumerate/align/gather/tabular.
+  //
+  // Those rows hold WrapperBoxes (see MatrixAtom::createBox), whose
+  // _height/_depth are the *row's* metrics, precomputed by
+  // recalculateLine() before the VBox exists; MatrixAtom then overwrites
+  // the row HBox metrics too. Breaking a cell would therefore have to
+  // re-derive every row height and push the new metrics back up through
+  // the WrapperBox and row box -- a change inside the matrix layout
+  // itself, affecting every table, matrix, cases and align in the
+  // package. Callers that need prose to wrap inside list items should
+  // stack the items themselves and give each one its own max_width.
+  auto out = sptrOf<VBox>();
+  bool splitted = false;
+  for (const auto& child : vb->_children) {
+    if (child->_width > width) {
+      auto [childSplit, newChild] = splitDispatch(child, width, lineSpace, depth + 1);
+      if (childSplit) splitted = true;
+      out->add(newChild);
+    } else {
+      // Interline struts and rows that already fit pass through as-is.
+      out->add(child);
+    }
+  }
+
+  // Nothing actually broke -- a row can be wider than the limit yet have
+  // no legal break position. Keep the original box rather than an
+  // equivalent copy.
+  if (!splitted) return {false, vb};
+
+  const float newTotal = out->_height + out->_depth;
+  out->_height = newTotal / 2 + axis;
+  out->_depth = newTotal / 2 - axis;
+
+  return {true, std::static_pointer_cast<Box>(out)};
+}
+
+std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<Box>& b, float width, float lineSpace) {
+  auto [splitted, box] = splitDispatch(b, width, lineSpace, 0);
+#ifdef HAVE_LOG
+  if (box != b) {
+    logv("[BEFORE SPLIT]:\n");
+    printBox(b);
+    logv("[AFTER SPLIT]:\n");
+    printBox(box);
+  } else {
+    logv("[BOX TREE]:\n");
+    printBox(box);
+  }
+#endif
+  return {splitted, box};
 }
 
 std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width, float lineSpace) {
