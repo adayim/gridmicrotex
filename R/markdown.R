@@ -92,18 +92,26 @@
 
 # Render one markdown text node.
 #
-# Escape the prose, restore the math spans raw, then hand the result to
-# latex_wrap(): the output of this file is fed to latex_grob() in "math"
-# mode, so prose has to arrive already wrapped in \text{} or it would be
-# typeset as spaced math italics. latex_wrap() also strips the `$`
-# delimiters and adds \displaystyle for block math, which is exactly the
-# translation needed here.
+# Escape the prose, restore the math spans raw, then -- unless `bare` --
+# hand the result to latex_wrap(). The output of this file is fed to
+# latex_grob() in "math" mode, so prose normally has to arrive already
+# wrapped in \text{} or it would be typeset as spaced math italics.
+# latex_wrap() also strips the `$` delimiters and adds \displaystyle for
+# block math, which is exactly the translation needed.
+#
+# `bare` is for the inside of a text command such as \textbf{}. Those
+# already put their argument in text mode, and a nested \text{} *resets
+# the style*: \textbf{bold} reports font style 2 (bold) but
+# \textbf{\text{bold}} reports 1 (plain), so wrapping there silently
+# throws the emphasis away. Bare content still handles math, because
+# `$...$` opens math mode inside a text command too.
 #
 # Order matters twice over: escape before unmasking, so the escaper never
 # touches a formula; unmask before latex_wrap(), so it can see the real
 # delimiters while escaped prose dollars stay literal.
-.md_text_node <- function(s, spans) {
-  latex_wrap(.md_unmask_math(.md_escape_tex(s), spans), input_mode = "mixed")
+.md_text_node <- function(s, spans, bare = FALSE) {
+  raw <- .md_unmask_math(.md_escape_tex(s), spans)
+  if (bare) raw else latex_wrap(raw, input_mode = "mixed")
 }
 
 # Walk the inline children of a cmark node and return a LaTeX string.
@@ -113,39 +121,45 @@
 # their text content rather than emitting an unknown command -- MicroTeX
 # renders unknown commands as literal glyphs instead of erroring, so a
 # stray \href would silently typeset the letters "href".
-.md_inline_to_tex <- function(node, spans) {
+.md_inline_to_tex <- function(node, spans, bare = FALSE) {
   kids <- xml2::xml_contents(node)
   if (length(kids) == 0L) return("")
   parts <- vapply(kids, function(k) {
     nm <- xml2::xml_name(k)
     switch(nm,
-      text = .md_text_node(xml2::xml_text(k), spans),
+      text = .md_text_node(xml2::xml_text(k), spans, bare = bare),
+      # \textbf/\textit/\texttt switch to text mode themselves, so their
+      # content is emitted bare -- a nested \text{} would reset the style
+      # and lose the emphasis entirely.
+      strong = paste0("\\textbf{", .md_inline_to_tex(k, spans, TRUE), "}"),
+      emph   = paste0("\\textit{", .md_inline_to_tex(k, spans, TRUE), "}"),
       # \sout, \cancel, \bcancel and \xcancel are all registered in
       # MicroTeX (macro_def.cpp); \sout is the horizontal rule that
-      # matches markdown's ~~strike~~.
-      strikethrough = paste0("\\sout{", .md_inline_to_tex(k, spans), "}"),
-      strong        = paste0("\\textbf{", .md_inline_to_tex(k, spans), "}"),
-      emph          = paste0("\\textit{", .md_inline_to_tex(k, spans), "}"),
+      # matches markdown's ~~strike~~. Unlike the \text* commands it does
+      # not set a mode of its own -- it just rules through whatever it is
+      # given -- so it inherits the caller's, and prose reaching it in
+      # math mode still needs the \text{} that `bare = FALSE` supplies.
+      strikethrough = paste0("\\sout{", .md_inline_to_tex(k, spans, bare), "}"),
       # Code spans are literal. Restore any masked math first so the
       # sentinel never leaks, then escape the lot -- `$x$` in backticks
-      # is meant to be shown as characters, not typeset as math. The
-      # explicit \text{} keeps it in text mode rather than math italics.
-      code = paste0("\\texttt{\\text{",
+      # is meant to be shown as characters, not typeset as math.
+      code = paste0("\\texttt{",
                     .md_escape_tex(.md_unmask_math(xml2::xml_text(k), spans)),
-                    "}}"),
+                    "}"),
       # No \href in MicroTeX: keep the link text, drop the destination.
-      link          = .md_inline_to_tex(k, spans),
+      link          = .md_inline_to_tex(k, spans, bare),
       # Images cannot be drawn by a text grob; keep the alt text.
-      image         = .md_inline_to_tex(k, spans),
-      # A soft line break is a word space. It has to be an explicit
-      # \text{ } box: the output is consumed in math mode, where a bare
-      # space between two \text{} runs is discarded outright -- the
-      # words either side would be run together ("islong").
-      softbreak     = "\\text{ }",
+      image         = .md_inline_to_tex(k, spans, bare),
+      # A soft line break is a word space. In math mode it needs to be an
+      # explicit \text{ } box, because a bare space between two \text{}
+      # runs is discarded there and the words either side would run
+      # together ("islong"). Inside a text command a plain space is
+      # already a space, and \text{ } would reset the style.
+      softbreak     = if (bare) " " else "\\text{ }",
       linebreak     = "\\\\",
       # html_inline and anything else unknown: drop the markup, keep text.
       html_inline   = "",
-      .md_text_node(xml2::xml_text(k), spans)
+      .md_text_node(xml2::xml_text(k), spans, bare = bare)
     )
   }, character(1))
   paste(parts, collapse = "")

@@ -3,6 +3,10 @@
 - New `markdown_grob()` and `grid.markdown()` render markdown with inline LaTeX math.
 - New `markdown_box_grob()` renders block markdown in a padded, filled box.
 - `max_width` is now honoured by content containing `\\` line breaks.
+- New `geom_markdown()` and `element_markdown()` for ggplot2.
+- New `justify` argument stretches wrapped lines to fill `max_width`.
+- Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room
+  and they overlapped the axis title.
 
 # gridmicrotex 0.0.5
 
