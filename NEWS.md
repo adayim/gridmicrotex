@@ -9,6 +9,9 @@
 - `markdown_box_grob()` draws block images (png/jpeg).
 - Task list items render a checkbox; table column alignment and `1)` list
   delimiters are honoured.
+- Bug fix: checked/unchecked task boxes rendered at different sizes.
+- Bug fix: list markers floated above their text instead of on the baseline.
+- Bug fix: code blocks rendered in the body font, mangling `<-`; now monospace.
 - Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room
   and they overlapped the axis title.
 

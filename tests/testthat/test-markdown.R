@@ -273,12 +273,34 @@ test_that("GFM task list items get a checkbox marker", {
               .md_parse_blocks("- [ ] todo\n- [x] done\n- plain"))[[1]]
   expect_equal(l$checked, c(FALSE, TRUE, NA))
   expect_equal(.md_list_marker(FALSE, 1, 1, FALSE, FALSE), "\\square")
-  expect_equal(.md_list_marker(FALSE, 1, 2, FALSE, TRUE), "\\boxtimes")
+  expect_equal(.md_list_marker(FALSE, 1, 2, FALSE, TRUE), "\\blacksquare")
   expect_equal(.md_list_marker(FALSE, 1, 3, FALSE, NA), "\\bullet")
-  # Both states must be single glyphs, or the item text would not line up.
-  for (m in c("\\square", "\\boxtimes")) {
-    expect_equal(nrow(latex_grob(m, input_mode = "math")$layout_df), 1L)
-  }
+  # The two checkbox states must be single glyphs AND the same size, or a
+  # task list looks ragged. \square and \blacksquare are both 14x13;
+  # \boxtimes (the more literal "checked") is 18x16 and was rejected for
+  # exactly this reason.
+  d_unchecked <- latex_dims("\\square", input_mode = "math")
+  d_checked   <- latex_dims("\\blacksquare", input_mode = "math")
+  expect_equal(nrow(latex_grob("\\square", input_mode = "math")$layout_df), 1L)
+  expect_equal(nrow(latex_grob("\\blacksquare", input_mode = "math")$layout_df), 1L)
+  expect_equal(as.numeric(d_checked$width), as.numeric(d_unchecked$width))
+  expect_equal(as.numeric(d_checked$height), as.numeric(d_unchecked$height))
+})
+
+test_that("list markers baseline-align with the first line of text", {
+  # A marker is shifted down from the line top so its baseline sits on the
+  # text baseline; top-aligning left bullets floating above the text.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_box_grob("- a bullet item", width = grid::unit(3, "in"),
+                         gp = grid::gpar(fontsize = 13))
+  kids <- grid::makeContent(g)$children
+  content <- kids[[length(kids)]]$children
+  # First child is the marker, second the item text. The marker's top
+  # (its vp$y is the top edge, vjust = 1) must sit below the text's top.
+  marker_y <- grid::convertY(content[[1]]$vp$y, "bigpts", valueOnly = TRUE)
+  text_y   <- grid::convertY(content[[2]]$vp$y, "bigpts", valueOnly = TRUE)
+  # Larger y = higher on the page; the marker top is pushed down, so lower.
+  expect_lt(marker_y, text_y)
 })
 
 test_that("table column alignment is carried into the tabular spec", {

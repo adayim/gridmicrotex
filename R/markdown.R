@@ -452,12 +452,14 @@ grid.markdown <- function(md, ...) {
 # Marker text for list item `n`.
 #
 # `checked` is NA for an ordinary item, TRUE/FALSE for a GFM task list
-# item. \square and \boxtimes are single glyphs in MicroTeX (\Box is not
-# -- it typesets the letters), so the two states stay the same size and
-# the item text lines up either way.
+# item. The two checkbox states must be the SAME glyph size or the list
+# looks ragged: \square (empty) and \blacksquare (filled) are both 14x13
+# in the math font, whereas the more literal \boxtimes is 18x16 and left
+# every checked row visibly larger. (\Box is not a glyph at all -- it
+# typesets the three letters "Box".)
 .md_list_marker <- function(ordered, start, n, paren = FALSE, checked = NA) {
   if (!is.na(checked)) {
-    return(if (isTRUE(checked)) "\\boxtimes" else "\\square")
+    return(if (isTRUE(checked)) "\\blacksquare" else "\\square")
   }
   if (ordered) {
     paste0("\\text{", start + n - 1L, if (paren) ")" else ".", "}")
@@ -506,11 +508,15 @@ grid.markdown <- function(md, ...) {
       d2 <- latex_dims(tex, max_width = target, input_mode = "math", gp = gp)
       if (as.numeric(d2$width) <= width) {
         return(list(w = as.numeric(d2$width), h = as.numeric(d2$height),
-                    mw = target))
+                    bl = as.numeric(d2$baseline), mw = target))
       }
     }
   }
-  list(w = w, h = as.numeric(d$height), mw = width)
+  # `bl` is the baseline as bigpts up from the bottom of the box, so
+  # (h - bl) is the baseline measured down from the top -- what the list
+  # layout needs to line a marker up with its text.
+  list(w = w, h = as.numeric(d$height), bl = as.numeric(d$baseline),
+       mw = width)
 }
 
 # Build the grob for a run of LaTeX at a given offset. `y` is the
@@ -573,12 +579,19 @@ grid.markdown <- function(md, ...) {
       y <- y + m$h
 
     } else if (identical(blk$type, "code_block")) {
+      # Code must render in a monospace font. \texttt switches MicroTeX's
+      # internal style, but the \text{} content is drawn with the resolved
+      # system font, which is the sans body font unless told otherwise --
+      # and in a proportional font "<-" comes out misshapen, the "<" set
+      # as a raised math relation while the "-" is a low text hyphen.
+      gp_code <- gp
+      gp_code$fontfamily <- "mono"
       for (ln in blk$lines) {
         tex <- paste0("\\texttt{\\text{", .md_escape_tex(ln), "}}")
         # An empty source line still occupies a row.
         if (!nzchar(ln)) tex <- "\\texttt{\\text{ }}"
-        m <- .md_measure(tex, 0, gp)
-        add(.md_item(.md_run_grob(tex, indent, y, 0, gp),
+        m <- .md_measure(tex, 0, gp_code)
+        add(.md_item(.md_run_grob(tex, indent, y, 0, gp_code),
                      indent, y, m$w, code_lh))
         y <- y + code_lh
       }
@@ -663,6 +676,12 @@ grid.markdown <- function(md, ...) {
 
     } else if (identical(blk$type, "list")) {
       gap_item <- if (isTRUE(blk$tight)) 0.25 * fontsize else gap_para
+      # Markers baseline-align to the first line of item text. A reference
+      # text line gives that baseline (measured down from the top of the
+      # line). Without this the marker is top-aligned, so a bullet floats
+      # near the top of the line instead of sitting on the text baseline.
+      refd <- latex_dims("\\text{Ag}", input_mode = "math", gp = gp)
+      ref_bl_top <- as.numeric(refd$height) - as.numeric(refd$baseline)
       for (j in seq_along(blk$items)) {
         if (j > 1L) y <- y + gap_item
         marker <- .md_list_marker(blk$ordered, blk$start, j,
@@ -670,6 +689,9 @@ grid.markdown <- function(md, ...) {
                                   checked = if (is.null(blk$checked)) NA
                                             else blk$checked[j])
         mm <- .md_measure(marker, 0, gp)
+        # Shift the marker down so its own baseline lands on the text
+        # baseline of the first line.
+        y_marker <- y + ref_bl_top - (mm$h - mm$bl)
         # Hanging indent: the marker sits at the current indent and the
         # item body is measured at the reduced width, so continuation
         # lines line up under the text rather than under the marker.
@@ -679,13 +701,15 @@ grid.markdown <- function(md, ...) {
         body_indent <- indent + mm$w + 0.4 * fontsize
         inner <- .md_layout(blk$items[[j]], width, gp, fontsize,
                             indent = body_indent, first = TRUE)
-        add(.md_item(.md_run_grob(marker, indent, y, 0, gp),
-                     indent, y, mm$w, mm$h))
+        add(.md_item(.md_run_grob(marker, indent, y_marker, 0, gp),
+                     indent, y_marker, mm$w, mm$h))
         for (it in inner$items) {
           it$grob$vp$y <- it$grob$vp$y - grid::unit(y, "bigpts")
           add(.md_item(it$grob, it$x, y + it$y, it$w, it$h))
         }
-        y <- y + max(mm$h, inner$height)
+        # Advance past whichever reaches lower: the body, or a marker that
+        # was pushed below it.
+        y <- y + max(inner$height, (y_marker - y) + mm$h)
       }
     }
   }
