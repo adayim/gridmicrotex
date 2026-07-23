@@ -119,8 +119,8 @@
 # `spans` carries the masked math so text nodes can restore it. Node
 # types cmark can emit that MicroTeX has no equivalent for degrade to
 # their text content rather than emitting an unknown command -- MicroTeX
-# renders unknown commands as literal glyphs instead of erroring, so a
-# stray \href would silently typeset the letters "href".
+# does not error on an unknown command, it typesets the command name as
+# red glyphs, so a stray \href would print a red "href" in the label.
 .md_inline_to_tex <- function(node, spans, bare = FALSE) {
   kids <- xml2::xml_contents(node)
   if (length(kids) == 0L) return("")

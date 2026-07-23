@@ -236,9 +236,9 @@ which positions the caption above or below the float regardless of
 source order.
 }
 
-Anything not in this list is passed to MicroTeX unchanged. Unknown
-commands render as literal text, which is useful for spotting
-unsupported markup.
+Anything not in this list is passed to MicroTeX unchanged. An unknown
+command is not an error: MicroTeX typesets its name in red, which
+makes unsupported markup easy to spot in the output.
 }
 
 \subsection{Parallelism}{
