@@ -1,3 +1,7 @@
+# gridmicrotex (development version)
+
+- New `markdown_grob()` and `grid.markdown()` render markdown with inline LaTeX math.
+
 # gridmicrotex 0.0.5
 
 - Bug fix: correct `grobX()`/`grobY()` boundary points.

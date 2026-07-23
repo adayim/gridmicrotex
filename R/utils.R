@@ -1,3 +1,190 @@
+# Authoritative list: every environment MicroTeX registers in
+# src/MicroTeX/lib/macro/macro_def.cpp env(...) calls, plus the
+# starred variants (amsmath's no-equation-numbering forms) that users
+# commonly type and that MicroTeX accepts without separate registration.
+# Hand-synced to the C++ registrations -- a gap here corrupts mixed-mode
+# input, so update both together.
+.MATH_ENVS <- c(
+  # array family
+  "array", "tabular", "tabular*",
+  # matrix family
+  "matrix", "smallmatrix",
+  "pmatrix", "bmatrix", "Bmatrix", "vmatrix", "Vmatrix",
+  # equation / display
+  "equation", "equation*", "math", "displaymath",
+  # amsmath alignments
+  "align", "align*", "flalign", "flalign*",
+  "alignat", "alignat*", "aligned",
+  "alignedat", "alignedat*",
+  "eqnarray", "eqnarray*",
+  "multline", "multline*",
+  # paragraph-like
+  "gather", "gather*", "gathered",
+  "split", "cases", "rcases",
+  # list environments
+  "itemize", "enumerate"
+)
+
+# Find \end{env} matching \begin{env}, honoring nesting of the same env.
+# `from` is the index just past the opening \begin{env}; the return value
+# is the index of the backslash that starts \end{env}, or NA_integer_.
+.find_env_close <- function(chars, n, from, env) {
+  open_tag  <- paste0("\\begin{", env, "}")
+  close_tag <- paste0("\\end{",   env, "}")
+  ol <- nchar(open_tag); cl <- nchar(close_tag)
+  depth <- 1L; k <- from
+  while (k <= n) {
+    if (chars[k] == "\\") {
+      if (k + cl - 1L <= n &&
+          paste(chars[k:(k + cl - 1L)], collapse = "") == close_tag) {
+        depth <- depth - 1L
+        if (depth == 0L) return(k)
+        k <- k + cl; next
+      }
+      if (k + ol - 1L <= n &&
+          paste(chars[k:(k + ol - 1L)], collapse = "") == open_tag) {
+        depth <- depth + 1L
+        k <- k + ol; next
+      }
+      k <- k + 2L; next   # skip any other \x escape
+    }
+    k <- k + 1L
+  }
+  NA_integer_
+}
+
+# Single source of truth for "where is the math in this string".
+#
+# Walks `tex` once and returns its maximal math regions: `$...$`,
+# `$$...$$`, `\(...\)`, `\[...\]`, and `\begin{env}...\end{env}` for
+# every environment in .MATH_ENVS. Any character not covered by a
+# returned span is prose.
+#
+# Both latex_wrap() (which wraps the prose in \text{}) and
+# .md_mask_math() (which hides the math from the markdown parser) are
+# built on this, so the two can never disagree about what counts as math.
+#
+# Returns a list of records:
+#   outer_start, outer_end  full span, delimiters included
+#   inner_start, inner_end  content between the delimiters. For "env"
+#                           spans this equals the outer range, because
+#                           the environment is passed through verbatim.
+#                           inner_end < inner_start means empty content.
+#   display                 TRUE for $$...$$ and \[...\]
+#   kind                    "dollar1"|"dollar2"|"paren"|"bracket"|"env"
+#   closed                  FALSE when the delimiter ran off the end
+.scan_math_spans <- function(tex) {
+  chars <- strsplit(tex, "", fixed = TRUE)[[1]]
+  n <- length(chars)
+  spans <- list()
+  i <- 1L
+
+  add_span <- function(outer_start, outer_end, inner_start, inner_end,
+                       display, kind, closed) {
+    spans[[length(spans) + 1L]] <<- list(
+      outer_start = outer_start, outer_end = outer_end,
+      inner_start = inner_start, inner_end = inner_end,
+      display = display, kind = kind, closed = closed
+    )
+  }
+
+  # Consume a delimited math run starting at `from` (first content
+  # character). `close_fn` reports the length of the closing delimiter at
+  # a position, or 0L when it does not close there.
+  scan_to_close <- function(from, close_fn) {
+    k <- from
+    while (k <= n) {
+      # An escaped delimiter never closes the run.
+      if (chars[k] == "\\" && k < n && chars[k + 1L] %in% c("$", "\\")) {
+        k <- k + 2L; next
+      }
+      cl <- close_fn(k)
+      if (cl > 0L) return(c(k, cl))
+      k <- k + 1L
+    }
+    c(NA_integer_, 0L)
+  }
+
+  while (i <= n) {
+    ch <- chars[i]
+    c2 <- if (i < n) chars[i + 1L] else ""
+
+    # Escaped literal in prose -- never opens math.
+    if (ch == "\\" && c2 %in% c("$", "\\", "{", "}", "%", "#", "&", "_")) {
+      i <- i + 2L; next
+    }
+
+    # \[ ... \]  (display)
+    if (ch == "\\" && c2 == "[") {
+      r <- scan_to_close(i + 2L, function(k) {
+        if (chars[k] == "\\" && k < n && chars[k + 1L] == "]") 2L else 0L
+      })
+      if (is.na(r[1])) {
+        add_span(i, n, i + 2L, n, TRUE, "bracket", FALSE); break
+      }
+      add_span(i, r[1] + r[2] - 1L, i + 2L, r[1] - 1L, TRUE, "bracket", TRUE)
+      i <- r[1] + r[2]; next
+    }
+
+    # \( ... \)  (inline)
+    if (ch == "\\" && c2 == "(") {
+      r <- scan_to_close(i + 2L, function(k) {
+        if (chars[k] == "\\" && k < n && chars[k + 1L] == ")") 2L else 0L
+      })
+      if (is.na(r[1])) {
+        add_span(i, n, i + 2L, n, FALSE, "paren", FALSE); break
+      }
+      add_span(i, r[1] + r[2] - 1L, i + 2L, r[1] - 1L, FALSE, "paren", TRUE)
+      i <- r[1] + r[2]; next
+    }
+
+    # \begin{env} ... \end{env} for known math environments
+    if (ch == "\\" && i + 5L <= n &&
+        paste(chars[i:(i + 5L)], collapse = "") == "\\begin") {
+      rest <- paste(chars[i:min(i + 64L, n)], collapse = "")
+      m <- regmatches(rest, regexec("^\\\\begin\\{([^}]+)\\}", rest))[[1]]
+      if (length(m) == 2 && m[2] %in% .MATH_ENVS) {
+        env <- m[2]
+        start_inner <- i + nchar(m[1])
+        j <- .find_env_close(chars, n, start_inner, env)
+        if (!is.na(j)) {
+          close_len <- nchar(paste0("\\end{", env, "}"))
+          e <- j + close_len - 1L
+          # Environments pass through verbatim: inner == outer.
+          add_span(i, e, i, e, FALSE, "env", TRUE)
+          i <- e + 1L; next
+        }
+      }
+    }
+
+    # $$ ... $$  (display)
+    if (ch == "$" && c2 == "$") {
+      r <- scan_to_close(i + 2L, function(k) {
+        if (chars[k] == "$" && k < n && chars[k + 1L] == "$") 2L else 0L
+      })
+      if (is.na(r[1])) {
+        add_span(i, n, i + 2L, n, TRUE, "dollar2", FALSE); break
+      }
+      add_span(i, r[1] + r[2] - 1L, i + 2L, r[1] - 1L, TRUE, "dollar2", TRUE)
+      i <- r[1] + r[2]; next
+    }
+
+    # $ ... $  (inline)
+    if (ch == "$") {
+      r <- scan_to_close(i + 1L, function(k) if (chars[k] == "$") 1L else 0L)
+      if (is.na(r[1])) {
+        add_span(i, n, i + 1L, n, FALSE, "dollar1", FALSE); break
+      }
+      add_span(i, r[1], i + 1L, r[1] - 1L, FALSE, "dollar1", TRUE)
+      i <- r[1] + 1L; next
+    }
+
+    i <- i + 1L
+  }
+
+  spans
+}
+
 #' Wrap standard text for math-first LaTeX renderers
 #'
 #' @description
@@ -52,7 +239,7 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
     stop("`tex` must not contain NA values.", call. = FALSE)
   }
   if (input_mode == "math") return(tex)
-  # The state-machine below operates on a single string; recurse so the
+  # The scanner below operates on a single string; recurse so the
   # documented "vector in, vector of the same length out" contract holds.
   if (length(tex) != 1L) {
     return(vapply(tex, latex_wrap, character(1),
@@ -60,152 +247,41 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   }
   if (!nzchar(tex)) return(tex)
 
-  # Authoritative list: every environment MicroTeX registers in
-  # src/MicroTeX/lib/macro/macro_def.cpp env(...) calls, plus the
-  # starred variants (amsmath's no-equation-numbering forms) that users
-  # commonly type and that MicroTeX accepts without separate registration.
-  MATH_ENVS <- c(
-    # array family
-    "array", "tabular", "tabular*",
-    # matrix family
-    "matrix", "smallmatrix",
-    "pmatrix", "bmatrix", "Bmatrix", "vmatrix", "Vmatrix",
-    # equation / display
-    "equation", "equation*", "math", "displaymath",
-    # amsmath alignments
-    "align", "align*", "flalign", "flalign*",
-    "alignat", "alignat*", "aligned",
-    "alignedat", "alignedat*",
-    "eqnarray", "eqnarray*",
-    "multline", "multline*",
-    # paragraph-like
-    "gather", "gather*", "gathered",
-    "split", "cases", "rcases",
-    # list environments
-    "itemize", "enumerate"
-  )
-
-  chars <- strsplit(tex, "", fixed = TRUE)[[1]]
-  n <- length(chars)
-
-  TEXT <- 1L; DOLLAR_INLINE <- 2L; DOLLAR_BLOCK <- 3L
-  PAREN <- 4L; BRACKET <- 5L
-
-  state <- TEXT
-  buf <- character(0)
+  # Math regions come from the shared scanner; everything between them is
+  # prose. See .scan_math_spans() for the delimiter rules.
+  spans <- .scan_math_spans(tex)
+  nch <- nchar(tex)
   out <- character(0)
-  i <- 1L
+  pos <- 1L
+  unclosed <- FALSE
 
-  flush_text <- function() {
-    if (length(buf)) {
-      s <- paste(buf, collapse = "")
+  emit_text <- function(s) {
+    if (nzchar(s)) {
       s <- gsub("\n", " \\\\\\\\", s, perl = TRUE)   # was " \\\\\\\\ "
       out <<- c(out, paste0("\\text{", s, "}"))
-      buf <<- character(0)
-    }
-  }
-  flush_math <- function(display = FALSE) {
-    if (length(buf)) {
-      s <- paste(buf, collapse = "")
-      out <<- c(out, if (display) paste0("\\displaystyle ", s) else s)
-      buf <<- character(0)
     }
   }
 
-  # Find \end{env} matching \begin{env}, honoring nesting of the same env.
-  find_env_close <- function(from, env) {
-    open_tag  <- paste0("\\begin{",  env, "}")
-    close_tag <- paste0("\\end{",    env, "}")
-    ol <- nchar(open_tag); cl <- nchar(close_tag)
-    depth <- 1L; k <- from
-    while (k <= n) {
-      if (chars[k] == "\\") {
-        if (k + cl - 1L <= n &&
-            paste(chars[k:(k + cl - 1L)], collapse = "") == close_tag) {
-          depth <- depth - 1L
-          if (depth == 0L) return(k)
-          k <- k + cl; next
-        }
-        if (k + ol - 1L <= n &&
-            paste(chars[k:(k + ol - 1L)], collapse = "") == open_tag) {
-          depth <- depth + 1L
-          k <- k + ol; next
-        }
-        k <- k + 2L; next   # skip any other \x escape
+  for (sp in spans) {
+    if (sp$outer_start > pos) {
+      emit_text(substr(tex, pos, sp$outer_start - 1L))
+    }
+    if (identical(sp$kind, "env")) {
+      # Environments pass through verbatim, delimiters included.
+      out <- c(out, substr(tex, sp$outer_start, sp$outer_end))
+    } else if (sp$inner_end >= sp$inner_start) {
+      inner <- substr(tex, sp$inner_start, sp$inner_end)
+      if (nzchar(inner)) {
+        out <- c(out,
+                 if (sp$display) paste0("\\displaystyle ", inner) else inner)
       }
-      k <- k + 1L
     }
-    NA_integer_
+    if (!sp$closed) unclosed <- TRUE
+    pos <- sp$outer_end + 1L
   }
+  if (pos <= nch) emit_text(substr(tex, pos, nch))
 
-  while (i <= n) {
-    ch <- chars[i]
-    c2 <- if (i < n) chars[i + 1L] else ""
-
-    if (state == TEXT) {
-      # Escaped literal in text
-      if (ch == "\\" && c2 %in% c("$", "\\", "{", "}", "%", "#", "&", "_")) {
-        buf <- c(buf, ch, c2); i <- i + 2L; next
-      }
-      # \[ ... \]
-      if (ch == "\\" && c2 == "[") { flush_text(); state <- BRACKET;       i <- i + 2L; next }
-      # \( ... \)
-      if (ch == "\\" && c2 == "(") { flush_text(); state <- PAREN;         i <- i + 2L; next }
-
-      # \begin{env}
-      if (ch == "\\" && i + 5L <= n &&
-          paste(chars[i:(i + 5L)], collapse = "") == "\\begin") {
-        rest <- paste(chars[i:min(i + 64L, n)], collapse = "")
-        m <- regmatches(rest, regexec("^\\\\begin\\{([^}]+)\\}", rest))[[1]]
-        if (length(m) == 2 && m[2] %in% MATH_ENVS) {
-          env <- m[2]
-          start_inner <- i + nchar(m[1])
-          j <- find_env_close(start_inner, env)
-          if (!is.na(j)) {
-            flush_text()
-            close_len <- nchar(paste0("\\end{", env, "}"))
-            out <- c(out, paste(chars[i:(j + close_len - 1L)], collapse = ""))
-            i <- j + close_len; next
-          }
-        }
-      }
-
-      # $$ ... $$
-      if (ch == "$" && c2 == "$") { flush_text(); state <- DOLLAR_BLOCK;  i <- i + 2L; next }
-      # $ ... $
-      if (ch == "$")              { flush_text(); state <- DOLLAR_INLINE; i <- i + 1L; next }
-
-      buf <- c(buf, ch); i <- i + 1L; next
-    }
-
-    # --- math states ---
-    if (state == DOLLAR_INLINE) {
-      if (ch == "\\" && c2 %in% c("$", "\\")) { buf <- c(buf, ch, c2); i <- i + 2L; next }
-      if (ch == "$") { flush_math(FALSE); state <- TEXT; i <- i + 1L; next }
-      buf <- c(buf, ch); i <- i + 1L; next
-    }
-    if (state == DOLLAR_BLOCK) {
-      if (ch == "\\" && c2 %in% c("$", "\\")) { buf <- c(buf, ch, c2); i <- i + 2L; next }
-      if (ch == "$" && c2 == "$") { flush_math(TRUE); state <- TEXT; i <- i + 2L; next }
-      buf <- c(buf, ch); i <- i + 1L; next
-    }
-    if (state == PAREN) {
-      if (ch == "\\" && c2 == "\\") { buf <- c(buf, ch, c2); i <- i + 2L; next }
-      if (ch == "\\" && c2 == ")")  { flush_math(FALSE); state <- TEXT; i <- i + 2L; next }
-      buf <- c(buf, ch); i <- i + 1L; next
-    }
-    if (state == BRACKET) {
-      if (ch == "\\" && c2 == "\\") { buf <- c(buf, ch, c2); i <- i + 2L; next }
-      if (ch == "\\" && c2 == "]")  { flush_math(TRUE); state <- TEXT; i <- i + 2L; next }
-      buf <- c(buf, ch); i <- i + 1L; next
-    }
-  }
-
-  if (state == TEXT) {
-    flush_text()
-  } else {
-    display <- state %in% c(DOLLAR_BLOCK, BRACKET)
-    flush_math(display)
+  if (unclosed) {
     warning("Unclosed math delimiter detected and auto-closed at end of string.")
   }
 

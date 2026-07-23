@@ -23,11 +23,13 @@ LinkingTo:
     Rcpp,
     systemfonts
 Imports:
+    commonmark,
     grDevices,
     grid,
     Rcpp,
     systemfonts,
-    tools
+    tools,
+    xml2
 Suggests:
     ggplot2 (>= 4.0.0),
     knitr,
