@@ -274,6 +274,16 @@ grid.markdown <- function(md, ...) {
   out <- list()
   for (nd in nodes) {
     nm <- xml2::xml_name(nd)
+    # A paragraph holding nothing but images is a block image, which is
+    # how markdown renderers treat it. Handled before the switch because
+    # one paragraph can yield several image blocks.
+    if (identical(nm, "paragraph")) {
+      imgs <- .md_image_blocks(nd, spans)
+      if (!is.null(imgs)) {
+        out <- c(out, imgs)
+        next
+      }
+    }
     blk <- switch(nm,
       paragraph = list(type = "paragraph",
                        tex = .md_inline_to_tex(nd, spans)),
@@ -320,12 +330,59 @@ grid.markdown <- function(md, ...) {
   ordered <- identical(xml2::xml_attr(nd, "type"), "ordered")
   start <- suppressWarnings(as.integer(xml2::xml_attr(nd, "start")))
   if (is.na(start)) start <- 1L
-  items <- lapply(xml2::xml_children(nd), function(it) {
+  kids <- xml2::xml_children(nd)
+  items <- lapply(kids, function(it) {
     .md_blocks(xml2::xml_children(it), spans)
   })
+  # A GFM task list item arrives as <tasklist completed="..."> in place
+  # of <item>; NA marks an ordinary item with no checkbox.
+  checked <- vapply(kids, function(it) {
+    if (!identical(xml2::xml_name(it), "tasklist")) return(NA)
+    identical(xml2::xml_attr(it, "completed"), "true")
+  }, logical(1))
   list(type = "list", ordered = ordered, start = start,
+       # `1)` is as valid as `1.` in CommonMark, and cmark reports which
+       # the author used.
+       paren = identical(xml2::xml_attr(nd, "delim"), "paren"),
        tight = identical(xml2::xml_attr(nd, "tight"), "true"),
-       items = items)
+       items = items, checked = checked)
+}
+
+# Return one image block per image when a paragraph contains nothing but
+# images, otherwise NULL so the paragraph is rendered normally. Images
+# mixed into a sentence stay inline, where only their alt text survives.
+.md_image_blocks <- function(nd, spans) {
+  kids <- xml2::xml_children(nd)
+  if (length(kids) == 0L) return(NULL)
+  nms <- xml2::xml_name(kids)
+  if (!all(nms %in% c("image", "softbreak"))) return(NULL)
+  lapply(which(nms == "image"), function(i) {
+    im <- kids[[i]]
+    list(type = "image",
+         path = xml2::xml_attr(im, "destination"),
+         alt = .md_inline_to_tex(im, spans))
+  })
+}
+
+# Load a raster image. Returns NULL -- and the caller falls back to the
+# alt text -- when the file is missing, the format is unsupported, or the
+# reader package is not installed. png and jpeg are Suggests, so images
+# degrade rather than becoming a hard dependency of the whole package.
+.md_image_raster <- function(path) {
+  if (is.null(path) || is.na(path) || !nzchar(path)) return(NULL)
+  if (!file.exists(path)) return(NULL)
+  ext <- tolower(tools::file_ext(path))
+  reader <- switch(ext,
+    png = if (requireNamespace("png", quietly = TRUE)) png::readPNG else NULL,
+    jpg = ,
+    jpeg = if (requireNamespace("jpeg", quietly = TRUE)) jpeg::readJPEG else NULL,
+    NULL
+  )
+  if (is.null(reader)) return(NULL)
+  ras <- tryCatch(reader(path), error = function(e) NULL)
+  if (is.null(ras) || length(dim(ras)) < 2L) return(NULL)
+  list(raster = grDevices::as.raster(ras),
+       w_px = dim(ras)[2], h_px = dim(ras)[1])
 }
 
 # Build a `tabular` from the GFM table extension. MicroTeX supports
@@ -354,7 +411,21 @@ grid.markdown <- function(md, ...) {
   pad <- function(cs) c(cs, rep("", ncol - length(cs)))
   line <- function(cs) paste(pad(cs), collapse = " & ")
 
-  parts <- c("\\begin{tabular}{", strrep("l", ncol), "}", "\\thickhline ")
+  # Column alignment from `|:--|:-:|--:|`. cmark records it on the header
+  # cells only, and MicroTeX honours l/c/r in the tabular spec.
+  spec <- rep("l", ncol)
+  hdr <- Filter(function(r) identical(xml2::xml_name(r), "table_header"), rows)
+  if (length(hdr)) {
+    a <- vapply(xml2::xml_children(hdr[[1]]), function(cell) {
+      switch(xml2::xml_attr(cell, "align") %||% "left",
+             center = "c", right = "r", "l")
+    }, character(1))
+    a <- a[!is.na(a)]
+    if (length(a)) spec[seq_len(min(ncol, length(a)))] <- a[seq_len(min(ncol, length(a)))]
+  }
+
+  parts <- c("\\begin{tabular}{", paste(spec, collapse = ""), "}",
+             "\\thickhline ")
   if (!is.null(header)) {
     parts <- c(parts, line(header), "\\\\", "\\hline ")
   }
@@ -379,9 +450,17 @@ grid.markdown <- function(md, ...) {
 }
 
 # Marker text for list item `n`.
-.md_list_marker <- function(ordered, start, n) {
+#
+# `checked` is NA for an ordinary item, TRUE/FALSE for a GFM task list
+# item. \square and \boxtimes are single glyphs in MicroTeX (\Box is not
+# -- it typesets the letters), so the two states stay the same size and
+# the item text lines up either way.
+.md_list_marker <- function(ordered, start, n, paren = FALSE, checked = NA) {
+  if (!is.na(checked)) {
+    return(if (isTRUE(checked)) "\\boxtimes" else "\\square")
+  }
   if (ordered) {
-    paste0("\\text{", start + n - 1L, ".}")
+    paste0("\\text{", start + n - 1L, if (paren) ")" else ".", "}")
   } else {
     "\\bullet"
   }
@@ -514,6 +593,38 @@ grid.markdown <- function(md, ...) {
                    indent, y, m$w, m$h))
       y <- y + m$h
 
+    } else if (identical(blk$type, "image")) {
+      img <- .md_image_raster(blk$path)
+      if (is.null(img)) {
+        # Missing file, unsupported format, or png/jpeg not installed:
+        # show the alt text so the reader still learns what belongs here.
+        if (nzchar(blk$alt)) {
+          m <- .md_measure(blk$alt, avail, gp)
+          add(.md_item(.md_run_grob(blk$alt, indent, y, m$mw, gp),
+                       indent, y, m$w, m$h))
+          y <- y + m$h
+        }
+      } else {
+        # Pixels are read at 96 dpi, the usual screen assumption, and the
+        # image is scaled down to fit the column but never blown up past
+        # its natural size.
+        nat_w <- img$w_px * 72 / 96
+        iw <- min(nat_w, avail)
+        ih <- iw * img$h_px / img$w_px
+        add(.md_item(
+          grid::rasterGrob(
+            img$raster,
+            x = grid::unit(indent, "bigpts"),
+            y = grid::unit(1, "npc") - grid::unit(y, "bigpts"),
+            width = grid::unit(iw, "bigpts"),
+            height = grid::unit(ih, "bigpts"),
+            hjust = 0, vjust = 1, interpolate = TRUE
+          ),
+          indent, y, iw, ih
+        ))
+        y <- y + ih
+      }
+
     } else if (identical(blk$type, "thematic_break")) {
       h <- 0.5 * fontsize
       rule <- grid::rectGrob(
@@ -554,7 +665,10 @@ grid.markdown <- function(md, ...) {
       gap_item <- if (isTRUE(blk$tight)) 0.25 * fontsize else gap_para
       for (j in seq_along(blk$items)) {
         if (j > 1L) y <- y + gap_item
-        marker <- .md_list_marker(blk$ordered, blk$start, j)
+        marker <- .md_list_marker(blk$ordered, blk$start, j,
+                                  paren = isTRUE(blk$paren),
+                                  checked = if (is.null(blk$checked)) NA
+                                            else blk$checked[j])
         mm <- .md_measure(marker, 0, gp)
         # Hanging indent: the marker sits at the current indent and the
         # item body is measured at the reduced width, so continuation

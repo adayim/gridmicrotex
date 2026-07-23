@@ -32,7 +32,9 @@ Imports:
     xml2
 Suggests:
     ggplot2 (>= 4.0.0),
+    jpeg,
     knitr,
+    png,
     ragg,
     rmarkdown,
     S7,

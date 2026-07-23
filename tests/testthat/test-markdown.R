@@ -262,3 +262,97 @@ test_that("a raw HTML block is dropped, not typeset", {
   expect_false(grepl("<div", paste(stats::na.omit(g$layout_df$text),
                                    collapse = ""), fixed = TRUE))
 })
+
+# --- CommonMark coverage gaps ------------------------------------------
+
+test_that("GFM task list items get a checkbox marker", {
+  # cmark emits <tasklist completed="..."> in place of <item>; without
+  # handling it the checkbox is silently dropped and a task list looks
+  # like an ordinary bullet list.
+  l <- Filter(function(b) b$type == "list",
+              .md_parse_blocks("- [ ] todo\n- [x] done\n- plain"))[[1]]
+  expect_equal(l$checked, c(FALSE, TRUE, NA))
+  expect_equal(.md_list_marker(FALSE, 1, 1, FALSE, FALSE), "\\square")
+  expect_equal(.md_list_marker(FALSE, 1, 2, FALSE, TRUE), "\\boxtimes")
+  expect_equal(.md_list_marker(FALSE, 1, 3, FALSE, NA), "\\bullet")
+  # Both states must be single glyphs, or the item text would not line up.
+  for (m in c("\\square", "\\boxtimes")) {
+    expect_equal(nrow(latex_grob(m, input_mode = "math")$layout_df), 1L)
+  }
+})
+
+test_that("table column alignment is carried into the tabular spec", {
+  tb <- Filter(function(b) b$type == "table",
+               .md_parse_blocks("| a | b | c |\n|:--|:-:|--:|\n| 1 | 2 | 3 |"))[[1]]
+  expect_match(tb$tex, "\\begin{tabular}{lcr}", fixed = TRUE)
+  # Default when the source gives no alignment.
+  tb2 <- Filter(function(b) b$type == "table",
+                .md_parse_blocks("| a | b |\n|---|---|\n| 1 | 2 |"))[[1]]
+  expect_match(tb2$tex, "\\begin{tabular}{ll}", fixed = TRUE)
+})
+
+test_that("ordered lists keep the delimiter the author used", {
+  period <- Filter(function(b) b$type == "list",
+                   .md_parse_blocks("1. one\n2. two"))[[1]]
+  paren <- Filter(function(b) b$type == "list",
+                  .md_parse_blocks("1) one\n2) two"))[[1]]
+  expect_false(period$paren)
+  expect_true(paren$paren)
+  expect_equal(.md_list_marker(TRUE, 1, 1, FALSE, NA), "\\text{1.}")
+  expect_equal(.md_list_marker(TRUE, 1, 1, TRUE, NA), "\\text{1)}")
+})
+
+test_that("a paragraph of only images becomes image blocks", {
+  skip_if_not_installed("png")
+  f <- tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(20, 40, 3)), f)
+  on.exit(unlink(f), add = TRUE)
+
+  types <- vapply(.md_parse_blocks(paste0("Before\n\n![alt](", f, ")\n\nAfter")),
+                  function(b) b$type, character(1))
+  expect_equal(types, c("paragraph", "image", "paragraph"))
+
+  r <- .md_image_raster(f)
+  expect_false(is.null(r))
+  expect_equal(c(r$w_px, r$h_px), c(40, 20))
+})
+
+test_that("an image mixed into a sentence stays inline as alt text", {
+  # Only a paragraph containing nothing but images is a block image.
+  types <- vapply(.md_parse_blocks("text ![alt](x.png) more"),
+                  function(b) b$type, character(1))
+  expect_equal(types, "paragraph")
+  expect_match(.md_to_tex("text ![alt](x.png) more"), "alt", fixed = TRUE)
+})
+
+test_that("an unusable image degrades to its alt text", {
+  # Missing file, unsupported format, or reader package absent must not
+  # error -- png and jpeg are Suggests.
+  expect_null(.md_image_raster("does-not-exist.png"))
+  expect_null(.md_image_raster("file.svg"))
+  expect_null(.md_image_raster(""))
+  expect_null(.md_image_raster(NA_character_))
+
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_box_grob("![the alt text](missing.png)",
+                         width = grid::unit(3, "in"))
+  expect_s3_class(grid::makeContent(g), "markdownbox")
+})
+
+test_that("a block image is drawn as a raster and scaled to the column", {
+  skip_if_not_installed("png")
+  f <- tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(100, 400, 3)), f)   # 400x100 px
+  on.exit(unlink(f), add = TRUE)
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+
+  g <- markdown_box_grob(paste0("![x](", f, ")"), width = grid::unit(100, "bigpts"))
+  kids <- grid::makeContent(g)$children
+  content <- kids[[length(kids)]]$children
+  expect_true(any(vapply(content, inherits, logical(1), "rastergrob")))
+  ras <- Filter(function(k) inherits(k, "rastergrob"), content)[[1]]
+  w <- grid::convertWidth(ras$width, "bigpts", valueOnly = TRUE)
+  h <- grid::convertHeight(ras$height, "bigpts", valueOnly = TRUE)
+  expect_lte(w, 100 + 0.5)             # scaled down to the column
+  expect_equal(h / w, 100 / 400, tolerance = 0.01)   # aspect preserved
+})

@@ -6,6 +6,9 @@
 - New `geom_markdown()` and `element_markdown()` for ggplot2.
 - New `justify` argument stretches wrapped lines to fill `max_width`.
 - New `line_break = "optimal"` chooses paragraph breaks by total fit.
+- `markdown_box_grob()` draws block images (png/jpeg).
+- Task list items render a checkbox; table column alignment and `1)` list
+  delimiters are honoured.
 - Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room
   and they overlapped the axis title.
 
