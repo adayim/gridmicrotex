@@ -339,9 +339,10 @@ ggplot(mtcars, aes(wt, mpg)) +
 
 ## What is and isn't supported
 
-The parser is the full CommonMark specification plus the GitHub
-extensions (tables, strikethrough, task lists), so parsing is never the
-limitation. On the rendering side:
+The parser is the full CommonMark specification plus all five GitHub
+extensions --- tables, strikethrough, autolinks, task lists and the
+`tagfilter` that strips `<script>` and friends --- so parsing is never
+the limitation. On the rendering side:
 
 - **Inline images** keep their alt text only. A block-level image (alone
   on its line) is drawn; one in the middle of a sentence is not, because
@@ -349,7 +350,7 @@ limitation. On the rendering side:
 - **Links** keep their text; the destination is dropped, since a grob
   cannot be a hyperlink.
 - **Block-level HTML** (a `<div>`, say) is dropped rather than typeset.
-  Inline HTML is partly rendered --- see below.
+  Inline HTML is rendered --- see *Colour and inline HTML* above.
 - **Syntax highlighting** of code blocks is not applied --- code is set
   in a monospace font, unhighlighted.
 - **Monospace spacing** depends on the device. `ragg`, `pdf()` and

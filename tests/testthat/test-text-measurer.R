@@ -76,12 +76,11 @@ test_that("a named font family travels from LaTeX to the layout", {
 
   # An empty name is a no-op rather than an error.
   expect_silent(runs("\\gmfontfamily{}{ab}"))
-})
 
-test_that("two families in one expression are measured apart", {
-  # The C++ measurement cache used to key on the low byte of the style,
-  # which is where the family index is *not*. Two families would then
-  # share one set of metrics -- whichever was asked for first.
+  # Two families in one expression must be measured apart. The C++ cache
+  # used to key on the low byte of the style, which is where the family
+  # index is *not*, so they shared one set of metrics -- whichever was
+  # asked for first. Needs a device that resolves families.
   skip_if_not_installed("ragg")
   f <- tempfile(fileext = ".png")
   ragg::agg_png(f, width = 400, height = 120)
@@ -91,9 +90,8 @@ test_that("two families in one expression are measured apart", {
   mono <- w("\\gmfontfamily{mono}{Wig}")
   sans <- w("\\gmfontfamily{sans}{Wig}")
   expect_false(isTRUE(all.equal(mono, sans)))
-  # Same two runs side by side must keep their own widths.
-  both <- w("\\gmfontfamily{mono}{Wig}\\gmfontfamily{sans}{Wig}")
-  expect_equal(both, mono + sans, tolerance = 1)
+  expect_equal(w("\\gmfontfamily{mono}{Wig}\\gmfontfamily{sans}{Wig}"),
+               mono + sans, tolerance = 1)
 })
 
 test_that("register/clear measurer lifecycle and integration", {

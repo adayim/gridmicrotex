@@ -1,32 +1,12 @@
 # gridmicrotex (development version)
 
-- New `markdown_grob()` and `grid.markdown()` render markdown with inline LaTeX math.
-- New `markdown_box_grob()` renders block markdown in a padded, filled box.
-- `max_width` is now honoured by content containing `\\` line breaks.
+- New `markdown_grob()` and `grid.markdown()` render inline markdown with LaTeX math; `markdown_box_grob()` renders a block document.
 - New `geom_markdown()` and `element_markdown()` for ggplot2.
-- New `justify` argument stretches wrapped lines to fill `max_width`.
-- New `line_break = "optimal"` chooses paragraph breaks by total fit.
-- `markdown_box_grob()` draws block images (png/jpeg).
-- Task list items render a checkbox; table column alignment and `1)` list
-  delimiters are honoured.
-- Inline HTML renders: `<b>`, `<i>`, `<code>`, `<u>`, `<s>`, `<sub>`, `<sup>`,
-  `<mark>`, `<small>`, `<big>`, `<q>`, `<br>` and their aliases, plus
-  `<span style="...">` with `color`, `text-decoration`, `font-size` and
-  `font-family`.
-- `font-family` accepts any font name, not just the CSS generics.
-- Bug fix: consecutive line breaks collapsed, so `<br><br>` left no blank line.
-- Bug fix: a strikethrough or underline dropped the emphasis around it, so
-  `**~~x~~**` was not bold.
-- Bug fix: `\texttt{}` drew in the body font, so inline `` `code` `` was not
-  monospace.
-- Bug fix: a `style` value containing quotes was truncated at the first one.
-- CSS colour names R lacks (`crimson`, `teal`, ...) now resolve.
-- Bug fix: checked/unchecked task boxes rendered at different sizes.
-- Bug fix: list markers floated above their text instead of on the baseline.
-- Bug fix: a list item with a tall first line (`$x^2$`) still floated its marker.
-- Bug fix: code blocks rendered in the body font, mangling `<-`; now monospace.
-- Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room
-  and they overlapped the axis title.
+- Markdown reads inline HTML for colour, font family, size and decoration.
+- New `justify` and `line_break` arguments control paragraph line breaking.
+- Bug fix: `max_width` is now honoured by content containing `\\` line breaks.
+- Bug fix: `\texttt{}` drew in the body font instead of a monospace one.
+- Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room  and they overlapped the axis title.
 
 # gridmicrotex 0.0.5
 
