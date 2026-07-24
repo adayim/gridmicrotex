@@ -83,19 +83,77 @@ grid.markdown(
 
 ### Colour and inline HTML
 
-Markdown has no syntax for colour, underline, or super/subscript ---
-CommonMark and GFM simply do not define one. The conformant way to ask
-for them is the inline HTML that CommonMark already includes, so that is
-what `gridmicrotex` reads:
+Markdown has no syntax for colour, underline, super/subscript, highlight
+or size --- CommonMark and GFM simply do not define one. The conformant
+way to ask for them is the inline HTML that CommonMark already includes,
+so that is what `gridmicrotex` reads. Each tag does what HTML's own
+default rendering says it should:
 
-| markdown | effect |
+| tag | effect |
 |---|---|
-| `<span style="color:red">…</span>` | colour (any R colour name, `#rgb`, `#rrggbb`, `rgb()`) |
-| `<span style="text-decoration:underline">…</span>` | underline |
-| `<u>…</u>`, `<ins>…</ins>` | underline |
-| `<s>…</s>`, `<del>…</del>` | strikethrough |
-| `<sub>…</sub>`, `<sup>…</sup>` | sub/superscript |
+| `<b>`, `<strong>` | bold |
+| `<i>`, `<em>`, `<cite>`, `<dfn>`, `<var>` | italic |
+| `<code>`, `<kbd>`, `<samp>`, `<tt>` | monospace |
+| `<u>`, `<ins>` | underline |
+| `<s>`, `<del>`, `<strike>` | strikethrough |
+| `<sub>`, `<sup>` | sub / superscript |
+| `<mark>` | yellow highlight |
+| `<small>`, `<big>` | smaller / larger |
+| `<q>` | wrapped in quotation marks |
 | `<br>` | line break |
+| `<span style="…">` | `color`, `text-decoration`, `font-size`, `font-family` |
+
+In a `style` attribute: `color` takes any R colour name, the nine CSS
+names R happens to lack (`crimson`, `teal`, `rebeccapurple` and friends),
+`#rgb`, `#rrggbb` or `rgb()` --- but note that `green`, `gray`, `grey`,
+`maroon` and `purple` keep their R values rather than their (darker) CSS
+ones, so that they mean the same thing here as in `gpar(col = ...)`;
+`text-decoration` takes `underline` or
+`line-through`; `font-size` takes `pt`, `px`, `in`, `cm`, `mm`, `em`,
+`rem`, `%`, `smaller` or `larger`; `font-family` takes the CSS generics
+`monospace`, `sans-serif` and `serif`, or any font name, including via a
+fallback list like `'Courier New', monospace`. Any other property is
+ignored.
+
+```{r html-css, fig.height = 0.7, fig.width = 6, out.width = "90%"}
+grid.newpage()
+grid.markdown(
+  paste0(
+    '<span style="font-size:26pt;color:#2E5E8E">Big</span> and ',
+    '<span style="font-family:serif">serif</span> and ',
+    '<span style="font-family:monospace">mono</span>.'
+  ),
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 16)
+)
+```
+
+### Which fonts are available
+
+A family name goes straight to `gp$fontfamily`, so **the device resolves
+it**, exactly as for any other grid text:
+
+| device | sees |
+|---|---|
+| `ragg`, `svglite` | any installed family, plus `systemfonts::register_font()` |
+| cairo (`png(type = "cairo")`, `cairo_pdf()`) | installed families |
+| `windows()`, `quartz()` | the OS font list |
+| base `pdf()`, `postscript()` | **only** what `pdfFonts()` declares --- a named family will not resolve |
+
+An unavailable font falls back silently, as it does for
+`gpar(fontfamily = ...)`. To use a font file that is not installed
+system-wide, register it first:
+
+```r
+systemfonts::register_font(name = "MyFont", plain = "path/to/MyFont.otf")
+grid.markdown('<span style="font-family:MyFont">x</span>')
+```
+
+`load_font()` is *not* the function for this --- it registers *math*
+fonts with MicroTeX, a different mechanism.
+
+A span's own family wins over `gp$fontfamily`. One thing it does not
+override: the width of the spaces *between* its words, which still comes
+from `gp$fontfamily`. Set both to the same family if that shows.
 
 ```{r html-spans, fig.height = 0.7, fig.width = 6, out.width = "90%"}
 grid.newpage()
@@ -108,10 +166,21 @@ grid.markdown(
 )
 ```
 
-Markdown and `$math$` keep working inside a span, and spans nest. Use
-`**` and `*` for bold and italic --- `<b>` and `<i>` are *not*
-interpreted, since markdown already covers them. Anything else, tag or
-CSS property, is dropped and the text inside it kept.
+Tags nest, and markdown and `$math$` keep working inside them, so
+`<u>**bold underlined**</u>` and `**<u>the same thing</u>**` render
+alike. Everything else is dropped and the text inside it kept --- which
+is also what a browser does with `<a>`, `<abbr>` or a bare `<span>`,
+since those have no default rendering of their own.
+
+Two `<br>` in a row leave a blank line, as in HTML:
+
+```{r html-br, fig.height = 1.1, fig.width = 6, out.width = "90%"}
+grid.newpage()
+grid.markdown(
+  "**Model fit**<br><br>Deviance <mark>412.7</mark> on term<sub>1</sub>.",
+  x = 0.02, y = 0.85, vjust = 1, hjust = 0, gp = gpar(fontsize = 18)
+)
+```
 
 ## Block documents
 
@@ -283,6 +352,11 @@ limitation. On the rendering side:
   Inline HTML is partly rendered --- see below.
 - **Syntax highlighting** of code blocks is not applied --- code is set
   in a monospace font, unhighlighted.
+- **Monospace spacing** depends on the device. `ragg`, `pdf()` and
+  `cairo_pdf()` report correct metrics for the `"mono"` family; the base
+  `png(type = "cairo")` and `svglite` report the *sans* widths for it, so
+  code set with them comes out slightly tight. Use `ragg::agg_png()` if
+  that matters.
 
 Everything else --- emphasis, headings, lists, quotes, tables, rules,
 block images, and of course `$math$` --- renders.

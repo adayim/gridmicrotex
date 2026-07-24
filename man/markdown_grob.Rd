@@ -34,16 +34,64 @@ spans are therefore hidden from the markdown parser before it runs and
 restored afterwards, so constructs like
 \code{$\\begin{matrix}a\\\\b\\end{matrix}$} survive intact.
 
-GFM has no markdown syntax for colour, underline or super/subscript,
-so --- as in CommonMark, and as \pkg{ggtext} does --- these come from
-inline HTML. The presentational subset is rendered:
-\code{<span style="color:...">} (any R colour name, \code{#rgb},
-\code{#rrggbb} or \code{rgb()}, plus
-\code{text-decoration: underline|line-through}), \code{<u>},
-\code{<ins>}, \code{<s>}, \code{<del>}, \code{<sub>}, \code{<sup>} and
-\code{<br>}. Use \code{**}/\code{*} for bold and italic; \code{<b>} and
-\code{<i>} are not interpreted. Any other tag --- and all block-level
-HTML --- is dropped, keeping the text inside it.
+GFM has no markdown syntax for colour, underline, super/subscript,
+highlight or size, so --- as in CommonMark, and as \pkg{ggtext} does
+--- these come from inline HTML. Each tag renders as HTML's own
+default rendering prescribes:
+
+\tabular{ll}{
+\strong{tag} \tab \strong{effect} \cr
+\code{<b>}, \code{<strong>} \tab bold \cr
+\code{<i>}, \code{<em>}, \code{<cite>}, \code{<dfn>}, \code{<var>},
+\code{<address>} \tab italic \cr
+\code{<code>}, \code{<kbd>}, \code{<samp>}, \code{<tt>} \tab monospace \cr
+\code{<u>}, \code{<ins>} \tab underline \cr
+\code{<s>}, \code{<del>}, \code{<strike>} \tab strikethrough \cr
+\code{<sub>}, \code{<sup>} \tab sub / superscript \cr
+\code{<mark>} \tab yellow highlight \cr
+\code{<small>}, \code{<big>} \tab smaller / larger \cr
+\code{<q>} \tab wrapped in quotation marks \cr
+\code{<br>} \tab line break \cr
+\code{<span style="...">} \tab see below
+}
+
+A \code{style} attribute is read for \code{color} (any R colour name,
+the nine CSS names R lacks --- \code{crimson}, \code{teal},
+\code{rebeccapurple} and friends --- \code{#rgb}, \code{#rrggbb} or
+\code{rgb()}; note that \code{green}, \code{gray}, \code{grey},
+\code{maroon} and \code{purple} keep their R values, not their CSS
+ones),
+\code{text-decoration} (\code{underline}, \code{line-through}),
+\code{font-size} (\code{pt}, \code{px}, \code{in}, \code{cm},
+\code{mm}, \code{em}, \code{rem}, \code{\%}, \code{smaller},
+\code{larger}) and \code{font-family}. Any other property is ignored.
+
+\code{font-family} takes the CSS generics \code{monospace},
+\code{sans-serif} and \code{serif}, or any font name; a fallback list
+resolves to its first entry. The name is handed to
+\code{gp$fontfamily}, so \emph{the device resolves it}: \pkg{ragg} and
+\pkg{svglite} see any installed family plus anything registered with
+\code{systemfonts::register_font()}, cairo devices see installed
+families, and base \code{pdf()} sees only what \code{pdfFonts()}
+declares --- a named family will not resolve there. An unavailable
+font falls back silently, as it does for \code{gpar(fontfamily=)}.
+A font file that is not installed system-wide is used by registering
+it first:
+
+\preformatted{systemfonts::register_font(name = "MyFont", plain = "MyFont.otf")}
+
+\code{\link{load_font}} is \emph{not} the function for this --- it
+registers \emph{math} fonts with MicroTeX, which is a different
+mechanism.
+
+A span's own family wins over \code{gp$fontfamily}, but the width of
+the spaces \emph{between} its words still comes from
+\code{gp$fontfamily}; set both to the same family if that shows.
+
+Tags nest and combine freely with markdown. Any other tag --- and all
+block-level HTML --- is dropped, keeping the text inside it, which is
+also what a browser shows for the ones (\code{<a>}, \code{<abbr>},
+\code{<span>} without a style) that have no default rendering.
 
 Not every markdown feature has a MicroTeX equivalent. Links keep their
 text and drop the destination, and images keep their alt text.

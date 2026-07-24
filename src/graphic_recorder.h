@@ -37,6 +37,10 @@ struct DrawRecord {
     // For TEXT (non-math text from \text{}, etc.)
     std::string text;
     int font_style = 0;  // FontStyle cast to int
+    // Family named by \gmfontfamily, resolved from the index packed into
+    // font_style's high byte. Empty when the run names no family, which is
+    // the usual case; R then falls back to gp$fontfamily.
+    std::string font_family;
     float rotation = 0;  // radians, extracted from current transform (ccw)
 
     // For MARK (\mark{name}) — a named anchor inside the formula. Position

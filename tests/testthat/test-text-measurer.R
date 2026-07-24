@@ -19,6 +19,83 @@ test_that("text measurer creates, measures, and handles styles", {
   expect_equal(gridmicrotex:::.resolve_text_face(NA_integer_), "plain")
 })
 
+test_that("\\texttt renders and measures in a monospace family", {
+  # Bit 128 is MicroTeX's \texttt. It has to reach the *measurer* as well
+  # as the renderer: measuring in one family and drawing in another puts
+  # the glyphs where they do not fit.
+  fam <- gridmicrotex:::.resolve_text_family
+  expect_equal(fam(128L), "mono")
+  expect_equal(fam(130L), "mono")                 # bold monospace
+  expect_null(fam(2L))                            # plain bold: caller's choice
+  expect_null(fam(NA_integer_))
+  expect_equal(fam(2L, "serif"), "serif")         # default passes through
+  expect_equal(fam(128L, "serif"), "mono")        # \texttt still wins
+
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The measurer must answer with monospace metrics, which are the same
+  # for every character -- that is what makes the font monospace.
+  m <- gridmicrotex:::.make_text_measurer(grid::gpar())
+  expect_equal(m("i", 128L)[1], m("W", 128L)[1])
+  expect_true(m("i", 1L)[1] < m("W", 1L)[1])
+
+  # End to end: the drawn textGrob carries the family too.
+  g <- grid::makeContent(latex_grob("\\texttt{Hg}", input_mode = "math"))
+  fams <- vapply(g$children, function(k) k$gp$fontfamily %||% "", character(1))
+  expect_true("mono" %in% fams)
+})
+
+test_that("a named font family travels from LaTeX to the layout", {
+  # MicroTeX has no channel for a font *name* -- a text run carries only
+  # FontStyle, a bitfield. \gmfontfamily packs an index into its unused
+  # high byte, which C++ resolves back to the name on the record.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  runs <- function(tex) {
+    df <- latex_grob(tex, input_mode = "math",
+                     gp = grid::gpar(fontsize = 20))$layout_df
+    df <- df[df$type == "text", c("text", "font_family", "font_style")]
+    rownames(df) <- NULL
+    df
+  }
+  one <- runs("\\gmfontfamily{Georgia}{ab}")
+  expect_true(all(one$font_family == "Georgia"))
+  # Ordinary text names no family, so gp$fontfamily still decides.
+  expect_true(all(is.na(runs("\\text{ab}")$font_family)))
+
+  # Nesting must *replace*: two indices OR'd together would address a
+  # third, unrelated family, so "c" would come back as neither A nor B.
+  nested <- runs("\\gmfontfamily{A}{a\\gmfontfamily{B}{b}c}")
+  expect_equal(nested$font_family, c("A", "B", "A"))
+
+  # The family composes with emphasis instead of replacing it: the low
+  # byte keeps the bold bit, the high byte carries the index.
+  bold <- runs("\\textbf{\\gmfontfamily{Georgia}{ab}}")
+  expect_true(all(bitwAnd(bold$font_style, 2L) != 0L))
+  expect_true(all(bold$font_family == "Georgia"))
+  # Either order gives the same answer.
+  expect_equal(bold, runs("\\gmfontfamily{Georgia}{\\textbf{ab}}"))
+
+  # An empty name is a no-op rather than an error.
+  expect_silent(runs("\\gmfontfamily{}{ab}"))
+})
+
+test_that("two families in one expression are measured apart", {
+  # The C++ measurement cache used to key on the low byte of the style,
+  # which is where the family index is *not*. Two families would then
+  # share one set of metrics -- whichever was asked for first.
+  skip_if_not_installed("ragg")
+  f <- tempfile(fileext = ".png")
+  ragg::agg_png(f, width = 400, height = 120)
+  on.exit({ dev.off(); unlink(f) }, add = TRUE)
+  w <- function(tex) as.numeric(latex_dims(tex, input_mode = "math",
+                                           gp = grid::gpar(fontsize = 20))$width)
+  mono <- w("\\gmfontfamily{mono}{Wig}")
+  sans <- w("\\gmfontfamily{sans}{Wig}")
+  expect_false(isTRUE(all.equal(mono, sans)))
+  # Same two runs side by side must keep their own widths.
+  both <- w("\\gmfontfamily{mono}{Wig}\\gmfontfamily{sans}{Wig}")
+  expect_equal(both, mono + sans, tolerance = 1)
+})
+
 test_that("register/clear measurer lifecycle and integration", {
   m <- gridmicrotex:::.make_text_measurer(grid::gpar())
   expect_silent(register_text_measurer(m))

@@ -3,6 +3,7 @@
 #include "microtex.h"
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
+#include "font_family_atom.h"
 #include "macro/macro.h"
 #include "core/split.h"
 
@@ -72,6 +73,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // (b) the typeface mode's automatic path-fallback parse doesn't fail
     // with "Command already exists!" when re-processing the same input.
     NewCommandMacro::clearUserMacros();
+    // The \gmfontfamily registry is per-parse too: indices are only
+    // meaningful against the names collected during this parse.
+    clear_font_families();
 
     // Toggle glyph rendering mode (guard restores default on any exit)
     RenderModeGuard render_guard;
@@ -153,6 +157,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     NumericVector rotation_col(n);
     IntegerVector codepoint_col(n);
     CharacterVector font_file_col(n);
+    CharacterVector font_family_col(n, NA_STRING);
 
     // Path data stored separately as a list
     Rcpp::List path_list(n);
@@ -203,6 +208,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 lwd_col[i] = NA_REAL;
                 text_col[i] = rec.text;
                 font_style_col[i] = rec.font_style;
+                if (!rec.font_family.empty()) {
+                    font_family_col[i] = rec.font_family;
+                }
                 // radians → degrees (grid textGrob rot= expects degrees, ccw)
                 rotation_col[i] = rec.rotation * (180.0 / 3.14159265358979323846);
                 codepoint_col[i] = NA_INTEGER;
@@ -368,7 +376,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Named("rotation") = rotation_col,
         Named("path") = path_list,
         Named("codepoint") = codepoint_col,
-        Named("font_file") = font_file_col
+        Named("font_file") = font_file_col,
+        Named("font_family") = font_family_col
     );
     result.attr("class") = "data.frame";
     if (n > 0) {

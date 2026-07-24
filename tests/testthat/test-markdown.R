@@ -303,6 +303,28 @@ test_that("list markers baseline-align with the first line of text", {
   expect_lt(marker_y, text_y)
 })
 
+test_that("markers align to their own item's baseline, not a generic one", {
+  # A tall first line -- a superscript, a fraction -- sits lower inside its
+  # own box, so a marker placed at one reference offset for the whole list
+  # floats above the text on exactly those items.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  gp <- grid::gpar(fontsize = 12)
+  blocks <- .md_parse_blocks(paste(
+    "- plain bullet, no math",
+    "- plain bullet with $x^2$",
+    "- deep $\\frac{a}{b}$ fraction",
+    "- a long bullet item that has to wrap because it is very wide indeed",
+    sep = "\n"))
+  items <- .md_layout(blocks, 200, gp, 12)$items
+  # Items alternate marker, body. `y` is the top of each box and
+  # (bbox_h - bbox_bl_bp) the first baseline measured down from it.
+  bl <- function(it) it$y + it$grob$bbox_h - it$grob$bbox_bl_bp
+  for (k in seq(1L, length(items), by = 2L)) {
+    expect_equal(bl(items[[k]]), bl(items[[k + 1L]]),
+                 label = items[[k + 1L]]$grob$tex)
+  }
+})
+
 test_that("table column alignment is carried into the tabular spec", {
   tb <- Filter(function(b) b$type == "table",
                .md_parse_blocks("| a | b | c |\n|:--|:-:|--:|\n| 1 | 2 | 3 |"))[[1]]
@@ -379,13 +401,14 @@ test_that("a block image is drawn as a raster and scaled to the column", {
   expect_equal(h / w, 100 / 400, tolerance = 0.01)   # aspect preserved
 })
 
-# --- inline HTML presentational spans -----------------------------------
+# --- inline HTML ---------------------------------------------------------
 #
-# GFM defines no markdown syntax for colour, underline or super/subscript,
-# so raw HTML (which CommonMark includes and GFM keeps) is the only
-# conformant way to express them. Only the presentational subset is
-# interpreted; everything else keeps the old behaviour of dropping the
-# markup and keeping the text.
+# GFM defines no markdown syntax for colour, underline, super/subscript,
+# highlight or size, so raw HTML -- which CommonMark includes and GFM
+# keeps -- is the only conformant way to express them. What each tag is
+# supposed to look like is not our invention either: it is the default
+# rendering HTML itself prescribes. Everything with no default rendering
+# keeps the old behaviour of dropping the markup and keeping the text.
 
 md_colours <- function(md) {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
@@ -394,6 +417,20 @@ md_colours <- function(md) {
 md_types <- function(md) {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   unique(markdown_grob(md)$layout_df$type)
+}
+# Everything observable about a rendered string, for the tag matrix below.
+md_render <- function(md, fontsize = 14) {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_grob(md, gp = grid::gpar(fontsize = fontsize))
+  df <- g$layout_df
+  fs <- df$font_style[!is.na(df$font_style)]
+  list(bold   = any(bitwAnd(fs, 2L) > 0L),
+       italic = any(bitwAnd(fs, 4L) > 0L),
+       mono   = any(bitwAnd(fs, 128L) > 0L),
+       lines  = sum(df$type == "line"),
+       fills  = sum(df$type == "fill_rect"),
+       colour = any(df$color != "#000000", na.rm = TRUE),
+       w = g$bbox_w, h = g$bbox_h, n = nrow(df))
 }
 
 test_that("a colour span colours its content", {
@@ -405,6 +442,16 @@ test_that("a colour span colours its content", {
   # #abc shorthand and rgb() both normalise to #RRGGBB.
   expect_true("#FF0000" %in% md_colours('<span style="color:#f00">x</span>'))
   expect_true("#FF0000" %in% md_colours('<span style="color:rgb(255,0,0)">x</span>'))
+  # The nine CSS names R's palette lacks; without these they resolved to
+  # nothing and the span silently did not colour.
+  expect_true("#DC143C" %in% md_colours('<span style="color:crimson">x</span>'))
+  expect_true("#008080" %in% md_colours('<span style="color:teal">x</span>'))
+  expect_equal(.md_resolve_color("rebeccapurple"), "#663399")
+  for (nm in names(.MD_CSS_COLORS)) expect_false(is.null(.md_resolve_color(nm)))
+  # A style value may carry the other kind of quote, so the attribute has
+  # to be matched to its own closing quote.
+  expect_true("#FF0000" %in%
+                md_colours("<span style='color:red'>x</span>"))
 })
 
 test_that("underline and strike tags draw a rule", {
@@ -415,11 +462,203 @@ test_that("underline and strike tags draw a rule", {
   expect_match(.md_to_tex("<s>x</s>"), "\\sout{", fixed = TRUE)
 })
 
+# One row per supported tag, saying what HTML's default rendering makes it
+# look like. Driven off a table on purpose: the coverage test below fails
+# if a tag is added to .MD_HTML_TAGS without an entry here, so a new tag
+# cannot arrive without someone stating what it is meant to do.
+md_tag_effect <- list(
+  bold    = c("b", "strong"),
+  italic  = c("i", "em", "cite", "dfn", "var", "address"),
+  mono    = c("code", "kbd", "samp", "tt"),
+  rule    = c("u", "ins", "s", "del", "strike"),
+  script  = c("sub", "sup"),
+  fill    = "mark",
+  smaller = "small",
+  larger  = "big",
+  quotes  = "q"
+)
+
+test_that("every supported tag renders what HTML prescribes for it", {
+  # Mid-sentence, because CommonMark makes some of these tag names start an
+  # HTML *block* when they open a line -- <address> is one -- and a block
+  # is dropped whole. Inline is the case this table is about.
+  wrap <- function(tag) sprintf("i <%s>Hg</%s> j", tag, tag)
+  ref <- md_render("i Hg j")
+
+  for (effect in names(md_tag_effect)) {
+    for (tag in md_tag_effect[[effect]]) {
+      got <- md_render(wrap(tag))
+      lab <- sprintf("<%s> (%s)", tag, effect)
+      switch(effect,
+        bold    = expect_true(got$bold && !got$italic && !got$mono, label = lab),
+        italic  = expect_true(got$italic && !got$bold && !got$mono, label = lab),
+        mono    = expect_true(got$mono && !got$bold && !got$italic, label = lab),
+        rule    = expect_equal(got$lines, 1L, label = lab),
+        # A script is set smaller and off the baseline, so the run is
+        # narrower than the same characters at full size.
+        script  = expect_lt(got$w, ref$w),
+        fill    = expect_true(got$fills == 1L && got$colour, label = lab),
+        smaller = expect_lt(got$w, ref$w),
+        larger  = expect_gt(got$w, ref$w),
+        # <q> adds quotation marks, so it gains records and width.
+        quotes  = expect_true(got$w > ref$w && got$n > ref$n, label = lab)
+      )
+      # Nothing here should be drawing a rule or a fill it was not asked for.
+      if (!identical(effect, "rule")) expect_equal(got$lines, 0L, label = lab)
+      if (!identical(effect, "fill")) expect_equal(got$fills, 0L, label = lab)
+    }
+  }
+})
+
+test_that("the tag table and the behaviour table stay in step", {
+  # <q> and <span> are handled in .md_html_tag() rather than the table:
+  # their LaTeX depends on the mode / the style attribute.
+  expect_setequal(names(.MD_HTML_TAGS), setdiff(unlist(md_tag_effect), "q"))
+})
+
+test_that("everything gridtext renders, we render", {
+  # gridtext's dispatch_tag() knows exactly these, and errors on anything
+  # else. <img> and <p> are the two we do not do: an inline raster cannot
+  # go inside a MicroTeX line, and a <p> arrives from cmark as an HTML
+  # *block*, which markdown's own paragraphs already cover.
+  gridtext_tags <- c("b", "strong", "i", "em", "br", "span", "sub", "sup")
+  expect_true(all(gridtext_tags %in%
+                    c(names(.MD_HTML_TAGS), "br", "span")))
+})
+
+test_that("CSS font-size scales, in every unit gridtext accepts", {
+  # gridtext's convert_css_unit_pt() takes pt/px/in/cm/mm; em, rem and %
+  # come free because they are already relative to the base size.
+  sz <- function(css, base = 20) {
+    pdf(NULL); on.exit(dev.off(), add = TRUE)
+    g <- markdown_grob(sprintf('<span style="font-size:%s">Hg</span>', css),
+                       gp = grid::gpar(fontsize = base))
+    unique(g$layout_df$font_size)
+  }
+  expect_equal(sz("10pt"), 10)
+  expect_equal(sz("40pt"), 40)
+  expect_equal(sz("20px"), 15)            # 96 px to the inch
+  expect_equal(sz("0.25in"), 18)
+  expect_equal(sz("1cm"), 72 / 2.54, tolerance = 0.05)
+  expect_equal(sz("5mm"), 72 / 25.4 * 5, tolerance = 0.05)
+  expect_equal(sz("0.5em"), 10)
+  expect_equal(sz("150%"), 30)
+  expect_equal(sz("smaller"), 20 / 1.2, tolerance = 0.05)
+  expect_equal(sz("larger"), 24)
+  # An absolute size is absolute: it must not drift with the base.
+  for (base in c(10, 20, 40)) expect_equal(sz("10pt", base), 10)
+  # Anything unparseable leaves the size alone rather than guessing.
+  for (bad in c("nonsense", "-5pt", "0pt", "12", "")) {
+    expect_equal(sz(bad), 20, label = bad)
+  }
+})
+
+test_that("CSS font-family names the family, generic or not", {
+  fam <- function(css) {
+    pdf(NULL); on.exit(dev.off(), add = TRUE)
+    g <- markdown_grob(sprintf('<span style="font-family:%s">Hg</span>', css))
+    df <- g$layout_df[g$layout_df$type == "text", ]
+    unique(vapply(seq_len(nrow(df)), function(i)
+      .resolve_text_family(df$font_style[i], "-", df$font_family[i]),
+      character(1)))
+  }
+  # The CSS generics map onto the aliases grid already understands.
+  expect_equal(fam("monospace"), "mono")
+  expect_equal(fam("sans-serif"), "sans")
+  # serif and named fonts used to be inexpressible -- MicroTeX's style bits
+  # cannot tell \textrm from a plain \text{}, nor one named font from
+  # another. \gmfontfamily carries the name itself, so both now work.
+  expect_equal(fam("serif"), "serif")
+  expect_equal(fam("Georgia"), "Georgia")
+  # A family is a name: keep its case, because some font matchers care.
+  expect_match(.md_to_tex('<span style="font-family:Georgia">x</span>'),
+               "\\gmfontfamily{Georgia}{", fixed = TRUE)
+  # A fallback list resolves to its first entry, as a browser does when the
+  # named font is present.
+  expect_equal(fam("'Courier New', monospace"), "Courier New")
+  expect_equal(fam("Helvetica, sans-serif"), "Helvetica")
+  # The name is spliced into LaTeX, so it must not carry parser syntax.
+  expect_equal(.md_to_tex('<span style="font-family:a}b\\c">x</span>'),
+               "\\gmfontfamily{abc}{x}")
+})
+
+test_that("a span's family beats gp$fontfamily, and only inside the span", {
+  # Local overrides global -- and it has to hold in the measurer too, or
+  # the run is measured in one font and drawn in another.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_grob('a <span style="font-family:mono">b</span> c',
+                     gp = grid::gpar(fontsize = 20, fontfamily = "serif"))
+  df <- g$layout_df[g$layout_df$type == "text", ]
+  fams <- vapply(seq_len(nrow(df)), function(i)
+    .resolve_text_family(df$font_style[i], "serif", df$font_family[i]),
+    character(1))
+  expect_equal(fams[df$text == "b"], "mono")
+  expect_true(all(fams[df$text %in% c("a", "c")] == "serif"))
+})
+
+test_that("a registered user font can be named by a span", {
+  # The route for a font that is not installed system-wide. No download:
+  # a bundled OTF stands in for the user's file.
+  skip_if_not_installed("ragg")
+  otf <- system.file("fonts", package = "gridmicrotex")
+  files <- list.files(otf, pattern = "\\.otf$", full.names = TRUE,
+                      recursive = TRUE)
+  skip_if(length(files) == 0L, "no bundled OTF to register")
+  systemfonts::register_font(name = "gmTestUserFont", plain = files[1])
+
+  f <- tempfile(fileext = ".png")
+  ragg::agg_png(f, width = 400, height = 120)
+  on.exit(unlink(f), add = TRUE)
+  w_user <- as.numeric(latex_dims("\\gmfontfamily{gmTestUserFont}{Wig}",
+                                  input_mode = "math")$width)
+  w_plain <- as.numeric(latex_dims("\\text{Wig}", input_mode = "math")$width)
+  dev.off()
+  expect_gt(w_user, 0)
+  expect_false(isTRUE(all.equal(w_user, w_plain)))
+})
+
+test_that("tags with no default rendering drop the markup and keep the text", {
+  # Not an oversight -- <a>, <abbr>, <span> and friends change nothing
+  # visually in a browser either, so keeping the text *is* the rendering.
+  for (tag in c("a", "abbr", "span", "bdi", "bdo", "data", "time", "wbr",
+                "ruby", "output", "nobr")) {
+    expect_equal(.md_to_tex(sprintf("<%s>Hg</%s>", tag, tag)), "\\text{Hg}",
+                 label = tag)
+  }
+})
+
 test_that("sub and sup map to the text script commands", {
   expect_match(.md_to_tex("<sub>i</sub>"), "\\textsubscript{", fixed = TRUE)
   expect_match(.md_to_tex("<sup>2</sup>"), "\\textsuperscript{", fixed = TRUE)
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_gt(markdown_grob("x<sup>2</sup>")$bbox_w, 0)
+})
+
+test_that("consecutive breaks leave a blank line", {
+  # MicroTeX gives a row holding nothing zero height, so `<br><br>` used to
+  # collapse to a single break. A strut restores the row HTML would show.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  gp <- grid::gpar(fontsize = 15)
+  h <- function(md) {
+    as.numeric(latex_dims(.md_to_tex(md), input_mode = "math", gp = gp)$height)
+  }
+  # Measure the leading from text that has both an ascender and a
+  # descender: a row is as tall as its content, so "a" alone would give a
+  # short row and understate what a full blank line is worth.
+  one <- h("Agp<br>Agp")
+  lead <- one - h("Agp")
+  # Each extra break adds exactly one more line, not zero.
+  expect_equal(h("Agp<br><br>Agp"), one + lead)
+  expect_equal(h("Agp<br><br><br>Agp"), one + 2 * lead)
+  # The usual way of writing it -- a break, a newline, a break -- counts the
+  # whitespace-only row as empty and gets the same blank line.
+  expect_equal(h("Agp<br>\n<br>\nAgp"), one + lead)
+  expect_equal(h("Agp<br> <br>Agp"), one + lead)
+  # Markdown's own hard break (backslash at end of line) goes the same way.
+  expect_equal(h("Agp\\\n\\\nAgp"), one + lead)
+  # A single break is untouched, and a trailing one adds no dangling row.
+  expect_match(.md_to_tex("a<br>b"), "\\text{a}\\\\\\text{b}", fixed = TRUE)
+  expect_equal(h("Agp<br>"), h("Agp"))
 })
 
 test_that("spans nest, and combine with markdown and math", {
@@ -437,13 +676,40 @@ test_that("spans nest, and combine with markdown and math", {
   expect_match(.md_to_tex(mixed), "\\textbf{", fixed = TRUE)
 })
 
-test_that("bold/italic tags are deliberately NOT interpreted", {
-  # Markdown already has ** and *; mapping <b> to \textbf would force its
-  # content to be emitted bare, which sibling-level tags cannot do.
-  tex <- .md_to_tex("<b>x</b>")
-  expect_equal(tex, "\\text{x}")
-  expect_false(grepl("\\textbf", tex, fixed = TRUE))
-  expect_equal(.md_to_tex("<i>x</i>"), "\\text{x}")
+test_that("a rule keeps the font style it is nested inside", {
+  # \underline and \sout typeset their argument as a fresh sub-formula and
+  # drop the bold/italic/mono around them, so those commands are re-opened
+  # inside. This bit markdown's own syntax too: **~~x~~** came out unbold.
+  for (md in c("**~~Hg~~**", "<b>~~Hg~~</b>", "**<u>Hg</u>**",
+               "<b><u>Hg</u></b>", "<b><s>Hg</s></b>")) {
+    got <- md_render(md)
+    expect_true(got$bold, label = md)
+    expect_equal(got$lines, 1L, label = md)
+  }
+  # Both orders agree, which is the real check: nesting is symmetric.
+  expect_equal(md_render("<b><u>Hg</u></b>"), md_render("<u><b>Hg</b></u>"))
+  expect_equal(md_render("**~~Hg~~**"), md_render("~~**Hg**~~"))
+  # Italic and mono survive too, and two rules both draw.
+  expect_true(md_render("*~~Hg~~*")$italic)
+  expect_true(md_render("~~`Hg`~~")$mono)
+  expect_true(all(unlist(md_render("**_~~Hg~~_**")[c("bold", "italic")])))
+  expect_equal(md_render("<u><s>Hg</s></u>")$lines, 2L)
+  # A superscript is set from a \text{} of its own, so it needs the same
+  # treatment or the exponent comes out unbold.
+  expect_true(md_render("<b>H<sup>2</sup></b>")$bold)
+})
+
+test_that("tags compose with each other and with markdown", {
+  expect_true(all(unlist(md_render("<b><i>Hg</i></b>")[c("bold", "italic")])))
+  expect_true(all(unlist(md_render("<b><code>Hg</code></b>")[c("bold", "mono")])))
+  expect_true(md_render('<span style="color:red"><b>Hg</b></span>')$bold)
+  expect_true(md_render('<b><span style="color:red">Hg</span></b>')$colour)
+  expect_true(md_render("<b><mark>Hg</mark></b>")$bold)
+  expect_true(md_render("<mark><b>Hg</b></mark>")$fills == 1L)
+  # Markdown inside a tag and a tag inside markdown agree.
+  expect_equal(md_render("<b>**Hg**</b>"), md_render("**<b>Hg</b>**"))
+  # Math still works inside a text-mode tag.
+  expect_gt(md_render("<b>a $x^2$ b</b>")$w, md_render("<b>a b</b>")$w)
 })
 
 test_that("unrecognised markup is dropped but its text is kept", {
@@ -471,7 +737,9 @@ test_that("malformed spans still produce balanced braces", {
   }
   for (md in c("<u>unclosed", "</u>stray",
                '<span style="color:red">a<u>b</span>c',
-               "<u><s>both</s></u>")) {
+               "<u><s>both</s></u>", "<b>unclosed", "</b>stray",
+               "<b>a<u>b</b>c", "<u><b>x</u></b>", "<b><i>x</b></i>",
+               "<mark>a<b>b</mark>c", "<b><q>x</b></q>")) {
     expect_true(balanced(.md_to_tex(md)), label = md)
   }
   # An unclosed tag still styles what follows it.

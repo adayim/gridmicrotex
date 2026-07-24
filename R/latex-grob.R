@@ -859,14 +859,18 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
   # Cache the R version check
   has_ascent_fn <- getRversion() >= "4.4.0"
 
-  # Per-closure cache keyed on (font_style, text). Lifetime = one parse
-  # (the closure is created fresh per parse in latex_grob/latex_dims), so
-  # graphics state can't drift between calls. Hits avoid a textGrob
-  # construction + grid::convertHeight round trip per repeated span.
+  # Per-closure cache keyed on (font_style, font_family, text). Lifetime =
+  # one parse (the closure is created fresh per parse in
+  # latex_grob/latex_dims), so graphics state can't drift between calls.
+  # Hits avoid a textGrob construction + grid::convertHeight round trip per
+  # repeated span.
   cache <- new.env(parent = emptyenv())
 
-  function(text, font_style) {
-    key <- paste0(as.integer(font_style), "\x1f", text)
+  # `font_family` is the family named by a \gmfontfamily span, passed in by
+  # TextLayout_R. Defaulted, so the two-argument calls that predate it --
+  # including register_text_measurer() users -- keep working.
+  function(text, font_style, font_family = "") {
+    key <- paste0(as.integer(font_style), "\x1f", font_family, "\x1f", text)
     hit <- cache[[key]]
     if (!is.null(hit)) return(hit)
 
@@ -885,8 +889,10 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     face <- .resolve_text_face(as.integer(font_style))
 
     gp <- grid::gpar(fontsize = ref_size, fontface = face)
-    if (!is.null(text_gp$fontfamily)) {
-      gp$fontfamily <- text_gp$fontfamily
+    fam <- .resolve_text_family(as.integer(font_style), text_gp$fontfamily,
+                                font_family)
+    if (!is.null(fam)) {
+      gp$fontfamily <- fam
     }
 
     # Ensure a graphics device is available for measurement
@@ -903,11 +909,15 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     # real plot's grid.newpage(). grob* queries below only read metrics.
     tg <- grid::textGrob(text, gp = gp)
 
-    # Measure width in bigpts
-    w <- .measure_text_bigpts(tg, text, em = ref_size)
+    # Measuring is per *character*, so a device that cannot resolve the
+    # family -- base pdf() has no named families, only what pdfFonts()
+    # declares -- would warn dozens of times for one label. Stay quiet
+    # here: the same device warns again when the text is actually drawn,
+    # which is the once-per-run, user-actionable copy of the message.
+    w <- suppressWarnings(.measure_text_bigpts(tg, text, em = ref_size))
 
     # Measure ascent and descent (with Windows/CJK locale fallback)
-    ad <- tryCatch({
+    ad <- suppressWarnings(tryCatch({
       if (has_ascent_fn) {
         asc <- grid::convertHeight(
           get("grobAscent", envir = asNamespace("grid"))(tg),
@@ -926,7 +936,7 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     }, error = function(e) {
       # Approximate: 80% of font size for ascent, 20% for descent
       c(ref_size * 0.8, ref_size * 0.2)
-    })
+    }))
     asc  <- ad[1]
     desc <- ad[2]
 
