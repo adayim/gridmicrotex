@@ -81,6 +81,38 @@ grid.markdown(
 )
 ```
 
+### Colour and inline HTML
+
+Markdown has no syntax for colour, underline, or super/subscript ---
+CommonMark and GFM simply do not define one. The conformant way to ask
+for them is the inline HTML that CommonMark already includes, so that is
+what `gridmicrotex` reads:
+
+| markdown | effect |
+|---|---|
+| `<span style="color:red">…</span>` | colour (any R colour name, `#rgb`, `#rrggbb`, `rgb()`) |
+| `<span style="text-decoration:underline">…</span>` | underline |
+| `<u>…</u>`, `<ins>…</ins>` | underline |
+| `<s>…</s>`, `<del>…</del>` | strikethrough |
+| `<sub>…</sub>`, `<sup>…</sup>` | sub/superscript |
+| `<br>` | line break |
+
+```{r html-spans, fig.height = 0.7, fig.width = 6, out.width = "90%"}
+grid.newpage()
+grid.markdown(
+  paste0(
+    'The <span style="color:#B22222">**residual**</span> for ',
+    "H<sub>0</sub> is <u>within</u> $2\\sigma$."
+  ),
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
+)
+```
+
+Markdown and `$math$` keep working inside a span, and spans nest. Use
+`**` and `*` for bold and italic --- `<b>` and `<i>` are *not*
+interpreted, since markdown already covers them. Anything else, tag or
+CSS property, is dropped and the text inside it kept.
+
 ## Block documents
 
 `markdown_box_grob()` lays out a full markdown document. Each block ---
@@ -247,7 +279,8 @@ limitation. On the rendering side:
   a single MicroTeX line has no raster.
 - **Links** keep their text; the destination is dropped, since a grob
   cannot be a hyperlink.
-- **Raw HTML** is dropped rather than typeset.
+- **Block-level HTML** (a `<div>`, say) is dropped rather than typeset.
+  Inline HTML is partly rendered --- see below.
 - **Syntax highlighting** of code blocks is not applied --- code is set
   in a monospace font, unhighlighted.
 

@@ -378,3 +378,123 @@ test_that("a block image is drawn as a raster and scaled to the column", {
   expect_lte(w, 100 + 0.5)             # scaled down to the column
   expect_equal(h / w, 100 / 400, tolerance = 0.01)   # aspect preserved
 })
+
+# --- inline HTML presentational spans -----------------------------------
+#
+# GFM defines no markdown syntax for colour, underline or super/subscript,
+# so raw HTML (which CommonMark includes and GFM keeps) is the only
+# conformant way to express them. Only the presentational subset is
+# interpreted; everything else keeps the old behaviour of dropping the
+# markup and keeping the text.
+
+md_colours <- function(md) {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  unique(markdown_grob(md)$layout_df$color)
+}
+md_types <- function(md) {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  unique(markdown_grob(md)$layout_df$type)
+}
+
+test_that("a colour span colours its content", {
+  expect_true("#FF0000" %in% md_colours('<span style="color:red">x</span>'))
+  expect_true("#4682B4" %in% md_colours('<span style="color:#4682B4">x</span>'))
+  # Any R colour name works, because the name is resolved to hex here
+  # rather than handed to MicroTeX's smaller named-colour table.
+  expect_true("#4682B4" %in% md_colours('<span style="color:steelblue">x</span>'))
+  # #abc shorthand and rgb() both normalise to #RRGGBB.
+  expect_true("#FF0000" %in% md_colours('<span style="color:#f00">x</span>'))
+  expect_true("#FF0000" %in% md_colours('<span style="color:rgb(255,0,0)">x</span>'))
+})
+
+test_that("underline and strike tags draw a rule", {
+  for (md in c("<u>x</u>", "<ins>x</ins>", "<s>x</s>", "<del>x</del>")) {
+    expect_true("line" %in% md_types(md), label = md)
+  }
+  expect_match(.md_to_tex("<u>x</u>"), "\\underline{", fixed = TRUE)
+  expect_match(.md_to_tex("<s>x</s>"), "\\sout{", fixed = TRUE)
+})
+
+test_that("sub and sup map to the text script commands", {
+  expect_match(.md_to_tex("<sub>i</sub>"), "\\textsubscript{", fixed = TRUE)
+  expect_match(.md_to_tex("<sup>2</sup>"), "\\textsuperscript{", fixed = TRUE)
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_gt(markdown_grob("x<sup>2</sup>")$bbox_w, 0)
+})
+
+test_that("spans nest, and combine with markdown and math", {
+  # Colour outside, underline inside.
+  cols <- md_colours('<span style="color:red"><u>x</u></span>')
+  expect_true("#FF0000" %in% cols)
+  expect_true("line" %in% md_types('<span style="color:red"><u>x</u></span>'))
+  # Two CSS properties on one span open two commands and close both.
+  one <- '<span style="color:red;text-decoration:underline">x</span>'
+  expect_true("#FF0000" %in% md_colours(one))
+  expect_true("line" %in% md_types(one))
+  # Markdown and math inside a span are still parsed, and inherit the colour.
+  mixed <- '<span style="color:red">a **b** $x^2$ c</span>'
+  expect_true("#FF0000" %in% md_colours(mixed))
+  expect_match(.md_to_tex(mixed), "\\textbf{", fixed = TRUE)
+})
+
+test_that("bold/italic tags are deliberately NOT interpreted", {
+  # Markdown already has ** and *; mapping <b> to \textbf would force its
+  # content to be emitted bare, which sibling-level tags cannot do.
+  tex <- .md_to_tex("<b>x</b>")
+  expect_equal(tex, "\\text{x}")
+  expect_false(grepl("\\textbf", tex, fixed = TRUE))
+  expect_equal(.md_to_tex("<i>x</i>"), "\\text{x}")
+})
+
+test_that("unrecognised markup is dropped but its text is kept", {
+  for (md in c("<abbr>x</abbr>", "<span>x</span>",
+               '<span style="color:notacolor">x</span>')) {
+    expect_equal(.md_to_tex(md), "\\text{x}", label = md)
+  }
+  expect_equal(md_colours("<abbr>x</abbr>"), "#000000")
+})
+
+test_that("HTML inside a code span stays literal", {
+  # Code spans are their own node type and are never scanned for tags, so
+  # documenting the syntax in backticks is safe.
+  tex <- .md_to_tex("`<u>x</u>`")
+  expect_match(tex, "\\texttt{", fixed = TRUE)
+  expect_match(tex, "<u>x</u>", fixed = TRUE)
+  expect_false(grepl("\\underline", tex, fixed = TRUE))
+})
+
+test_that("malformed spans still produce balanced braces", {
+  balanced <- function(tex) {
+    ob <- lengths(regmatches(tex, gregexpr("(?<!\\\\)\\{", tex, perl = TRUE)))
+    cb <- lengths(regmatches(tex, gregexpr("(?<!\\\\)\\}", tex, perl = TRUE)))
+    ob == cb
+  }
+  for (md in c("<u>unclosed", "</u>stray",
+               '<span style="color:red">a<u>b</span>c',
+               "<u><s>both</s></u>")) {
+    expect_true(balanced(.md_to_tex(md)), label = md)
+  }
+  # An unclosed tag still styles what follows it.
+  expect_match(.md_to_tex("<u>unclosed"), "\\underline{", fixed = TRUE)
+})
+
+test_that("HTML spans work in the block renderer too", {
+  # markdown_box_grob() uses the same inline walker.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_box_grob(
+    'Text with <span style="color:red">red</span> and <u>under</u>.',
+    width = grid::unit(3, "in"))
+  kids <- grid::makeContent(g)$children
+  inner <- kids[[length(kids)]]$children
+  cols <- unlist(lapply(inner, function(k) k$layout_df$color))
+  expect_true("#FF0000" %in% cols)
+})
+
+test_that("block-level HTML is still dropped", {
+  # Only *inline* HTML changed; <div> arrives as html_block.
+  md <- "Before\n\n<div>raw **html**</div>\n\nAfter"
+  tex <- .md_to_tex(md)
+  expect_false(grepl("<div", tex, fixed = TRUE))
+  expect_match(tex, "Before", fixed = TRUE)
+  expect_match(tex, "After", fixed = TRUE)
+})

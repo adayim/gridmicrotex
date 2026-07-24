@@ -9,6 +9,8 @@
 - `markdown_box_grob()` draws block images (png/jpeg).
 - Task list items render a checkbox; table column alignment and `1)` list
   delimiters are honoured.
+- Inline HTML spans render: `<span style="color:...">`, `<u>`, `<s>`,
+  `<sub>`, `<sup>` and `<br>`.
 - Bug fix: checked/unchecked task boxes rendered at different sizes.
 - Bug fix: list markers floated above their text instead of on the baseline.
 - Bug fix: code blocks rendered in the body font, mangling `<-`; now monospace.

@@ -34,10 +34,21 @@ spans are therefore hidden from the markdown parser before it runs and
 restored afterwards, so constructs like
 \code{$\\begin{matrix}a\\\\b\\end{matrix}$} survive intact.
 
+GFM has no markdown syntax for colour, underline or super/subscript,
+so --- as in CommonMark, and as \pkg{ggtext} does --- these come from
+inline HTML. The presentational subset is rendered:
+\code{<span style="color:...">} (any R colour name, \code{#rgb},
+\code{#rrggbb} or \code{rgb()}, plus
+\code{text-decoration: underline|line-through}), \code{<u>},
+\code{<ins>}, \code{<s>}, \code{<del>}, \code{<sub>}, \code{<sup>} and
+\code{<br>}. Use \code{**}/\code{*} for bold and italic; \code{<b>} and
+\code{<i>} are not interpreted. Any other tag --- and all block-level
+HTML --- is dropped, keeping the text inside it.
+
 Not every markdown feature has a MicroTeX equivalent. Links keep their
-text and drop the destination, images keep their alt text, and inline
-HTML is dropped. Block-level markdown (headings, lists, block quotes,
-tables) is rendered by \code{markdown_box_grob()}.
+text and drop the destination, and images keep their alt text.
+Block-level markdown (headings, lists, block quotes, tables) is
+rendered by \code{markdown_box_grob()}.
 }
 \examples{
 \donttest{

@@ -114,6 +114,118 @@
   if (bare) raw else latex_wrap(raw, input_mode = "mixed")
 }
 
+# ---------------------------------------------------------------------
+# Inline HTML
+#
+# GFM defines no markdown syntax for colour, underline or super/subscript
+# -- verified: `_x_` is italic, `__x__` bold, `^x^` and `~x~` literal.
+# CommonMark's raw HTML, which GFM keeps, is therefore not a fallback for
+# these; it is the only conformant way to express them, and it is what
+# ggtext uses. cmark hands us each tag as its own `html_inline` node with
+# the raw text, so the walker can read them.
+#
+# Only the presentational subset below is interpreted. Everything else --
+# `<abbr>`, `<div>`, anything unrecognised -- keeps its current
+# behaviour: the markup is dropped and the text between it is kept.
+# GFM's tagfilter (on, via extensions = TRUE) has already stripped
+# `<script>`, `<iframe>` and friends before we see them.
+# ---------------------------------------------------------------------
+
+# Resolve a CSS colour to "#RRGGBB", or NULL when it is not a colour.
+# Feeding hex to \textcolor is the robust path: MicroTeX accepts hex, so
+# this frees us from its smaller table of named colours and lets any R
+# colour name work.
+.md_resolve_color <- function(x) {
+  x <- trimws(tolower(x %||% ""))
+  if (!nzchar(x)) return(NULL)
+  if (grepl("^#[0-9a-f]{6}$", x)) return(toupper(x))
+  # #abc is shorthand for #aabbcc.
+  if (grepl("^#[0-9a-f]{3}$", x)) {
+    d <- strsplit(substring(x, 2L), "")[[1]]
+    return(toupper(paste0("#", paste0(d, d, collapse = ""))))
+  }
+  m <- regmatches(x, regexec("^rgba?\\(\\s*([0-9]+)\\D+([0-9]+)\\D+([0-9]+)", x))[[1]]
+  if (length(m) == 4L) {
+    v <- pmin(pmax(as.integer(m[2:4]), 0L), 255L)
+    return(sprintf("#%02X%02X%02X", v[1], v[2], v[3]))
+  }
+  rgb <- tryCatch(grDevices::col2rgb(x), error = function(e) NULL)
+  if (is.null(rgb)) return(NULL)
+  sprintf("#%02X%02X%02X", rgb[1], rgb[2], rgb[3])
+}
+
+# Turn a style attribute into wrapping commands. Several properties nest,
+# so the closer has to match the number opened.
+.md_parse_style <- function(style) {
+  open <- character(0)
+  for (decl in strsplit(style %||% "", ";", fixed = TRUE)[[1]]) {
+    kv <- strsplit(decl, ":", fixed = TRUE)[[1]]
+    if (length(kv) < 2L) next
+    prop <- trimws(tolower(kv[1]))
+    val <- trimws(tolower(paste(kv[-1], collapse = ":")))
+    if (prop == "color") {
+      hex <- .md_resolve_color(val)
+      if (!is.null(hex)) open <- c(open, paste0("\\textcolor{", hex, "}{"))
+    } else if (prop == "text-decoration") {
+      # Only the two decorations MicroTeX can draw.
+      if (grepl("underline", val, fixed = TRUE)) open <- c(open, "\\underline{")
+      if (grepl("line-through", val, fixed = TRUE)) open <- c(open, "\\sout{")
+    }
+  }
+  list(open = paste(open, collapse = ""),
+       close = strrep("}", length(open)))
+}
+
+# Tags we interpret. Deliberately excludes <b>/<i>/<strong>/<em> and the
+# font-weight / font-style properties: markdown already has ** and *, and
+# \textbf/\textit switch to text mode, which would mean their content had
+# to be emitted bare. Every command below leaves the mode alone, so
+# content passes through with `bare` untouched.
+.MD_HTML_TAGS <- list(
+  u      = "\\underline{",
+  ins    = "\\underline{",
+  s      = "\\sout{",
+  del    = "\\sout{",
+  strike = "\\sout{",
+  sub    = "\\textsubscript{",
+  sup    = "\\textsuperscript{"
+)
+
+# Classify one html_inline node.
+#
+# Returns a list with `kind`:
+#   "open"  -- push `close`, emit `open`
+#   "close" -- pop the matching tag, emit its close
+#   "void"  -- emit `open`, no push (<br>)
+#   "drop"  -- emit nothing (unrecognised markup)
+.md_html_tag <- function(txt) {
+  m <- regmatches(txt, regexec("^<\\s*(/?)\\s*([A-Za-z][A-Za-z0-9]*)([^>]*)>$",
+                               trimws(txt)))[[1]]
+  if (length(m) != 4L) return(list(kind = "drop"))
+  closing <- nzchar(m[2])
+  tag <- tolower(m[3])
+  attrs <- m[4]
+
+  if (closing) {
+    if (tag == "span" || !is.null(.MD_HTML_TAGS[[tag]])) {
+      return(list(kind = "close", tag = tag))
+    }
+    return(list(kind = "drop"))
+  }
+  if (tag == "br") return(list(kind = "void", open = "\\\\"))
+  if (tag == "span") {
+    style <- regmatches(attrs,
+      regexec("style\\s*=\\s*[\"']([^\"']*)[\"']", attrs))[[1]]
+    st <- if (length(style) == 2L) .md_parse_style(style[2]) else
+      list(open = "", close = "")
+    # A span with no usable style still pushes, so </span> pairs cleanly.
+    return(list(kind = "open", tag = "span", open = st$open, close = st$close))
+  }
+  cmd <- .MD_HTML_TAGS[[tag]]
+  if (is.null(cmd)) return(list(kind = "drop"))
+  list(kind = "open", tag = tag, open = cmd, close = "}")
+}
+
 # Walk the inline children of a cmark node and return a LaTeX string.
 #
 # `spans` carries the masked math so text nodes can restore it. Node
@@ -124,8 +236,15 @@
 .md_inline_to_tex <- function(node, spans, bare = FALSE) {
   kids <- xml2::xml_contents(node)
   if (length(kids) == 0L) return("")
-  parts <- vapply(kids, function(k) {
-    nm <- xml2::xml_name(k)
+
+  # An HTML span's opening and closing tags are *siblings*, with the
+  # content it styles as the siblings between them, so the walk needs
+  # state across the sequence rather than a per-node map.
+  out <- character(0)
+  open_tags <- character(0)   # tag names, innermost last
+  open_close <- character(0)  # their closing LaTeX, same order
+
+  emit_one <- function(k, nm) {
     switch(nm,
       text = .md_text_node(xml2::xml_text(k), spans, bare = bare),
       # \textbf/\textit/\texttt switch to text mode themselves, so their
@@ -157,12 +276,43 @@
       # already a space, and \text{ } would reset the style.
       softbreak     = if (bare) " " else "\\text{ }",
       linebreak     = "\\\\",
-      # html_inline and anything else unknown: drop the markup, keep text.
-      html_inline   = "",
+      # Anything else unknown: drop the markup, keep the text.
       .md_text_node(xml2::xml_text(k), spans, bare = bare)
     )
-  }, character(1))
-  paste(parts, collapse = "")
+  }
+
+  for (k in kids) {
+    nm <- xml2::xml_name(k)
+    if (!identical(nm, "html_inline")) {
+      out <- c(out, emit_one(k, nm))
+      next
+    }
+    tg <- .md_html_tag(xml2::xml_text(k))
+    if (identical(tg$kind, "open")) {
+      out <- c(out, tg$open)
+      open_tags <- c(open_tags, tg$tag)
+      open_close <- c(open_close, tg$close)
+    } else if (identical(tg$kind, "close")) {
+      # Close the innermost matching tag. Anything opened inside it that
+      # was never closed is closed here too, so the braces stay balanced
+      # however malformed the input was.
+      hit <- which(open_tags == tg$tag)
+      if (length(hit)) {
+        i <- hit[length(hit)]
+        out <- c(out, rev(open_close[seq(i, length(open_close))]))
+        open_tags <- open_tags[seq_len(i - 1L)]
+        open_close <- open_close[seq_len(i - 1L)]
+      }
+      # An unmatched closing tag is just stray markup: drop it.
+    } else if (identical(tg$kind, "void")) {
+      out <- c(out, tg$open)
+    }
+    # "drop": unrecognised markup contributes nothing.
+  }
+  # Unclosed spans at the end of the run.
+  if (length(open_close)) out <- c(out, rev(open_close))
+
+  paste(out, collapse = "")
 }
 
 # Convert markdown to a single LaTeX string for input_mode = "math",
@@ -186,8 +336,9 @@
   parts <- vapply(blocks, function(b) {
     # An html_block holds raw markup as its text, so walking into it
     # would typeset the tags -- and the markdown inside them, unparsed.
-    # Drop it, matching html_inline here and .md_blocks() on the block
-    # path, which would otherwise disagree about the same document.
+    # Drop it, matching .md_blocks() on the block path, which would
+    # otherwise disagree about the same document. Only *inline* HTML
+    # (.md_html_tag) is interpreted.
     if (identical(xml2::xml_name(b), "html_block")) return("")
     .md_inline_to_tex(b, masked$spans)
   }, character(1))
@@ -212,10 +363,21 @@
 #' restored afterwards, so constructs like
 #' \code{$\\begin{matrix}a\\\\b\\end{matrix}$} survive intact.
 #'
+#' GFM has no markdown syntax for colour, underline or super/subscript,
+#' so --- as in CommonMark, and as \pkg{ggtext} does --- these come from
+#' inline HTML. The presentational subset is rendered:
+#' \code{<span style="color:...">} (any R colour name, \code{#rgb},
+#' \code{#rrggbb} or \code{rgb()}, plus
+#' \code{text-decoration: underline|line-through}), \code{<u>},
+#' \code{<ins>}, \code{<s>}, \code{<del>}, \code{<sub>}, \code{<sup>} and
+#' \code{<br>}. Use \code{**}/\code{*} for bold and italic; \code{<b>} and
+#' \code{<i>} are not interpreted. Any other tag --- and all block-level
+#' HTML --- is dropped, keeping the text inside it.
+#'
 #' Not every markdown feature has a MicroTeX equivalent. Links keep their
-#' text and drop the destination, images keep their alt text, and inline
-#' HTML is dropped. Block-level markdown (headings, lists, block quotes,
-#' tables) is rendered by \code{markdown_box_grob()}.
+#' text and drop the destination, and images keep their alt text.
+#' Block-level markdown (headings, lists, block quotes, tables) is
+#' rendered by \code{markdown_box_grob()}.
 #'
 #' @param md Character string of markdown.
 #' @param ... Passed to \code{\link{latex_grob}} --- e.g. \code{x},
