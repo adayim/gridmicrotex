@@ -409,28 +409,6 @@ popViewport()
 popViewport()
 ```
 
-## In ggplot2
-
-Markdown works as a geom and as a theme element, mirroring
-`geom_latex()` and `element_latex()` --- see the *ggplot2 integration*
-vignette. In short:
-
-```{r ggplot, eval = requireNamespace("ggplot2", quietly = TRUE), fig.height = 3, fig.width = 5, out.width = "80%"}
-library(ggplot2)
-
-ggplot(mtcars, aes(wt, mpg)) +
-  geom_point() +
-  labs(
-    title = "*Fitted* model: $\\hat{y} = \\beta_0 + \\beta_1 x$",
-    x     = "**weight** ($10^3$ lbs)",
-    y     = "*efficiency* $\\eta$"
-  ) +
-  theme(
-    plot.title   = element_markdown(fontsize = 14),
-    axis.title.x = element_markdown(),
-    axis.title.y = element_markdown()
-  )
-```
 
 ## What is and isn't supported
 
