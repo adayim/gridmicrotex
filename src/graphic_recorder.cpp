@@ -1,5 +1,7 @@
 #include "graphic_recorder.h"
 
+#include "font_family_atom.h"
+
 namespace microtex {
 
 Graphics2D_Recorder::Graphics2D_Recorder() = default;
@@ -324,6 +326,7 @@ void Graphics2D_Recorder::drawTextRun(const std::string& text, float x, float y,
     rec.y = y;
     rec.text = text;
     rec.font_style = fontStyle;
+    rec.font_family = font_family_of_style(fontStyle);
     rec.font_size = fontSize * s;
     rec.rotation = rot;
     rec.col = _currentColor;

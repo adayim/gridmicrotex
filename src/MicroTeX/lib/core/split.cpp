@@ -1,7 +1,14 @@
 #include "core/split.h"
 
 #include "box/box_group.h"
+// glue.h only forward-declares GlueBox; justifyLine() needs the
+// definition to reach _stretch and _width.
+#include "box/box_single.h"
 #include "utils/log.h"
+
+#include <algorithm>
+#include <limits>
+#include <vector>
 
 using namespace std;
 using namespace microtex;
@@ -61,29 +68,262 @@ void microtex::printBox(const sptr<Box>& box) {
 
 #endif  // HAVE_LOG
 
-std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<Box>& b, float width, float lineSpace) {
-  auto h = dynamic_pointer_cast<HBox>(b);
-  sptr<Box> box;
-  if (h != nullptr) {
-    auto [splitted, box] = split(h, width, lineSpace);
-#ifdef HAVE_LOG
-    if (box != b) {
-      logv("[BEFORE SPLIT]:\n");
-      printBox(b);
-      logv("[AFTER SPLIT]:\n");
-      printBox(box);
-    } else {
-      logv("[BOX TREE]:\n");
-      printBox(box);
-    }
-#endif
-    return {splitted, box};
+bool BoxSplitter::_justify = false;
+bool BoxSplitter::_optimalBreak = false;
+
+std::vector<float> BoxSplitter::enumerateBreakWidths(const sptr<HBox>& hb) {
+  std::vector<float> out;
+  // canBreak() reports a break only where the content overruns the
+  // ceiling it is given, so start just inside the natural width to see
+  // the final break, then step the ceiling down past each one in turn.
+  float ceiling = hb->_width - PREC;
+  // Bounded: a malformed or pathological box must not spin here.
+  for (int guard = 0; guard < 4096 && ceiling > 0; guard++) {
+    std::stack<Position> positions;
+    const float w = canBreak(positions, hb, ceiling);
+    if (w >= hb->_width) break;                   // nothing breakable left
+    if (!out.empty() && w >= out.back()) break;   // not advancing; stop
+    out.push_back(w);
+    ceiling = w - PREC;
   }
-#ifdef HAVE_LOG
-  logv("[BOX TREE]:\n");
-  printBox(b);
-#endif
+  std::reverse(out.begin(), out.end());
+  return out;
+}
+
+std::vector<float> BoxSplitter::optimalLineTargets(const sptr<HBox>& hb, float width) {
+  if (width <= 0) return {};
+  const std::vector<float> breaks = enumerateBreakWidths(hb);
+  if (breaks.empty()) return {};
+
+  // Node 0 is the start of the paragraph, 1..m the breaks, m+1 the end.
+  std::vector<float> pos;
+  pos.reserve(breaks.size() + 2);
+  pos.push_back(0.f);
+  for (const float b : breaks) pos.push_back(b);
+  pos.push_back(hb->_width);
+  const int n = static_cast<int>(pos.size());
+
+  const float INF = std::numeric_limits<float>::max();
+  std::vector<float> best(n, INF);
+  std::vector<int> prev(n, -1);
+  best[0] = 0.f;
+
+  for (int i = 1; i < n; i++) {
+    for (int j = 0; j < i; j++) {
+      if (best[j] == INF) continue;
+      const float w = pos[i] - pos[j];
+      if (w > width + PREC) continue;  // that line would not fit
+      // TeX's demerits, in miniature. Badness grows with the cube of how
+      // far short the line falls, so one very loose line costs more than
+      // several slightly loose ones -- which is what breaks up greedy's
+      // ragged shape. Squaring (linePenalty + badness) then makes each
+      // extra line carry a cost of its own, so the paragraph is not
+      // allowed to grow a line merely to even out the others.
+      //
+      // The last line is free: TeX does not penalise a short final line.
+      float cost = 0.f;
+      if (i != n - 1) {
+        const float slack = (width - w) / width;
+        const float badness = 100.f * slack * slack * slack;
+        const float demerits = 10.f + badness;
+        cost = demerits * demerits;
+      }
+      if (best[j] + cost < best[i]) {
+        best[i] = best[j] + cost;
+        prev[i] = j;
+      }
+    }
+  }
+  if (best[n - 1] == INF) return {};  // nothing feasible; caller falls back
+
+  std::vector<float> targets;
+  for (int i = n - 1; i > 0; i = prev[i]) {
+    if (prev[i] < 0) return {};
+    targets.push_back(pos[i] - pos[prev[i]]);
+  }
+  std::reverse(targets.begin(), targets.end());
+  // The final line takes whatever is left, so it needs no target.
+  if (!targets.empty()) targets.pop_back();
+  return targets;
+}
+
+// Flatten a line into its boxes, left to right, descending only through
+// HBoxes. Stopping at any other box type keeps justification to the
+// spaces between words on the line: the spaces inside a fraction or a
+// matrix cell belong to that construct's own layout, and stretching them
+// would pull it apart.
+static void collectLineLeaves(const sptr<Box>& b, std::vector<sptr<Box>>& out) {
+  auto h = std::dynamic_pointer_cast<HBox>(b);
+  if (h == nullptr) {
+    out.push_back(b);
+    return;
+  }
+  for (const auto& child : h->_children) collectLineLeaves(child, out);
+}
+
+// Re-sum HBox widths after their glue has been widened. HBox::_width is
+// maintained as the sum of its children (see HBox::recalculate), so the
+// same restricted descent that found the glue can put the widths right.
+static float recomputeHBoxWidth(const sptr<Box>& b) {
+  auto h = std::dynamic_pointer_cast<HBox>(b);
+  if (h == nullptr) return b->_width;
+  float w = 0;
+  for (const auto& child : h->_children) w += recomputeHBoxWidth(child);
+  h->_width = w;
+  return w;
+}
+
+bool BoxSplitter::justifyLine(const sptr<Box>& line, float width) {
+  if (width <= 0 || line == nullptr) return false;
+
+  std::vector<sptr<Box>> leaves;
+  collectLineLeaves(line, leaves);
+
+  // A line ends at its last piece of ink. The break leaves the space it
+  // broke at sitting on the end of the line, and TeX drops that space
+  // rather than stretching it -- keeping it would push the visible text
+  // short of the margin by the width of a stretched space, so the line
+  // would measure right but still look ragged.
+  int last = -1;
+  for (int i = static_cast<int>(leaves.size()) - 1; i >= 0; i--) {
+    if (!leaves[i]->isSpace()) {
+      last = i;
+      break;
+    }
+  }
+  if (last < 0) return false;  // nothing but spaces
+
+  float trailing = 0;
+  std::vector<sptr<GlueBox>> glue;
+  for (int i = 0; i < static_cast<int>(leaves.size()); i++) {
+    auto g = std::dynamic_pointer_cast<GlueBox>(leaves[i]);
+    if (g == nullptr) continue;
+    if (i > last) {
+      trailing += g->_width;
+      g->_width = 0;
+    } else {
+      glue.push_back(g);
+    }
+  }
+
+  // Never squeeze: shrinking is what makes justified text look cramped,
+  // and a line already at or past the measure has nothing to give.
+  const float slack = width - (line->_width - trailing);
+  if (slack <= PREC || glue.empty()) {
+    if (trailing > 0) recomputeHBoxWidth(line);
+    return trailing > 0;
+  }
+
+  float total = 0;
+  for (const auto& g : glue) total += g->_stretch;
+  if (total <= PREC) {
+    if (trailing > 0) recomputeHBoxWidth(line);
+    return trailing > 0;
+  }
+
+  for (const auto& g : glue) {
+    g->_width += slack * (g->_stretch / total);
+  }
+  recomputeHBoxWidth(line);
+  return true;
+}
+
+std::pair<bool, sptr<Box>> BoxSplitter::splitDispatch(
+  const sptr<Box>& b,
+  float width,
+  float lineSpace,
+  int depth
+) {
+  if (depth > MAX_SPLIT_DEPTH) return {false, b};
+  auto h = dynamic_pointer_cast<HBox>(b);
+  if (h != nullptr) return split(h, width, lineSpace);
+  auto v = dynamic_pointer_cast<VBox>(b);
+  if (v != nullptr) return split(v, width, lineSpace, depth);
   return {false, b};
+}
+
+std::pair<bool, sptr<Box>> BoxSplitter::split(
+  const sptr<VBox>& vb,
+  float width,
+  float lineSpace,
+  int depth
+) {
+  if (width <= 0) return {false, vb};
+
+  // Cheap rejection: if every row already fits there is nothing to do,
+  // and the box is returned untouched so unsplit content keeps its
+  // original object identity and metrics exactly.
+  bool needsSplit = false;
+  for (const auto& child : vb->_children) {
+    if (child->_width > width) {
+      needsSplit = true;
+      break;
+    }
+  }
+  if (!needsSplit) return {false, vb};
+
+  // A VBox is positioned by its height/depth split, not just its total
+  // extent, and callers such as MatrixAtom::createBox overwrite both to
+  // centre the box on the math axis after building it. Recover that
+  // offset now so it can be reapplied to the taller box below --
+  // rebuilding without it silently shifts the baseline of every
+  // multi-row formula.
+  const float oldTotal = vb->_height + vb->_depth;
+  const float axis = vb->_height - oldTotal / 2;
+
+  // NOTE ON REACH: this splits rows that are plain HBoxes, which covers
+  // content separated by `\\` at the top level. It deliberately does NOT
+  // reach inside matrix/array cells, and so does not wrap long items in
+  // itemize/enumerate/align/gather/tabular.
+  //
+  // Those rows hold WrapperBoxes (see MatrixAtom::createBox), whose
+  // _height/_depth are the *row's* metrics, precomputed by
+  // recalculateLine() before the VBox exists; MatrixAtom then overwrites
+  // the row HBox metrics too. Breaking a cell would therefore have to
+  // re-derive every row height and push the new metrics back up through
+  // the WrapperBox and row box -- a change inside the matrix layout
+  // itself, affecting every table, matrix, cases and align in the
+  // package. Callers that need prose to wrap inside list items should
+  // stack the items themselves and give each one its own max_width.
+  auto out = sptrOf<VBox>();
+  bool splitted = false;
+  for (const auto& child : vb->_children) {
+    if (child->_width > width) {
+      auto [childSplit, newChild] = splitDispatch(child, width, lineSpace, depth + 1);
+      if (childSplit) splitted = true;
+      out->add(newChild);
+    } else {
+      // Interline struts and rows that already fit pass through as-is.
+      out->add(child);
+    }
+  }
+
+  // Nothing actually broke -- a row can be wider than the limit yet have
+  // no legal break position. Keep the original box rather than an
+  // equivalent copy.
+  if (!splitted) return {false, vb};
+
+  const float newTotal = out->_height + out->_depth;
+  out->_height = newTotal / 2 + axis;
+  out->_depth = newTotal / 2 - axis;
+
+  return {true, std::static_pointer_cast<Box>(out)};
+}
+
+std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<Box>& b, float width, float lineSpace) {
+  auto [splitted, box] = splitDispatch(b, width, lineSpace, 0);
+#ifdef HAVE_LOG
+  if (box != b) {
+    logv("[BEFORE SPLIT]:\n");
+    printBox(b);
+    logv("[AFTER SPLIT]:\n");
+    printBox(box);
+  } else {
+    logv("[BOX TREE]:\n");
+    printBox(box);
+  }
+#endif
+  return {splitted, box};
 }
 
 std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width, float lineSpace) {
@@ -91,11 +331,31 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
 
   auto* vbox = new VBox();
   sptr<HBox> first, second;
-  stack<Position> positions;
   sptr<HBox> hbox = hb;
   bool splitted = false;
 
-  while (hbox->_width > width && canBreak(positions, hbox, width) != hbox->_width) {
+  // Per-line target widths when breaking by total fit. Empty means
+  // greedy, in which case every line simply targets the full measure and
+  // the behaviour is exactly what it was.
+  const std::vector<float> targets =
+    _optimalBreak ? optimalLineTargets(hb, width) : std::vector<float>();
+  size_t line = 0;
+
+  while (hbox->_width > width) {
+    stack<Position> positions;
+    // A target is only ever <= width, so the line this produces cannot
+    // overrun the measure regardless of how the target was chosen.
+    const float target = line < targets.size() ? std::min(targets[line], width)
+                                               : width;
+    if (canBreak(positions, hbox, target) == hbox->_width) {
+      // Nothing breakable within the target. Retry at the full measure
+      // before giving up, so a bad plan degrades to greedy rather than
+      // leaving the rest of the paragraph unbroken.
+      if (target >= width) break;
+      positions = stack<Position>();
+      if (canBreak(positions, hbox, width) == hbox->_width) break;
+    }
+    line++;
     Position pos = positions.top();
     positions.pop();
     auto hboxes = pos._box->split(pos._index - 1);
@@ -110,6 +370,11 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
       first = hboxes.first;
       second = hboxes.second;
     }
+    // `first` is a completed line and something follows it, so it is
+    // never the last line of the paragraph -- the one case TeX leaves
+    // ragged. The trailing `second` added after this loop is that line,
+    // and is deliberately left alone.
+    if (_justify) justifyLine(first, width);
     vbox->add(first, lineSpace);
     splitted = true;
     hbox = second;

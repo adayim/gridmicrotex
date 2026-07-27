@@ -274,6 +274,9 @@ element_latex <- function(math_font = "", fontsize = NULL,
     envir = asNamespace("ggplot2")
   )
 
+  # The markdown geom and theme element are built the same way, from the
+  # same ggplot2/S7 soft dependencies.
+  .onLoad_ggplot2_markdown()
 }
 
 # --------------------------------------------------------------------------
@@ -357,7 +360,32 @@ element_latex <- function(math_font = "", fontsize = NULL,
       name = paste0("ticklabel.", i)
     ))
   }
-  grid::gTree(children = grobs, name = "axis.latex.labels")
+  grid::gTree(children = grobs, name = "axis.latex.labels",
+              cl = "gridmicrotex_labels")
+}
+
+# Report the extent of a bundle of tick-label grobs.
+#
+# Without these, the gTree measures 0 x 0: its children sit at npc
+# positions and grid has nothing to derive an extent from. ggplot2 sizes
+# the axis strip from this grob, so a zero height means no room is
+# reserved and the labels are drawn over the axis title.
+.labels_extent <- function(x, fn) {
+  kids <- x$children
+  if (length(kids) == 0L) return(grid::unit(0, "bigpts"))
+  max(do.call(grid::unit.c, lapply(kids, fn)))
+}
+
+#' @method widthDetails gridmicrotex_labels
+#' @export
+widthDetails.gridmicrotex_labels <- function(x) {
+  .labels_extent(x, grid::grobWidth)
+}
+
+#' @method heightDetails gridmicrotex_labels
+#' @export
+heightDetails.gridmicrotex_labels <- function(x) {
+  .labels_extent(x, grid::grobHeight)
 }
 
 # ggplot2 passes per-tick positions for one axis and a scalar unit for the

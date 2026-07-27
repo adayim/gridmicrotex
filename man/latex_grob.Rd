@@ -18,6 +18,8 @@ latex_grob(
   tex_style = "",
   input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
+  justify = FALSE,
+  line_break = c("greedy", "optimal"),
   debug = FALSE,
   name = NULL,
   gp = grid::gpar()
@@ -70,7 +72,7 @@ for details on the wrapping process.}
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_font}}
+Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files --- no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
@@ -78,6 +80,22 @@ R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
 For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).}
+
+\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
+its interword spaces so every line but the last fills
+\code{max_width} exactly. Requires \code{max_width}: it acts on the
+lines the wrapper produces, so it does nothing on its own.
+\code{FALSE} (default) leaves the right edge ragged, matching R's own
+text drawing. gridmicrotex does not hyphenate, so justifying a narrow
+column opens noticeably wide word spaces.}
+
+\item{line_break}{How lines are chosen when wrapping.
+\code{"greedy"} (default) fills each line as far as it will go and
+never reconsiders. \code{"optimal"} chooses the breaks together so
+the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+pulling one word down early can improve every later line, which a
+greedy pass cannot see. Requires \code{max_width}, and costs a
+little more layout time.}
 
 \item{debug}{Logical; if \code{TRUE}, draws diagnostic overlays on the
 grob --- the full bounding box (dashed gray), the baseline (solid
@@ -172,7 +190,7 @@ a minimal metrics file is generated on first use and cached under
 spacing of \verb{\\text} blocks stays in sync with what \pkg{grid}
 actually draws. When \code{fontfamily} is unset, the R default
 (\code{"sans"}) is used. No manual font loading is required for text
-fonts; \code{\link[=load_font]{load_font()}} remains only for adding custom \strong{math}
+fonts; \code{\link[=load_math_font]{load_math_font()}} remains only for adding custom \strong{math}
 fonts.
 \item \code{fontsize} / \code{cex}: formula size is \code{fontsize * cex} big points
 (default 20 * 1). Both math and text scale together. The effective
@@ -218,9 +236,9 @@ which positions the caption above or below the float regardless of
 source order.
 }
 
-Anything not in this list is passed to MicroTeX unchanged. Unknown
-commands render as literal text, which is useful for spotting
-unsupported markup.
+Anything not in this list is passed to MicroTeX unchanged. An unknown
+command is not an error: MicroTeX typesets its name in red, which
+makes unsupported markup easy to spot in the output.
 }
 
 \subsection{Parallelism}{

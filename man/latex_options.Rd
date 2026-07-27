@@ -9,7 +9,10 @@ latex_options(
   math_font = NULL,
   render_mode = NULL,
   tex_style = NULL,
-  input_mode = NULL
+  input_mode = NULL,
+  justify = NULL,
+  line_break = NULL,
+  markdown_style = NULL
 )
 
 reset_latex_options()
@@ -35,6 +38,26 @@ that mix prose and math without explicit \code{\\text{}} markers.
 \code{"math"} treats the whole string as math --- the classic
 MicroTeX behaviour, where letters render as math italics and
 unwrapped prose looks wrong.}
+
+\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
+its interword spaces so every line but the last fills
+\code{max_width} exactly. Has no effect without \code{max_width},
+since it acts on the lines the wrapper produces. \code{FALSE}
+(default) leaves the right edge ragged, matching R's own text
+drawing. Note that gridmicrotex does not hyphenate, so justifying a
+narrow column opens noticeably wide word spaces.}
+
+\item{line_break}{How lines are chosen when wrapping.
+\code{"greedy"} (default) fills each line as far as it will go and
+never reconsiders. \code{"optimal"} chooses the breaks together so
+the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+pulling one word down early can improve every later line, which a
+greedy pass cannot see. Requires \code{max_width}, and costs a
+little more layout time.}
+
+\item{markdown_style}{Default style for \code{\link{markdown_grob}} and
+\code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}
+object, CSS text, or a path to a \code{.css} file.}
 }
 \value{
 Invisibly returns the previous settings (a list). With no

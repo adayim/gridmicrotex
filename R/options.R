@@ -8,8 +8,20 @@
   math_font   = NULL,
   render_mode = NULL,
   tex_style   = NULL,
-  input_mode  = NULL
+  input_mode  = NULL,
+  justify     = NULL,
+  line_break  = NULL,
+  markdown_style = NULL
 )
+
+# Validate the `justify` argument. Kept here so latex_grob(),
+# latex_dims() and latex_options() all reject the same things.
+.check_justify <- function(justify) {
+  if (!is.logical(justify) || length(justify) != 1L || is.na(justify)) {
+    stop("`justify` must be TRUE or FALSE.", call. = FALSE)
+  }
+  invisible(TRUE)
+}
 
 #' Set or query package-wide LaTeX rendering defaults
 #'
@@ -44,6 +56,23 @@
 #'   \code{"math"} treats the whole string as math --- the classic
 #'   MicroTeX behaviour, where letters render as math italics and
 #'   unwrapped prose looks wrong.
+#' @param justify Logical. When \code{TRUE}, wrapped text is stretched at
+#'   its interword spaces so every line but the last fills
+#'   \code{max_width} exactly. Has no effect without \code{max_width},
+#'   since it acts on the lines the wrapper produces. \code{FALSE}
+#'   (default) leaves the right edge ragged, matching R's own text
+#'   drawing. Note that gridmicrotex does not hyphenate, so justifying a
+#'   narrow column opens noticeably wide word spaces.
+#' @param line_break How lines are chosen when wrapping.
+#'   \code{"greedy"} (default) fills each line as far as it will go and
+#'   never reconsiders. \code{"optimal"} chooses the breaks together so
+#'   the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+#'   pulling one word down early can improve every later line, which a
+#'   greedy pass cannot see. Requires \code{max_width}, and costs a
+#'   little more layout time.
+#' @param markdown_style Default style for \code{\link{markdown_grob}} and
+#'   \code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}
+#'   object, CSS text, or a path to a \code{.css} file.
 #' @return Invisibly returns the previous settings (a list). With no
 #'   arguments, returns the current settings visibly.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}}
@@ -56,7 +85,9 @@
 #'   reset_latex_options()
 #' }
 latex_options <- function(math_font = NULL, render_mode = NULL,
-                          tex_style = NULL, input_mode = NULL) {
+                          tex_style = NULL, input_mode = NULL,
+                          justify = NULL, line_break = NULL,
+                          markdown_style = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -80,6 +111,19 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     input_mode <- match.arg(input_mode, c("math", "mixed"))
     .latex_options$values$input_mode <- input_mode
   }
+  if (!is.null(justify)) {
+    .check_justify(justify)
+    .latex_options$values$justify <- justify
+  }
+  if (!is.null(line_break)) {
+    line_break <- match.arg(line_break, c("greedy", "optimal"))
+    .latex_options$values$line_break <- line_break
+  }
+  if (!is.null(markdown_style)) {
+    # Coerce here rather than at each use, so a bad value is rejected by
+    # the call that set it.
+    .latex_options$values$markdown_style <- .md_as_style(markdown_style)
+  }
   invisible(old)
 }
 
@@ -91,7 +135,10 @@ reset_latex_options <- function() {
     math_font   = NULL,
     render_mode = NULL,
     tex_style   = NULL,
-    input_mode  = NULL
+    input_mode  = NULL,
+    justify     = NULL,
+    line_break  = NULL,
+    markdown_style = NULL
   )
   invisible(NULL)
 }

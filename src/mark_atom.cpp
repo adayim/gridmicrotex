@@ -30,8 +30,4 @@ void register_mark_macro() {
     s_registered = true;
 }
 
-void reset_mark_macro() {
-    s_registered = false;
-}
-
 }  // namespace microtex

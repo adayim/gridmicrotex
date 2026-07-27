@@ -40,7 +40,7 @@
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
-#'   Bundled math fonts and any registered via \code{\link{load_font}}
+#'   Bundled math fonts and any registered via \code{\link{load_math_font}}
 #'   are read directly from their OTF files --- no system-wide font
 #'   install is required.
 #'   Falls back to path mode automatically on devices that lack the
@@ -48,6 +48,20 @@
 #'   For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 #'   \code{"path"} renders math symbols as filled vector paths (works on
 #'   all devices but text is not selectable in PDF/SVG).
+#' @param justify Logical. When \code{TRUE}, wrapped text is stretched at
+#'   its interword spaces so every line but the last fills
+#'   \code{max_width} exactly. Requires \code{max_width}: it acts on the
+#'   lines the wrapper produces, so it does nothing on its own.
+#'   \code{FALSE} (default) leaves the right edge ragged, matching R's own
+#'   text drawing. gridmicrotex does not hyphenate, so justifying a narrow
+#'   column opens noticeably wide word spaces.
+#' @param line_break How lines are chosen when wrapping.
+#'   \code{"greedy"} (default) fills each line as far as it will go and
+#'   never reconsiders. \code{"optimal"} chooses the breaks together so
+#'   the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+#'   pulling one word down early can improve every later line, which a
+#'   greedy pass cannot see. Requires \code{max_width}, and costs a
+#'   little more layout time.
 #' @param debug Logical; if \code{TRUE}, draws diagnostic overlays on the
 #'   grob --- the full bounding box (dashed gray), the baseline (solid
 #'   red), the depth line (dashed gray), and a small dot at each
@@ -120,7 +134,7 @@
 #'   spacing of `\text` blocks stays in sync with what \pkg{grid}
 #'   actually draws. When `fontfamily` is unset, the R default
 #'   (`"sans"`) is used. No manual font loading is required for text
-#'   fonts; [load_font()] remains only for adding custom **math**
+#'   fonts; [load_math_font()] remains only for adding custom **math**
 #'   fonts.
 #' - `fontsize` / `cex`: formula size is `fontsize * cex` big points
 #'   (default 20 * 1). Both math and text scale together. The effective
@@ -160,9 +174,9 @@
 #'   which positions the caption above or below the float regardless of
 #'   source order.
 #'
-#' Anything not in this list is passed to MicroTeX unchanged. Unknown
-#' commands render as literal text, which is useful for spotting
-#' unsupported markup.
+#' Anything not in this list is passed to MicroTeX unchanged. An unknown
+#' command is not an error: MicroTeX typesets its name in red, which
+#' makes unsupported markup easy to spot in the output.
 #'
 #' ## Parallelism
 #' The MicroTeX engine keeps mutable C++ state for font caching and text
@@ -214,19 +228,24 @@ latex_grob <- function(tex,
                        tex_style = "",
                        input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
+                       justify = FALSE,
+                       line_break = c("greedy", "optimal"),
                        debug = FALSE,
                        name = NULL,
                        gp = grid::gpar()) {
 
-  .apply_opts("math_font", "render_mode", "tex_style", "input_mode")
+  .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
+              "justify", "line_break")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
+  line_break <- match.arg(line_break)
+  .check_justify(justify)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
     input_mode = input_mode,
-    with_path_fallback = TRUE
+    with_path_fallback = TRUE, justify = justify, line_break = line_break
   )
 
   # Convert numeric x/y to units
@@ -266,6 +285,8 @@ latex_grob <- function(tex,
     max_width = max_width,
     tex_style = tex_style,
     input_mode = input_mode,
+    justify = justify,
+    line_break = line_break,
     text_gp = parsed$text_gp,
     render_mode = parsed$render_mode,
     path_layout_df = parsed$path_layout,
@@ -424,7 +445,8 @@ grobMark <- function(grob, name) {
 # so they don't re-scale at draw time).
 .parse_from_gp <- function(tex, gp, math_font, max_width, tex_style,
                            render_mode, input_mode = "mixed",
-                           with_path_fallback = FALSE) {
+                           with_path_fallback = FALSE, justify = FALSE,
+                           line_break = "greedy") {
   .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
   input_mode <- match.arg(input_mode, c("math", "mixed"))
@@ -483,7 +505,8 @@ grobMark <- function(grob, name) {
     tex = parse_input, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
-    tex_style = tex_style, text_family = text_family
+    tex_style = tex_style, text_family = text_family, justify = justify,
+    optimal_break = identical(line_break, "optimal")
   )
 
   path_layout <- NULL
@@ -492,7 +515,8 @@ grobMark <- function(grob, name) {
       tex = parse_input, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style,
-      text_family = text_family
+      text_family = text_family, justify = justify,
+      optimal_break = identical(line_break, "optimal")
     )
   }
 
@@ -564,7 +588,8 @@ makeContent.latexgrob <- function(x) {
 # Fields whose values feed .parse_from_gp(); editing any of them forces a
 # re-parse so the layout/bbox/text metrics stay in sync with the inputs.
 .latex_parse_fields <- c("tex", "math_font", "max_width", "tex_style",
-                         "input_mode", "render_mode", "gp")
+                         "input_mode", "render_mode", "justify",
+                         "line_break", "gp")
 
 #' @method editDetails latexgrob
 #' @export
@@ -579,7 +604,9 @@ editDetails.latexgrob <- function(x, specs) {
       tex = x$tex, gp = x$gp, math_font = x$math_font,
       max_width = x$max_width, tex_style = x$tex_style,
       input_mode = x$input_mode %||% "math",
-      render_mode = x$render_mode, with_path_fallback = TRUE
+      render_mode = x$render_mode, with_path_fallback = TRUE,
+      justify = isTRUE(x$justify),
+      line_break = x$line_break %||% "greedy"
     )
     layout <- parsed$layout
     x$tex            <- parsed$tex
@@ -764,15 +791,20 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
                        input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
+                       justify = FALSE,
+                       line_break = c("greedy", "optimal"),
                        gp = grid::gpar()) {
-  .apply_opts("math_font", "render_mode", "tex_style", "input_mode")
+  .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
+              "justify", "line_break")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
+  line_break <- match.arg(line_break)
+  .check_justify(justify)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
-    input_mode = input_mode
+    input_mode = input_mode, justify = justify, line_break = line_break
   )
   layout <- parsed$layout
   bbox_h <- attr(layout, "bbox_height")
@@ -827,14 +859,18 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
   # Cache the R version check
   has_ascent_fn <- getRversion() >= "4.4.0"
 
-  # Per-closure cache keyed on (font_style, text). Lifetime = one parse
-  # (the closure is created fresh per parse in latex_grob/latex_dims), so
-  # graphics state can't drift between calls. Hits avoid a textGrob
-  # construction + grid::convertHeight round trip per repeated span.
+  # Per-closure cache keyed on (font_style, font_family, text). Lifetime =
+  # one parse (the closure is created fresh per parse in
+  # latex_grob/latex_dims), so graphics state can't drift between calls.
+  # Hits avoid a textGrob construction + grid::convertHeight round trip per
+  # repeated span.
   cache <- new.env(parent = emptyenv())
 
-  function(text, font_style) {
-    key <- paste0(as.integer(font_style), "\x1f", text)
+  # `font_family` is the family named by a \gmfontfamily span, passed in by
+  # TextLayout_R. Defaulted, so the two-argument calls that predate it --
+  # including register_text_measurer() users -- keep working.
+  function(text, font_style, font_family = "") {
+    key <- paste0(as.integer(font_style), "\x1f", font_family, "\x1f", text)
     hit <- cache[[key]]
     if (!is.null(hit)) return(hit)
 
@@ -853,8 +889,10 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     face <- .resolve_text_face(as.integer(font_style))
 
     gp <- grid::gpar(fontsize = ref_size, fontface = face)
-    if (!is.null(text_gp$fontfamily)) {
-      gp$fontfamily <- text_gp$fontfamily
+    fam <- .resolve_text_family(as.integer(font_style), text_gp$fontfamily,
+                                font_family)
+    if (!is.null(fam)) {
+      gp$fontfamily <- fam
     }
 
     # Ensure a graphics device is available for measurement
@@ -871,11 +909,15 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     # real plot's grid.newpage(). grob* queries below only read metrics.
     tg <- grid::textGrob(text, gp = gp)
 
-    # Measure width in bigpts
-    w <- .measure_text_bigpts(tg, text, em = ref_size)
+    # Measuring is per *character*, so a device that cannot resolve the
+    # family -- base pdf() has no named families, only what pdfFonts()
+    # declares -- would warn dozens of times for one label. Stay quiet
+    # here: the same device warns again when the text is actually drawn,
+    # which is the once-per-run, user-actionable copy of the message.
+    w <- suppressWarnings(.measure_text_bigpts(tg, text, em = ref_size))
 
     # Measure ascent and descent (with Windows/CJK locale fallback)
-    ad <- tryCatch({
+    ad <- suppressWarnings(tryCatch({
       if (has_ascent_fn) {
         asc <- grid::convertHeight(
           get("grobAscent", envir = asNamespace("grid"))(tg),
@@ -894,7 +936,7 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     }, error = function(e) {
       # Approximate: 80% of font size for ascent, 20% for descent
       c(ref_size * 0.8, ref_size * 0.2)
-    })
+    }))
     asc  <- ad[1]
     desc <- ad[2]
 

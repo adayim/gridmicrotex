@@ -11,8 +11,9 @@ download](https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex)](https://c
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
-Render LaTeX math expressions as native R **grid** graphics objects,
-with no external LaTeX installation required.
+Render LaTeX math expressions — and markdown containing them — as native
+R **grid** graphics objects, with no external LaTeX installation
+required.
 
 gridmicrotex embeds the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ layout engine to
@@ -122,43 +123,40 @@ grid.latex(
 
 <img src="man/figures/README-example-mixed-definition-1.png" alt="" width="50%" />
 
-## CJK and multilingual text
+## Markdown
 
-Non-math text via `\text{}` supports CJK and other scripts. Font
-settings from `gp` (`fontfamily`, `fontface`) apply to text only — math
-rendering always uses the selected math font:
+`grid.markdown()` renders markdown, with `$math$` inline. Unlike the
+other markdown-in-grid packages, the maths is real LaTeX rather than
+plotmath:
 
 ``` r
 grid.newpage()
-grid.latex(r"(\text{如果 } x > 0 \text{ 则 } y = x^2)",
-           gp = gpar(fontsize = 24, fontfamily = "sans"))
-```
-
-<img src="man/figures/README-example-mixed-cjk-math-1.png" alt="" width="50%" />
-
-## User-defined macros
-
-Use `define_macro()` for zero-argument shorthands that persist across
-plots in the session, and plain-TeX `\def` for parameterised macros
-local to a single expression:
-
-``` r
-define_macro("RR", "\\mathbb{R}")
-grid.newpage()
-grid.latex(
-  r"(\def\norm#1{\left\lVert #1 \right\rVert}
-      \forall \vec{v} \in \RR^n,\ \norm{\vec{v}} \geq 0)",
-  gp = grid::gpar(fontsize = 22)
+grid.markdown(
+  "The **fitted** slope is $\\hat{\\beta}_1 = 0.42$ (*p* < 0.001).",
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
 )
 ```
 
-<img src="man/figures/README-example-macros-1.png" alt="" width="60%" />
+<img src="man/figures/README-example-markdown-1.png" alt="" width="70%" />
+
+Colour, font and size come from inline HTML, as they must: markdown
+itself defines no syntax for them.
 
 ``` r
-clear_macros()
+grid.newpage()
+grid.markdown(
+  paste0('Set in <span style="font-family:serif">serif</span>, ',
+         'H<sub>0</sub> <u>rejected</u> at ',
+         '<span style="color:#B22222">5%</span>.'),
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
+)
 ```
 
-See `?define_macro` and `vignette("getting-started")` for details.
+<img src="man/figures/README-example-markdown-html-1.png" alt="" width="70%" />
+
+`markdown_box_grob()` lays out a whole document — headings, lists,
+quotes, code, tables and images — as a stack of grobs. See
+`vignette("markdown")`.
 
 ## ggplot2 integration
 
@@ -186,14 +184,16 @@ ggplot2 is a soft dependency — the core functions work without it. See
 
 ## Comparison
 
-| Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
-|:-----------------|:---------------:|:-------------------:|:-------:|:-------------:|
-| `tikzDevice`     |       Yes       |         No          |   Yes   |     Full      |
-| `xdvir`          |       Yes       |         No          |   Yes   |     Full      |
-| `latexpdf`       |       Yes       |         No          |   Yes   | Full (tables) |
-| `latex2exp`      |       No        |         Yes         |   Yes   |    Limited    |
-| `plotmath`       |       No        |         Yes         |   Yes   |    Limited    |
-| **gridmicrotex** |     **No**      |       **Yes**       | **Yes** |   **Broad**   |
+| Approach | LaTeX required? | Device independent? | Vector? | Math coverage | Markdown |
+|:---|:--:|:--:|:--:|:--:|:--:|
+| `tikzDevice` | Yes | No | Yes | Full | No |
+| `xdvir` | Yes | No | Yes | Full | No |
+| `latexpdf` | Yes | No | Yes | Full (tables) | No |
+| `latex2exp` | No | Yes | Yes | Limited | No |
+| `plotmath` | No | Yes | Yes | Limited | No |
+| `gridtext` | No | Yes | Yes | None | Yes |
+| `marquee` | No | Yes | Yes | None | Yes |
+| **gridmicrotex** | **No** | **Yes** | **Yes** | **Broad** | **Yes** |
 
 ## How it works
 
