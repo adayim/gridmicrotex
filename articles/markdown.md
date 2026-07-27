@@ -442,34 +442,6 @@ popViewport()
 
 ![](markdown_files/figure-html/justify-1.png)
 
-## In ggplot2
-
-Markdown works as a geom and as a theme element, mirroring
-[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
-and
-[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
-— see the *ggplot2 integration* vignette. In short:
-
-``` r
-
-library(ggplot2)
-
-ggplot(mtcars, aes(wt, mpg)) +
-  geom_point() +
-  labs(
-    title = "*Fitted* model: $\\hat{y} = \\beta_0 + \\beta_1 x$",
-    x     = "**weight** ($10^3$ lbs)",
-    y     = "*efficiency* $\\eta$"
-  ) +
-  theme(
-    plot.title   = element_markdown(fontsize = 14),
-    axis.title.x = element_markdown(),
-    axis.title.y = element_markdown()
-  )
-```
-
-![](markdown_files/figure-html/ggplot-1.png)
-
 ## What is and isn’t supported
 
 The parser is the full CommonMark specification plus all five GitHub
