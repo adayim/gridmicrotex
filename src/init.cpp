@@ -3,6 +3,7 @@
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
 #include "font_family_atom.h"
+#include "macro/macro.h"
 #include "mark_atom.h"
 #include "unimath/font_src.h"
 #include "unimath/uni_font.h"
@@ -344,12 +345,22 @@ bool microtex_set_default_math_font(std::string name) {
 // [[Rcpp::export]]
 void microtex_release() {
     if (!s_initialized) return;
-    MicroTeX::release();
+    // Deliberately NOT MicroTeX::release(). Its whole body is
+    // MacroInfo::_free_() + NewCommandMacro::_free_(), which are
+    // process-teardown deallocation: _free_() deletes every value in the
+    // static _commands map but never erases, so afterwards every built-in
+    // macro is a dangling pointer -- and MacroInfo::add() then does
+    // `delete it->second` on one, i.e. a double free, every time we
+    // re-register \mark / \gmfontfamily / \textrm on the next init. That
+    // corrupted the heap on every release/re-init cycle; with enough
+    // macros registered it segfaults outright on the next large parse.
+    // _commands is static-lifetime data that is only ever populated once,
+    // so the right move is to leave it alone and just drop what is
+    // genuinely per-session.
+    NewCommandMacro::clearUserMacros();
     microtex::g_font_id_cache.clear();
-    // release() rebuilds the macro registry on the next init(); drop the
-    // \mark and \gmfontfamily guards so they are re-added.
-    microtex::reset_mark_macro();
-    microtex::reset_font_family_macro();
+    // The built-in registry now survives, so our macros are still there
+    // and their registration guards must stay set.
     s_initialized = false;
 }
 

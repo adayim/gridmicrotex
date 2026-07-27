@@ -18,6 +18,7 @@ markdown_box_grob(
   margin = grid::unit(0, "pt"),
   box_gp = NULL,
   r = grid::unit(0, "pt"),
+  style = NULL,
   name = NULL,
   gp = grid::gpar(),
   vp = NULL
@@ -52,21 +53,32 @@ draws no box.}
 
 \item{r}{Corner radius; a non-zero value draws a rounded box.}
 
+\item{style}{Appearance of the blocks: a \code{\link{markdown_style}}
+object, CSS text, or a path to a \code{.css} file. \code{NULL}
+(default) uses \code{latex_options("markdown_style")} if set, and
+the built-in defaults otherwise.}
+
 \item{name}{Optional grob name.}
 
 \item{gp}{Graphical parameters for the text. \code{fontsize} also sets
-the scale for block spacing and list indentation.}
+the scale for block spacing and list indentation, and \code{cex}
+multiplies it as elsewhere in \pkg{grid}.}
 
-\item{vp}{Optional viewport.}
+\item{vp}{Optional viewport. Supplying one replaces the viewport built
+from \code{x}, \code{y}, \code{width}, \code{height}, \code{hjust}
+and \code{vjust}, so those are then ignored.}
 }
 \value{
 A \code{markdownbox} gTree.
 }
 \description{
-Lays markdown out as a block document --- headings, paragraphs, lists,
-block quotes, code blocks, tables and horizontal rules --- inside an
-optional padded, filled and bordered box. Prose wraps to the requested
-width, and \code{$...$} math is typeset by MicroTeX as usual.
+Lays markdown out as a block document --- headings, paragraphs, lists
+(including GFM task lists), block quotes, code blocks, tables,
+horizontal rules and images --- inside an optional padded, filled and
+bordered box. Prose wraps to the requested width, and \code{$...$}
+math is typeset by MicroTeX as usual. All the inline formatting
+\code{\link{markdown_grob}} understands, including the inline HTML
+subset, works inside every block.
 }
 \details{
 Where \code{\link{markdown_grob}} flattens everything into a single
@@ -79,7 +91,54 @@ Two consequences worth knowing. Table cells and code lines are not
 wrapped, so a wide table overflows rather than reflowing. And list
 items are stacked here rather than handed to MicroTeX's
 \code{itemize}, which is what gives them a proper hanging indent.
+
+An image on a line of its own is drawn as a raster, scaled to fit the
+column but never enlarged past its natural size (pixels are read at
+96 dpi). PNG needs the \pkg{png} package and JPEG needs \pkg{jpeg},
+both \emph{Suggests}: when the reader is not installed, the file is
+missing, or the format is anything else, the image degrades to its alt
+text. An image \emph{within} a sentence stays inline, where only its
+alt text survives.
+
+The layout is computed at draw time, so an open device is required ---
+which is what lets a relative \code{width} and the measured height of
+the text resolve against the viewport the box is actually drawn in.
 }
+\section{Styling}{
+
+Appearance comes from a small CSS cascade. \code{style} sets the house
+style for the whole document, by tag:
+
+\preformatted{markdown_box_grob(md, style = markdown_style(
+  h1         = md_style(color = "steelblue", font_size = 2),
+  blockquote = md_style(border_left = "3px solid grey60")
+))}
+
+The same thing written as CSS, which \code{style} also takes directly,
+as text or as the path to a \code{.css} file:
+
+\preformatted{markdown_box_grob(md, style = "
+  h1 \{ color: steelblue; font-size: 2rem \}
+  blockquote \{ border-left: 3px solid grey60 \}
+")}
+
+To style one chunk rather than every block of a kind, wrap it in a
+\code{<div>} carrying a \code{class} or a \code{style}. \strong{Leave
+blank lines around the tags} --- that is what makes CommonMark parse
+the markdown between them instead of treating the whole thing as raw
+HTML:
+
+\preformatted{<div class="note">
+
+## This heading only
+
+</div>}
+
+Inline runs take \code{class} as well as \code{style} on a
+\code{<span>}. See \code{\link{markdown_style}} for the tag names, the
+supported properties and how the cascade resolves.
+}
+
 \examples{
 \donttest{
   md <- paste(

@@ -316,9 +316,18 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 #
 # There is deliberately no serif case for the bits: \textrm and a plain
 # \text{} both report bit 1, so mapping it would restyle every ordinary
-# run. font-family: serif goes through `family` instead.
+# run. font-family: serif goes through `family` instead -- and so does
+# \textrm, which names the reserved family below rather than relying on
+# its (indistinguishable) style bit. See src/font_family_atom.h.
+.GM_DEFAULT_FAMILY <- "gridmicrotex.default"
+
 .resolve_text_family <- function(style, default = NULL, family = NULL) {
-  if (!is.null(family) && !is.na(family) && nzchar(family)) return(family)
+  if (!is.null(family) && !is.na(family) && nzchar(family)) {
+    # \textrm: back to the caller's font, overriding any enclosing
+    # \textsf / \texttt rather than inheriting it.
+    if (identical(family, .GM_DEFAULT_FAMILY)) return(default)
+    return(family)
+  }
   if (is.na(style)) return(default)
   if (bitwAnd(style, 128L) != 0L) return("mono")
   if (bitwAnd(style, 64L) != 0L) return("sans")

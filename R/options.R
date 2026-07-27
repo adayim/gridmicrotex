@@ -10,7 +10,8 @@
   tex_style   = NULL,
   input_mode  = NULL,
   justify     = NULL,
-  line_break  = NULL
+  line_break  = NULL,
+  markdown_style = NULL
 )
 
 # Validate the `justify` argument. Kept here so latex_grob(),
@@ -69,6 +70,9 @@
 #'   pulling one word down early can improve every later line, which a
 #'   greedy pass cannot see. Requires \code{max_width}, and costs a
 #'   little more layout time.
+#' @param markdown_style Default style for \code{\link{markdown_grob}} and
+#'   \code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}
+#'   object, CSS text, or a path to a \code{.css} file.
 #' @return Invisibly returns the previous settings (a list). With no
 #'   arguments, returns the current settings visibly.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}}
@@ -82,7 +86,8 @@
 #' }
 latex_options <- function(math_font = NULL, render_mode = NULL,
                           tex_style = NULL, input_mode = NULL,
-                          justify = NULL, line_break = NULL) {
+                          justify = NULL, line_break = NULL,
+                          markdown_style = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -114,6 +119,11 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     line_break <- match.arg(line_break, c("greedy", "optimal"))
     .latex_options$values$line_break <- line_break
   }
+  if (!is.null(markdown_style)) {
+    # Coerce here rather than at each use, so a bad value is rejected by
+    # the call that set it.
+    .latex_options$values$markdown_style <- .md_as_style(markdown_style)
+  }
   invisible(old)
 }
 
@@ -127,7 +137,8 @@ reset_latex_options <- function() {
     tex_style   = NULL,
     input_mode  = NULL,
     justify     = NULL,
-    line_break  = NULL
+    line_break  = NULL,
+    markdown_style = NULL
   )
   invisible(NULL)
 }

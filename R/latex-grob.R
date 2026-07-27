@@ -40,7 +40,7 @@
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
-#'   Bundled math fonts and any registered via \code{\link{load_font}}
+#'   Bundled math fonts and any registered via \code{\link{load_math_font}}
 #'   are read directly from their OTF files --- no system-wide font
 #'   install is required.
 #'   Falls back to path mode automatically on devices that lack the
@@ -134,7 +134,7 @@
 #'   spacing of `\text` blocks stays in sync with what \pkg{grid}
 #'   actually draws. When `fontfamily` is unset, the R default
 #'   (`"sans"`) is used. No manual font loading is required for text
-#'   fonts; [load_font()] remains only for adding custom **math**
+#'   fonts; [load_math_font()] remains only for adding custom **math**
 #'   fonts.
 #' - `fontsize` / `cex`: formula size is `fontsize * cex` big points
 #'   (default 20 * 1). Both math and text scale together. The effective

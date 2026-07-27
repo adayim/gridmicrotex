@@ -690,3 +690,108 @@ test_that("a registered user font can be named by a span", {
   expect_gt(w_user, 0)
   expect_false(isTRUE(all.equal(w_user, w_plain)))
 })
+
+# --- regressions: block nesting and gp handling --------------------------
+
+test_that("an absolute font-size resolves inside a list item or image alt", {
+  # `base` was referenced but never passed into .md_list_block(),
+  # .md_image_blocks() or .md_table_tex(), so any CSS length that needs a
+  # reference size errored with "object 'base' not found". Only absolute
+  # units reach it -- em/rem/% return before base is touched, which is
+  # why this went unnoticed.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (md in c("- <span style=\"font-size:12pt\">big</span> item",
+               "![<span style=\"font-size:12pt\">alt</span>](missing.png)",
+               "| <span style=\"font-size:12pt\">a</span> | b |\n|---|---|\n| 1 | 2 |")) {
+    expect_s3_class(
+      grid::makeContent(markdown_box_grob(md, width = grid::unit(3, "in"))),
+      "markdownbox")
+  }
+})
+
+test_that("a table cell sizes against the caller's font size", {
+  # .md_table_tex() measured cells against the default 20 whatever gp said.
+  blk <- .md_parse_blocks(
+    "| <span style=\"font-size:40pt\">big</span> | b |\n|---|---|\n| 1 | 2 |",
+    base = 40)[[1]]
+  expect_match(blk$tex, "\\scalebox{1.0", fixed = TRUE)
+})
+
+test_that("a rule, image or quote nested in a container lays out", {
+  # .md_layout() shifted nested children through it$grob$vp$y, but rules,
+  # images and block-quote bars are rect/raster grobs with no viewport,
+  # so "object is not coercible to a unit" came out of ordinary markdown.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (md in c("> a\n>\n> ---\n>\n> b",
+               "- a\n\n  ---\n\n- b",
+               "- item\n\n  > quoted",
+               "> outer\n>\n> > inner")) {
+    expect_s3_class(
+      grid::makeContent(markdown_box_grob(md, width = grid::unit(3, "in"))),
+      "markdownbox")
+  }
+})
+
+test_that("a nested rule is offset by its container, not left at the top", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  blocks <- .md_parse_blocks("intro\n\n> quoted\n>\n> ---\n>\n> more")
+  lay <- .md_layout(blocks, 300, grid::gpar(fontsize = 12), 12)
+  rules <- Filter(function(it) inherits(it$grob, "rect"), lay$items)
+  # Two rects: the quote's own bar, and the rule inside it. The inner one
+  # must sit below the quote's first line, not at the container's origin.
+  expect_length(rules, 2L)
+  expect_gt(max(vapply(rules, function(it) it$y, numeric(1))), 0)
+})
+
+test_that("markdown_box_grob() applies gp$cex exactly once", {
+  # The gTree carried the raw gp, so grid multiplied cex into children
+  # that had already scaled themselves by it: 10pt at cex 2 drew at 40.
+  skip_if_not_installed("svglite")
+  sizes <- function(gp) {
+    f <- tempfile(fileext = ".svg")
+    svglite::svglite(f, width = 6, height = 4)
+    grid::grid.draw(markdown_box_grob("hello world",
+                                      width = grid::unit(3, "in"), gp = gp))
+    dev.off()
+    on.exit(unlink(f), add = TRUE)
+    s <- readLines(f, warn = FALSE)
+    unique(unlist(regmatches(s, gregexpr("font-size: *[0-9.]+", s))))
+  }
+  expect_equal(sizes(grid::gpar(fontsize = 10, cex = 2)),
+               sizes(grid::gpar(fontsize = 20)))
+})
+
+test_that("halign moves an image that has room, and leaves a full-width rule", {
+  skip_if_not_installed("png")
+  f <- tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(20, 40, 3)), f)   # 40x20 px, narrow
+  on.exit(unlink(f), add = TRUE)
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+
+  xs <- function(ha) {
+    g <- markdown_box_grob(paste0("---\n\n![a](", f, ")"),
+                           width = grid::unit(4, "in"), halign = ha,
+                           gp = grid::gpar(fontsize = 12))
+    kids <- grid::makeContent(g)$children[[1]]$children
+    vapply(kids, function(k) grid::convertX(k$x, "bigpts", valueOnly = TRUE),
+           numeric(1))
+  }
+  left <- xs(0)
+  right <- xs(1)
+  expect_equal(left[[1]], right[[1]])   # the rule spans the column
+  expect_gt(right[[2]], left[[2]])      # the image has slack and uses it
+})
+
+test_that("private-use characters in the input cannot forge a math span", {
+  # The mask sentinels are private-use codepoints, which icon fonts do
+  # use. A pasted one used to be spliced with a real math span.
+  inj <- paste0("icon ", intToUtf8(0xE000), "1", intToUtf8(0xE001),
+                " and $y$")
+  out <- .md_to_tex(inj)
+  expect_match(out, "icon 1 and ", fixed = TRUE)
+  expect_equal(lengths(regmatches(out, gregexpr("y", out))), 1L)
+})
+
+test_that("markdown_grob() rejects input_mode instead of failing obscurely", {
+  expect_error(markdown_grob("x", input_mode = "mixed"), "input_mode")
+})

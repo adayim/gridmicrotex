@@ -137,7 +137,6 @@ GeomMarkdown <- NULL
 #' be unambiguous. The two are not interchangeable --- ggtext renders
 #' HTML/CSS and images, this renders LaTeX math.
 #'
-#' @inheritParams markdown_grob
 #' @param math_font Name of the math font to use (e.g. \code{"stix"}).
 #' @param fontsize Convenience alias for \code{size}; forwarded to
 #'   \code{ggplot2::element_text()} as the text size in points.

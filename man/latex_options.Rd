@@ -11,7 +11,8 @@ latex_options(
   tex_style = NULL,
   input_mode = NULL,
   justify = NULL,
-  line_break = NULL
+  line_break = NULL,
+  markdown_style = NULL
 )
 
 reset_latex_options()
@@ -53,6 +54,10 @@ the paragraph as a whole reads best, in the spirit of Knuth-Plass:
 pulling one word down early can improve every later line, which a
 greedy pass cannot see. Requires \code{max_width}, and costs a
 little more layout time.}
+
+\item{markdown_style}{Default style for \code{\link{markdown_grob}} and
+\code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}
+object, CSS text, or a path to a \code{.css} file.}
 }
 \value{
 Invisibly returns the previous settings (a list). With no

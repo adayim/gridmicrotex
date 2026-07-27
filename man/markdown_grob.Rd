@@ -5,12 +5,20 @@
 \alias{grid.markdown}
 \title{Render markdown as a grid grob}
 \usage{
-markdown_grob(md, ...)
+markdown_grob(md, style = NULL, ...)
 
 grid.markdown(md, ...)
 }
 \arguments{
 \item{md}{Character string of markdown.}
+
+\item{style}{Appearance of the text: a \code{\link{markdown_style}}
+object, CSS text, or a path to a \code{.css} file. \code{NULL}
+(default) uses \code{latex_options("markdown_style")} if set, and
+the built-in defaults otherwise. Only the properties \code{md_style}
+marks as \emph{inline} apply here --- there is no block layout in a
+single run for a margin, an indent or an alignment to act on, so
+those are ignored. \code{\link{markdown_box_grob}} honours them all.}
 
 \item{...}{Passed to \code{\link{latex_grob}} --- e.g. \code{x},
 \code{y}, \code{hjust}, \code{vjust}, \code{rot}, \code{max_width},
@@ -80,8 +88,8 @@ it first:
 
 \preformatted{systemfonts::register_font(name = "MyFont", plain = "MyFont.otf")}
 
-\code{\link{load_font}} is \emph{not} the function for this --- it
-registers \emph{math} fonts with MicroTeX, which is a different
+\code{\link{load_math_font}} is \emph{not} the function for this ---
+it registers \emph{math} fonts with MicroTeX, which is a different
 mechanism.
 
 A span's own family wins over \code{gp$fontfamily}, but the width of
@@ -95,8 +103,12 @@ also what a browser shows for the ones (\code{<a>}, \code{<abbr>},
 
 Not every markdown feature has a MicroTeX equivalent. Links keep their
 text and drop the destination, and images keep their alt text.
-Block-level markdown (headings, lists, block quotes, tables) is
-rendered by \code{markdown_box_grob()}.
+
+Everything is flattened into a single run here, with paragraphs joined
+by line breaks: there is no block layout, so indentation, list markers
+and block-quote rules need \code{\link{markdown_box_grob}}. A heading
+still takes the size and weight its \code{style} gives it, since those
+compile to LaTeX commands rather than to layout.
 }
 \examples{
 \donttest{

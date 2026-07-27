@@ -38,6 +38,14 @@
 # into math would also skip escaping it. Leaving it unmasked lets it fall
 # through to .md_escape_tex() as the literal character the user typed.
 .md_mask_math <- function(text) {
+  # The sentinels below are private-use codepoints, which is not the same
+  # as impossible: icon fonts (Nerd Fonts and friends) put real glyphs in
+  # this block, and a pasted one would be spliced with a math span on the
+  # way back out, silently duplicating a formula. Drop them from the
+  # input rather than try to tell them apart later.
+  text <- gsub(
+    paste0("[", .MD_SENTINEL_OPEN, .MD_SENTINEL_CLOSE, .MD_ESC_BS, "]"),
+    "", text)
   spans <- .scan_math_spans(text)
   spans <- Filter(function(sp) isTRUE(sp$closed), spans)
   if (length(spans) == 0L) {
@@ -75,15 +83,10 @@
   # contains braces, which the brace rules below would otherwise escape
   # in turn, yielding \backslash\{\}.
   s <- gsub("\\", .MD_ESC_BS, s, fixed = TRUE)
-  s <- gsub("{", "\\{", s, fixed = TRUE)
-  s <- gsub("}", "\\}", s, fixed = TRUE)
-  s <- gsub("$", "\\$", s, fixed = TRUE)
-  s <- gsub("&", "\\&", s, fixed = TRUE)
-  s <- gsub("#", "\\#", s, fixed = TRUE)
-  s <- gsub("_", "\\_", s, fixed = TRUE)
-  s <- gsub("%", "\\%", s, fixed = TRUE)
-  s <- gsub("^", "\\^{}", s, fixed = TRUE)
-  s <- gsub("~", "\\~{}", s, fixed = TRUE)
+  # A leading backslash is all these need.
+  s <- gsub("([{}$&#_%])", "\\\\\\1", s)
+  # These two are accents, so they also need an empty group to bind to.
+  s <- gsub("([~^])", "\\\\\\1{}", s)
   # MicroTeX has no \textbackslash -- it would typeset those 13 letters
   # literally. \backslash is the spelling that works; the empty group
   # stops it gluing onto a following letter (\backslashx).
@@ -177,14 +180,42 @@
   size
 }
 
+# Fold gp$cex into gp$fontsize and drop it.
+#
+# markdown_box_grob() builds a gTree whose children are latex_grobs, and
+# each of those has already scaled itself by cex. grid multiplies a
+# parent's cex into every child that does not set its own, so leaving cex
+# on the gTree applied it a second time -- gpar(fontsize = 10, cex = 2)
+# measured at 20 and drew at 40, overflowing the box. latex_grob() bakes
+# and strips the same pair, for the same reason.
+.md_fold_cex <- function(gp) {
+  if (is.null(gp$cex)) return(gp)
+  gp$fontsize <- .md_base_size(gp)
+  gp$cex <- NULL
+  gp
+}
+
 # A CSS length as a scale factor relative to `base` (big points). The
 # absolute units are the ones gridtext accepts; em / rem / % are already
 # relative, so they need no base at all. NULL for anything unparseable,
 # which leaves the size alone rather than guessing.
 .md_css_size <- function(x, base) {
+  # A style object may hold a bare number or a unit rather than a CSS
+  # string, since md_style(font_size = 2.5) is the R spelling of
+  # "2.5rem". Both mean a multiple of the base, which is what this
+  # returns, so they need no unit handling.
+  if (grid::is.unit(x)) {
+    if (base <= 0) return(NULL)
+    return(grid::convertHeight(x, "bigpts", valueOnly = TRUE) / base)
+  }
+  if (is.numeric(x)) return(if (is.finite(x) && x > 0) x else NULL)
   x <- trimws(tolower(x))
   if (identical(x, "smaller")) return(1 / 1.2)
   if (identical(x, "larger")) return(1.2)
+  # A unitless *string* stays invalid, because that is what it is in CSS:
+  # `font-size: 12` is ignored by a browser and is ignored here. Only an
+  # R value -- md_style(font_size = 2.5) -- means a bare multiple, and it
+  # arrives as a number, not as text.
   m <- regmatches(
     x, regexec("^([0-9]*\\.?[0-9]+)\\s*(pt|px|in|cm|mm|em|rem|%)$", x))[[1]]
   if (length(m) != 3L) return(NULL)
@@ -203,21 +234,69 @@
   pt / base
 }
 
-# Turn a style attribute into wrapping commands. Several properties nest,
-# so the closer has to match the number opened. `style` names the subset
-# that switches to text mode -- the caller has to emit content inside
-# those bare, and put them back inside a rule (see .md_inline_to_tex).
-.md_parse_style <- function(style, base = 20) {
-  open <- character(0)
-  text_mode <- character(0)
+# Split a declaration list ("color: red; font-size: 2em") into a named
+# list of raw values, in declaration order. Property names are lowercased
+# -- CSS property names are case-insensitive -- but values keep their
+# case, because a font family is a *name* and some font matchers care.
+#
+# A repeated property keeps its first position and takes its last value,
+# which is what CSS says. This is the one place the split changed
+# behaviour: the old loop emitted a command per declaration, so
+# "color:red;color:blue" wrapped the text twice.
+#
+# Shared by every route into the style system -- the `style` attribute of
+# a span or a div, a rule in a stylesheet, and md_style() -- so they can
+# never disagree about what a declaration means.
+.md_parse_css <- function(style) {
+  out <- list()
   for (decl in strsplit(style %||% "", ";", fixed = TRUE)[[1]]) {
     kv <- strsplit(decl, ":", fixed = TRUE)[[1]]
     if (length(kv) < 2L) next
     prop <- trimws(tolower(kv[1]))
-    # Keywords are case-insensitive, so compare against `val`; a font
-    # family is a *name* and some font matchers care, so emit `val_raw`.
-    val_raw <- trimws(paste(kv[-1], collapse = ":"))
-    val <- tolower(val_raw)
+    # A value can legitimately contain a colon, so rejoin what was split.
+    if (nzchar(prop)) out[[prop]] <- trimws(paste(kv[-1], collapse = ":"))
+  }
+  out
+}
+
+# font-family is a fallback list, so take the first entry. Map the CSS
+# generics onto the aliases grid already understands and pass anything
+# else through: what the name resolves to is the device's business, same
+# as gpar(fontfamily=). Returns "" when there is no usable name.
+.md_css_family <- function(val_raw) {
+  fam <- gsub("^[\"']|[\"']$", "", trimws(strsplit(val_raw %||% "", ",")[[1]]))[1]
+  fam <- switch(tolower(fam %||% ""), monospace = "mono",
+                "sans-serif" = "sans", fam)
+  # The name is about to be spliced into LaTeX, so it must not carry
+  # anything the parser reads as syntax.
+  gsub("[{}\\\\]", "", fam %||% "")
+}
+
+# CSS counts 600 and up as bold, alongside the two keywords.
+.md_css_is_bold <- function(val) {
+  if (val %in% c("bold", "bolder")) return(TRUE)
+  n <- suppressWarnings(as.numeric(val))
+  isTRUE(n >= 600)
+}
+
+# Turn parsed properties into wrapping commands. Several properties nest,
+# so the closer has to match the number opened. `style` names the subset
+# that switches to text mode -- the caller has to emit content inside
+# those bare, and put them back inside a rule (see .md_inline_to_tex).
+#
+# Properties with no inline meaning (margin, padding, text-align ...) are
+# skipped here and read by the block layout instead.
+.md_css_inline_latex <- function(props, base = 20) {
+  open <- character(0)
+  text_mode <- character(0)
+  # Emitted in declaration order, so the nesting matches what the author
+  # wrote rather than an order of our choosing.
+  for (prop in names(props)) {
+    val_raw <- props[[prop]]
+    # Only text gets case-folded. tolower() would coerce a number or a
+    # unit -- which is how md_style() states a length -- into a string,
+    # and a unitless string is not a valid CSS length.
+    val <- if (is.character(val_raw)) tolower(val_raw) else val_raw
     if (prop == "color") {
       hex <- .md_resolve_color(val)
       if (!is.null(hex)) open <- c(open, paste0("\\textcolor{", hex, "}{"))
@@ -229,20 +308,24 @@
       # \scalebox scales the whole box, which is what font-size means, and
       # unlike \underline it keeps the font style around it.
       f <- .md_css_size(val, base)
-      if (!is.null(f)) open <- c(open, sprintf("\\scalebox{%s}{", format(f)))
+      # Fixed notation, not format(): that honours getOption("OutDec"), so
+      # a comma locale emitted \scalebox{0,75}, and it switches to
+      # e-notation for a small factor, which the parser cannot read either.
+      if (!is.null(f)) open <- c(open, sprintf("\\scalebox{%.6f}{", f))
+    } else if (prop == "font-weight") {
+      # \textbf switches to text mode itself, so it joins `style` for the
+      # same reason \gmfontfamily does.
+      if (.md_css_is_bold(val)) {
+        open <- c(open, "\\textbf{")
+        text_mode <- c(text_mode, "\\textbf{")
+      }
+    } else if (prop == "font-style") {
+      if (val %in% c("italic", "oblique")) {
+        open <- c(open, "\\textit{")
+        text_mode <- c(text_mode, "\\textit{")
+      }
     } else if (prop == "font-family") {
-      # \gmfontfamily carries the family name itself, so a named font works
-      # as well as a generic one. Map the CSS generics onto the aliases
-      # grid already understands, and pass anything else through: what the
-      # name resolves to is the device's business, same as gpar(fontfamily=).
-      # font-family is a fallback list, so take the first entry rather than
-      # the whole string.
-      fam <- gsub("^[\"']|[\"']$", "", trimws(strsplit(val_raw, ",")[[1]]))[1]
-      fam <- switch(tolower(fam %||% ""), monospace = "mono",
-                    "sans-serif" = "sans", fam)
-      # The name is about to be spliced into LaTeX, so it must not carry
-      # anything the parser reads as syntax.
-      fam <- gsub("[{}\\\\]", "", fam %||% "")
+      fam <- .md_css_family(val_raw)
       if (nzchar(fam)) {
         cmd <- paste0("\\gmfontfamily{", fam, "}{")
         open <- c(open, cmd)
@@ -257,6 +340,11 @@
   list(open = paste(open, collapse = ""),
        close = strrep("}", length(open)),
        style = text_mode)
+}
+
+# A `style` attribute straight to wrapping commands.
+.md_parse_style <- function(style, base = 20) {
+  .md_css_inline_latex(.md_parse_css(style), base)
 }
 
 # Tags we interpret, and the LaTeX that reproduces the rendering HTML
@@ -314,6 +402,28 @@
   big     = .md_tag("{\\large ")
 )
 
+# Read one attribute out of a tag's attribute text, or NULL if absent.
+#
+# Match to the *closing* quote of the same kind, not to whichever quote
+# comes first: a value may legitimately contain the other one, as
+# font-family: 'Courier New', monospace does.
+.md_html_attr <- function(attrs, name) {
+  for (q in c('"', "'")) {
+    m <- regmatches(attrs, regexec(
+      paste0(name, "\\s*=\\s*", q, "([^", q, "]*)", q), attrs))[[1]]
+    if (length(m) == 2L) return(m[2])
+  }
+  NULL
+}
+
+# The class names on a tag, lowercased -- CSS class matching here is
+# case-insensitive because every selector is lowercased on the way in.
+.md_html_classes <- function(attrs) {
+  v <- .md_html_attr(attrs, "class")
+  if (is.null(v)) return(character(0))
+  tolower(Filter(nzchar, strsplit(trimws(v), "[[:space:]]+")[[1]]))
+}
+
 # Classify one html_inline node. `bare` is the mode the tag appears in,
 # which <q> needs: its quotation marks are glyphs, not a command, so they
 # have to be wrapped or not like any other text.
@@ -323,7 +433,7 @@
 #   "close" -- pop the matching tag, emit its close
 #   "break" -- <br>, a line break; nothing to push
 #   "drop"  -- emit nothing (unrecognised markup)
-.md_html_tag <- function(txt, bare = FALSE, base = 20) {
+.md_html_tag <- function(txt, bare = FALSE, base = 20, style = NULL) {
   m <- regmatches(txt, regexec("^<\\s*(/?)\\s*([A-Za-z][A-Za-z0-9]*)([^>]*)>$",
                                trimws(txt)))[[1]]
   if (length(m) != 4L) return(list(kind = "drop"))
@@ -339,15 +449,13 @@
   }
   if (tag == "br") return(list(kind = "break"))
   if (tag == "span") {
-    # Match to the *closing* quote of the same kind, not to whichever
-    # quote comes first: a value may legitimately contain the other one,
-    # as font-family: 'Courier New', monospace does.
-    style <- regmatches(attrs, regexec('style\\s*=\\s*"([^"]*)"', attrs))[[1]]
-    if (length(style) != 2L) {
-      style <- regmatches(attrs, regexec("style\\s*=\\s*'([^']*)'", attrs))[[1]]
-    }
-    st <- if (length(style) == 2L) .md_parse_style(style[2], base) else
-      list(open = "", close = "", style = character(0))
+    # A class names rules in the stylesheet; the style attribute is the
+    # highest-priority origin. .md_cascade() settles the two, so a span
+    # and a div read their attributes exactly the same way.
+    props <- .md_cascade(style %||% markdown_style(), "span",
+                         classes = .md_html_classes(attrs),
+                         inline = .md_parse_css(.md_html_attr(attrs, "style")))
+    st <- .md_css_inline_latex(props, base)
     # A span with no usable style still pushes, so </span> pairs cleanly.
     # font-family opens a text-mode command, so the span then behaves like
     # <code> and its content must be emitted bare.
@@ -374,7 +482,8 @@
 # does not error on an unknown command, it typesets the command name as
 # red glyphs, so a stray \href would print a red "href" in the label.
 .md_inline_to_tex <- function(node, spans, bare = FALSE,
-                              styles = character(0), base = 20) {
+                              styles = character(0), base = 20,
+                              style = NULL) {
   kids <- xml2::xml_contents(node)
   if (length(kids) == 0L) return("")
 
@@ -419,10 +528,10 @@
       # and lose the emphasis entirely.
       strong = paste0(
         "\\textbf{",
-        .md_inline_to_tex(k, spans, TRUE, c(sty, "\\textbf{"), base), "}"),
+        .md_inline_to_tex(k, spans, TRUE, c(sty, "\\textbf{"), base, style), "}"),
       emph   = paste0(
         "\\textit{",
-        .md_inline_to_tex(k, spans, TRUE, c(sty, "\\textit{"), base), "}"),
+        .md_inline_to_tex(k, spans, TRUE, c(sty, "\\textit{"), base, style), "}"),
       # \sout, \cancel, \bcancel and \xcancel are all registered in
       # MicroTeX (macro_def.cpp); \sout is the horizontal rule that
       # matches markdown's ~~strike~~. It typesets its argument as a fresh
@@ -432,18 +541,24 @@
       strikethrough = paste0("\\sout{", paste(sty, collapse = ""),
                              .md_inline_to_tex(
                                k, spans, if (length(sty)) TRUE else bare,
-                               sty, base),
+                               sty, base, style),
                              strrep("}", length(sty)), "}"),
       # Code spans are literal. Restore any masked math first so the
       # sentinel never leaks, then escape the lot -- `$x$` in backticks
       # is meant to be shown as characters, not typeset as math.
-      code = paste0("\\texttt{",
-                    .md_escape_tex(.md_unmask_math(xml2::xml_text(k), spans)),
-                    "}"),
+      # A `code` rule in the stylesheet wraps the result; \texttt is the
+      # built-in default that a rule adds to rather than replaces.
+      code = {
+        cd <- .md_css_inline_latex(
+          .md_cascade(style %||% markdown_style(), "code"), base)
+        paste0(cd$open, "\\texttt{",
+               .md_escape_tex(.md_unmask_math(xml2::xml_text(k), spans)),
+               "}", cd$close)
+      },
       # No \href in MicroTeX: keep the link text, drop the destination.
-      link          = .md_inline_to_tex(k, spans, bare, sty, base),
+      link          = .md_inline_to_tex(k, spans, bare, sty, base, style),
       # Images cannot be drawn by a text grob; keep the alt text.
-      image         = .md_inline_to_tex(k, spans, bare, sty, base),
+      image         = .md_inline_to_tex(k, spans, bare, sty, base, style),
       # A soft line break is a word space. In math mode it needs to be an
       # explicit \text{ } box, because a bare space between two \text{}
       # runs is discarded there and the words either side would run
@@ -472,7 +587,7 @@
       out <- c(out, s)
       next
     }
-    tg <- .md_html_tag(xml2::xml_text(k), cur_bare(), base)
+    tg <- .md_html_tag(xml2::xml_text(k), cur_bare(), base, style)
     if (identical(tg$kind, "open")) {
       sty <- cur_styles()
       # The font-style commands this tag contributes: \textbf, \textit,
@@ -520,32 +635,70 @@
   paste(out, collapse = "")
 }
 
+# Mask the math, then parse to a namespace-stripped CommonMark AST.
+# Both entry points below need exactly this and must agree about it: a
+# difference here would make markdown_grob() and markdown_box_grob()
+# read the same document two different ways.
+#
+# commonmark and xml2 are Imports, so they cannot be missing at run time
+# and are not guarded.
+.md_parse_doc <- function(md) {
+  masked <- .md_mask_math(md)
+  doc <- xml2::read_xml(
+    commonmark::markdown_xml(masked$text, extensions = TRUE)
+  )
+  # Strip the CommonMark namespace so plain node names match.
+  xml2::xml_ns_strip(doc)
+  list(doc = doc, spans = masked$spans)
+}
+
+# A single character string, the only thing either entry point accepts.
+.md_check_string <- function(md) {
+  if (!is.character(md) || length(md) != 1L) {
+    stop("`md` must be a single character string.", call. = FALSE)
+  }
+  if (is.na(md)) {
+    stop("`md` must not be NA.", call. = FALSE)
+  }
+  invisible(md)
+}
+
 # Convert markdown to a single LaTeX string for input_mode = "math",
 # flattening block structure: paragraphs are joined with `\\` line
 # breaks and headings/lists/quotes lose their block formatting. This is
 # what markdown_grob() uses. markdown_box_grob() keeps block structure
 # by stacking each block as its own grob instead.
-.md_to_tex <- function(md, base = 20) {
-  if (!requireNamespace("commonmark", quietly = TRUE) ||
-      !requireNamespace("xml2", quietly = TRUE)) {
-    stop("Markdown support requires the 'commonmark' and 'xml2' packages.",
-         call. = FALSE)
-  }
-  masked <- .md_mask_math(md)
-  xml <- commonmark::markdown_xml(masked$text, extensions = TRUE)
-  doc <- xml2::read_xml(xml)
-  # Strip the CommonMark namespace so plain node names match.
-  xml2::xml_ns_strip(doc)
-  blocks <- xml2::xml_children(doc)
+.md_to_tex <- function(md, base = 20, style = NULL) {
+  parsed <- .md_parse_doc(md)
+  blocks <- xml2::xml_children(parsed$doc)
   if (length(blocks) == 0L) return("")
   parts <- vapply(blocks, function(b) {
+    nm <- xml2::xml_name(b)
     # An html_block holds raw markup as its text, so walking into it
     # would typeset the tags -- and the markdown inside them, unparsed.
     # Drop it, matching .md_blocks() on the block path, which would
     # otherwise disagree about the same document. Only *inline* HTML
     # (.md_html_tag) is interpreted.
-    if (identical(xml2::xml_name(b), "html_block")) return("")
-    .md_inline_to_tex(b, masked$spans, base = base)
+    if (identical(nm, "html_block")) return("")
+
+    # There is no layout here to hang a margin or an indent on, so only
+    # the properties that compile to a LaTeX command apply. Everything
+    # else is ignored, the way CSS ignores what a medium cannot do.
+    tag <- switch(nm,
+      paragraph = "p", heading = paste0("h", .md_heading_level(b)),
+      block_quote = "blockquote", code_block = "pre", table = "table",
+      thematic_break = "hr", item = "li", nm)
+    ilat <- .md_css_inline_latex(
+      .md_cascade(style %||% markdown_style(), tag), base)
+    # A text-mode command resets the style of a nested \text{}, so the
+    # content goes in bare when one is open -- the same rule the span
+    # path follows.
+    inner <- .md_inline_to_tex(b, parsed$spans,
+                               bare = length(ilat$style) > 0L,
+                               styles = ilat$style, base = base,
+                               style = style)
+    if (!nzchar(inner)) return("")
+    paste0(ilat$open, inner, ilat$close)
   }, character(1))
   parts <- parts[nzchar(parts)]
   paste(parts, collapse = "\\\\")
@@ -614,8 +767,8 @@
 #'
 #' \preformatted{systemfonts::register_font(name = "MyFont", plain = "MyFont.otf")}
 #'
-#' \code{\link{load_font}} is \emph{not} the function for this --- it
-#' registers \emph{math} fonts with MicroTeX, which is a different
+#' \code{\link{load_math_font}} is \emph{not} the function for this ---
+#' it registers \emph{math} fonts with MicroTeX, which is a different
 #' mechanism.
 #'
 #' A span's own family wins over \code{gp$fontfamily}, but the width of
@@ -629,10 +782,21 @@
 #'
 #' Not every markdown feature has a MicroTeX equivalent. Links keep their
 #' text and drop the destination, and images keep their alt text.
-#' Block-level markdown (headings, lists, block quotes, tables) is
-#' rendered by \code{markdown_box_grob()}.
+#'
+#' Everything is flattened into a single run here, with paragraphs joined
+#' by line breaks: there is no block layout, so indentation, list markers
+#' and block-quote rules need \code{\link{markdown_box_grob}}. A heading
+#' still takes the size and weight its \code{style} gives it, since those
+#' compile to LaTeX commands rather than to layout.
 #'
 #' @param md Character string of markdown.
+#' @param style Appearance of the text: a \code{\link{markdown_style}}
+#'   object, CSS text, or a path to a \code{.css} file. \code{NULL}
+#'   (default) uses \code{latex_options("markdown_style")} if set, and
+#'   the built-in defaults otherwise. Only the properties \code{md_style}
+#'   marks as \emph{inline} apply here --- there is no block layout in a
+#'   single run for a margin, an indent or an alignment to act on, so
+#'   those are ignored. \code{\link{markdown_box_grob}} honours them all.
 #' @param ... Passed to \code{\link{latex_grob}} --- e.g. \code{x},
 #'   \code{y}, \code{hjust}, \code{vjust}, \code{rot}, \code{max_width},
 #'   \code{gp}.
@@ -645,16 +809,17 @@
 #'   grid::grid.newpage()
 #'   grid.markdown("The **fitted** slope is $\\beta_1$, *p* < 0.001")
 #' }
-markdown_grob <- function(md, ...) {
-  if (!is.character(md) || length(md) != 1L) {
-    stop("`md` must be a single character string.", call. = FALSE)
-  }
-  if (is.na(md)) {
-    stop("`md` must not be NA.", call. = FALSE)
+markdown_grob <- function(md, style = NULL, ...) {
+  .md_check_string(md)
+  # input_mode is fixed below, so letting it through `...` would fail with
+  # R's "matched by multiple actual arguments" rather than saying why.
+  if ("input_mode" %in% ...names()) {
+    stop("`input_mode` is not accepted by markdown_grob(): markdown ",
+         "decides for itself what is prose and what is math.", call. = FALSE)
   }
   # The walker has already produced \text{}-wrapped LaTeX, so bypass
   # latex_wrap() -- running it again would double-wrap the prose.
-  latex_grob(.md_to_tex(md, .md_base_size(list(...)$gp)),
+  latex_grob(.md_to_tex(md, .md_base_size(list(...)$gp), .md_as_style(style)),
              input_mode = "math", ...)
 }
 
@@ -684,42 +849,120 @@ grid.markdown <- function(md, ...) {
 .MD_HEADING_SIZE <- c("\\Huge", "\\huge", "\\LARGE",
                       "\\Large", "\\large", "\\normalsize")
 
+# Classify an html_block as a <div> boundary, or neither.
+#
+# cmark hands `<div ...>` and `</div>` over as separate html_block
+# siblings whenever there are blank lines around them, with the markdown
+# between them parsed into real blocks -- which is what makes a div
+# usable as a container here. Written without blank lines the whole thing
+# arrives as one opaque block instead, and falls through to "other".
+.md_div_tag <- function(txt) {
+  t <- trimws(txt)
+  if (grepl("^</[[:space:]]*div[[:space:]]*>$", t, ignore.case = TRUE)) {
+    return(list(kind = "close"))
+  }
+  m <- regmatches(t, regexec("^<[[:space:]]*div([^>]*)>$", t,
+                             ignore.case = TRUE))[[1]]
+  if (length(m) != 2L) return(list(kind = "other"))
+  list(kind = "open",
+       class = .md_html_classes(m[2]),
+       style = .md_parse_css(.md_html_attr(m[2], "style")))
+}
+
 # Parse markdown into a list of block descriptors. Recurses through
-# containers (lists, block quotes) so nesting is preserved.
-.md_blocks <- function(nodes, spans, base = 20) {
+# containers (lists, block quotes) so nesting is preserved, and folds
+# <div>...</div> runs into container blocks of their own.
+#
+# `ctx` is the enclosing container's resolved style. It is threaded here,
+# and not only at layout time, because a block's *content* has to know
+# whether an emphasis command will wrap it: \textbf{\text{x}} silently
+# reports plain, so prose destined for \textbf{} must be emitted bare.
+# The cascade is the same function either way, so the two passes cannot
+# disagree about the rules.
+.md_blocks <- function(nodes, spans, base = 20, style = NULL, ctx = list()) {
   out <- list()
+  # Open <div>s, innermost last. Blocks are collected into the innermost
+  # one until it closes, and each carries the context its contents see.
+  open <- list()
+
+  cur_ctx <- function() if (length(open)) open[[length(open)]]$ctx else ctx
+  emit <- function(blk) {
+    k <- length(open)
+    if (k) open[[k]]$blocks <<- c(open[[k]]$blocks, list(blk))
+    else out <<- c(out, list(blk))
+  }
+  close_div <- function() {
+    d <- open[[length(open)]]
+    open[[length(open)]] <<- NULL
+    emit(list(type = "div", class = d$class, style = d$style,
+              blocks = d$blocks))
+  }
+  # Prose for a block, emitted bare when emphasis will wrap it.
+  prose <- function(nd, tag) {
+    res <- .md_cascade(style %||% markdown_style(), tag, inherited = cur_ctx())
+    emph <- .md_emphasis_cmds(res)
+    .md_inline_to_tex(nd, spans, bare = length(emph) > 0L, styles = emph,
+                      base = base, style = style)
+  }
+  # The context a container hands to its children.
+  child_ctx <- function(tag) {
+    .md_cascade(style %||% markdown_style(), tag, inherited = cur_ctx())
+  }
+
   for (nd in nodes) {
     nm <- xml2::xml_name(nd)
+
+    if (identical(nm, "html_block")) {
+      tg <- .md_div_tag(xml2::xml_text(nd))
+      if (identical(tg$kind, "open")) {
+        open[[length(open) + 1L]] <- list(
+          class = tg$class, style = tg$style, blocks = list(),
+          ctx = .md_cascade(style %||% markdown_style(), "div",
+                            classes = tg$class, inline = tg$style,
+                            inherited = cur_ctx()))
+      } else if (identical(tg$kind, "close") && length(open)) {
+        close_div()
+      }
+      # Any other raw block, and a stray </div>, is dropped rather than
+      # passed through: MicroTeX would typeset the markup.
+      next
+    }
+
     # A paragraph holding nothing but images is a block image, which is
     # how markdown renderers treat it. Handled before the switch because
     # one paragraph can yield several image blocks.
     if (identical(nm, "paragraph")) {
-      imgs <- .md_image_blocks(nd, spans)
+      imgs <- .md_image_blocks(nd, spans, base, style)
       if (!is.null(imgs)) {
-        out <- c(out, imgs)
+        for (im in imgs) emit(im)
         next
       }
     }
     blk <- switch(nm,
-      paragraph = list(type = "paragraph",
-                       tex = .md_inline_to_tex(nd, spans, base = base)),
-      heading = list(type = "heading",
-                     level = .md_heading_level(nd),
-                     tex = .md_inline_to_tex(nd, spans, base = base)),
+      paragraph = list(type = "paragraph", tex = prose(nd, "p")),
+      heading = {
+        lvl <- .md_heading_level(nd)
+        list(type = "heading", level = lvl,
+             tex = prose(nd, paste0("h", lvl)))
+      },
       block_quote = list(type = "block_quote",
                          blocks = .md_blocks(xml2::xml_children(nd), spans,
-                                             base)),
+                                             base, style,
+                                             child_ctx("blockquote"))),
       code_block = list(type = "code_block",
                         lines = .md_code_lines(nd)),
-      list = .md_list_block(nd, spans),
-      table = list(type = "table", tex = .md_table_tex(nd, spans)),
+      list = .md_list_block(nd, spans, base, style, cur_ctx()),
+      table = list(type = "table", tex = .md_table_tex(nd, spans, base, style)),
       thematic_break = list(type = "thematic_break"),
-      # html_block and anything unrecognised is dropped rather than
-      # passed through: MicroTeX would typeset the raw markup.
+      # Anything unrecognised is dropped.
       NULL
     )
-    if (!is.null(blk)) out[[length(out) + 1L]] <- blk
+    if (!is.null(blk)) emit(blk)
   }
+
+  # A div left open at the end of a container closes here, so the blocks
+  # inside it are still laid out rather than lost.
+  while (length(open)) close_div()
   out
 }
 
@@ -743,13 +986,19 @@ grid.markdown <- function(md, ...) {
   lines
 }
 
-.md_list_block <- function(nd, spans) {
+.md_list_block <- function(nd, spans, base = 20, style = NULL, ctx = list()) {
   ordered <- identical(xml2::xml_attr(nd, "type"), "ordered")
   start <- suppressWarnings(as.integer(xml2::xml_attr(nd, "start")))
   if (is.na(start)) start <- 1L
   kids <- xml2::xml_children(nd)
+  # An item's contents see ul/ol and then li, the same chain .md_layout()
+  # walks when it resolves the same blocks for drawing.
+  st <- style %||% markdown_style()
+  item_ctx <- .md_cascade(st, "li",
+                          inherited = .md_cascade(st, if (ordered) "ol" else "ul",
+                                                  inherited = ctx))
   items <- lapply(kids, function(it) {
-    .md_blocks(xml2::xml_children(it), spans, base)
+    .md_blocks(xml2::xml_children(it), spans, base, style, item_ctx)
   })
   # A GFM task list item arrives as <tasklist completed="..."> in place
   # of <item>; NA marks an ordinary item with no checkbox.
@@ -768,7 +1017,7 @@ grid.markdown <- function(md, ...) {
 # Return one image block per image when a paragraph contains nothing but
 # images, otherwise NULL so the paragraph is rendered normally. Images
 # mixed into a sentence stay inline, where only their alt text survives.
-.md_image_blocks <- function(nd, spans) {
+.md_image_blocks <- function(nd, spans, base = 20, style = NULL) {
   kids <- xml2::xml_children(nd)
   if (length(kids) == 0L) return(NULL)
   nms <- xml2::xml_name(kids)
@@ -777,7 +1026,7 @@ grid.markdown <- function(md, ...) {
     im <- kids[[i]]
     list(type = "image",
          path = xml2::xml_attr(im, "destination"),
-         alt = .md_inline_to_tex(im, spans, base = base))
+         alt = .md_inline_to_tex(im, spans, base = base, style = style))
   })
 }
 
@@ -806,12 +1055,12 @@ grid.markdown <- function(md, ...) {
 # tabular natively along with \hline and the \thickhline added for
 # booktabs output, so a markdown table becomes a real typeset table
 # rather than an image -- something marquee cannot do at all.
-.md_table_tex <- function(nd, spans) {
+.md_table_tex <- function(nd, spans, base = 20, style = NULL) {
   rows <- xml2::xml_children(nd)
   if (length(rows) == 0L) return("")
   cells_of <- function(r) {
     vapply(xml2::xml_children(r), .md_inline_to_tex, character(1),
-           spans = spans)
+           spans = spans, base = base, style = style)
   }
   header <- NULL
   body <- list()
@@ -838,7 +1087,8 @@ grid.markdown <- function(md, ...) {
              center = "c", right = "r", "l")
     }, character(1))
     a <- a[!is.na(a)]
-    if (length(a)) spec[seq_len(min(ncol, length(a)))] <- a[seq_len(min(ncol, length(a)))]
+    k <- seq_len(min(ncol, length(a)))
+    if (length(k)) spec[k] <- a[k]
   }
 
   parts <- c("\\begin{tabular}{", paste(spec, collapse = ""), "}",
@@ -852,18 +1102,9 @@ grid.markdown <- function(md, ...) {
 }
 
 # Parse a markdown string into block descriptors.
-.md_parse_blocks <- function(md, base = 20) {
-  if (!requireNamespace("commonmark", quietly = TRUE) ||
-      !requireNamespace("xml2", quietly = TRUE)) {
-    stop("Markdown support requires the 'commonmark' and 'xml2' packages.",
-         call. = FALSE)
-  }
-  masked <- .md_mask_math(md)
-  doc <- xml2::read_xml(
-    commonmark::markdown_xml(masked$text, extensions = TRUE)
-  )
-  xml2::xml_ns_strip(doc)
-  .md_blocks(xml2::xml_children(doc), masked$spans, base)
+.md_parse_blocks <- function(md, base = 20, style = NULL, ctx = list()) {
+  parsed <- .md_parse_doc(md)
+  .md_blocks(xml2::xml_children(parsed$doc), parsed$spans, base, style, ctx)
 }
 
 # Marker text for list item `n`.
@@ -874,14 +1115,17 @@ grid.markdown <- function(md, ...) {
 # in the math font, whereas the more literal \boxtimes is 18x16 and left
 # every checked row visibly larger. (\Box is not a glyph at all -- it
 # typesets the three letters "Box".)
-.md_list_marker <- function(ordered, start, n, paren = FALSE, checked = NA) {
+.md_list_marker <- function(ordered, start, n, paren = FALSE, checked = NA,
+                            bullet = NULL) {
   if (!is.na(checked)) {
     return(if (isTRUE(checked)) "\\blacksquare" else "\\square")
   }
   if (ordered) {
     paste0("\\text{", start + n - 1L, if (paren) ")" else ".", "}")
   } else {
-    "\\bullet"
+    # `bullet` is raw LaTeX from the style, the one escape hatch for a
+    # marker glyph -- there is no CSS spelling for "\\triangleright".
+    bullet %||% "\\bullet"
   }
 }
 
@@ -896,9 +1140,30 @@ grid.markdown <- function(md, ...) {
 # All distances are big points, matching what latex_dims() reports.
 # ---------------------------------------------------------------------
 
-# One entry in the laid-out stack.
-.md_item <- function(grob, x, y, w, h) {
-  list(grob = grob, x = x, y = y, w = w, h = h)
+# One entry in the laid-out stack. `align` is the block's own text-align
+# as a fraction, or NULL to take the box-wide halign.
+.md_item <- function(grob, x, y, w, h, align = NULL) {
+  list(grob = grob, x = x, y = y, w = w, h = h, align = align)
+}
+
+# Move a laid-out grob by (dx, dy) big points, dy measured downward to
+# match the stack's own top-down offsets.
+#
+# Two kinds of grob end up in the stack and they are positioned
+# differently. A text block is a latex_grob, which carries its position
+# in a viewport; a rule, an image and a block quote's bar are plain
+# rect/raster grobs positioned by their own x/y. Assuming the viewport is
+# what made a horizontal rule inside a block quote an error rather than a
+# rule, and what left images pinned to the left edge under `halign`.
+.md_shift_grob <- function(g, dx = 0, dy = 0) {
+  if (!is.null(g$vp)) {
+    if (dx != 0) g$vp$x <- g$vp$x + grid::unit(dx, "bigpts")
+    if (dy != 0) g$vp$y <- g$vp$y - grid::unit(dy, "bigpts")
+    return(g)
+  }
+  if (dx != 0 && !is.null(g$x)) g$x <- g$x + grid::unit(dx, "bigpts")
+  if (dy != 0 && !is.null(g$y)) g$y <- g$y - grid::unit(dy, "bigpts")
+  g
 }
 
 # Measure a run, and return the max_width that achieved that measurement
@@ -951,23 +1216,85 @@ grid.markdown <- function(md, ...) {
   )
 }
 
+# The style tag a block is matched by. HTML's names, not our internal
+# ones, so that `blockquote { }` in a stylesheet reads the way a CSS
+# author expects it to.
+.md_block_tag <- function(blk) {
+  switch(blk$type,
+    paragraph      = "p",
+    heading        = paste0("h", blk$level),
+    code_block     = "pre",
+    block_quote    = "blockquote",
+    thematic_break = "hr",
+    image          = "img",
+    list           = if (isTRUE(blk$ordered)) "ol" else "ul",
+    div            = "div",
+    blk$type)
+}
+
+# Turn resolved properties into the grid gp a block draws with, plus the
+# LaTeX commands that wrap its content.
+#
+# Colour, family, size and line height ride on gp, which latex_grob()
+# bakes into the layout. Weight, slant and decoration have no gp
+# equivalent -- gp$fontface is deliberately not honoured, since LaTeX
+# controls the face -- so they wrap the content instead, reusing the
+# same commands the inline walker emits.
+.md_block_style <- function(gp, res, body, inherited_size) {
+  size <- .md_css_length(res[["font-size"]], body, inherited_size) %||%
+    inherited_size
+  gp$fontsize <- size
+  # Already folded into `body` by markdown_box_grob(); leaving it would
+  # scale the block a second time.
+  gp$cex <- NULL
+
+  if (!is.null(res$color)) {
+    hex <- .md_resolve_color(res$color)
+    if (!is.null(hex)) gp$col <- hex
+  }
+  if (!is.null(res[["font-family"]])) {
+    fam <- .md_css_family(res[["font-family"]])
+    if (nzchar(fam)) gp$fontfamily <- fam
+  }
+  if (!is.null(res[["line-height"]])) {
+    # Unitless, as line-height almost always is, and as gpar() wants it.
+    lh <- suppressWarnings(as.numeric(res[["line-height"]]))
+    if (is.finite(lh)) gp$lineheight <- lh
+  }
+
+  # Decorations wrap the emphasis, not the other way round. \underline
+  # and \sout typeset their argument as a fresh sub-formula and drop the
+  # font style inside it, so \textbf{\underline{x}} loses the bold while
+  # \underline{\textbf{x}} keeps it.
+  dec <- character(0)
+  td <- tolower(as.character(res[["text-decoration"]] %||% ""))
+  if (grepl("underline", td, fixed = TRUE)) dec <- c(dec, "\\underline{")
+  if (grepl("line-through", td, fixed = TRUE)) dec <- c(dec, "\\sout{")
+  emph <- .md_emphasis_cmds(res)
+  open <- c(dec, emph)
+
+  list(gp = gp, size = size, open = paste(open, collapse = ""),
+       close = strrep("}", length(open)), emph = emph)
+}
+
 # Lay out a list of blocks into positioned items.
 #
 # Returns list(items = <list of .md_item>, height = <total bigpts>).
 # `indent` shifts everything right, which is how nested lists and block
 # quotes are built -- each recursion re-measures its content at the
 # reduced width so text still wraps inside the indent.
-.md_layout <- function(blocks, width, gp, fontsize, indent = 0, first = TRUE) {
+#
+# `style` is the resolved cascade; `inherited` the properties of the
+# enclosing container, so colour and font settings fall through into a
+# block quote's contents while its margins and border do not.
+.md_layout <- function(blocks, width, gp, fontsize, indent = 0, first = TRUE,
+                       style = NULL, inherited = list()) {
   items <- list()
   y <- 0
-  gap_para <- 0.55 * fontsize
-  # A heading opens a section, so it gets more air above it than the gap
-  # between two paragraphs, not less.
-  gap_head <- 0.95 * fontsize
-  # Code lines advance by a fixed leading rather than by their measured
-  # height: a line with no descender measures shorter, and stacking on
-  # that would let the next line's ascenders collide with it.
-  code_lh <- 1.15 * fontsize
+  style <- style %||% markdown_style()
+  # The container's font size, which `em` and `%` resolve against.
+  base_size <- .md_css_length(inherited[["font-size"]], fontsize, fontsize) %||%
+    fontsize
 
   add <- function(it) items[[length(items) + 1L]] <<- it
   # Baseline of the first line laid out here, in bigpts down from the top.
@@ -979,27 +1306,47 @@ grid.markdown <- function(md, ...) {
 
   for (i in seq_along(blocks)) {
     blk <- blocks[[i]]
+    # A class matches the element carrying it and nothing else, as in
+    # CSS: what reaches the blocks inside a styled <div> reaches them by
+    # inheritance, not by matching the div's selector again.
+    res <- .md_cascade(style, .md_block_tag(blk),
+                       classes = blk$class %||% character(0),
+                       inline = blk$style, inherited = inherited)
+    sty <- .md_block_style(gp, res, fontsize, base_size)
+    gp_blk <- sty$gp
+    # Wrap once, so every branch below draws what the cascade asked for.
+    wrap <- function(tex) paste0(sty$open, tex, sty$close)
+    align <- .md_css_align(res[["text-align"]])
+
+    # The first block in a container opens flush; a margin only ever
+    # separates one block from another.
     if (!(first && i == 1L)) {
-      y <- y + if (identical(blk$type, "heading")) gap_head else gap_para
+      y <- y + (.md_css_length(res[["margin-top"]], fontsize, sty$size) %||% 0)
     }
-    avail <- width - indent
+    indent_blk <- indent +
+      (.md_css_length(res[["padding-left"]], fontsize, sty$size,
+                      horizontal = TRUE) %||% 0)
+    avail <- width - indent_blk
 
     if (identical(blk$type, "paragraph")) {
       if (!nzchar(blk$tex)) next
-      m <- .md_measure(blk$tex, avail, gp)
+      tex <- wrap(blk$tex)
+      m <- .md_measure(tex, avail, gp_blk)
       # Draw at m$mw, not avail: .md_measure() may have had to narrow the
       # request to get a fitting set of line breaks, and drawing at a
       # different width would re-break the text and undo the fit.
-      add(.md_item(.md_run_grob(blk$tex, indent, y, m$mw, gp),
-                   indent, y, m$w, m$h))
+      add(.md_item(.md_run_grob(tex, indent_blk, y, m$mw, gp_blk),
+                   indent_blk, y, m$w, m$h, align))
       note_bl(y + m$h - m$bl)
       y <- y + m$h
 
     } else if (identical(blk$type, "heading")) {
-      tex <- paste0(.MD_HEADING_SIZE[blk$level], "{}\\textbf{", blk$tex, "}")
-      m <- .md_measure(tex, avail, gp)
-      add(.md_item(.md_run_grob(tex, indent, y, m$mw, gp),
-                   indent, y, m$w, m$h))
+      # The size comes from gp, not a \Huge..\normalsize macro: the macro
+      # ladder is six fixed steps, and font-size has to be continuous.
+      tex <- wrap(blk$tex)
+      m <- .md_measure(tex, avail, gp_blk)
+      add(.md_item(.md_run_grob(tex, indent_blk, y, m$mw, gp_blk),
+                   indent_blk, y, m$w, m$h, align))
       note_bl(y + m$h - m$bl)
       y <- y + m$h
 
@@ -1009,15 +1356,20 @@ grid.markdown <- function(md, ...) {
       # system font, which is the sans body font unless told otherwise --
       # and in a proportional font "<-" comes out misshapen, the "<" set
       # as a raised math relation while the "-" is a low text hyphen.
-      gp_code <- gp
-      gp_code$fontfamily <- "mono"
+      # The default style says so; a stylesheet may say otherwise.
+      #
+      # Lines advance by a fixed leading rather than by their measured
+      # height: a line with no descender measures shorter, and stacking
+      # on that would let the next line's ascenders collide with it.
+      code_lh <- (gp_blk$lineheight %||% 1.15) * sty$size
       for (ln in blk$lines) {
         tex <- paste0("\\texttt{\\text{", .md_escape_tex(ln), "}}")
         # An empty source line still occupies a row.
         if (!nzchar(ln)) tex <- "\\texttt{\\text{ }}"
-        m <- .md_measure(tex, 0, gp_code)
-        add(.md_item(.md_run_grob(tex, indent, y, 0, gp_code),
-                     indent, y, m$w, code_lh))
+        tex <- wrap(tex)
+        m <- .md_measure(tex, 0, gp_blk)
+        add(.md_item(.md_run_grob(tex, indent_blk, y, 0, gp_blk),
+                     indent_blk, y, m$w, code_lh, align))
         y <- y + code_lh
       }
 
@@ -1026,9 +1378,10 @@ grid.markdown <- function(md, ...) {
       # Tables are not wrapped: max_width does not reach inside tabular
       # cells (see BoxSplitter::split), so asking would silently do
       # nothing and a wide table simply overflows.
-      m <- .md_measure(blk$tex, 0, gp)
-      add(.md_item(.md_run_grob(blk$tex, indent, y, 0, gp),
-                   indent, y, m$w, m$h))
+      tex <- wrap(blk$tex)
+      m <- .md_measure(tex, 0, gp_blk)
+      add(.md_item(.md_run_grob(tex, indent_blk, y, 0, gp_blk),
+                   indent_blk, y, m$w, m$h, align))
       y <- y + m$h
 
     } else if (identical(blk$type, "image")) {
@@ -1037,9 +1390,10 @@ grid.markdown <- function(md, ...) {
         # Missing file, unsupported format, or png/jpeg not installed:
         # show the alt text so the reader still learns what belongs here.
         if (nzchar(blk$alt)) {
-          m <- .md_measure(blk$alt, avail, gp)
-          add(.md_item(.md_run_grob(blk$alt, indent, y, m$mw, gp),
-                       indent, y, m$w, m$h))
+          tex <- wrap(blk$alt)
+          m <- .md_measure(tex, avail, gp_blk)
+          add(.md_item(.md_run_grob(tex, indent_blk, y, m$mw, gp_blk),
+                       indent_blk, y, m$w, m$h, align))
           y <- y + m$h
         }
       } else {
@@ -1052,78 +1406,115 @@ grid.markdown <- function(md, ...) {
         add(.md_item(
           grid::rasterGrob(
             img$raster,
-            x = grid::unit(indent, "bigpts"),
+            x = grid::unit(indent_blk, "bigpts"),
             y = grid::unit(1, "npc") - grid::unit(y, "bigpts"),
             width = grid::unit(iw, "bigpts"),
             height = grid::unit(ih, "bigpts"),
             hjust = 0, vjust = 1, interpolate = TRUE
           ),
-          indent, y, iw, ih
+          indent_blk, y, iw, ih, align
         ))
         y <- y + ih
       }
 
     } else if (identical(blk$type, "thematic_break")) {
-      h <- 0.5 * fontsize
-      rule <- grid::rectGrob(
-        x = grid::unit(indent, "bigpts"),
-        y = grid::unit(1, "npc") - grid::unit(y + h / 2, "bigpts"),
-        width = grid::unit(avail, "bigpts"),
-        height = grid::unit(max(1, fontsize / 20), "bigpts"),
-        hjust = 0, vjust = 0.5,
-        gp = grid::gpar(fill = gp$col %||% "black", col = NA)
-      )
-      add(.md_item(rule, indent, y, avail, h))
+      # The rule sits centred in a band of its own, so `height` is the
+      # band and the border is the ink drawn across the middle of it.
+      h <- .md_css_length(res$height, fontsize, sty$size) %||% (0.5 * fontsize)
+      bd <- .md_css_border(res[["border-top"]], fontsize)
+      add(.md_item(
+        grid::rectGrob(
+          x = grid::unit(indent_blk, "bigpts"),
+          y = grid::unit(1, "npc") - grid::unit(y + h / 2, "bigpts"),
+          width = grid::unit(avail, "bigpts"),
+          # Unstated thickness and colour resolve as they did before the
+          # cascade existed: a hairline that grows with the text, inked
+          # in the text colour.
+          height = grid::unit(bd$width %||% max(1, sty$size / 20), "bigpts"),
+          hjust = 0, vjust = 0.5,
+          gp = grid::gpar(fill = bd$color %||% gp_blk$col %||% "black", col = NA)
+        ),
+        indent_blk, y, avail, h, align))
       y <- y + h
 
-    } else if (identical(blk$type, "block_quote")) {
-      bar <- 0.25 * fontsize
+    } else if (identical(blk$type, "div")) {
+      # A styled chunk. It draws no ink of its own: padding moves its
+      # contents right, and its inheritable properties fall through.
+      #
+      # Transparent to margins too -- unlike a quote or a list item, a
+      # div supplies no offset of its own, so its first child keeps its
+      # top margin unless the div itself opens the container.
       inner <- .md_layout(blk$blocks, width, gp, fontsize,
-                          indent = indent + bar * 3, first = TRUE)
+                          indent = indent_blk, first = first && i == 1L,
+                          style = style, inherited = res)
       for (it in inner$items) {
-        it$grob$vp$y <- it$grob$vp$y - grid::unit(y, "bigpts")
-        add(.md_item(it$grob, it$x, y + it$y, it$w, it$h))
+        add(.md_item(.md_shift_grob(it$grob, dy = y),
+                     it$x, y + it$y, it$w, it$h, it$align))
       }
-      # The rule spans the quoted content, drawn after so it is measured
+      y <- y + inner$height
+
+    } else if (identical(blk$type, "block_quote")) {
+      bd <- .md_css_border(res[["border-left"]], fontsize)
+      bar <- bd$width %||% (0.125 * fontsize)
+      # padding-left has already moved indent_blk; the bar is drawn at
+      # the quote's own left edge, in the space that padding opened.
+      inner <- .md_layout(blk$blocks, width, gp, fontsize,
+                          indent = indent_blk, first = TRUE,
+                          style = style, inherited = res)
+      for (it in inner$items) {
+        add(.md_item(.md_shift_grob(it$grob, dy = y),
+                     it$x, y + it$y, it$w, it$h, it$align))
+      }
+      # The bar spans the quoted content, added after so it is measured
       # against the final height.
       add(.md_item(
         grid::rectGrob(
           x = grid::unit(indent, "bigpts"),
           y = grid::unit(1, "npc") - grid::unit(y, "bigpts"),
-          width = grid::unit(max(1, bar / 2), "bigpts"),
+          width = grid::unit(max(1, bar), "bigpts"),
           height = grid::unit(inner$height, "bigpts"),
           hjust = 0, vjust = 1,
-          gp = grid::gpar(fill = gp$col %||% "grey60", col = NA)
+          gp = grid::gpar(fill = bd$color %||% gp_blk$col %||% "grey60",
+                          col = NA)
         ),
-        indent, y, bar / 2, inner$height
+        indent, y, bar, inner$height
       ))
       y <- y + inner$height
 
     } else if (identical(blk$type, "list")) {
-      gap_item <- if (isTRUE(blk$tight)) 0.25 * fontsize else gap_para
+      # A tight list closes its items up; CommonMark decides which it is.
+      res_li <- .md_cascade(style, "li", inherited = res)
+      sty_li <- .md_block_style(gp, res_li, fontsize, sty$size)
+      gap_item <- if (isTRUE(blk$tight)) 0.25 * fontsize else
+        (.md_css_length(res_li[["margin-top"]], fontsize, sty_li$size) %||%
+           (0.55 * fontsize))
       # Markers baseline-align to the first line of item text. Without
       # this the marker is top-aligned, so a bullet floats near the top
       # of the line instead of sitting on the text baseline. An ordinary
       # ascender/descender line stands in for a body with no baseline of
       # its own to align to.
-      refd <- latex_dims("\\text{Ag}", input_mode = "math", gp = gp)
+      refd <- latex_dims("\\text{Ag}", input_mode = "math", gp = gp_blk)
       ref_bl_top <- as.numeric(refd$height) - as.numeric(refd$baseline)
+      marker_gap <- .md_css_length(res[["marker-gap"]], fontsize, sty$size,
+                                   horizontal = TRUE) %||% (0.4 * fontsize)
       for (j in seq_along(blk$items)) {
         if (j > 1L) y <- y + gap_item
         marker <- .md_list_marker(blk$ordered, blk$start, j,
                                   paren = isTRUE(blk$paren),
                                   checked = if (is.null(blk$checked)) NA
-                                            else blk$checked[j])
-        mm <- .md_measure(marker, 0, gp)
+                                            else blk$checked[j],
+                                  bullet = res$bullet)
+        mm <- .md_measure(marker, 0, gp_blk)
         # Hanging indent: the marker sits at the current indent and the
         # item body is measured at the reduced width, so continuation
         # lines line up under the text rather than under the marker.
         # This is the reason lists are stacked here instead of being
         # handed to MicroTeX's itemize -- max_width does not reach into
         # its cells.
-        body_indent <- indent + mm$w + 0.4 * fontsize
+        body_indent <- indent_blk + mm$w + marker_gap
         inner <- .md_layout(blk$items[[j]], width, gp, fontsize,
-                            indent = body_indent, first = TRUE)
+                            indent = body_indent, first = TRUE,
+                            style = style, inherited = res_li)
         # Shift the marker down so its own baseline lands on the text
         # baseline of the first line -- the item's own baseline, not the
         # reference one, since a tall line ($x^2$, say) sits lower in its
@@ -1133,17 +1524,23 @@ grid.markdown <- function(md, ...) {
         bl_top <- if (is.na(inner$first_bl)) ref_bl_top else inner$first_bl
         y_marker <- y + bl_top - (mm$h - mm$bl)
         note_bl(y_marker + mm$h - mm$bl)
-        add(.md_item(.md_run_grob(marker, indent, y_marker, 0, gp),
-                     indent, y_marker, mm$w, mm$h))
+        add(.md_item(.md_run_grob(marker, indent_blk, y_marker, 0, gp_blk),
+                     indent_blk, y_marker, mm$w, mm$h))
         for (it in inner$items) {
-          it$grob$vp$y <- it$grob$vp$y - grid::unit(y, "bigpts")
-          add(.md_item(it$grob, it$x, y + it$y, it$w, it$h))
+          add(.md_item(.md_shift_grob(it$grob, dy = y),
+                       it$x, y + it$y, it$w, it$h, it$align))
         }
         # Advance past whichever reaches lower: the body, or a marker that
         # was pushed below it.
         y <- y + max(inner$height, (y_marker - y) + mm$h)
       }
     }
+
+    # Margins do not collapse here, unlike CSS: the space below a block
+    # simply adds to the space above the next. Every built-in default
+    # leaves margin-bottom unset, so this changes nothing until a
+    # stylesheet asks for it.
+    y <- y + (.md_css_length(res[["margin-bottom"]], fontsize, sty$size) %||% 0)
   }
 
   list(items = items, height = y, first_bl = first_bl)
@@ -1194,10 +1591,15 @@ grid.markdown <- function(md, ...) {
   content_w <- max(box_w - padding[2] - padding[4], 1)
 
   gp <- x$gp %||% grid::gpar()
-  fontsize <- gp$fontsize %||% 20
-  if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
+  # markdown_box_grob() has already folded cex in, so this is the drawn
+  # size; .md_base_size() is the same rule latex_grob() applies.
+  fontsize <- .md_base_size(gp)
 
-  laid <- .md_layout(x$blocks, content_w, gp, fontsize)
+  style <- x$style %||% markdown_style()
+  # `body` is the document root: it declares nothing itself, it seeds the
+  # inheritance every block starts from.
+  laid <- .md_layout(x$blocks, content_w, gp, fontsize, style = style,
+                     inherited = .md_cascade(style, "body"))
 
   content_h <- laid$height
   box_h <- content_h + padding[1] + padding[3]
@@ -1244,14 +1646,13 @@ makeContent.markdownbox <- function(x) {
 
   halign <- x$halign %||% 0
   content <- lapply(lay$items, function(it) {
-    g <- it$grob
-    if (halign != 0 && !is.null(g$vp)) {
-      # Slack to the right of this item, so halign cooperates with the
-      # per-block indent instead of fighting it.
-      shift <- (lay$content_w - it$x - it$w) * halign
-      g$vp$x <- g$vp$x + grid::unit(shift, "bigpts")
-    }
-    g
+    # A block's own text-align wins; the box-wide halign is the default
+    # for blocks that state none.
+    a <- it$align %||% halign
+    if (a == 0) return(it$grob)
+    # Slack to the right of this item, so alignment cooperates with the
+    # per-block indent instead of fighting it.
+    .md_shift_grob(it$grob, dx = (lay$content_w - it$x - it$w) * a)
   })
 
   kids <- c(kids, list(grid::gTree(
@@ -1282,10 +1683,13 @@ heightDetails.markdownbox <- function(x) {
 #' Render a markdown document as a boxed grid grob
 #'
 #' @description
-#' Lays markdown out as a block document --- headings, paragraphs, lists,
-#' block quotes, code blocks, tables and horizontal rules --- inside an
-#' optional padded, filled and bordered box. Prose wraps to the requested
-#' width, and \code{$...$} math is typeset by MicroTeX as usual.
+#' Lays markdown out as a block document --- headings, paragraphs, lists
+#' (including GFM task lists), block quotes, code blocks, tables,
+#' horizontal rules and images --- inside an optional padded, filled and
+#' bordered box. Prose wraps to the requested width, and \code{$...$}
+#' math is typeset by MicroTeX as usual. All the inline formatting
+#' \code{\link{markdown_grob}} understands, including the inline HTML
+#' subset, works inside every block.
 #'
 #' @details
 #' Where \code{\link{markdown_grob}} flattens everything into a single
@@ -1298,6 +1702,51 @@ heightDetails.markdownbox <- function(x) {
 #' wrapped, so a wide table overflows rather than reflowing. And list
 #' items are stacked here rather than handed to MicroTeX's
 #' \code{itemize}, which is what gives them a proper hanging indent.
+#'
+#' An image on a line of its own is drawn as a raster, scaled to fit the
+#' column but never enlarged past its natural size (pixels are read at
+#' 96 dpi). PNG needs the \pkg{png} package and JPEG needs \pkg{jpeg},
+#' both \emph{Suggests}: when the reader is not installed, the file is
+#' missing, or the format is anything else, the image degrades to its alt
+#' text. An image \emph{within} a sentence stays inline, where only its
+#' alt text survives.
+#'
+#' The layout is computed at draw time, so an open device is required ---
+#' which is what lets a relative \code{width} and the measured height of
+#' the text resolve against the viewport the box is actually drawn in.
+#'
+#' @section Styling:
+#' Appearance comes from a small CSS cascade. \code{style} sets the house
+#' style for the whole document, by tag:
+#'
+#' \preformatted{markdown_box_grob(md, style = markdown_style(
+#'   h1         = md_style(color = "steelblue", font_size = 2),
+#'   blockquote = md_style(border_left = "3px solid grey60")
+#' ))}
+#'
+#' The same thing written as CSS, which \code{style} also takes directly,
+#' as text or as the path to a \code{.css} file:
+#'
+#' \preformatted{markdown_box_grob(md, style = "
+#'   h1 \{ color: steelblue; font-size: 2rem \}
+#'   blockquote \{ border-left: 3px solid grey60 \}
+#' ")}
+#'
+#' To style one chunk rather than every block of a kind, wrap it in a
+#' \code{<div>} carrying a \code{class} or a \code{style}. \strong{Leave
+#' blank lines around the tags} --- that is what makes CommonMark parse
+#' the markdown between them instead of treating the whole thing as raw
+#' HTML:
+#'
+#' \preformatted{<div class="note">
+#'
+#' ## This heading only
+#'
+#' </div>}
+#'
+#' Inline runs take \code{class} as well as \code{style} on a
+#' \code{<span>}. See \code{\link{markdown_style}} for the tag names, the
+#' supported properties and how the cascade resolves.
 #'
 #' @param md Character string of markdown.
 #' @param x,y Position of the box in the parent viewport.
@@ -1317,10 +1766,17 @@ heightDetails.markdownbox <- function(x) {
 #'   \code{gpar(fill = "grey95", col = "black")}. \code{NULL} (default)
 #'   draws no box.
 #' @param r Corner radius; a non-zero value draws a rounded box.
+#' @param style Appearance of the blocks: a \code{\link{markdown_style}}
+#'   object, CSS text, or a path to a \code{.css} file. \code{NULL}
+#'   (default) uses \code{latex_options("markdown_style")} if set, and
+#'   the built-in defaults otherwise.
 #' @param name Optional grob name.
 #' @param gp Graphical parameters for the text. \code{fontsize} also sets
-#'   the scale for block spacing and list indentation.
-#' @param vp Optional viewport.
+#'   the scale for block spacing and list indentation, and \code{cex}
+#'   multiplies it as elsewhere in \pkg{grid}.
+#' @param vp Optional viewport. Supplying one replaces the viewport built
+#'   from \code{x}, \code{y}, \code{width}, \code{height}, \code{hjust}
+#'   and \code{vjust}, so those are then ignored.
 #' @return A \code{markdownbox} gTree.
 #' @seealso \code{\link{markdown_grob}}, \code{\link{latex_grob}}
 #' @export
@@ -1352,23 +1808,24 @@ markdown_box_grob <- function(md,
                               margin = grid::unit(0, "pt"),
                               box_gp = NULL,
                               r = grid::unit(0, "pt"),
+                              style = NULL,
                               name = NULL,
                               gp = grid::gpar(),
                               vp = NULL) {
-  if (!is.character(md) || length(md) != 1L) {
-    stop("`md` must be a single character string.", call. = FALSE)
-  }
-  if (is.na(md)) {
-    stop("`md` must not be NA.", call. = FALSE)
-  }
+  .md_check_string(md)
   .md_check_trbl(padding, "padding")
   .md_check_trbl(margin, "margin")
+  gp <- .md_fold_cex(gp)
+  style <- .md_as_style(style)
   # Parse once at construction; the layout is redone at draw time, when
   # relative widths resolve and a device is available for measuring.
-  blocks <- .md_parse_blocks(md, .md_base_size(gp))
+  # The style has to be in hand here as well as at draw time, because a
+  # <span class> compiles to LaTeX commands during the parse.
+  blocks <- .md_parse_blocks(md, .md_base_size(gp), style,
+                             .md_cascade(style, "body"))
 
   grid::gTree(
-    md = md, blocks = blocks,
+    md = md, blocks = blocks, style = style,
     width = width, height = height,
     halign = halign, valign = valign,
     padding = padding, margin = margin,

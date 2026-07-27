@@ -41,13 +41,9 @@ private:
     std::string _name;
 };
 
-// Register the \mark{name} macro with MicroTeX. Idempotent within one
-// MicroTeX init lifetime.
+// Register the \mark{name} macro with MicroTeX. Idempotent, and registered
+// for the life of the process: microtex_release() deliberately leaves the
+// macro registry standing (see init.cpp), so this never needs re-running.
 void register_mark_macro();
-
-// Clear the registration guard so the next register_mark_macro() re-adds
-// the macro. Must be called from microtex_release(), because release()
-// rebuilds MicroTeX's macro registry from scratch.
-void reset_mark_macro();
 
 }  // namespace microtex

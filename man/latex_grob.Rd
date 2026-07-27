@@ -72,7 +72,7 @@ for details on the wrapping process.}
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_font}}
+Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files --- no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
@@ -190,7 +190,7 @@ a minimal metrics file is generated on first use and cached under
 spacing of \verb{\\text} blocks stays in sync with what \pkg{grid}
 actually draws. When \code{fontfamily} is unset, the R default
 (\code{"sans"}) is used. No manual font loading is required for text
-fonts; \code{\link[=load_font]{load_font()}} remains only for adding custom \strong{math}
+fonts; \code{\link[=load_math_font]{load_math_font()}} remains only for adding custom \strong{math}
 fonts.
 \item \code{fontsize} / \code{cex}: formula size is \code{fontsize * cex} big points
 (default 20 * 1). Both math and text scale together. The effective

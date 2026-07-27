@@ -2,11 +2,17 @@
 
 - New `markdown_grob()` and `grid.markdown()` render inline markdown with LaTeX math; `markdown_box_grob()` renders a block document.
 - New `geom_markdown()` and `element_markdown()` for ggplot2.
-- Markdown reads inline HTML for colour, font family, size and decoration.
+- New `markdown_style()` and `md_style()` style markdown through a CSS cascade.
+- New `latex_options(markdown_style = )` sets a document-wide default.
 - New `justify` and `line_break` arguments control paragraph line breaking.
-- Bug fix: `max_width` is now honoured by content containing `\\` line breaks.
+- New `\gmfontfamily{family}{content}` sets the font for one run of text.
+- `load_font()` is renamed `load_math_font()`; the old name is deprecated.
+- `check_fonts()` is renamed `check_math_fonts()`; the old name is deprecated.
+- Bug fix: `\textrm{}` now returns text to `gp$fontfamily`; it previously did nothing.
 - Bug fix: `\texttt{}` drew in the body font instead of a monospace one.
-- Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room  and they overlapped the axis title.
+- Bug fix: `max_width` is now honoured by content containing `\\` line breaks.
+- Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room and they overlapped the axis title.
+- Bug fix: reloading the package corrupted MicroTeX's macro registry, so a later large formula could crash R.
 
 # gridmicrotex 0.0.5
 

@@ -142,37 +142,6 @@ grid.markdown(
 code, tables and images --- as a stack of grobs. See
 `vignette("markdown")`.
 
-## CJK and multilingual text
-
-Non-math text via `\text{}` supports CJK and other scripts. Font settings from
-`gp` (`fontfamily`, `fontface`) apply to text only --- math rendering always
-uses the selected math font:
-
-
-```{r example-mixed-cjk-math, fig.height=0.8, fig.width=5, out.width="50%"}
-grid.newpage()
-grid.latex(r"(\text{如果 } x > 0 \text{ 则 } y = x^2)",
-           gp = gpar(fontsize = 24, fontfamily = "sans"))
-```
-
-## User-defined macros
-
-Use `define_macro()` for zero-argument shorthands that persist across
-plots in the session, and plain-TeX `\def` for parameterised macros
-local to a single expression:
-
-```{r example-macros, fig.height=0.8, fig.width=4, out.width="60%"}
-define_macro("RR", "\\mathbb{R}")
-grid.newpage()
-grid.latex(
-  r"(\def\norm#1{\left\lVert #1 \right\rVert}
-      \forall \vec{v} \in \RR^n,\ \norm{\vec{v}} \geq 0)",
-  gp = grid::gpar(fontsize = 22)
-)
-clear_macros()
-```
-
-See `?define_macro` and `vignette("getting-started")` for details.
 
 ## ggplot2 integration
 

@@ -1,0 +1,49 @@
+/* A GitHub-flavoured style for gridmicrotex markdown.
+ *
+ * Copy this file and point markdown_style(css = "your-copy.css") at it to
+ * use it as a starting point. Every property here is one gridmicrotex
+ * honours; anything else you add is parsed and then ignored, the way a
+ * browser ignores a property it does not implement.
+ *
+ * Lengths: rem is a multiple of the body font size, em a multiple of the
+ * element's own.
+ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: bold;
+  margin-top: 1.2rem;
+}
+
+/* GitHub sets headings on a gentler ladder than the LaTeX default. */
+h1 { font-size: 2rem }
+h2 { font-size: 1.5rem }
+h3 { font-size: 1.25rem }
+h4 { font-size: 1rem }
+h5 { font-size: 0.875rem }
+h6 { font-size: 0.85rem; color: #59636E }
+
+p  { margin-top: 0.8rem }
+
+blockquote {
+  color: #59636E;
+  border-left: 0.25rem solid #D1D9E0;
+  padding-left: 1rem;
+  margin-top: 0.8rem;
+}
+
+pre {
+  font-family: monospace;
+  line-height: 1.45;
+  margin-top: 0.8rem;
+}
+
+hr {
+  height: 1rem;
+  border-top: 0.25rem solid #D1D9E0;
+  margin-top: 1.5rem;
+}
+
+ul, ol { margin-top: 0.8rem; marker-gap: 0.5rem }
+li     { margin-top: 0.25rem }
+
+table  { margin-top: 0.8rem }

@@ -94,6 +94,54 @@ test_that("a named font family travels from LaTeX to the layout", {
                mono + sans, tolerance = 1)
 })
 
+test_that("\\textrm returns to the caller's font", {
+  # MicroTeX's own \textrm only ORs in FontStyle::rm -- the same bit a plain
+  # \text{} run already carries -- so it could never express "reset the
+  # family", and did nothing at all. The override names a reserved family
+  # instead; see src/font_family_atom.h.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  fam <- function(tex) {
+    df <- latex_grob(tex, input_mode = "math",
+                     gp = grid::gpar(fontsize = 20))$layout_df
+    df <- df[df$type == "text", ]
+    vapply(seq_len(nrow(df)),
+           function(i) .resolve_text_family(df$font_style[i], default = "BODY",
+                                            family = df$font_family[i]),
+           character(1))
+  }
+
+  expect_equal(fam("\\textsf{a\\textrm{b}c}"), c("sans", "BODY", "sans"))
+  expect_equal(fam("\\texttt{a\\textrm{b}c}"), c("mono", "BODY", "mono"))
+  expect_equal(fam("\\gmfontfamily{Georgia}{a\\textrm{b}c}"),
+               c("Georgia", "BODY", "Georgia"))
+
+  # On its own it is still ordinary body text, as it always was.
+  expect_equal(fam("\\textrm{ab}"), c("BODY", "BODY"))
+
+  # Emphasis survives: the override keeps upstream's *nested* FontStyleAtom,
+  # so only the family is replaced, not the bold/italic bits.
+  df <- latex_grob("\\textsf{\\textbf{a\\textrm{b}c}}", input_mode = "math",
+                   gp = grid::gpar(fontsize = 20))$layout_df
+  expect_true(all(bitwAnd(df$font_style[df$type == "text"], 2L) != 0L))
+})
+
+test_that("\\textrm is measured in the font it is drawn in", {
+  # Measuring in mono while drawing in the body font puts glyphs where they
+  # do not fit, so the reset has to reach the measurer too.
+  skip_if_not_installed("ragg")
+  f <- tempfile(fileext = ".png")
+  ragg::agg_png(f, width = 400, height = 100)
+  on.exit({ dev.off(); unlink(f) }, add = TRUE)
+  w <- function(tex) as.numeric(latex_dims(tex, input_mode = "math",
+                                           gp = grid::gpar(fontsize = 20))$width)
+
+  body <- w("\\text{Wig}")
+  skip_if(isTRUE(all.equal(w("\\texttt{Wig}"), body)),
+          "device does not distinguish mono from the body font")
+  expect_equal(w("\\texttt{\\textrm{Wig}}"), body)
+  expect_equal(w("\\textrm{Wig}"), body)
+})
+
 test_that("register/clear measurer lifecycle and integration", {
   m <- gridmicrotex:::.make_text_measurer(grid::gpar())
   expect_silent(register_text_measurer(m))
@@ -150,10 +198,34 @@ test_that("measuring leaves the caller's display list untouched", {
   m <- gridmicrotex:::.make_text_measurer(grid::gpar())
   m("Heterogeneity", 0L)
   expect_identical(dl_len(), 0L)
+  # The three-argument form, used by \gmfontfamily and \textrm spans.
+  m("Heterogeneity", 0L, "Georgia")
+  expect_identical(dl_len(), 0L)
 
   # Same for a full grob construction, which is what callers actually do.
   latex_grob("\\text{This is study A}\\\\\\text{This is study B}",
              input_mode = "math", render_mode = "path",
              gp = grid::gpar(fontsize = 8))
   expect_identical(dl_len(), 0L)
+  latex_dims("\\text{measure me}", input_mode = "math")
+  expect_identical(dl_len(), 0L)
+
+  # Markdown measures far more text than a formula does, and arrived after
+  # the fix above, so it needs its own guard.
+  markdown_grob("**bold** and $x^2$")
+  expect_identical(dl_len(), 0L)
+  markdown_box_grob("# Title\n\nProse with $x^2$.\n\n- one\n- two",
+                    width = grid::unit(3, "in"))
+  expect_identical(dl_len(), 0L)
+
+  # grobWidth() forces the layout, which is where the measuring happens.
+  grid::convertWidth(grid::grobWidth(markdown_grob("hello $x$")),
+                     "bigpts", valueOnly = TRUE)
+  expect_identical(dl_len(), 0L)
+
+  # A drawing call *must* still record, or the assertions above are vacuous.
+  grid::grid.newpage()
+  grid::grid.draw(latex_grob("\\text{drawn}", input_mode = "math",
+                             render_mode = "path"))
+  expect_gt(dl_len(), 0L)
 })

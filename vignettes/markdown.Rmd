@@ -139,21 +139,17 @@ it**, exactly as for any other grid text:
 | `windows()`, `quartz()` | the OS font list |
 | base `pdf()`, `postscript()` | **only** what `pdfFonts()` declares --- a named family will not resolve |
 
-An unavailable font falls back silently, as it does for
-`gpar(fontfamily = ...)`. To use a font file that is not installed
-system-wide, register it first:
+An unavailable font falls back silently. Register a file that is not
+installed system-wide first --- `load_math_font()` is *not* the function
+for this, as it registers *math* fonts with MicroTeX:
 
 ```r
 systemfonts::register_font(name = "MyFont", plain = "path/to/MyFont.otf")
 grid.markdown('<span style="font-family:MyFont">x</span>')
 ```
 
-`load_font()` is *not* the function for this --- it registers *math*
-fonts with MicroTeX, a different mechanism.
-
-A span's own family wins over `gp$fontfamily`. One thing it does not
-override: the width of the spaces *between* its words, which still comes
-from `gp$fontfamily`. Set both to the same family if that shows.
+A span's own family wins over `gp$fontfamily`, except for the width of
+the spaces *between* its words. Set both to the same family if that shows.
 
 ```{r html-spans, fig.height = 0.7, fig.width = 6, out.width = "90%"}
 grid.newpage()
@@ -168,9 +164,8 @@ grid.markdown(
 
 Tags nest, and markdown and `$math$` keep working inside them, so
 `<u>**bold underlined**</u>` and `**<u>the same thing</u>**` render
-alike. Everything else is dropped and the text inside it kept --- which
-is also what a browser does with `<a>`, `<abbr>` or a bare `<span>`,
-since those have no default rendering of their own.
+alike. Any other tag is dropped and its text kept --- as a browser does
+with `<a>` or a bare `<span>`, which have no rendering of their own.
 
 Two `<br>` in a row leave a blank line, as in HTML:
 
@@ -278,6 +273,106 @@ grid.draw(markdown_box_grob(
 ))
 ```
 
+## Styling
+
+Everything above uses the built-in look. To change it, hand
+`markdown_box_grob()` a `style`. It is a small CSS cascade over the
+markdown tags, and it takes CSS directly --- as text, or as the path to
+a `.css` file:
+
+```{r style-css, fig.height = 2.6, fig.width = 5, out.width = "85%"}
+doc <- "
+# Results
+
+The slope is $\\beta_1$ with *p* < 0.001.
+
+> Worth a second look.
+"
+
+grid.newpage()
+grid.draw(markdown_box_grob(
+  doc,
+  width = unit(4.5, "in"), padding = unit(10, "pt"),
+  style = "
+    h1         { color: steelblue; font-size: 1.8rem }
+    blockquote { color: grey40; border-left: 3px solid steelblue }
+  ",
+  gp = gpar(fontsize = 13)
+))
+```
+
+The same thing written in R, which validates property names and
+autocompletes:
+
+```{r style-r, eval = FALSE}
+markdown_style(
+  h1         = md_style(color = "steelblue", font_size = 1.8),
+  blockquote = md_style(color = "grey40",
+                        border_left = "3px solid steelblue")
+)
+```
+
+Lengths take three forms: a bare number is `rem`, a multiple of the body
+font size; a string is whatever CSS says (`"1.8rem"`, `"12pt"`, `"150%"`);
+and a `grid::unit()` is absolute.
+
+Tags are named as in HTML --- `body`, `p`, `h1`--`h6`, `ul`, `ol`, `li`,
+`blockquote`, `pre`, `code`, `table`, `hr`, `img`, `div`, `span`. The
+properties are the ones MicroTeX and grid can honour --- colour, the
+font family, size, weight and slant, decorations, line height, margins,
+left padding, alignment and the two borders. `?md_style` has the full
+table, including which of them work on an inline `<span>` as well as on
+a block. Anything outside it parses and is then ignored, the way a
+browser ignores what it does not implement --- so an existing stylesheet
+can be pasted in and the parts that apply still work.
+
+### Starting from a preset
+
+`markdown_style("github")` is a GitHub-like look, shipped as a CSS file
+you can read and copy:
+
+```{r style-preset, eval = FALSE}
+markdown_style("github", h1 = md_style(color = "firebrick"))
+file.show(system.file("css", "github.css", package = "gridmicrotex"))
+```
+
+Pass an existing style as the first argument to extend it, and use
+`latex_options(markdown_style = ...)` to set one for a whole document.
+
+### Styling one chunk
+
+A style set says how *every* heading looks. To style one particular
+chunk, wrap it in a `<div>` with a `class` or a `style`. **Leave blank
+lines around the tags** --- that is what makes CommonMark parse the
+markdown between them rather than treating the whole block as raw HTML:
+
+```{r style-div, fig.height = 2.4, fig.width = 5, out.width = "85%"}
+doc <- '
+Ordinary text.
+
+<div class="note">
+
+**Note.** This chunk is indented and set apart.
+
+</div>
+
+Ordinary text again.
+'
+
+grid.newpage()
+grid.draw(markdown_box_grob(
+  doc,
+  width = unit(4.5, "in"), padding = unit(10, "pt"),
+  style = ".note { color: grey35; padding-left: 1.5rem }",
+  gp = gpar(fontsize = 13)
+))
+```
+
+Inheritable properties --- colour and the `font-*` family --- fall
+through to everything inside the div, exactly as in CSS; margins,
+padding and borders do not. `<span class="...">` works the same way for
+an inline run.
+
 ## Line breaking and justification
 
 Two optional refinements apply once text wraps (both need `max_width`,
@@ -349,8 +444,10 @@ the limitation. On the rendering side:
   a single MicroTeX line has no raster.
 - **Links** keep their text; the destination is dropped, since a grob
   cannot be a hyperlink.
-- **Block-level HTML** (a `<div>`, say) is dropped rather than typeset.
-  Inline HTML is rendered --- see *Colour and inline HTML* above.
+- **Block-level HTML** other than `<div>` is dropped rather than typeset.
+  A `<div>` with blank lines around its tags is read as a styled chunk
+  --- see *Styling* above. Inline HTML is rendered; see *Colour and
+  inline HTML*.
 - **Syntax highlighting** of code blocks is not applied --- code is set
   in a monospace font, unhighlighted.
 - **Monospace spacing** depends on the device. `ragg`, `pdf()` and

@@ -1,11 +1,14 @@
 #include "font_family_atom.h"
 
+#include "atom/atom_font.h"
 #include "box/box_single.h"
 #include "core/formula.h"
 #include "env/env.h"
 #include "macro/macro.h"
 
 namespace microtex {
+
+const std::string kDefaultFamilyName = "gridmicrotex.default";
 
 namespace {
 
@@ -22,6 +25,19 @@ sptr<Atom> font_family_macro_delegate(Parser& tp, std::vector<std::string>& args
     return sptr<Atom>(new FontFamilyAtom(index, atom));
 }
 
+// Delegate for \textrm{content}, replacing MicroTeX's built-in.
+//
+// The inner FontStyleAtom is exactly what macro_fonts.h builds -- text mode,
+// nested, so \textbf{\textrm{x}} keeps its bold. The wrapper is the part
+// upstream cannot express: it names the reserved family, so a \textrm inside
+// \textsf{} or \texttt{} returns to the caller's font instead of inheriting
+// sans or mono.
+sptr<Atom> text_rm_macro_delegate(Parser& tp, std::vector<std::string>& args) {
+    const auto atom = Formula(tp, args[1], false, false)._root;
+    const auto styled = sptrOf<FontStyleAtom>(FontStyle::rm, false, atom, true);
+    return sptr<Atom>(new FontFamilyAtom(kDefaultFamilyIndex, styled));
+}
+
 }  // namespace
 
 int register_font_family(const std::string& name) {
@@ -35,6 +51,7 @@ int register_font_family(const std::string& name) {
 }
 
 const std::string& font_family_name(int index) {
+    if (index == kDefaultFamilyIndex) return kDefaultFamilyName;
     if (index <= 0 || static_cast<std::size_t>(index) > s_families.size()) {
         return s_empty;
     }
@@ -69,11 +86,8 @@ sptr<Box> FontFamilyAtom::createBox(Env& env) {
 void register_font_family_macro() {
     if (s_registered) return;
     MacroInfo::add("gmfontfamily", new PreDefMacro(2, font_family_macro_delegate));
+    MacroInfo::add("textrm", new PreDefMacro(1, text_rm_macro_delegate));
     s_registered = true;
-}
-
-void reset_font_family_macro() {
-    s_registered = false;
 }
 
 }  // namespace microtex

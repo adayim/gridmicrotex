@@ -27,7 +27,17 @@ namespace microtex {
 // The high byte of FontStyle, where the family index lives.
 constexpr u16 kFamilyMask = 0xFF00;
 constexpr int kFamilyShift = 8;
-constexpr std::size_t kMaxFamilies = 255;
+constexpr std::size_t kMaxFamilies = 254;
+
+// Reserved index, never handed out by register_font_family. It resolves to
+// kDefaultFamilyName, which R reads as "go back to the caller's font"
+// rather than as a font to look up. This is how \textrm is implemented:
+// FontStyle::rm is the same bit a plain \text{} run carries, so the style
+// bits alone cannot express "reset the family" -- which is why \textrm had
+// no effect at all before. Taking the top index leaves 1..254 for real
+// families, so no existing index moves.
+constexpr int kDefaultFamilyIndex = 255;
+extern const std::string kDefaultFamilyName;
 
 // Guard the packing assumption. If upstream ever moves a style bit into
 // the high byte this stops compiling rather than silently mis-rendering.
@@ -75,13 +85,19 @@ private:
     sptr<Atom> _atom;
 };
 
-// Register the \gmfontfamily{name}{content} macro. Internal: emitted by
-// R/markdown.R for CSS font-family, not part of the documented dialect.
-// Idempotent within one MicroTeX init lifetime.
+// Register the two font-family macros. Idempotent, and registered for the
+// life of the process: microtex_release() deliberately leaves the macro
+// registry standing (see init.cpp), so this never needs re-running.
+//
+//   \gmfontfamily{name}{content} -- emitted by R/markdown.R for CSS
+//     font-family, and documented for direct use in the getting-started
+//     vignette, so the name is part of the public dialect now and is not
+//     free to rename.
+//
+//   \textrm{content} -- *overrides* MicroTeX's built-in, which only ORs in
+//     FontStyle::rm and is therefore a no-op downstream. MacroInfo::add
+//     replaces an existing entry (deleting the old one), so this needs no
+//     edit to the vendored macro table.
 void register_font_family_macro();
-
-// Clear the registration guard, for microtex_release(), which rebuilds
-// MicroTeX's macro registry from scratch.
-void reset_font_family_macro();
 
 }  // namespace microtex

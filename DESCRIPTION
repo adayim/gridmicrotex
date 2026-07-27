@@ -12,7 +12,9 @@ Authors@R: c(
 Description: Renders 'LaTeX' math equations as native R grid graphics objects
     (grobs) using the 'MicroTeX' 'C++' library as the layout engine. Produces
     resolution-independent vector output that works on any R graphics device,
-    with no external 'LaTeX' installation required.
+    with no external 'LaTeX' installation required. Markdown labels and block
+    documents that mix prose formatting with math are also rendered, for use
+    with both 'grid' and 'ggplot2'.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -45,3 +47,4 @@ Config/testthat/edition: 3
 URL: https://github.com/adayim/gridmicrotex, https://adayim.github.io/gridmicrotex/
 BugReports: https://github.com/adayim/gridmicrotex/issues
 Config/roxygen2/version: 8.0.0
+RoxygenNote: 7.3.3
