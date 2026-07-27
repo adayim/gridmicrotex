@@ -64,7 +64,7 @@ latex_tree(
   Character string: `"typeface"` (default) renders glyphs as native text
   using the math font, producing selectable/accessible text in PDF and
   SVG output. Bundled math fonts and any registered via
-  [`load_font`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
   are read directly from their OTF files — no system-wide font install
   is required. Falls back to path mode automatically on devices that
   lack the R \\\geq\\ 4.3 glyph engine (e.g., the base
@@ -137,5 +137,9 @@ A list with class `"latex_tree"` containing:
 #> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
 #> 2                                                                <NA>
 #> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
+#>   font_family
+#> 1        <NA>
+#> 2        <NA>
+#> 3        <NA>
 # }
 ```

@@ -5,6 +5,7 @@
 <url><loc>https://adayim.github.io/gridmicrotex/articles/getting-started.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/articles/index.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/articles/markdown.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/authors.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/index.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/news/index.html</loc></url>
@@ -12,7 +13,7 @@
 <url><loc>https://adayim.github.io/gridmicrotex/reference/bigpt_to_tex_pt.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/build_latex_children.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/build_path_grob.html</loc></url>
-<url><loc>https://adayim.github.io/gridmicrotex/reference/check_fonts.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/check_math_fonts.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/cubic_bezier.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/define_macro.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/dot-build_glyph_grob.html</loc></url>
@@ -20,7 +21,10 @@
 <url><loc>https://adayim.github.io/gridmicrotex/reference/dot-make_text_measurer.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/dot-resolve_text_face.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/element_latex.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/element_markdown.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/geom_latex.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/geom_markdown.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/gridmicrotex-package.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/grobMark.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/index.html</loc></url>
@@ -30,7 +34,11 @@
 <url><loc>https://adayim.github.io/gridmicrotex/reference/latex_options.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/latex_tree.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/latex_wrap.html</loc></url>
-<url><loc>https://adayim.github.io/gridmicrotex/reference/load_font.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/load_math_font.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/markdown_grob.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/markdown_style.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/md_style.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/quad_bezier.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/resolve_math_font.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/tex_pt_to_bigpt.html</loc></url>

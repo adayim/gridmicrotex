@@ -1,6 +1,50 @@
 # Changelog
 
-## gridmicrotex (development version)
+## gridmicrotex 0.1.0
+
+- New
+  [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+  and
+  [`grid.markdown()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+  render inline markdown with LaTeX math;
+  [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
+  renders a block document.
+- New
+  [`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
+  and
+  [`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+  for ggplot2.
+- New
+  [`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
+  and
+  [`md_style()`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
+  style markdown through a CSS cascade.
+- New `latex_options(markdown_style = )` sets a document-wide default.
+- New `justify` and `line_break` arguments control paragraph line
+  breaking.
+- New `\gmfontfamily{family}{content}` sets the font for one run of
+  text.
+- [`load_font()`](https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.md)
+  is renamed
+  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md);
+  the old name is deprecated.
+- [`check_fonts()`](https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.md)
+  is renamed
+  [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md);
+  the old name is deprecated.
+- Bug fix: `\textrm{}` now returns text to `gp$fontfamily`; it
+  previously did nothing.
+- Bug fix: `\texttt{}` drew in the body font instead of a monospace one.
+- Bug fix: `max_width` is now honoured by content containing `\\` line
+  breaks.
+- Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room
+  and they overlapped the axis title.
+- Bug fix: reloading the package corrupted MicroTeX’s macro registry, so
+  a later large formula could crash R.
+
+## gridmicrotex 0.0.5
+
+CRAN release: 2026-07-21
 
 - Bug fix: correct
   [`grobX()`](https://rdrr.io/r/grid/grobX.html)/[`grobY()`](https://rdrr.io/r/grid/grobX.html)
@@ -9,6 +53,10 @@
 - Bug fix: spurious “font metrics unknown” warnings in `"mixed"` mode.
 - Bug fix: CJK fallback width on Windows was ~6x too narrow.
 - Bug fix: layout-cache collisions between unresolved text fonts.
+- Bug fix: measuring `\text{}` runs no longer pushes a viewport on the
+  caller’s device. The push/pop was recorded on the graphics engine
+  display list, so the device looked like it already held a plot and
+  `knitr` emitted a spurious blank figure ahead of the real one.
 - Hardened the OTF MATH reader against malformed fonts that could hang
   R.
 - Docs: `input_mode` defaults to `"mixed"`; use `\textbf{}` etc. instead
@@ -42,7 +90,7 @@ CRAN release: 2026-06-01
 CRAN release: 2026-05-18
 
 - Self-contained
-  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.md)
   example so CRAN’s donttest additional checks no longer fail on the
   unreliable CTAN font download.
 - New commands.

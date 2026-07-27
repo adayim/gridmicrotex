@@ -28,6 +28,8 @@ latex_grob(
   tex_style = "",
   input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
+  justify = FALSE,
+  line_break = c("greedy", "optimal"),
   debug = FALSE,
   name = NULL,
   gp = grid::gpar()
@@ -104,7 +106,7 @@ grid.latex(tex, ...)
   Character string: `"typeface"` (default) renders glyphs as native text
   using the math font, producing selectable/accessible text in PDF and
   SVG output. Bundled math fonts and any registered via
-  [`load_font`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
   are read directly from their OTF files — no system-wide font install
   is required. Falls back to path mode automatically on devices that
   lack the R \\\geq\\ 4.3 glyph engine (e.g., the base
@@ -113,6 +115,24 @@ grid.latex(tex, ...)
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`
   renders math symbols as filled vector paths (works on all devices but
   text is not selectable in PDF/SVG).
+
+- justify:
+
+  Logical. When `TRUE`, wrapped text is stretched at its interword
+  spaces so every line but the last fills `max_width` exactly. Requires
+  `max_width`: it acts on the lines the wrapper produces, so it does
+  nothing on its own. `FALSE` (default) leaves the right edge ragged,
+  matching R's own text drawing. gridmicrotex does not hyphenate, so
+  justifying a narrow column opens noticeably wide word spaces.
+
+- line_break:
+
+  How lines are chosen when wrapping. `"greedy"` (default) fills each
+  line as far as it will go and never reconsiders. `"optimal"` chooses
+  the breaks together so the paragraph as a whole reads best, in the
+  spirit of Knuth-Plass: pulling one word down early can improve every
+  later line, which a greedy pass cannot see. Requires `max_width`, and
+  costs a little more layout time.
 
 - debug:
 
@@ -209,7 +229,7 @@ sub-expression from within `tex`, use the inline TeX commands
   `\text` blocks stays in sync with what grid actually draws. When
   `fontfamily` is unset, the R default (`"sans"`) is used. No manual
   font loading is required for text fonts;
-  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
   remains only for adding custom **math** fonts.
 
 - `fontsize` / `cex`: formula size is `fontsize * cex` big points
@@ -259,9 +279,9 @@ the input reaches MicroTeX:
   visual difference from full LaTeX, which positions the caption above
   or below the float regardless of source order.
 
-Anything not in this list is passed to MicroTeX unchanged. Unknown
-commands render as literal text, which is useful for spotting
-unsupported markup.
+Anything not in this list is passed to MicroTeX unchanged. An unknown
+command is not an error: MicroTeX typesets its name in red, which makes
+unsupported markup easy to spot in the output.
 
 ### Parallelism
 

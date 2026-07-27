@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,6 +22,8 @@
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="../articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
+    <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -76,6 +78,52 @@
         </dt>
         <dd>Look up a named anchor inside a LaTeX grob</dd>
       </dl></div><div class="section level2">
+      <h2 id="markdown">Markdown<a class="anchor" aria-label="anchor" href="#markdown"></a></h2>
+
+      <div class="section-desc"><p>Render markdown, with LaTeX math inline, as grid grobs</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="markdown_grob.html">markdown_grob()</a></code> <code><a href="markdown_grob.html">grid.markdown()</a></code>
+
+        </dt>
+        <dd>Render markdown as a grid grob</dd>
+
+        <dt>
+
+          <code><a href="markdown_box_grob.html">markdown_box_grob()</a></code>
+
+        </dt>
+        <dd>Render a markdown document as a boxed grid grob</dd>
+      </dl></div><div class="section level2">
+      <h2 id="markdown-styling">Markdown styling<a class="anchor" aria-label="anchor" href="#markdown-styling"></a></h2>
+
+      <div class="section-desc"><p>A small CSS cascade over the markdown tags</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="markdown_style.html">markdown_style()</a></code>
+
+        </dt>
+        <dd>A style for markdown rendering</dd>
+
+        <dt>
+
+          <code><a href="md_style.html">md_style()</a></code>
+
+        </dt>
+        <dd>Declarations for one markdown tag</dd>
+      </dl></div><div class="section level2">
       <h2 id="options-macros-and-cache">Options, macros, and cache<a class="anchor" aria-label="anchor" href="#options-macros-and-cache"></a></h2>
 
       <div class="section-desc"><p>Project-wide defaults and advanced tooling</p></div>
@@ -108,7 +156,7 @@
       </dl></div><div class="section level2">
       <h2 id="ggplot-integration">ggplot2 integration<a class="anchor" aria-label="anchor" href="#ggplot-integration"></a></h2>
 
-      <div class="section-desc"><p>Use LaTeX in ggplot2 plots</p></div>
+      <div class="section-desc"><p>Use LaTeX and markdown in ggplot2 plots</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -128,6 +176,20 @@
 
         </dt>
         <dd>A ggplot2 theme element for LaTeX text</dd>
+
+        <dt>
+
+          <code><a href="geom_markdown.html">geom_markdown()</a></code>
+
+        </dt>
+        <dd>A ggplot2 geom for markdown labels</dd>
+
+        <dt>
+
+          <code><a href="element_markdown.html">element_markdown()</a></code>
+
+        </dt>
+        <dd>A ggplot2 theme element for markdown text</dd>
       </dl></div><div class="section level2">
       <h2 id="font-management">Font management<a class="anchor" aria-label="anchor" href="#font-management"></a></h2>
 
@@ -147,17 +209,17 @@
 
         <dt>
 
-          <code><a href="load_font.html">load_font()</a></code>
+          <code><a href="load_math_font.html">load_math_font()</a></code>
 
         </dt>
         <dd>Load a math font from an OTF file</dd>
 
         <dt>
 
-          <code><a href="check_fonts.html">check_fonts()</a></code>
+          <code><a href="check_math_fonts.html">check_math_fonts()</a></code>
 
         </dt>
-        <dd>Check font status</dd>
+        <dd>Check math font status</dd>
       </dl></div><div class="section level2">
       <h2 id="misc-utilities">Misc utilities<a class="anchor" aria-label="anchor" href="#misc-utilities"></a></h2>
 

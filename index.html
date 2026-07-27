@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Native LaTeX Math Rendering for Grid Graphics">
-<meta name="description" content="Renders LaTeX math equations as native R grid graphics objects (grobs) using the MicroTeX C++ library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external LaTeX installation required.">
-<meta property="og:description" content="Renders LaTeX math equations as native R grid graphics objects (grobs) using the MicroTeX C++ library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external LaTeX installation required.">
+<meta name="description" content="Renders LaTeX math equations as native R grid graphics objects (grobs) using the MicroTeX C++ library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external LaTeX installation required. Markdown labels and block documents that mix prose formatting with math are also rendered, for use with both grid and ggplot2.">
+<meta property="og:description" content="Renders LaTeX math equations as native R grid graphics objects (grobs) using the MicroTeX C++ library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external LaTeX installation required. Markdown labels and block documents that mix prose formatting with math are also rendered, for use with both grid and ggplot2.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,6 +39,8 @@
     <li><a class="dropdown-item" href="articles/getting-started.html">Introduction to gridmicrotex</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
+    <li><a class="dropdown-item" href="articles/markdown.html">Markdown with LaTeX math</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -60,7 +62,7 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>Render LaTeX math expressions as native R <strong>grid</strong> graphics objects, with no external LaTeX installation required.</p>
+<p>Render LaTeX math expressions — and markdown containing them — as native R <strong>grid</strong> graphics objects, with no external LaTeX installation required.</p>
 <p>gridmicrotex embeds the <a href="https://github.com/NanoMichael/MicroTeX" class="external-link">MicroTeX</a> C++ layout engine to parse LaTeX, compute the full box model, and produce resolution-independent vector output (paths, lines, rectangles) that works on any R graphics device.</p>
 <div class="section level2">
 <h2 id="disclaimer">Disclaimer<a class="anchor" aria-label="anchor" href="#disclaimer"></a>
@@ -143,37 +145,33 @@
 </div>
 </div>
 <div class="section level2">
-<h2 id="cjk-and-multilingual-text">CJK and multilingual text<a class="anchor" aria-label="anchor" href="#cjk-and-multilingual-text"></a>
+<h2 id="markdown">Markdown<a class="anchor" aria-label="anchor" href="#markdown"></a>
 </h2>
-<p>Non-math text via <code>\text{}</code> supports CJK and other scripts. Font settings from <code>gp</code> (<code>fontfamily</code>, <code>fontface</code>) apply to text only — math rendering always uses the selected math font:</p>
+<p><code><a href="reference/markdown_grob.html">grid.markdown()</a></code> renders markdown, with <code>$math$</code> inline. Unlike the other markdown-in-grid packages, the maths is real LaTeX rather than plotmath:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\text{如果 } x &gt; 0 \text{ 则 } y = x^2)"</span>,</span>
-<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span>, fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-mixed-cjk-math-1.png" alt="" width="50%"></p>
-</div>
-<div class="section level2">
-<h2 id="user-defined-macros">User-defined macros<a class="anchor" aria-label="anchor" href="#user-defined-macros"></a>
-</h2>
-<p>Use <code><a href="reference/define_macro.html">define_macro()</a></code> for zero-argument shorthands that persist across plots in the session, and plain-TeX <code>\def</code> for parameterised macros local to a single expression:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/define_macro.html">define_macro</a></span><span class="op">(</span><span class="st">"RR"</span>, <span class="st">"\\mathbb{R}"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
-<span>  <span class="st">r"(\def\norm#1{\left\lVert #1 \right\rVert}</span></span>
-<span><span class="st">      \forall \vec{v} \in \RR^n,\ \norm{\vec{v}} \geq 0)"</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
+<span>  <span class="st">"The **fitted** slope is $\\hat{\\beta}_1 = 0.42$ (*p* &lt; 0.001)."</span>,</span>
+<span>  x <span class="op">=</span> <span class="fl">0.02</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-macros-1.png" alt="" width="60%"></p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/define_macro.html">clear_macros</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>See <code><a href="reference/define_macro.html">?define_macro</a></code> and <code><a href="articles/getting-started.html">vignette("getting-started")</a></code> for details.</p>
+<p><img src="reference/figures/README-example-markdown-1.png" alt="" width="70%"></p>
+<p>Colour, font and size come from inline HTML, as they must: markdown itself defines no syntax for them.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">'Set in &lt;span style="font-family:serif"&gt;serif&lt;/span&gt;, '</span>,</span>
+<span>         <span class="st">'H&lt;sub&gt;0&lt;/sub&gt; &lt;u&gt;rejected&lt;/u&gt; at '</span>,</span>
+<span>         <span class="st">'&lt;span style="color:#B22222"&gt;5%&lt;/span&gt;.'</span><span class="op">)</span>,</span>
+<span>  x <span class="op">=</span> <span class="fl">0.02</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-markdown-html-1.png" alt="" width="70%"></p>
+<p><code><a href="reference/markdown_box_grob.html">markdown_box_grob()</a></code> lays out a whole document — headings, lists, quotes, code, tables and images — as a stack of grobs. See <code><a href="articles/markdown.html">vignette("markdown")</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="ggplot2-integration">ggplot2 integration<a class="anchor" aria-label="anchor" href="#ggplot2-integration"></a>
 </h2>
 <p>Use <code><a href="reference/geom_latex.html">geom_latex()</a></code> to place LaTeX labels at data coordinates, and <code><a href="reference/element_latex.html">element_latex()</a></code> for LaTeX-rendered axis titles:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="co"># Add a LaTeX table as an annotation</span></span>
 <span><span class="va">tab_str</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tabular}{c|c} \text{A} &amp; B^2 \\ \hline 1 &amp; \cellcolor{#00bde5}2 \\ 3 &amp; 4 \end{tabular})"</span></span>
@@ -191,13 +189,14 @@
 <div class="section level2">
 <h2 id="comparison">Comparison<a class="anchor" aria-label="anchor" href="#comparison"></a>
 </h2>
-<table class="table">
+<table style="width:100%;" class="table">
 <colgroup>
-<col width="22%">
-<col width="21%">
-<col width="26%">
-<col width="11%">
-<col width="18%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
 </colgroup>
 <thead><tr>
 <th align="left">Approach</th>
@@ -205,6 +204,7 @@
 <th align="center">Device independent?</th>
 <th align="center">Vector?</th>
 <th align="center">Math coverage</th>
+<th align="center">Markdown</th>
 </tr></thead>
 <tbody>
 <tr>
@@ -213,6 +213,7 @@
 <td align="center">No</td>
 <td align="center">Yes</td>
 <td align="center">Full</td>
+<td align="center">No</td>
 </tr>
 <tr>
 <td align="left"><code>xdvir</code></td>
@@ -220,6 +221,7 @@
 <td align="center">No</td>
 <td align="center">Yes</td>
 <td align="center">Full</td>
+<td align="center">No</td>
 </tr>
 <tr>
 <td align="left"><code>latexpdf</code></td>
@@ -227,6 +229,7 @@
 <td align="center">No</td>
 <td align="center">Yes</td>
 <td align="center">Full (tables)</td>
+<td align="center">No</td>
 </tr>
 <tr>
 <td align="left"><code>latex2exp</code></td>
@@ -234,6 +237,7 @@
 <td align="center">Yes</td>
 <td align="center">Yes</td>
 <td align="center">Limited</td>
+<td align="center">No</td>
 </tr>
 <tr>
 <td align="left"><code>plotmath</code></td>
@@ -241,6 +245,23 @@
 <td align="center">Yes</td>
 <td align="center">Yes</td>
 <td align="center">Limited</td>
+<td align="center">No</td>
+</tr>
+<tr>
+<td align="left"><code>gridtext</code></td>
+<td align="center">No</td>
+<td align="center">Yes</td>
+<td align="center">Yes</td>
+<td align="center">None</td>
+<td align="center">Yes</td>
+</tr>
+<tr>
+<td align="left"><code>marquee</code></td>
+<td align="center">No</td>
+<td align="center">Yes</td>
+<td align="center">Yes</td>
+<td align="center">None</td>
+<td align="center">Yes</td>
 </tr>
 <tr>
 <td align="left"><strong>gridmicrotex</strong></td>
@@ -248,6 +269,7 @@
 <td align="center"><strong>Yes</strong></td>
 <td align="center"><strong>Yes</strong></td>
 <td align="center"><strong>Broad</strong></td>
+<td align="center"><strong>Yes</strong></td>
 </tr>
 </tbody>
 </table>
@@ -264,15 +286,15 @@
 </ol>
 <p>By default, math glyphs are rendered in typeface mode as native text using the selected math font, which keeps PDF/SVG output selectable and searchable on devices with font embedding support.</p>
 <p>When <code>render_mode = "path"</code> is used (or when automatic fallback is triggered on unsupported devices), glyphs are drawn as filled vector paths for consistent rendering everywhere.</p>
-<p>Make sure to use <code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code>, <code>svglite::svglite()</code> or <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code> for best results, as some older devices may not support the full range of path operations.</p>
+<p>Make sure to use <code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code>, <code><a href="https://svglite.r-lib.org/reference/svglite.html" class="external-link">svglite::svglite()</a></code> or <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code> for best results, as some older devices may not support the full range of path operations.</p>
 </div>
 <div class="section level2">
 <h2 id="graphics-backend">Graphics backend<a class="anchor" aria-label="anchor" href="#graphics-backend"></a>
 </h2>
 <p>The default graphics device on Windows (<code>windows()</code>) and macOS (<code><a href="https://rdrr.io/r/grDevices/quartz.html" class="external-link">quartz()</a></code>) may not find the bundled math fonts, producing warnings like:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>font family not found <span class="cf">in</span> Windows font database</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>font family not found <span class="cf">in</span> Windows font database</span></code></pre></div>
 <p>To avoid this, switch to a modern graphics backend that uses <a href="https://CRAN.R-project.org/package=systemfonts" class="external-link">systemfonts</a> for font resolution:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># For knitr / R Markdown — add to your setup chunk:</span></span>
 <span><span class="fu">knitr</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/knitr/man/opts_chunk.html" class="external-link">opts_chunk</a></span><span class="op">$</span><span class="fu">set</span><span class="op">(</span>dev <span class="op">=</span> <span class="st">"ragg_png"</span><span class="op">)</span></span>
 <span></span>
@@ -297,7 +319,7 @@
 <td align="left"><a href="https://CRAN.R-project.org/package=ragg" class="external-link">ragg</a></td>
 </tr>
 <tr>
-<td align="left"><code>svglite::svglite()</code></td>
+<td align="left"><code><a href="https://svglite.r-lib.org/reference/svglite.html" class="external-link">svglite::svglite()</a></code></td>
 <td align="left">SVG</td>
 <td align="left"><a href="https://CRAN.R-project.org/package=svglite" class="external-link">svglite</a></td>
 </tr>

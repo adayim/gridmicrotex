@@ -1,7 +1,8 @@
 # gridmicrotex
 
-Render LaTeX math expressions as native R **grid** graphics objects,
-with no external LaTeX installation required.
+Render LaTeX math expressions — and markdown containing them — as native
+R **grid** graphics objects, with no external LaTeX installation
+required.
 
 gridmicrotex embeds the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ layout engine to
@@ -116,52 +117,43 @@ grid.latex(
 
 ![](reference/figures/README-example-mixed-definition-1.png)
 
-## CJK and multilingual text
+## Markdown
 
-Non-math text via `\text{}` supports CJK and other scripts. Font
-settings from `gp` (`fontfamily`, `fontface`) apply to text only — math
-rendering always uses the selected math font:
+[`grid.markdown()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+renders markdown, with `$math$` inline. Unlike the other
+markdown-in-grid packages, the maths is real LaTeX rather than plotmath:
 
 ``` r
 
 grid.newpage()
-grid.latex(r"(\text{如果 } x > 0 \text{ 则 } y = x^2)",
-           gp = gpar(fontsize = 24, fontfamily = "sans"))
-```
-
-![](reference/figures/README-example-mixed-cjk-math-1.png)
-
-## User-defined macros
-
-Use
-[`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-for zero-argument shorthands that persist across plots in the session,
-and plain-TeX `\def` for parameterised macros local to a single
-expression:
-
-``` r
-
-define_macro("RR", "\\mathbb{R}")
-grid.newpage()
-grid.latex(
-  r"(\def\norm#1{\left\lVert #1 \right\rVert}
-      \forall \vec{v} \in \RR^n,\ \norm{\vec{v}} \geq 0)",
-  gp = grid::gpar(fontsize = 22)
+grid.markdown(
+  "The **fitted** slope is $\\hat{\\beta}_1 = 0.42$ (*p* < 0.001).",
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
 )
 ```
 
-![](reference/figures/README-example-macros-1.png)
+![](reference/figures/README-example-markdown-1.png)
+
+Colour, font and size come from inline HTML, as they must: markdown
+itself defines no syntax for them.
 
 ``` r
 
-clear_macros()
+grid.newpage()
+grid.markdown(
+  paste0('Set in <span style="font-family:serif">serif</span>, ',
+         'H<sub>0</sub> <u>rejected</u> at ',
+         '<span style="color:#B22222">5%</span>.'),
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
+)
 ```
 
-See
-[`?define_macro`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-and
-[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)
-for details.
+![](reference/figures/README-example-markdown-html-1.png)
+
+[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
+lays out a whole document — headings, lists, quotes, code, tables and
+images — as a stack of grobs. See
+[`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md).
 
 ## ggplot2 integration
 
@@ -194,14 +186,16 @@ for more examples.
 
 ## Comparison
 
-| Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
-|:-----------------|:---------------:|:-------------------:|:-------:|:-------------:|
-| `tikzDevice`     |       Yes       |         No          |   Yes   |     Full      |
-| `xdvir`          |       Yes       |         No          |   Yes   |     Full      |
-| `latexpdf`       |       Yes       |         No          |   Yes   | Full (tables) |
-| `latex2exp`      |       No        |         Yes         |   Yes   |    Limited    |
-| `plotmath`       |       No        |         Yes         |   Yes   |    Limited    |
-| **gridmicrotex** |     **No**      |       **Yes**       | **Yes** |   **Broad**   |
+| Approach | LaTeX required? | Device independent? | Vector? | Math coverage | Markdown |
+|:---|:--:|:--:|:--:|:--:|:--:|
+| `tikzDevice` | Yes | No | Yes | Full | No |
+| `xdvir` | Yes | No | Yes | Full | No |
+| `latexpdf` | Yes | No | Yes | Full (tables) | No |
+| `latex2exp` | No | Yes | Yes | Limited | No |
+| `plotmath` | No | Yes | Yes | Limited | No |
+| `gridtext` | No | Yes | Yes | None | Yes |
+| `marquee` | No | Yes | Yes | None | Yes |
+| **gridmicrotex** | **No** | **Yes** | **Yes** | **Broad** | **Yes** |
 
 ## How it works
 
@@ -224,10 +218,10 @@ paths for consistent rendering everywhere.
 
 Make sure to use
 [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html),
-`svglite::svglite()` or
-[`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) for
-best results, as some older devices may not support the full range of
-path operations.
+[`svglite::svglite()`](https://svglite.r-lib.org/reference/svglite.html)
+or [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html)
+for best results, as some older devices may not support the full range
+of path operations.
 
 ## Graphics backend
 
@@ -257,7 +251,7 @@ Recommended backends:
 | Backend | Format | Package |
 |:---|:---|:---|
 | [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG | [ragg](https://CRAN.R-project.org/package=ragg) |
-| `svglite::svglite()` | SVG | [svglite](https://CRAN.R-project.org/package=svglite) |
+| [`svglite::svglite()`](https://svglite.r-lib.org/reference/svglite.html) | SVG | [svglite](https://CRAN.R-project.org/package=svglite) |
 | [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF | Base R (Cairo build) |
 
 Alternatively, use `render_mode = "path"` to bypass font lookup entirely
@@ -280,6 +274,25 @@ Create and draw LaTeX math as grid grobs
 - [`grobMark()`](https://adayim.github.io/gridmicrotex/reference/grobMark.md)
   : Look up a named anchor inside a LaTeX grob
 
+## Markdown
+
+Render markdown, with LaTeX math inline, as grid grobs
+
+- [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+  [`grid.markdown()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+  : Render markdown as a grid grob
+- [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
+  : Render a markdown document as a boxed grid grob
+
+## Markdown styling
+
+A small CSS cascade over the markdown tags
+
+- [`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
+  : A style for markdown rendering
+- [`md_style()`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
+  : Declarations for one markdown tag
+
 ## Options, macros, and cache
 
 Project-wide defaults and advanced tooling
@@ -298,12 +311,16 @@ Project-wide defaults and advanced tooling
 
 ## ggplot2 integration
 
-Use LaTeX in ggplot2 plots
+Use LaTeX and markdown in ggplot2 plots
 
 - [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
   : A ggplot2 geom for LaTeX math labels
 - [`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
   : A ggplot2 theme element for LaTeX text
+- [`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
+  : A ggplot2 geom for markdown labels
+- [`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+  : A ggplot2 theme element for markdown text
 
 ## Font management
 
@@ -311,10 +328,10 @@ Load and configure math and text fonts
 
 - [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
   : List available math fonts
-- [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+- [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
   : Load a math font from an OTF file
-- [`check_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_fonts.md)
-  : Check font status
+- [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md)
+  : Check math font status
 
 ## Misc utilities
 
@@ -334,3 +351,8 @@ Utilities for working with LaTeX strings and rendering
 
 - [Using LaTeX Math in
   ggplot2](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md):
+
+### Markdown
+
+- [Rendering Markdown with
+  Math](https://adayim.github.io/gridmicrotex/articles/markdown.md):

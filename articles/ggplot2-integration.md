@@ -1,6 +1,6 @@
 # Using LaTeX Math in ggplot2
 
-gridmicrotex provides two ggplot2 extensions for rendering LaTeX math in
+gridmicrotex provides ggplot2 extensions for rendering LaTeX math in
 plots:
 
 - **[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)**
@@ -8,6 +8,14 @@ plots:
 - **[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)**
   — a theme element for rendering axis titles, plot titles, and other
   text elements as LaTeX.
+
+There are matching
+[`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
+and
+[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+for labels written in markdown rather than raw LaTeX — covered at the
+end of this vignette, and in more depth in
+[`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md).
 
 ## Annotating plots with `geom_latex()`
 
@@ -78,3 +86,51 @@ ggplot(mtcars, aes(wt, mpg)) +
 ```
 
 ![](ggplot2-integration_files/figure-html/regression-annotation-1.png)
+
+## Markdown labels
+
+When a label is more prose than formula — a bold phrase, an italic word,
+a symbol in a sentence —
+[`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
+and
+[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+accept markdown with inline `$math$`. They take the same aesthetics and
+theme slots as their LaTeX counterparts; only the label syntax differs.
+
+``` r
+
+df <- data.frame(
+  x   = 1:3,
+  y   = c(2, 3, 1),
+  lab = c("**bold**", "*slope* $\\beta_1$", "`code` and $x^2$")
+)
+
+ggplot(df, aes(x, y, label = lab)) +
+  geom_point() +
+  geom_markdown(fontsize = 12, vjust = -0.6) +
+  ylim(0.5, 3.6) +
+  labs(
+    title = "*Fitted* model: $\\hat{y} = \\beta_0 + \\beta_1 x$",
+    x     = "**weight** in $10^3$ lbs",
+    y     = "*efficiency* $\\eta$"
+  ) +
+  theme(
+    plot.title   = element_markdown(fontsize = 14),
+    axis.title.x = element_markdown(),
+    axis.title.y = element_markdown()
+  )
+```
+
+![](ggplot2-integration_files/figure-html/markdown-1.png)
+
+Unlike
+[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md),
+[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+never strips `$` delimiters — in markdown a `$...$` pair *is* the math,
+so removing it would change the label. Note that the
+[ggtext](https://wilkelab.org/ggtext/) package also exports an
+[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md);
+if both are attached, call
+[`gridmicrotex::element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+to be explicit. The two are not interchangeable — ggtext renders
+HTML/CSS, this renders LaTeX math.

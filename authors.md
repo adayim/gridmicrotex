@@ -15,16 +15,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/v0.0.5/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/main/DESCRIPTION)
 
 Dayim A (2026). *gridmicrotex: Native 'LaTeX' Math Rendering for Grid
-Graphics*. R package version 0.0.5,
+Graphics*. R package version 0.1.0,
 <https://github.com/adayim/gridmicrotex>.
 
     @Manual{,
       title = {gridmicrotex: Native 'LaTeX' Math Rendering for Grid Graphics},
       author = {Alim Dayim},
       year = {2026},
-      note = {R package version 0.0.5},
+      note = {R package version 0.1.0},
       url = {https://github.com/adayim/gridmicrotex},
     }

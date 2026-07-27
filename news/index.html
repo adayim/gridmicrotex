@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.5</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -22,6 +22,8 @@
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="../articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
+    <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -36,16 +38,35 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.0.5/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="gridmicrotex-development-version">gridmicrotex (development version)<a class="anchor" aria-label="anchor" href="#gridmicrotex-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.0" id="gridmicrotex-010">gridmicrotex 0.1.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-010"></a></h2>
+<ul><li>New <code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> and <code><a href="../reference/markdown_grob.html">grid.markdown()</a></code> render inline markdown with LaTeX math; <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code> renders a block document.</li>
+<li>New <code><a href="../reference/geom_markdown.html">geom_markdown()</a></code> and <code><a href="../reference/element_markdown.html">element_markdown()</a></code> for ggplot2.</li>
+<li>New <code><a href="../reference/markdown_style.html">markdown_style()</a></code> and <code><a href="../reference/md_style.html">md_style()</a></code> style markdown through a CSS cascade.</li>
+<li>New <code>latex_options(markdown_style = )</code> sets a document-wide default.</li>
+<li>New <code>justify</code> and <code>line_break</code> arguments control paragraph line breaking.</li>
+<li>New <code>\gmfontfamily{family}{content}</code> sets the font for one run of text.</li>
+<li>
+<code><a href="../reference/gridmicrotex-deprecated.html">load_font()</a></code> is renamed <code><a href="../reference/load_math_font.html">load_math_font()</a></code>; the old name is deprecated.</li>
+<li>
+<code><a href="../reference/gridmicrotex-deprecated.html">check_fonts()</a></code> is renamed <code><a href="../reference/check_math_fonts.html">check_math_fonts()</a></code>; the old name is deprecated.</li>
+<li>Bug fix: <code>\textrm{}</code> now returns text to <code>gp$fontfamily</code>; it previously did nothing.</li>
+<li>Bug fix: <code>\texttt{}</code> drew in the body font instead of a monospace one.</li>
+<li>Bug fix: <code>max_width</code> is now honoured by content containing <code>\\</code> line breaks.</li>
+<li>Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room and they overlapped the axis title.</li>
+<li>Bug fix: reloading the package corrupted MicroTeX’s macro registry, so a later large formula could crash R.</li>
+</ul></div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.5" id="gridmicrotex-005">gridmicrotex 0.0.5<a class="anchor" aria-label="anchor" href="#gridmicrotex-005"></a></h2><p class="text-muted">CRAN release: 2026-07-21</p>
 <ul><li>Bug fix: correct <code><a href="https://rdrr.io/r/grid/grobX.html" class="external-link">grobX()</a></code>/<code><a href="https://rdrr.io/r/grid/grobX.html" class="external-link">grobY()</a></code> boundary points.</li>
 <li>Bug fix: <code>geom_latex(fontsize = )</code> was ignored.</li>
 <li>Bug fix: spurious “font metrics unknown” warnings in <code>"mixed"</code> mode.</li>
 <li>Bug fix: CJK fallback width on Windows was ~6x too narrow.</li>
 <li>Bug fix: layout-cache collisions between unresolved text fonts.</li>
+<li>Bug fix: measuring <code>\text{}</code> runs no longer pushes a viewport on the caller’s device. The push/pop was recorded on the graphics engine display list, so the device looked like it already held a plot and <code>knitr</code> emitted a spurious blank figure ahead of the real one.</li>
 <li>Hardened the OTF MATH reader against malformed fonts that could hang R.</li>
 <li>Docs: <code>input_mode</code> defaults to <code>"mixed"</code>; use <code>\textbf{}</code> etc. instead of <code>gp$fontface</code>.</li>
 </ul></div>
@@ -64,7 +85,7 @@
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.3" id="gridmicrotex-003">gridmicrotex 0.0.3<a class="anchor" aria-label="anchor" href="#gridmicrotex-003"></a></h2><p class="text-muted">CRAN release: 2026-05-18</p>
-<ul><li>Self-contained <code><a href="../reference/load_font.html">load_font()</a></code> example so CRAN’s donttest additional checks no longer fail on the unreliable CTAN font download.</li>
+<ul><li>Self-contained <code><a href="../reference/gridmicrotex-deprecated.html">load_font()</a></code> example so CRAN’s donttest additional checks no longer fail on the unreliable CTAN font download.</li>
 <li>New commands.</li>
 </ul></div>
     <div class="section level2">

@@ -28,7 +28,7 @@ pair them with a matching `fontfamily` in `gp`:
 | STIX Two Math (`"stix"`)           | Serif      | `"serif"`               |
 
 Additional math fonts can be loaded with
-[`load_font`](https://adayim.github.io/gridmicrotex/reference/load_font.md).
+[`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md).
 
 ## Examples
 

@@ -64,7 +64,7 @@ element_latex(
   Character string: `"typeface"` (default) renders glyphs as native text
   using the math font, producing selectable/accessible text in PDF and
   SVG output. Bundled math fonts and any registered via
-  [`load_font`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
   are read directly from their OTF files — no system-wide font install
   is required. Falls back to path mode automatically on devices that
   lack the R \\\geq\\ 4.3 glyph engine (e.g., the base

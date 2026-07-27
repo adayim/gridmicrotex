@@ -3,7 +3,9 @@
 Renders 'LaTeX' math equations as native R grid graphics objects (grobs)
 using the 'MicroTeX' 'C++' library as the layout engine. Produces
 resolution-independent vector output that works on any R graphics
-device, with no external 'LaTeX' installation required.
+device, with no external 'LaTeX' installation required. Markdown labels
+and block documents that mix prose formatting with math are also
+rendered, for use with both 'grid' and 'ggplot2'.
 
 ## See also
 
@@ -19,11 +21,6 @@ Useful links:
 
 **Maintainer**: Alim Dayim <ad938@cam.ac.uk>
 ([ORCID](https://orcid.org/0000-0001-9998-7463))
-
-Authors:
-
-- Alim Dayim <ad938@cam.ac.uk>
-  ([ORCID](https://orcid.org/0000-0001-9998-7463))
 
 Other contributors:
 

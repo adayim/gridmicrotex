@@ -16,7 +16,10 @@ latex_options(
   math_font = NULL,
   render_mode = NULL,
   tex_style = NULL,
-  input_mode = NULL
+  input_mode = NULL,
+  justify = NULL,
+  line_break = NULL,
+  markdown_style = NULL
 )
 
 reset_latex_options()
@@ -50,6 +53,34 @@ reset_latex_options()
   markers. `"math"` treats the whole string as math — the classic
   MicroTeX behaviour, where letters render as math italics and unwrapped
   prose looks wrong.
+
+- justify:
+
+  Logical. When `TRUE`, wrapped text is stretched at its interword
+  spaces so every line but the last fills `max_width` exactly. Has no
+  effect without `max_width`, since it acts on the lines the wrapper
+  produces. `FALSE` (default) leaves the right edge ragged, matching R's
+  own text drawing. Note that gridmicrotex does not hyphenate, so
+  justifying a narrow column opens noticeably wide word spaces.
+
+- line_break:
+
+  How lines are chosen when wrapping. `"greedy"` (default) fills each
+  line as far as it will go and never reconsiders. `"optimal"` chooses
+  the breaks together so the paragraph as a whole reads best, in the
+  spirit of Knuth-Plass: pulling one word down early can improve every
+  later line, which a greedy pass cannot see. Requires `max_width`, and
+  costs a little more layout time.
+
+- markdown_style:
+
+  Default style for
+  [`markdown_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+  and
+  [`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md):
+  a
+  [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
+  object, CSS text, or a path to a `.css` file.
 
 ## Value
 

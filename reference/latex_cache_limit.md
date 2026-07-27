@@ -48,7 +48,7 @@ latex_cache_info()
 
   latex_cache_info()
 #> $size
-#> [1] 10
+#> [1] 18
 #> 
 #> $max_size
 #> [1] 256
@@ -57,7 +57,7 @@ latex_cache_info()
 #> [1] 0
 #> 
 #> $misses
-#> [1] 10
+#> [1] 18
 #> 
   latex_cache_clear()
 # }
