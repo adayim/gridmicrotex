@@ -1,0 +1,5 @@
+# Shell scripts must keep LF line endings regardless of the developer's
+# core.autocrlf setting. CRLF in a #! line causes cryptic "/bin/sh^M:
+# bad interpreter" failures under stricter POSIX shells (e.g. dash).
+configure  text eol=lf
+cleanup    text eol=lf

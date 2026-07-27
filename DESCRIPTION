@@ -40,6 +40,7 @@ Suggests:
     ragg,
     rmarkdown,
     S7,
+    svglite,
     testthat (>= 3.0.0),
     vdiffr
 VignetteBuilder: knitr
