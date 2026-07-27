@@ -1,4 +1,4 @@
-# gridmicrotex (development version)
+# gridmicrotex 0.1.0
 
 - New `markdown_grob()` and `grid.markdown()` render inline markdown with LaTeX math; `markdown_box_grob()` renders a block document.
 - New `geom_markdown()` and `element_markdown()` for ggplot2.
