@@ -7,8 +7,9 @@
 .make_text_measurer(text_gp)
 }
 \arguments{
-\item{text_gp}{A \code{\link[grid]{gpar}} object with font settings
-(\code{fontfamily}, \code{fontface}) to use for measurement.}
+\item{text_gp}{A \code{\link[grid]{gpar}} object whose
+\code{fontfamily} is used for measurement. The face comes from
+MicroTeX's per-run \code{font_style}, not from \code{text_gp}.}
 }
 \value{
 A function taking \code{(text, font_style)} that returns

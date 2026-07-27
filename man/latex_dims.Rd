@@ -9,7 +9,10 @@ latex_dims(
   math_font = "",
   max_width = 0,
   tex_style = "",
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
+  justify = FALSE,
+  line_break = c("greedy", "optimal"),
   gp = grid::gpar()
 )
 }
@@ -29,10 +32,21 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 \code{"script"}, or \code{"scriptscript"}. See
 \code{\link{latex_grob}} for the semantics of each value.}
 
+\item{input_mode}{How \code{tex} is interpreted before being parsed.
+\code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
+string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
+opens math mode, matching document-level LaTeX semantics. Useful for
+labels that arrive from external sources mixing prose and math without
+explicit \code{\\text{}} markers. \code{"math"} is the classic
+MicroTeX behaviour --- the whole string is treated as math, so unwrapped
+prose renders as spaced math italics. The default can be changed globally via
+\code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
+for details on the wrapping process.}
+
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_font}}
+Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files --- no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
@@ -41,9 +55,25 @@ For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).}
 
+\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
+its interword spaces so every line but the last fills
+\code{max_width} exactly. Requires \code{max_width}: it acts on the
+lines the wrapper produces, so it does nothing on its own.
+\code{FALSE} (default) leaves the right edge ragged, matching R's own
+text drawing. gridmicrotex does not hyphenate, so justifying a narrow
+column opens noticeably wide word spaces.}
+
+\item{line_break}{How lines are chosen when wrapping.
+\code{"greedy"} (default) fills each line as far as it will go and
+never reconsiders. \code{"optimal"} chooses the breaks together so
+the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+pulling one word down early can improve every later line, which a
+greedy pass cannot see. Requires \code{max_width}, and costs a
+little more layout time.}
+
 \item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
 Common entries: \code{col} (formula foreground), \code{fontfamily}
-/ \code{fontface} (text font), \code{fontsize} / \code{cex}
+(text font), \code{fontsize} / \code{cex}
 (formula size), and \code{lineheight} (multi-line spacing). See
 \code{\link{latex_grob}} for how each of these flows through
 MicroTeX.}

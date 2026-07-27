@@ -60,17 +60,20 @@
 #'   # Use annotate() for single annotations (no legend, no data frame needed)
 #'   ggplot(mtcars, aes(wt, mpg)) + geom_point() +
 #'     annotate("latex", x = 4, y = 30,
-#'              label = "\\hat{y} = \\beta_0 + \\beta_1 x")
+#'              label = r"($\hat{y} = \beta_0 + \beta_1 x$)")
 #' }
 #' }
 geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
                        position = "identity", ...,
                        fontsize = 11, math_font = "",
                        lineheight = 1.2, max_width = 0,
+                       input_mode = c("mixed", "math"),
                        render_mode = c("typeface", "path"),
                        na.rm = FALSE, show.legend = NA,
                        inherit.aes = TRUE) {
+  .apply_opts("math_font", "render_mode", "input_mode")
   render_mode <- match.arg(render_mode)
+  input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required for geom_latex(). ",
          "Please install it with install.packages('ggplot2').",
@@ -90,6 +93,7 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
       math_font = math_font,
       lineheight = lineheight,
       max_width = max_width,
+      input_mode = input_mode,
       render_mode = render_mode,
       na.rm = na.rm,
       ...
@@ -146,8 +150,11 @@ GeomLatex <- NULL
 #' }
 element_latex <- function(math_font = "", fontsize = NULL,
                          lineheight = 1.2, max_width = 0,
+                         input_mode = c("mixed", "math"),
                          render_mode = c("typeface", "path"), ...) {
+  .apply_opts("math_font", "render_mode", "input_mode")
   render_mode <- match.arg(render_mode)
+  input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required for element_latex(). ",
          "Please install it with install.packages('ggplot2').",
@@ -158,7 +165,17 @@ element_latex <- function(math_font = "", fontsize = NULL,
   if (!is.null(fontsize)) {
     dots$size <- fontsize
   }
-  do.call(.element_latex_class, c(list(math_font = math_font, lineheight = lineheight, max_width = max_width, render_mode = render_mode), dots))
+  obj <- do.call(.element_latex_class, c(list(math_font = math_font, lineheight = lineheight, max_width = max_width, input_mode = input_mode, render_mode = render_mode), dots))
+  # ggplot2's element_text constructor injects legacy "element_text" and
+  # "element" S3 strings into the class vector; S7 inheritance loses them,
+  # which makes combine_elements treat us as an unrelated sibling and drop
+  # us when resolving inherited theme entries (e.g. axis.title.y inheriting
+  # from a user-set axis.title). Re-inject them so subclass detection works.
+  class(obj) <- union(
+    union(c("gridmicrotex::element_latex", "ggplot2::element_text", "element_text"), class(obj)),
+    "element"
+  )
+  obj
 }
 
 # Placeholder — replaced in .onLoad_ggplot2() with the real S7 constructor
@@ -186,8 +203,20 @@ element_latex <- function(math_font = "", fontsize = NULL,
 
     draw_key = ggplot2::draw_key_text,
 
+    # default_aes is applied after setup_data, so a missing `size` column
+    # here means the aesthetic was not mapped — fill it from the fontsize
+    # parameter. (In draw_panel the column is always populated, so the
+    # parameter could never win there.)
+    setup_data = function(data, params) {
+      if (is.null(data$size)) {
+        data$size <- params$fontsize %||% 11
+      }
+      data
+    },
+
     draw_panel = function(data, panel_params, coord, fontsize = 11,
                           math_font = "", lineheight = 1.2, max_width = 0,
+                          input_mode = "mixed",
                           render_mode = "typeface",
                           na.rm = FALSE) {
       coords <- coord$transform(data, panel_params)
@@ -213,6 +242,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
           rot = row$angle %||% 0,
           math_font = math_font,
           max_width = max_width,
+          input_mode = input_mode,
           render_mode = render_mode,
           gp = grid::gpar(col = col, fontsize = fs, lineheight = lineheight)
         )
@@ -230,6 +260,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
       math_font = S7::new_property(S7::class_character, default = ""),
       lineheight = S7::new_property(S7::class_numeric, default = 1.2),
       max_width = S7::new_property(S7::class_numeric, default = 0),
+      input_mode = S7::new_property(S7::class_character, default = "mixed"),
       render_mode = S7::new_property(S7::class_character, default = "typeface")
     )
   )
@@ -243,66 +274,143 @@ element_latex <- function(math_font = "", fontsize = NULL,
     envir = asNamespace("ggplot2")
   )
 
+  # The markdown geom and theme element are built the same way, from the
+  # same ggplot2/S7 soft dependencies.
+  .onLoad_ggplot2_markdown()
 }
 
 # --------------------------------------------------------------------------
 # Internal helpers
 # --------------------------------------------------------------------------
 
-# element_grob method implementation for element_latex
+# element_grob method implementation for element_latex.
 # Defined outside .onLoad_ggplot2 so it can be referenced by name.
-.element_grob_latex <- function(element, label = "", x = NULL, y = NULL, ...) {
-  # Handle NULL or empty labels
+# Signature mirrors ggplot2:::element_grob.element_text so callers (axes,
+# guides) can override element properties per-call.
+.element_grob_latex <- function(element, label = "", x = NULL, y = NULL,
+                                family = NULL, face = NULL, colour = NULL,
+                                size = NULL, hjust = NULL, vjust = NULL,
+                                angle = NULL, lineheight = NULL,
+                                margin = NULL, margin_x = FALSE,
+                                margin_y = FALSE, ...) {
   if (is.null(label) || (length(label) == 1L && (!nzchar(label) || is.na(label)))) {
     return(grid::nullGrob())
   }
 
-  # Inherit properties from the (already-merged) S7 element
-  fontsize <- element@size %||% 11
-  colour <- element@colour %||% "black"
-  hjust <- element@hjust %||% 0.5
-  vjust <- element@vjust %||% 0.5
-  math_font <- element@math_font %||% ""
-  lineheight <- element@lineheight %||% 1.2
-  max_width <- element@max_width %||% 0
+  # Per-call overrides win, then element values, then a final fallback.
+  fontsize    <- size       %||% element@size       %||% 11
+  colour      <- colour     %||% element@colour     %||% "black"
+  hjust       <- hjust      %||% element@hjust      %||% 0.5
+  vjust       <- vjust      %||% element@vjust      %||% 0.5
+  angle       <- angle      %||% element@angle      %||% 0
+  family      <- family     %||% element@family
+  face        <- face       %||% element@face
+  lineheight  <- lineheight %||% element@lineheight %||% 1.2
+  math_font   <- element@math_font   %||% ""
+  max_width   <- element@max_width   %||% 0
+  input_mode  <- element@input_mode  %||% "mixed"
   render_mode <- element@render_mode %||% "typeface"
 
-  # Single label (axis title, strip text) — render one grob
+  gp <- grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
+  if (!is.null(family) && nzchar(family)) gp$fontfamily <- family
+  if (!is.null(face)   && nzchar(face))   gp$fontface   <- face
+
+  # In math mode, strip enclosing $...$ that users add by analogy with
+  # plotmath-style labels. In text mode, $ toggles math sub-spans, so
+  # leave them intact.
+  strip_dollars <- function(s) {
+    if (input_mode == "mixed") s else gsub("^\\$|\\$$", "", s)
+  }
+
+  # When x/y aren't supplied, anchor at the rotation-adjusted just so the
+  # rotated text lands where ggplot2:::titleGrob would put it (e.g. for
+  # axis.title.y with angle=90, vjust=1: anchor at left-middle, text reads
+  # bottom-to-top across the cell).
+  default_just <- .rotate_just(angle, hjust, vjust)
+
   if (length(label) == 1L) {
-    label <- gsub("^\\$|\\$$", "", label)
-    if (is.null(x)) x <- grid::unit(0.5, "npc")
-    if (is.null(y)) y <- grid::unit(0.5, "npc")
+    label <- strip_dollars(label)
+    if (is.null(x)) x <- grid::unit(default_just$hjust, "npc")
+    if (is.null(y)) y <- grid::unit(default_just$vjust, "npc")
     return(latex_grob(
       tex = label, x = x, y = y,
-      hjust = hjust, vjust = vjust,
-      math_font = math_font,
-      max_width = max_width,
-      render_mode = render_mode,
-      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
+      hjust = hjust, vjust = vjust, rot = angle,
+      math_font = math_font, max_width = max_width,
+      input_mode = input_mode, render_mode = render_mode,
+      gp = gp
     ))
   }
 
-  # Multiple labels (axis tick labels) — render a gTree of grobs
-  label <- gsub("^\\$|\\$$", "", label)
+  # Multiple labels (axis tick labels) — render a gTree of grobs.
+  label <- strip_dollars(label)
   n <- length(label)
-  if (is.null(x)) x <- grid::unit(seq(0, 1, length.out = n), "npc")
-  if (is.null(y)) y <- grid::unit(seq(0, 1, length.out = n), "npc")
+  if (is.null(x)) x <- grid::unit(rep(default_just$hjust, n), "npc")
+  if (is.null(y)) y <- grid::unit(rep(default_just$vjust, n), "npc")
 
   grobs <- grid::gList()
   for (i in seq_len(n)) {
     lab <- label[i]
     if (is.na(lab) || !nzchar(lab)) next
-    xi <- if (inherits(x, "unit")) x[i] else grid::unit(x[i], "npc")
-    yi <- if (inherits(y, "unit")) y[i] else grid::unit(y[i], "npc")
     grobs <- grid::gList(grobs, latex_grob(
-      tex = lab, x = xi, y = yi,
-      hjust = hjust, vjust = vjust,
-      math_font = math_font,
-      max_width = max_width,
-      render_mode = render_mode,
-      gp = grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight),
+      tex = lab, x = .pick_unit(x, i), y = .pick_unit(y, i),
+      hjust = hjust, vjust = vjust, rot = angle,
+      math_font = math_font, max_width = max_width,
+      input_mode = input_mode, render_mode = render_mode,
+      gp = gp,
       name = paste0("ticklabel.", i)
     ))
   }
-  grid::gTree(children = grobs, name = "axis.latex.labels")
+  grid::gTree(children = grobs, name = "axis.latex.labels",
+              cl = "gridmicrotex_labels")
+}
+
+# Report the extent of a bundle of tick-label grobs.
+#
+# Without these, the gTree measures 0 x 0: its children sit at npc
+# positions and grid has nothing to derive an extent from. ggplot2 sizes
+# the axis strip from this grob, so a zero height means no room is
+# reserved and the labels are drawn over the axis title.
+.labels_extent <- function(x, fn) {
+  kids <- x$children
+  if (length(kids) == 0L) return(grid::unit(0, "bigpts"))
+  max(do.call(grid::unit.c, lapply(kids, fn)))
+}
+
+#' @method widthDetails gridmicrotex_labels
+#' @export
+widthDetails.gridmicrotex_labels <- function(x) {
+  .labels_extent(x, grid::grobWidth)
+}
+
+#' @method heightDetails gridmicrotex_labels
+#' @export
+heightDetails.gridmicrotex_labels <- function(x) {
+  .labels_extent(x, grid::grobHeight)
+}
+
+# ggplot2 passes per-tick positions for one axis and a scalar unit for the
+# orthogonal one (e.g. axis.text.x: x is length-n, y is length-1). Recycle
+# the scalar so `unit[i]` doesn't error past length 1.
+.pick_unit <- function(u, i) {
+  if (inherits(u, "unit")) {
+    if (length(u) == 1L) u else u[i]
+  } else {
+    grid::unit(u[((i - 1L) %% length(u)) + 1L], "npc")
+  }
+}
+
+# Mirror of ggplot2:::rotate_just. Picks the anchor point so that a
+# rotated grob with raw (hjust, vjust) lands inside the cell rather than
+# overflowing one of its edges.
+.rotate_just <- function(angle, hjust, vjust) {
+  angle <- (angle %||% 0) %% 360
+  if (angle < 90) {
+    list(hjust = hjust,     vjust = vjust)
+  } else if (angle < 180) {
+    list(hjust = 1 - vjust, vjust = hjust)
+  } else if (angle < 270) {
+    list(hjust = 1 - hjust, vjust = 1 - vjust)
+  } else {
+    list(hjust = vjust,     vjust = 1 - hjust)
+  }
 }

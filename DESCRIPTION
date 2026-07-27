@@ -1,22 +1,23 @@
 Package: gridmicrotex
-Title: Native LaTeX Math Rendering for Grid Graphics
-Version: 0.0.1
+Title: Native 'LaTeX' Math Rendering for Grid Graphics
+Version: 0.0.5
 Authors@R: c(
     person("Alim", "Dayim", role = c("aut", "cre"),
            email = "ad938@cam.ac.uk",
            comment = c(ORCID = "0000-0001-9998-7463")),
     person("Nano", "Michael", role = "cph",
-           comment = "Author of included MicroTeX library"),
+           comment = "Author of included 'MicroTeX' library"),
     person(family = "Bundled math font authors", role = "cph",
            comment = "See inst/COPYRIGHTS for the full list of authors of the bundled math fonts."))
-Description: Renders LaTeX math equations as native R grid graphics objects
-    (grobs) using the MicroTeX C++ library as the layout engine. Produces
+Description: Renders 'LaTeX' math equations as native R grid graphics objects
+    (grobs) using the 'MicroTeX' 'C++' library as the layout engine. Produces
     resolution-independent vector output that works on any R graphics device,
-    with no external LaTeX installation required.
+    with no external 'LaTeX' installation required. Markdown labels and block
+    documents that mix prose formatting with math are also rendered, for use
+    with both 'grid' and 'ggplot2'.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 SystemRequirements: C++17, FreeType (>= 2.9), pkg-config
 Depends:
     R (>= 4.2.0)
@@ -24,14 +25,18 @@ LinkingTo:
     Rcpp,
     systemfonts
 Imports:
+    commonmark,
     grDevices,
     grid,
     Rcpp,
     systemfonts,
-    tools
+    tools,
+    xml2
 Suggests:
     ggplot2 (>= 4.0.0),
+    jpeg,
     knitr,
+    png,
     ragg,
     rmarkdown,
     S7,
@@ -41,3 +46,5 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/adayim/gridmicrotex, https://adayim.github.io/gridmicrotex/
 BugReports: https://github.com/adayim/gridmicrotex/issues
+Config/roxygen2/version: 8.0.0
+RoxygenNote: 7.3.3

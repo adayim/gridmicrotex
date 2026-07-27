@@ -3,6 +3,9 @@
 #include "microtex.h"
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
+#include "font_family_atom.h"
+#include "macro/macro.h"
+#include "core/split.h"
 
 using namespace microtex;
 using namespace Rcpp;
@@ -10,6 +13,16 @@ using namespace Rcpp;
 // RAII guard: restores the global render-mode flag on scope exit
 struct RenderModeGuard {
     ~RenderModeGuard() { MicroTeX::setRenderGlyphUsePath(true); }
+};
+
+// RAII guard: line justification is a global on the splitter, so clear
+// it on every exit path -- otherwise one justified call would silently
+// justify every parse that followed it.
+struct JustifyGuard {
+    ~JustifyGuard() {
+        BoxSplitter::_justify = false;
+        BoxSplitter::_optimalBreak = false;
+    }
 };
 
 // Helper: convert ARGB color to R hex string "#RRGGBB" or "#RRGGBBAA"
@@ -47,15 +60,32 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            std::string math_font = "",
                            std::string main_font = "",
                            bool use_path = true,
-                           std::string tex_style = "") {
+                           std::string tex_style = "",
+                           bool justify = false,
+                           bool optimal_break = false) {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
     }
 
+    // Each parse starts from a clean slate of user-defined macros so that
+    // (a) \newcommand/\def in one R call doesn't leak into the next and
+    // (b) the typeface mode's automatic path-fallback parse doesn't fail
+    // with "Command already exists!" when re-processing the same input.
+    NewCommandMacro::clearUserMacros();
+    // The \gmfontfamily registry is per-parse too: indices are only
+    // meaningful against the names collected during this parse.
+    clear_font_families();
+
     // Toggle glyph rendering mode (guard restores default on any exit)
     RenderModeGuard render_guard;
     MicroTeX::setRenderGlyphUsePath(use_path);
+
+    // Justification only has an effect when a width is set, since it is
+    // applied to the lines the splitter produces.
+    JustifyGuard justify_guard;
+    BoxSplitter::_justify = justify;
+    BoxSplitter::_optimalBreak = optimal_break;
 
     // Decode foreground color
     color fg = decodeColor(fg_color);
@@ -95,8 +125,21 @@ Rcpp::List parse_latex_cpp(std::string tex,
     Graphics2D_Recorder recorder;
     render->draw(recorder, 0, 0);
 
-    // Convert records to R data structures
-    const auto& records = recorder.records();
+    // Convert records to R data structures. MARK records are pulled out
+    // into a separate marks list so the main layout data frame stays
+    // ink-only — most expressions have zero marks, and downstream code
+    // shouldn't have to filter them out of every row scan.
+    const auto& all_records = recorder.records();
+    std::vector<const DrawRecord*> records;
+    records.reserve(all_records.size());
+    std::vector<const DrawRecord*> mark_records;
+    for (const auto& r : all_records) {
+        if (r.type == DrawRecord::MARK) {
+            mark_records.push_back(&r);
+        } else {
+            records.push_back(&r);
+        }
+    }
     int n = static_cast<int>(records.size());
 
     // Columns for the layout data.frame
@@ -114,12 +157,13 @@ Rcpp::List parse_latex_cpp(std::string tex,
     NumericVector rotation_col(n);
     IntegerVector codepoint_col(n);
     CharacterVector font_file_col(n);
+    CharacterVector font_family_col(n, NA_STRING);
 
     // Path data stored separately as a list
     Rcpp::List path_list(n);
 
     for (int i = 0; i < n; i++) {
-        const auto& rec = records[i];
+        const auto& rec = *records[i];
 
         // rx/ry are only meaningful for round-rect records; default NA.
         rx_col[i] = NA_REAL;
@@ -164,6 +208,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 lwd_col[i] = NA_REAL;
                 text_col[i] = rec.text;
                 font_style_col[i] = rec.font_style;
+                if (!rec.font_family.empty()) {
+                    font_family_col[i] = rec.font_family;
+                }
                 // radians → degrees (grid textGrob rot= expects degrees, ccw)
                 rotation_col[i] = rec.rotation * (180.0 / 3.14159265358979323846);
                 codepoint_col[i] = NA_INTEGER;
@@ -329,10 +376,15 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Named("rotation") = rotation_col,
         Named("path") = path_list,
         Named("codepoint") = codepoint_col,
-        Named("font_file") = font_file_col
+        Named("font_file") = font_file_col,
+        Named("font_family") = font_family_col
     );
     result.attr("class") = "data.frame";
-    result.attr("row.names") = Rcpp::seq(1, n);
+    if (n > 0) {
+        result.attr("row.names") = Rcpp::seq(1, n);
+    } else {
+        result.attr("row.names") = Rcpp::IntegerVector::create();
+    }
 
     // Attach bounding box as attributes
     result.attr("bbox_width") = width;
@@ -340,6 +392,30 @@ Rcpp::List parse_latex_cpp(std::string tex,
     result.attr("bbox_depth") = depth;
     result.attr("bbox_baseline") = baseline;
     result.attr("bbox_is_split") = is_split;
+
+    // Marks (\mark{name}) — stored as a small data.frame attribute keyed by
+    // name, with x/y in the same world coords as the bounding box (so the
+    // R-side gTree can place them in bigpts from the bbox top-left).
+    int m = static_cast<int>(mark_records.size());
+    CharacterVector mark_name_col(m);
+    NumericVector mark_x_col(m), mark_y_col(m);
+    for (int i = 0; i < m; i++) {
+        mark_name_col[i] = mark_records[i]->mark_name;
+        mark_x_col[i] = mark_records[i]->x;
+        mark_y_col[i] = mark_records[i]->y;
+    }
+    Rcpp::List marks_df = Rcpp::List::create(
+        Named("name") = mark_name_col,
+        Named("x") = mark_x_col,
+        Named("y") = mark_y_col
+    );
+    marks_df.attr("class") = "data.frame";
+    if (m > 0) {
+        marks_df.attr("row.names") = Rcpp::seq(1, m);
+    } else {
+        marks_df.attr("row.names") = Rcpp::IntegerVector::create();
+    }
+    result.attr("marks") = marks_df;
 
     return result;
 }

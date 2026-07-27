@@ -16,7 +16,10 @@ latex_grob(
   math_font = "",
   max_width = 0,
   tex_style = "",
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
+  justify = FALSE,
+  line_break = c("greedy", "optimal"),
   debug = FALSE,
   name = NULL,
   gp = grid::gpar()
@@ -31,7 +34,13 @@ grid.latex(tex, ...)
 
 \item{default.units}{Units for x, y if given as numeric.}
 
-\item{hjust, vjust}{Horizontal/vertical justification (0-1).}
+\item{hjust, vjust}{Horizontal/vertical justification. Accepts the
+usual numeric values in \verb{[0, 1]}. As a convenience, \code{hjust} also
+accepts the strings \code{"left"}/\code{"bbleft"}, \code{"center"}/\code{"centre"}/
+\code{"middle"}/\code{"bbcentre"}, and \code{"right"}/\code{"bbright"}; \code{vjust} accepts
+\code{"bottom"}, \code{"center"}/\code{"centre"}/\code{"middle"}, \code{"top"}, and
+\code{"baseline"}. \code{"baseline"} aligns the formula's math baseline with
+the anchor point — handy for placing a formula in flowing text.}
 
 \item{rot}{Rotation angle in degrees, counter-clockwise (default: 0).
 Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.}
@@ -49,10 +58,21 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 \code{"script"}, or \code{"scriptscript"}. See
 \code{\link{latex_grob}} for the semantics of each value.}
 
+\item{input_mode}{How \code{tex} is interpreted before being parsed.
+\code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
+string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
+opens math mode, matching document-level LaTeX semantics. Useful for
+labels that arrive from external sources mixing prose and math without
+explicit \code{\\text{}} markers. \code{"math"} is the classic
+MicroTeX behaviour --- the whole string is treated as math, so unwrapped
+prose renders as spaced math italics. The default can be changed globally via
+\code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
+for details on the wrapping process.}
+
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_font}}
+Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files --- no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
@@ -60,6 +80,22 @@ R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
 For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).}
+
+\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
+its interword spaces so every line but the last fills
+\code{max_width} exactly. Requires \code{max_width}: it acts on the
+lines the wrapper produces, so it does nothing on its own.
+\code{FALSE} (default) leaves the right edge ragged, matching R's own
+text drawing. gridmicrotex does not hyphenate, so justifying a narrow
+column opens noticeably wide word spaces.}
+
+\item{line_break}{How lines are chosen when wrapping.
+\code{"greedy"} (default) fills each line as far as it will go and
+never reconsiders. \code{"optimal"} chooses the breaks together so
+the paragraph as a whole reads best, in the spirit of Knuth-Plass:
+pulling one word down early can improve every later line, which a
+greedy pass cannot see. Requires \code{max_width}, and costs a
+little more layout time.}
 
 \item{debug}{Logical; if \code{TRUE}, draws diagnostic overlays on the
 grob --- the full bounding box (dashed gray), the baseline (solid
@@ -71,7 +107,7 @@ diagnosing vertical alignment.}
 
 \item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
 Common entries: \code{col} (formula foreground), \code{fontfamily}
-/ \code{fontface} (text font), \code{fontsize} / \code{cex}
+(text font), \code{fontsize} / \code{cex}
 (formula size), and \code{lineheight} (multi-line spacing). See
 \code{\link{latex_grob}} for how each of these flows through
 MicroTeX.}
@@ -136,12 +172,16 @@ of a sub-expression from within \code{tex}, use the inline TeX commands
 \item \code{col}: default foreground color for the formula. Individual
 elements can still be overridden with an inline \verb{\\textcolor}
 command in the LaTeX string.
-\item \code{fontfamily} / \code{fontface}: control the appearance of text inside
-\verb{\\text} and \verb{\\mbox} blocks. For example, \code{gpar(fontfamily = "serif")} renders \verb{\\text} content in R's serif family. Any font
-available to R's graphics system works --- base families
-(\code{"sans"}, \code{"serif"}, \code{"mono"}) as well as fonts registered via
-\pkg{showtext} or \pkg{systemfonts}. Math symbols always use the
-selected math font (see \code{math_font}).
+\item \code{fontfamily}: controls the font of text inside \verb{\\text} and \verb{\\mbox}
+blocks. For example, \code{gpar(fontfamily = "serif")} renders \verb{\\text}
+content in R's serif family. Any font available to R's graphics
+system works --- base families (\code{"sans"}, \code{"serif"}, \code{"mono"}) as
+well as fonts registered via \pkg{showtext} or \pkg{systemfonts}.
+Math symbols always use the selected math font (see \code{math_font}).
+Bold/italic text is controlled from within the LaTeX source
+(\verb{\\textbf\{\}}, \verb{\\textit\{\}}, \verb{\\bf}, ...), not via \code{gp$fontface} ---
+MicroTeX needs the style at layout time to size each run correctly,
+so a \code{gpar()}-level face is not consulted.
 
 \code{fontfamily} \emph{also} drives MicroTeX's layout metrics for non-math
 text: the matching system font is resolved via \pkg{systemfonts},
@@ -150,7 +190,7 @@ a minimal metrics file is generated on first use and cached under
 spacing of \verb{\\text} blocks stays in sync with what \pkg{grid}
 actually draws. When \code{fontfamily} is unset, the R default
 (\code{"sans"}) is used. No manual font loading is required for text
-fonts; \code{\link[=load_font]{load_font()}} remains only for adding custom \strong{math}
+fonts; \code{\link[=load_math_font]{load_math_font()}} remains only for adding custom \strong{math}
 fonts.
 \item \code{fontsize} / \code{cex}: formula size is \code{fontsize * cex} big points
 (default 20 * 1). Both math and text scale together. The effective
@@ -161,24 +201,83 @@ semantics when \code{gp} is set explicitly).
 inter-line gap is \code{(lineheight - 1) * fontsize} big points.
 }
 }
+
+\subsection{LaTeX document-level wrappers}{
+
+The parser accepts raw output from \code{print.xtable()},
+\code{knitr::kable()}, and similar functions that emit complete
+\code{tabular} LaTeX. The following document-level constructs are
+recognized and rewritten silently before the input reaches MicroTeX:
+
+\strong{Removed (no visual effect):}
+\itemize{
+\item \verb{\%}-to-end-of-line comments (escaped \verb{\\\%} is preserved)
+\item preamble: \verb{\\documentclass[...]\{...\}}, \verb{\\usepackage[...]\{...\}},
+\verb{\\begin\{document\}} / \verb{\\end\{document\}}
+\item title metadata: \verb{\\maketitle}, \verb{\\title\{...\}}, \verb{\\author\{...\}}
+\item cross-reference labels: \verb{\\label\{...\}}
+\item float wrappers: \verb{\\begin\{table\}} / \verb{\\end\{table\}}, \verb{\\begin\{figure\}} /
+\verb{\\end\{figure\}} (and starred variants)
+\item layout scopes: \verb{\\centering}, \verb{\\raggedright}, \verb{\\raggedleft},
+\verb{\\flushleft}, \verb{\\flushright}
+}
+
+\strong{Rewritten:}
+\itemize{
+\item booktabs rules: \verb{\\toprule}, \verb{\\midrule}, \verb{\\bottomrule}, \verb{\\cmidrule}
+are mapped to \verb{\\hline}. The optional column-range and trim
+arguments of \verb{\\cmidrule} are discarded (MicroTeX has no concept of
+partial-column rules).
+\item \verb{\\caption[short]\{X\}} is extracted as \verb{\\text\{X\}\\\\} at its source
+position. The caption renders where it appears in the input
+(typically below the \code{tabular} for \code{xtable}, above for
+\code{kable}); expect a slight visual difference from full LaTeX,
+which positions the caption above or below the float regardless of
+source order.
+}
+
+Anything not in this list is passed to MicroTeX unchanged. An unknown
+command is not an error: MicroTeX typesets its name in red, which
+makes unsupported markup easy to spot in the output.
+}
+
+\subsection{Parallelism}{
+
+The MicroTeX engine keeps mutable C++ state for font caching and text
+measurement. Rendering is safe single-threaded and under separate-process
+backends such as \code{future::plan(multisession)}. It is \emph{not} safe
+under forked backends (\code{parallel::mclapply()},
+\code{future::plan(multicore)}) on Unix, because forked workers share that
+state without synchronisation. Use a socket/multisession backend instead.
+}
 }
 \examples{
 \donttest{
-  g <- latex_grob("\\\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
+  g <- latex_grob(r"($\fcolorbox{red}{yellow}{\frac{a}{b}}$)",
+                  x = grid::unit(0.3, "npc"),
+                  y = grid::unit(0.3, "npc"),
+                  gp = grid::gpar(fontsize = 30))
   grid::grid.draw(g)
-
   # Red formula
-  grid::grid.draw(latex_grob("x^{2}", gp = grid::gpar(col = "red")))
+  grid::grid.draw(latex_grob("$x^{2}$",
+                             x = grid::unit(0.3, "npc"),
+                             y = grid::unit(0.8, "npc"),
+                             gp = grid::gpar(col = "red")))
 
-  # Rotated formula
-  grid::grid.draw(latex_grob("x^{2} + y^{2}",
-                             gp = grid::gpar(fontsize = 24), rot = 45))
-}
-\donttest{
-  grid.latex("x^{2} + y^{2} = z^{2}")
+                             # Rotated formula
+  grid::grid.draw(latex_grob(r"($\colorbox{BurntOrange}{x^{2}} + y^{2}$)",
+                             x = grid::unit(0.6, "npc"),
+                             y = grid::unit(0.3, "npc"),
+                             gp = grid::gpar(fontsize = 24),
+                             rot = 45))
+
+  grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
+             x = grid::unit(0.6, "npc"),
+             y = grid::unit(0.8, "npc"),)
 }
 }
 \seealso{
 \code{\link{grid.latex}}, \code{\link{latex_dims}},
-\code{\link{geom_latex}}, \code{\link{available_math_fonts}}
+\code{\link{geom_latex}}, \code{\link{available_math_fonts}},
+\code{\link{latex_wrap}}, \code{\link{latex_options}}
 }

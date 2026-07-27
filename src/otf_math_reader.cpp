@@ -64,7 +64,8 @@ struct BeReader {
     std::size_t len;
 
     bool in_bounds(std::size_t off, std::size_t n) const {
-        return off + n <= len;
+        // Phrased to avoid off + n overflowing size_t on a malformed font.
+        return off <= len && n <= (len - off);
     }
 
     u16 u16be(std::size_t off) const {
@@ -127,8 +128,11 @@ std::map<u16, u16> read_coverage(const BeReader& r, std::size_t off) {
             const u16 start_g = r.u16be(rec);
             const u16 end_g   = r.u16be(rec + 2);
             const u16 start_c = r.u16be(rec + 4);
-            for (u16 g = start_g; g <= end_g; ++g) {
-                cov.emplace(g, static_cast<u16>(start_c + (g - start_g)));
+            // u32 counter: a range ending at glyph 0xFFFF (legal per the
+            // spec) would wrap a u16 and never terminate.
+            for (u32 g = start_g; g <= end_g; ++g) {
+                cov.emplace(static_cast<u16>(g),
+                            static_cast<u16>(start_c + (g - start_g)));
             }
         }
     }
@@ -232,15 +236,17 @@ void read_construction(const BeReader& math, std::size_t mv_off,
 void read_math_kern(const BeReader& math, std::size_t kern_off,
                     std::vector<std::pair<i16, i16>>& out) {
     const u16 hc = math.u16be(kern_off);
-    std::vector<i16> heights(hc), kerns(hc + 1);
+    // u32 counters: with hc == 0xFFFF, `u16 i < hc + 1` never terminates
+    // (hc + 1 promotes to int 65536, unreachable for a u16).
+    std::vector<i16> heights(hc), kerns(static_cast<std::size_t>(hc) + 1);
     std::size_t p = kern_off + 2;
-    for (u16 i = 0; i < hc;     ++i) { heights[i] = read_mvr_value(math, p); p += 4; }
-    for (u16 i = 0; i < hc + 1; ++i) { kerns[i]   = read_mvr_value(math, p); p += 4; }
+    for (u32 i = 0; i < hc;                        ++i) { heights[i] = read_mvr_value(math, p); p += 4; }
+    for (u32 i = 0; i < static_cast<u32>(hc) + 1;  ++i) { kerns[i]   = read_mvr_value(math, p); p += 4; }
     // MicroTeX's MathKern stores (value, height) pairs; for i ∈ [0, hc] the
     // kern[i] applies below height[i] (or beyond the last, for i = hc).
     // To match MicroTeX's `indexOf(height)` lookup we store height[i]
     // alongside kern[i]; the final entry uses the last height as its anchor.
-    for (u16 i = 0; i < hc + 1; ++i) {
+    for (u32 i = 0; i < static_cast<u32>(hc) + 1; ++i) {
         const i16 h = (hc == 0) ? 0 :
                       (i < hc ? heights[i] : heights[hc - 1]);
         out.emplace_back(kerns[i], h);
@@ -412,6 +418,9 @@ FT_Face open_face(const std::string& path, int index) {
 std::vector<u8> read_sfnt_table(FT_Face face, FT_ULong tag) {
     FT_ULong len = 0;
     if (FT_Load_Sfnt_Table(face, tag, 0, nullptr, &len) != 0 || len == 0) return {};
+    // sfnt metadata tables are at most a few MB; reject absurd sizes from a
+    // corrupt font rather than attempting a multi-GB heap allocation.
+    if (len > 50u * 1024u * 1024u) return {};
     std::vector<u8> buf(len);
     if (FT_Load_Sfnt_Table(face, tag, 0, buf.data(), &len) != 0) return {};
     return buf;
@@ -608,10 +617,13 @@ void write_assembly(BeWriter& w, const Assembly& a) {
 }
 
 void write_math_kern(BeWriter& w, const std::vector<std::pair<i16, i16>>& pts) {
-    w.u16v(static_cast<u16>(pts.size()));
-    for (const auto& p : pts) {
-        w.i16v(p.first);   // kern value
-        w.i16v(p.second);  // height
+    // hc == 0xFFFF yields 65536 pairs but the CLM count field is u16 —
+    // cap so the written count always matches the pairs that follow.
+    const std::size_t n = std::min<std::size_t>(pts.size(), 0xFFFF);
+    w.u16v(static_cast<u16>(n));
+    for (std::size_t i = 0; i < n; ++i) {
+        w.i16v(pts[i].first);   // kern value
+        w.i16v(pts[i].second);  // height
     }
 }
 
@@ -836,8 +848,13 @@ SEXP ot_math_table_bytes(std::string path, int index = 0) {
     } catch (const std::exception& e) {
         Rcpp::stop(e.what());
     }
+    // RAII so the face is freed even if a later step throws, matching
+    // build_clm_bytes_impl's FaceGuard pattern.
+    struct FaceGuard {
+        FT_Face f;
+        ~FaceGuard() { if (f) FT_Done_Face(f); }
+    } guard{face};
     auto buf = read_sfnt_table(face, TTAG_MATH);
-    FT_Done_Face(face);
     if (buf.empty()) return R_NilValue;
     Rcpp::RawVector out(buf.size());
     std::memcpy(&out[0], buf.data(), buf.size());

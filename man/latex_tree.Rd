@@ -9,6 +9,7 @@ latex_tree(
   math_font = "",
   max_width = 0,
   tex_style = "",
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
   gp = grid::gpar()
 )
@@ -29,10 +30,21 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 \code{"script"}, or \code{"scriptscript"}. See
 \code{\link{latex_grob}} for the semantics of each value.}
 
+\item{input_mode}{How \code{tex} is interpreted before being parsed.
+\code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
+string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
+opens math mode, matching document-level LaTeX semantics. Useful for
+labels that arrive from external sources mixing prose and math without
+explicit \code{\\text{}} markers. \code{"math"} is the classic
+MicroTeX behaviour --- the whole string is treated as math, so unwrapped
+prose renders as spaced math italics. The default can be changed globally via
+\code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
+for details on the wrapping process.}
+
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_font}}
+Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files --- no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
@@ -43,7 +55,7 @@ all devices but text is not selectable in PDF/SVG).}
 
 \item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
 Common entries: \code{col} (formula foreground), \code{fontfamily}
-/ \code{fontface} (text font), \code{fontsize} / \code{cex}
+(text font), \code{fontsize} / \code{cex}
 (formula size), and \code{lineheight} (multi-line spacing). See
 \code{\link{latex_grob}} for how each of these flows through
 MicroTeX.}

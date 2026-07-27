@@ -6,11 +6,14 @@
 [![R-CMD-check](https://github.com/adayim/gridmicrotex/workflows/R-CMD-check/badge.svg)](https://github.com/adayim/gridmicrotex/actions)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/gridmicrotex)](https://CRAN.R-project.org/package=gridmicrotex)
+[![CRAN
+download](https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex)](https://cran.r-project.org/package=gridmicrotex)
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
-Render LaTeX math expressions as native R **grid** graphics objects,
-with no external LaTeX installation required.
+Render LaTeX math expressions — and markdown containing them — as native
+R **grid** graphics objects, with no external LaTeX installation
+required.
 
 gridmicrotex embeds the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ layout engine to
@@ -45,16 +48,26 @@ library(gridmicrotex)
 library(grid)
 
 grid.newpage()
-grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", gp = grid::gpar(fontsize = 30))
+grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", 
+           gp = grid::gpar(fontsize = 30))
 ```
 
 <img src="man/figures/README-example-basic-1.png" alt="" width="50%" />
+
+By default, the input is treated as LaTeX math mode (“mixed” mode),
+which wraps non-math text in `\text{}` and preserves math expressions
+as-is. Use `$...$` or `\\(...\\)` delimiters to render math. The
+`"x = "` in the equation above treated as text. Use
+`input_mode = "math"` to treat the whole string as math mode and render
+text with `\\text{}`. You can change this with global option
+`latex_options(input_mode = "math")`.
 
 ### Composing with other grobs
 
 The grob can be placed alongside other grid objects:
 
 ``` r
+latex_options(input_mode = "math")
 g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
 grid.newpage()
 # A blue box behind the formula
@@ -96,31 +109,54 @@ for (i in seq_along(exprs)) {
 
 ### Mixed text and math
 
-Use `\text{}` to embed regular text within math expressions:
+You can use `r"()"` raw strings to write LaTeX with regular newlines and
+quotes without escaping. Use `\text{}` to embed regular text within math
+expressions:
 
 ``` r
 grid.newpage()
 grid.latex(
-  "f(x) = \\begin{cases} x^2 & \\text{if } x \\geq 0 \\\\ -x & \\text{otherwise} \\end{cases}",
+  r"(f(x) = \begin{cases} x^2 & \text{if } x \geq 0 \\ -x & \text{otherwise} \end{cases})",
   gp = grid::gpar(fontsize = 26)
 )
 ```
 
 <img src="man/figures/README-example-mixed-definition-1.png" alt="" width="50%" />
 
-## CJK and multilingual text
+## Markdown
 
-Non-math text via `\text{}` supports CJK and other scripts. Font
-settings from `gp` (`fontfamily`, `fontface`) apply to text only — math
-rendering always uses the selected math font:
+`grid.markdown()` renders markdown, with `$math$` inline. Unlike the
+other markdown-in-grid packages, the maths is real LaTeX rather than
+plotmath:
 
 ``` r
 grid.newpage()
-grid.latex("\\text{如果 } x > 0 \\text{ 则 } y = x^2",
-           gp = gpar(fontsize = 24, fontfamily = "sans"))
+grid.markdown(
+  "The **fitted** slope is $\\hat{\\beta}_1 = 0.42$ (*p* < 0.001).",
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
+)
 ```
 
-<img src="man/figures/README-example-mixed-cjk-math-1.png" alt="" width="50%" />
+<img src="man/figures/README-example-markdown-1.png" alt="" width="70%" />
+
+Colour, font and size come from inline HTML, as they must: markdown
+itself defines no syntax for them.
+
+``` r
+grid.newpage()
+grid.markdown(
+  paste0('Set in <span style="font-family:serif">serif</span>, ',
+         'H<sub>0</sub> <u>rejected</u> at ',
+         '<span style="color:#B22222">5%</span>.'),
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
+)
+```
+
+<img src="man/figures/README-example-markdown-html-1.png" alt="" width="70%" />
+
+`markdown_box_grob()` lays out a whole document — headings, lists,
+quotes, code, tables and images — as a stack of grobs. See
+`vignette("markdown")`.
 
 ## ggplot2 integration
 
@@ -130,7 +166,7 @@ Use `geom_latex()` to place LaTeX labels at data coordinates, and
 ``` r
 library(ggplot2)
 # Add a LaTeX table as an annotation
-tab_str <- "\\begin{tabular}{c|c} \\text{A} & \\text{B} \\\\ \\hline 1 & \\cellcolor{#00bde5}2 \\\\ 3 & 4 \\end{tabular}"
+tab_str <- r"(\begin{tabular}{c|c} \text{A} & B^2 \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 
 df <- data.frame(x = 1:3, y = 1:3,
                  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
@@ -148,14 +184,16 @@ ggplot2 is a soft dependency — the core functions work without it. See
 
 ## Comparison
 
-| Approach         | LaTeX required? | Device independent? | Vector? | Math coverage |
-|:-----------------|:---------------:|:-------------------:|:-------:|:-------------:|
-| `tikzDevice`     |       Yes       |         No          |   Yes   |     Full      |
-| `xdvir`          |       Yes       |         No          |   Yes   |     Full      |
-| `latexpdf`       |       Yes       |         No          |   Yes   | Full (tables) |
-| `latex2exp`      |       No        |         Yes         |   Yes   |    Limited    |
-| `plotmath`       |       No        |         Yes         |   Yes   |    Limited    |
-| **gridmicrotex** |     **No**      |       **Yes**       | **Yes** |   **Broad**   |
+| Approach | LaTeX required? | Device independent? | Vector? | Math coverage | Markdown |
+|:---|:--:|:--:|:--:|:--:|:--:|
+| `tikzDevice` | Yes | No | Yes | Full | No |
+| `xdvir` | Yes | No | Yes | Full | No |
+| `latexpdf` | Yes | No | Yes | Full (tables) | No |
+| `latex2exp` | No | Yes | Yes | Limited | No |
+| `plotmath` | No | Yes | Yes | Limited | No |
+| `gridtext` | No | Yes | Yes | None | Yes |
+| `marquee` | No | Yes | Yes | None | Yes |
+| **gridmicrotex** | **No** | **Yes** | **Yes** | **Broad** | **Yes** |
 
 ## How it works
 

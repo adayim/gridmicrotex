@@ -556,9 +556,28 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
         case AtomType::hline: {
           auto* at = (HlineAtom*)_matrix->_array[i][j].get();
           at->setColor(LINE_COLOR);
-          at->setWidth(matW);
           if (i >= 1 && dynamic_cast<HlineAtom*>(_matrix->_array[i - 1][j].get()) != nullptr) {
             hb->add(sptrOf<StrutBox>(0.f, 2 * drt, 0.f, 0.f));
+          }
+          if (at->colStart() >= 0) {
+            // Partial rule: \cline{a-b}. Span left edge of column a to
+            // right edge of column b (LaTeX 1-indexed columns are
+            // converted to 0-indexed by the macro).
+            int a = at->colStart();
+            int b = at->colEnd();
+            if (a < 0) a = 0;
+            if (b >= cols) b = cols - 1;
+            if (b < a) b = a;
+            float offset = 0;
+            for (int c = 0; c < a; c++) offset += colWidth[c];
+            for (int c = 0; c <= a; c++) offset += Hsep[c];
+            float width = 0;
+            for (int c = a; c <= b; c++) width += colWidth[c];
+            for (int c = a + 1; c <= b; c++) width += Hsep[c];
+            if (offset > 0) hb->add(sptrOf<StrutBox>(offset, 0.f, 0.f, 0.f));
+            at->setWidth(width);
+          } else {
+            at->setWidth(matW);
           }
 
           hb->add(at->createBox(env));

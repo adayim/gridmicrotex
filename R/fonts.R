@@ -54,7 +54,7 @@ resolve_math_font <- function(name) {
 #'   Lete Sans Math (\code{"lete"}, default) \tab Sans-serif \tab \code{"sans"} \cr
 #'   STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
 #' }
-#' Additional math fonts can be loaded with \code{\link{load_font}}.
+#' Additional math fonts can be loaded with \code{\link{load_math_font}}.
 #'
 #' @return A character vector of math font names.
 #' @export
@@ -94,35 +94,41 @@ available_math_fonts <- function() {
 
 #' Load a math font from an OTF file
 #'
-#' Loads an OTF/TTF math font into MicroTeX's internal font registry. The
-#' font's OpenType MATH table is parsed directly in C++ and the required
-#' metrics are synthesised on the fly. You can download free math fonts like
-#' Latin Modern Math (default math fonts in LaTeX) and load it with 
-#' \code{load_font()} to use it for math rendering.
+#' Loads an OTF/TTF \strong{math} font --- one carrying an OpenType MATH
+#' table --- into MicroTeX's internal font registry. The MATH table is
+#' parsed directly in C++ and the required metrics are synthesised on the
+#' fly. You can download a free math font such as Latin Modern Math
+#' (the LaTeX default) and load it for math rendering.
 #'
 #' The font is also registered with the \pkg{systemfonts} package so it
 #' can be selected for surrounding plot text via
 #' \code{gp = gpar(fontfamily = "...")} without being installed
 #' system-wide.
 #'
-#' @section Text fonts:
-#' This function is only for \strong{math} fonts (fonts with an
-#' OpenType MATH table). Plain text fonts used inside \code{\\text\{\}}
-#' blocks are resolved automatically by \pkg{systemfonts} from the
-#' \code{gp$fontfamily} argument --- no \code{load_font()} call required.
+#' Plain \strong{text} fonts --- those used inside \code{\\text\{\}} blocks
+#' --- need no loading at all. They are resolved automatically by
+#' \pkg{systemfonts} from \code{gp$fontfamily}, or per run with
+#' \code{\\gmfontfamily\{\}\{\}}.
 #'
 #' @param otf_path Path to the OTF/TTF font file.
 #' @return Invisibly returns \code{NULL}.
-#' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_options}},
-#'   \code{\link{latex_grob}}
+#' @seealso \code{\link{available_math_fonts}}, \code{\link{check_math_fonts}},
+#'   \code{\link{latex_options}}, \code{\link{latex_grob}}
 #' @export
 #'
 #' @examples
 #' \donttest{
-#'   # Load a custom math font from OTF:
-#'   # load_font("path/to/font.otf")
+#'   # Load a math font from a local OTF file. Here we point at the
+#'   # bundled STIX font so the example is self-contained and loaded.
+#'   # You don't need to load the bundled fonts to use them — they're registered
+#'   # with systemfonts on first render — but this shows how to load a custom font.
+#'   # in practice you would pass the path to any OTF with an OpenType MATH table.
+#'   otf <- system.file("fonts", "STIXTwoMath-Regular.otf",
+#'                      package = "gridmicrotex")
+#'   load_math_font(otf)
+#'   available_math_fonts()
 #' }
-load_font <- function(otf_path) {
+load_math_font <- function(otf_path) {
   if (!file.exists(otf_path)) {
     stop("Font file not found: ", otf_path, call. = FALSE)
   }
@@ -159,10 +165,10 @@ load_font <- function(otf_path) {
 
 # Register a math font with systemfonts so gp$fontfamily = <name> (or any
 # alias) resolves to `otf_path` for grid text drawing. Silent on failure
-# — systemfonts is a soft dep and missing it is not a blocker.
+# — registration is best-effort; failing only means gp$fontfamily won't
+# resolve to the bundled OTF.
 .register_font_with_systemfonts <- function(otf_path, display_name,
                                             aliases = character(0)) {
-  if (!requireNamespace("systemfonts", quietly = TRUE)) return(invisible())
   names <- unique(c(display_name, aliases))
   for (nm in names) {
     try(
@@ -173,18 +179,50 @@ load_font <- function(otf_path) {
   invisible()
 }
 
-#' Check font status
+# Session-level flag for the bundled-font systemfonts registration. Kept
+# out of .onLoad so we don't touch Core Text at namespace-load time on
+# macOS — older SDKs print "XType: Using static font registry." to stderr,
+# which R CMD check captures and flags across many check phases. Running
+# this lazily on first render keeps the check log clean.
+.fonts_state <- new.env(parent = emptyenv())
+.fonts_state$registered <- FALSE
+
+.ensure_bundled_fonts_registered <- function() {
+  if (isTRUE(.fonts_state$registered)) return(invisible())
+  .fonts_state$registered <- TRUE  # set first so a failure isn't retried each call
+
+  lete <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
+  if (nzchar(lete)) {
+    .register_font_with_systemfonts(lete, "Lete Sans Math", aliases = "lete")
+  }
+
+  stix <- system.file("fonts", "STIXTwoMath-Regular.otf", package = "gridmicrotex")
+  if (nzchar(stix)) {
+    .register_font_with_systemfonts(stix, "STIX Two Math", aliases = "stix")
+  }
+
+  invisible()
+}
+
+#' Check math font status
 #'
-#' Reports which math fonts are loaded and available for rendering.
-#' Shows the MicroTeX version, loaded math fonts, and whether bundled
-#' font files are present.
+#' Reports which \strong{math} fonts are loaded and available for
+#' rendering: the MicroTeX version, the loaded math fonts, and whether the
+#' bundled font files are present.
 #'
-#' @return Invisibly returns the character vector of available font names.
+#' Text fonts are not covered, because they are not registered here ---
+#' they are resolved on demand by \pkg{systemfonts} from
+#' \code{gp$fontfamily}. Use \code{systemfonts::match_fonts()} to see
+#' what a text family resolves to.
+#'
+#' @return Invisibly returns the character vector of available math font
+#'   names.
+#' @seealso \code{\link{available_math_fonts}}, \code{\link{load_math_font}}
 #' @export
 #'
 #' @examples
-#' check_fonts()
-check_fonts <- function() {
+#' check_math_fonts()
+check_math_fonts <- function() {
   if (!microtex_is_inited()) {
     message("MicroTeX is not initialized.")
     return(invisible(character(0)))

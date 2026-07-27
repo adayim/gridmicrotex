@@ -2,6 +2,7 @@
 #define MACRO_H_INCLUDED
 
 #include <map>
+#include <set>
 #include <string>
 
 #include "atom/atom.h"
@@ -23,6 +24,10 @@ protected:
   static std::map<std::string, std::string> _codes;
   static std::map<std::string, std::string> _replacements;
   static Macro* _instance;
+  // Snapshot of the macro names known at the end of _init_(). Anything
+  // not in this set is considered user-defined and is dropped by
+  // clearUserMacros(). Populated once by snapshotBuiltins().
+  static std::set<std::string> _builtin_names;
 
   static void checkNew(const std::string& name);
 
@@ -52,7 +57,35 @@ public:
     const std::string& def
   );
 
+  /**
+   * Define or silently overwrite a macro with plain-TeX \def semantics.
+   * Supports the sequential parameter form \def\foo#1#2{body} (argc 0..9).
+   * No conflict check is performed.
+   */
+  static void addDefCommand(const std::string& name, const std::string& code, int argc);
+
   static bool isMacro(const std::string& name);
+
+  /**
+   * Drop every user-defined macro currently registered (\newcommand,
+   * \renewcommand, \def). Built-in macros and environments registered
+   * by _init_() are preserved via the snapshot taken by
+   * snapshotBuiltins().
+   *
+   * Call this between independent parses so that the static state
+   * doesn't leak macros across calls and so that the typeface/path
+   * double-parse for a single grob doesn't hit "already exists"
+   * errors on the second pass.
+   */
+  static void clearUserMacros();
+
+  /**
+   * Record the set of macro names currently in `_codes`. Anything
+   * present at the time of the call is considered "built-in" and will
+   * not be removed by clearUserMacros(). Idempotent — only the first
+   * call has an effect, so multiple init paths can call it safely.
+   */
+  static void snapshotBuiltins();
 
   static void _init_();
 
@@ -88,6 +121,10 @@ public:
 
   /** Get the macro info from given name, return nullptr if not found. */
   static MacroInfo* get(const std::string& name);
+
+  /** Remove and delete the macro info entry for the given name. No-op
+   *  if the name is not registered. */
+  static void remove(const std::string& name);
 
   // Number of arguments
   const int argc;

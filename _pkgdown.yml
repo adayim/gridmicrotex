@@ -4,8 +4,21 @@ template:
 
 navbar:
   structure:
-    left: [intro, reference, articles]
+    left: [intro, reference, articles, news]
     right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+      - text: "Getting started"
+      - text: Introduction to gridmicrotex
+        href: articles/getting-started.html
+      - text: "ggplot2"
+      - text: Using LaTeX Math in ggplot2
+        href: articles/ggplot2-integration.html
+      - text: "Markdown"
+      - text: Markdown with LaTeX math
+        href: articles/markdown.html
 
 reference:
   - title: Core rendering
@@ -15,6 +28,20 @@ reference:
       - grid.latex
       - latex_dims
       - latex_tree
+      - grobMark
+
+  - title: Markdown
+    desc: Render markdown, with LaTeX math inline, as grid grobs
+    contents:
+      - markdown_grob
+      - grid.markdown
+      - markdown_box_grob
+
+  - title: Markdown styling
+    desc: A small CSS cascade over the markdown tags
+    contents:
+      - markdown_style
+      - md_style
 
   - title: Options, macros, and cache
     desc: Project-wide defaults and advanced tooling
@@ -29,22 +56,31 @@ reference:
       - latex_cache_clear
 
   - title: ggplot2 integration
-    desc: Use LaTeX in ggplot2 plots
+    desc: Use LaTeX and markdown in ggplot2 plots
     contents:
       - geom_latex
       - element_latex
+      - geom_markdown
+      - element_markdown
 
   - title: Font management
     desc: Load and configure math and text fonts
     contents:
       - available_math_fonts
-      - load_font
-      - check_fonts
+      - load_math_font
+      - check_math_fonts
+  - title: Misc utilities
+    desc: Utilities for working with LaTeX strings and rendering
+    contents:
+      - latex_wrap
 
 articles:
   - title: Getting started
     contents:
-      - introduction
+      - getting-started
   - title: ggplot2
     contents:
       - ggplot2-integration
+  - title: Markdown
+    contents:
+      - markdown

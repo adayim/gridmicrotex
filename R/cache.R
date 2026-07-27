@@ -102,28 +102,38 @@ latex_cache_info <- function() {
 
 # Cache key for a parse_latex_cpp call. Concatenation is fine because the
 # tex string is included and the remaining inputs are short numerics/strings.
+# `text_family` is the *requested* gp$fontfamily, not the resolved
+# main_font: two families that both fail MicroTeX resolution (main_font ==
+# "") are still measured with the requested family by the R text-measurer
+# callback, so they can produce different layouts and must not share a key.
 .parse_cache_key <- function(tex, text_size, line_space, fg_color, max_width,
-                             math_font, main_font, use_path, tex_style) {
+                             math_font, main_font, text_family, use_path,
+                             tex_style, justify, optimal_break) {
   paste(
     tex, "|", text_size, "|", line_space, "|", fg_color, "|",
-    max_width, "|", math_font, "|", main_font, "|",
-    as.integer(use_path), "|", tex_style,
+    max_width, "|", math_font, "|", main_font, "|", text_family, "|",
+    as.integer(use_path), "|", tex_style, "|", as.integer(justify),
+    "|", as.integer(optimal_break),
     sep = ""
   )
 }
 
-# Cached wrapper around parse_latex_cpp. Same signature, transparent cache.
+# Cached wrapper around parse_latex_cpp. Same signature plus `text_family`
+# (key-only, not forwarded to C++), transparent cache.
 .parse_latex_cached <- function(tex, text_size, line_space, fg_color,
                                 max_width, math_font, main_font, use_path,
-                                tex_style = "") {
+                                tex_style = "", text_family = "",
+                                justify = FALSE, optimal_break = FALSE) {
   key <- .parse_cache_key(tex, text_size, line_space, fg_color, max_width,
-                          math_font, main_font, use_path, tex_style)
+                          math_font, main_font, text_family, use_path,
+                          tex_style, justify, optimal_break)
   hit <- .cache_get(key)
   if (!is.null(hit)) return(hit)
   layout <- parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
-    main_font = main_font, use_path = use_path, tex_style = tex_style
+    main_font = main_font, use_path = use_path, tex_style = tex_style,
+    justify = justify, optimal_break = optimal_break
   )
   .cache_put(key, layout)
   layout

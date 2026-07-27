@@ -186,7 +186,7 @@ private:
   int _cancelType;
 
 public:
-  enum CancelType { SLASH, BACKSLASH, CROSS };
+  enum CancelType { SLASH, BACKSLASH, CROSS, HORIZONTAL };
 
   CancelAtom() = delete;
 

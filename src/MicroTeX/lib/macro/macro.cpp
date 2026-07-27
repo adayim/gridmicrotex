@@ -1,6 +1,7 @@
 #include "macro/macro.h"
 
 #include <string>
+#include <vector>
 
 #include "macro/macro_misc.h"
 
@@ -60,6 +61,11 @@ void NewCommandMacro::addRenewCommand(
   MacroInfo::add(name, new InflationMacroInfo(_instance, argc, 1));
 }
 
+void NewCommandMacro::addDefCommand(const string& name, const string& code, int argc) {
+  _codes[name] = code;
+  MacroInfo::add(name, new InflationMacroInfo(_instance, argc));
+}
+
 void NewCommandMacro::execute(Parser& tp, vector<string>& args) {
   string code = _codes[args[0]];
   string rep;
@@ -68,26 +74,18 @@ void NewCommandMacro::execute(Parser& tp, vector<string>& args) {
 
   auto it = _replacements.find(args[0]);
 
-  // FIXME
-  // Keep slash "\" and dollar "$" signs?
-  // Example:
-  //      \newcommand{\cmd}[2][\sqrt{e^x}]{ #2 - #1 }
-  // we want the optional argument "\sqrt{e^x}" keep the slash sign
   if (!args[argc + 1].empty()) {
     dec = 1;
-    // quotereplace(args[argc + 1], rep);
     replaceAll(code, "#1", args[argc + 1]);
   } else if (it != _replacements.end()) {
     dec = 1;
-    // quotereplace(it->second, rep);
     replaceAll(code, "#1", it->second);
   }
 
-  for (int i = 1; i <= argc; i++) {
+  for (size_t i = 1; i <= argc; i++) {
     rep = args[i];
     replaceAll(code, "#" + toString(i + dec), rep);
   }
-  // push back as returned value (inflated macro)
   args.push_back(code);
 }
 
@@ -114,8 +112,34 @@ void NewEnvironmentMacro::addRenewEnvironment(
   addRenewCommand(name + "@env", begDef + " #" + toString(argc + 1) + " " + endDef, argc + 1);
 }
 
+void NewCommandMacro::clearUserMacros() {
+  std::vector<std::string> to_drop;
+  for (const auto& kv : _codes) {
+    if (_builtin_names.find(kv.first) == _builtin_names.end()) {
+      to_drop.push_back(kv.first);
+    }
+  }
+  for (const auto& name : to_drop) {
+    _codes.erase(name);
+    _replacements.erase(name);
+    MacroInfo::remove(name);
+  }
+}
+
+void NewCommandMacro::snapshotBuiltins() {
+  if (!_builtin_names.empty()) return;
+  for (const auto& kv : _codes) _builtin_names.insert(kv.first);
+}
+
 void NewCommandMacro::_free_() {
   delete _instance;
+}
+
+void MacroInfo::remove(const string& name) {
+  auto it = _commands.find(name);
+  if (it == _commands.end()) return;
+  delete it->second;
+  _commands.erase(it);
 }
 
 void MacroInfo::add(const string& name, MacroInfo* mac) {

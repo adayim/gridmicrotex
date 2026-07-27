@@ -1,5 +1,7 @@
 #include "graphic_recorder.h"
 
+#include "font_family_atom.h"
+
 namespace microtex {
 
 Graphics2D_Recorder::Graphics2D_Recorder() = default;
@@ -63,6 +65,16 @@ void Graphics2D_Recorder::transformPoint(float& x, float& y) const {
     float ny = _transform.b * x + _transform.d * y + _transform.ty;
     x = nx;
     y = ny;
+}
+
+void Graphics2D_Recorder::recordMark(const std::string& name, float x, float y) {
+    DrawRecord rec;
+    rec.type = DrawRecord::MARK;
+    transformPoint(x, y);
+    rec.x = x;
+    rec.y = y;
+    rec.mark_name = name;
+    _records.push_back(std::move(rec));
 }
 
 void Graphics2D_Recorder::drawGlyph(u16 glyph, float x, float y) {
@@ -314,6 +326,7 @@ void Graphics2D_Recorder::drawTextRun(const std::string& text, float x, float y,
     rec.y = y;
     rec.text = text;
     rec.font_style = fontStyle;
+    rec.font_family = font_family_of_style(fontStyle);
     rec.font_size = fontSize * s;
     rec.rotation = rot;
     rec.col = _currentColor;

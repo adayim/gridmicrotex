@@ -7,7 +7,8 @@
 #' @param total_h Total height of the formula (height + depth) in bigpts.
 #' @param depth Depth below the baseline in bigpts (default 0).
 #' @param text_gp Optional \code{\link[grid]{gpar}} for text grobs
-#'   (from \code{\\text\{\}} blocks). Controls fontfamily and fontface.
+#'   (from \code{\\text\{\}} blocks). Controls fontfamily; the face comes
+#'   from each record's MicroTeX \code{font_style}.
 #' @param render_mode Character string: \code{"path"} or \code{"typeface"}.
 #'   In typeface mode, glyph records are rendered via \code{glyphGrob}.
 #' @return A \code{grid::gList} of child grobs.
@@ -121,7 +122,10 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
             col = color[i],
             fontface = .resolve_text_face(layout_df$font_style[i])
           )
-          if (!is.null(text_gp$fontfamily)) tgp$fontfamily <- text_gp$fontfamily
+          fam <- .resolve_text_family(layout_df$font_style[i],
+                                      text_gp$fontfamily,
+                                      layout_df$font_family[i])
+          if (!is.null(fam)) tgp$fontfamily <- fam
           grid::textGrob(
             label = txt,
             x = grid::unit(x[i], "bigpts"),
@@ -295,6 +299,39 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
   else if (is_bold) "bold"
   else if (is_italic) "italic"
   else "plain"
+}
+
+# Which font family a text record should be drawn in. The single place
+# the precedence lives, because the renderer and the *measurer* both ask:
+# measuring in one font and drawing in another puts the glyphs where they
+# do not fit.
+#
+#   \gmfontfamily  >  \texttt / \textsf  >  gp$fontfamily
+#
+# Local beats global. `family` is the name carried by the record, from a
+# CSS font-family; it can say "Georgia", which the font_style bits never
+# can. Those bits still cover \texttt (128) and \textsf (64), which is how
+# markdown's `code` and <code> get monospace -- without this they reported
+# monospace but drew in the body font.
+#
+# There is deliberately no serif case for the bits: \textrm and a plain
+# \text{} both report bit 1, so mapping it would restyle every ordinary
+# run. font-family: serif goes through `family` instead -- and so does
+# \textrm, which names the reserved family below rather than relying on
+# its (indistinguishable) style bit. See src/font_family_atom.h.
+.GM_DEFAULT_FAMILY <- "gridmicrotex.default"
+
+.resolve_text_family <- function(style, default = NULL, family = NULL) {
+  if (!is.null(family) && !is.na(family) && nzchar(family)) {
+    # \textrm: back to the caller's font, overriding any enclosing
+    # \textsf / \texttt rather than inheriting it.
+    if (identical(family, .GM_DEFAULT_FAMILY)) return(default)
+    return(family)
+  }
+  if (is.na(style)) return(default)
+  if (bitwAnd(style, 128L) != 0L) return("mono")
+  if (bitwAnd(style, 64L) != 0L) return("sans")
+  default
 }
 
 # Cache of font file -> glyphFont objects

@@ -2,6 +2,9 @@
 #include "microtex.h"
 #include "graphic/graphic.h"
 #include "graphic_recorder.h"
+#include "font_family_atom.h"
+#include "macro/macro.h"
+#include "mark_atom.h"
 #include "unimath/font_src.h"
 #include "unimath/uni_font.h"
 #include "otf/otf.h"
@@ -126,15 +129,25 @@ float measure_glyph_advance(const std::string& fontFile, u16 glyphId, float font
     return g->metrics().width() * fontSize / static_cast<float>(em);
 }
 
+// Cache key for one measured run. The style goes in as both its bytes:
+// the high one carries the font family index, so keying on the low byte
+// alone would measure two different families as whichever was asked for
+// first. The prefix is fixed width, so no (style, src) pair can alias.
+std::string text_measure_key(const std::string& text, int fontStyle) {
+    std::string key;
+    key.reserve(text.size() + 4);
+    key.push_back(static_cast<char>(fontStyle & 0xFF));
+    key.push_back(static_cast<char>((fontStyle >> 8) & 0xFF));
+    key.push_back('\x01');
+    key.append(text);
+    return key;
+}
+
 // Shared with graphic_recorder.cpp: width lookup used to compensate for
 // horizontal flips (e.g. \reflectbox) at drawTextRun time.
 float measure_cached_text_width(const std::string& text, int fontStyle, float fontSize) {
     if (has_text_measurer()) {
-        std::string key;
-        key.reserve(text.size() + 3);
-        key.push_back(static_cast<char>(fontStyle & 0xFF));
-        key.push_back('\x01');
-        key.append(text);
+        const std::string key = text_measure_key(text, fontStyle);
         auto it = g_text_measure_cache.find(key);
         if (it != g_text_measure_cache.end()) {
             return it->second[0] * fontSize;
@@ -163,15 +176,7 @@ public:
     void getBounds(Rect& bounds) override {
         // Try R callback for accurate font metrics
         if (has_text_measurer()) {
-            // Cache key: style prefix + '\x01' separator + src. The separator
-            // can't appear in UTF-8 text so two different (src, style) pairs
-            // cannot collide.
-            std::string key;
-            key.reserve(_src.size() + 3);
-            key.push_back(static_cast<char>(static_cast<int>(_style) & 0xFF));
-            key.push_back('\x01');
-            key.append(_src);
-
+            std::string key = text_measure_key(_src, static_cast<int>(_style));
             auto it = g_text_measure_cache.find(key);
             if (it != g_text_measure_cache.end()) {
                 bounds.x = 0;
@@ -183,7 +188,12 @@ public:
 
             try {
                 Rcpp::Function fn(g_text_measure_fn);
-                Rcpp::NumericVector result = fn(_src, static_cast<int>(_style));
+                // The family goes over as a name, not the packed index:
+                // the registry is ours, and R only wants something it can
+                // hand to gpar(fontfamily=).
+                Rcpp::NumericVector result = fn(
+                    _src, static_cast<int>(_style),
+                    font_family_of_style(static_cast<int>(_style)));
                 if (result.size() >= 3) {
                     // result = c(width_ratio, ascent_ratio, height_ratio)
                     // Ratios are relative to font size, multiply by _size
@@ -268,6 +278,8 @@ void microtex_init(std::string clm_path, std::string otf_path) {
         MicroTeX::setRenderGlyphUsePath(true);
     }
 
+    register_mark_macro();
+    register_font_family_macro();
     s_initialized = true;
 }
 
@@ -296,6 +308,8 @@ void microtex_init_from_otf(std::string otf_path, int index = 0) {
         MicroTeX::setRenderGlyphUsePath(true);
     }
 
+    register_mark_macro();
+    register_font_family_macro();
     s_initialized = true;
 }
 
@@ -331,8 +345,22 @@ bool microtex_set_default_math_font(std::string name) {
 // [[Rcpp::export]]
 void microtex_release() {
     if (!s_initialized) return;
-    MicroTeX::release();
+    // Deliberately NOT MicroTeX::release(). Its whole body is
+    // MacroInfo::_free_() + NewCommandMacro::_free_(), which are
+    // process-teardown deallocation: _free_() deletes every value in the
+    // static _commands map but never erases, so afterwards every built-in
+    // macro is a dangling pointer -- and MacroInfo::add() then does
+    // `delete it->second` on one, i.e. a double free, every time we
+    // re-register \mark / \gmfontfamily / \textrm on the next init. That
+    // corrupted the heap on every release/re-init cycle; with enough
+    // macros registered it segfaults outright on the next large parse.
+    // _commands is static-lifetime data that is only ever populated once,
+    // so the right move is to leave it alone and just drop what is
+    // genuinely per-session.
+    NewCommandMacro::clearUserMacros();
     microtex::g_font_id_cache.clear();
+    // The built-in registry now survives, so our macros are still there
+    // and their registration guards must stay set.
     s_initialized = false;
 }
 

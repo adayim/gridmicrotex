@@ -24,7 +24,7 @@ pair them with a matching \code{fontfamily} in \code{gp}:
 Lete Sans Math (\code{"lete"}, default) \tab Sans-serif \tab \code{"sans"} \cr
 STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
 }
-Additional math fonts can be loaded with \code{\link{load_font}}.
+Additional math fonts can be loaded with \code{\link{load_math_font}}.
 }
 
 \examples{

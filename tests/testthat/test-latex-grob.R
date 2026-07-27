@@ -77,8 +77,12 @@ test_that("device support detection and typeface fallback work", {
 
 # --- edge cases: empty and invalid input ---
 
-test_that("latex_grob handles empty input", {
-  expect_error(latex_grob(""))
+test_that("latex_grob handles empty input as a zero-size grob", {
+  g <- latex_grob("")
+  expect_s3_class(g, "latexgrob")
+  expect_equal(g$bbox_w, 0)
+  expect_equal(g$bbox_h, 0)
+  expect_equal(nrow(g$layout_df), 0L)
 })
 
 test_that("latex_grob handles invalid LaTeX commands gracefully", {
@@ -156,7 +160,7 @@ test_that("editGrob keeps viewport just in sync with hjust/vjust", {
 })
 
 test_that("latex_dims respects math_font parameter", {
-  expr <- "\\int_0^1 f(x)\\,dx + x + y"
+  expr <- "$\\int_0^1 f(x)\\,dx + x + y$"
   dims_lete <- latex_dims(expr, math_font = "lete", gp = grid::gpar(fontsize = 20))
   dims_stix <- latex_dims(expr, math_font = "stix", gp = grid::gpar(fontsize = 20))
   w_lete <- grid::convertWidth(dims_lete$width, "bigpts", valueOnly = TRUE)
@@ -164,4 +168,53 @@ test_that("latex_dims respects math_font parameter", {
   expect_true(w_lete > 0)
   expect_true(w_stix > 0)
   expect_false(w_lete == w_stix)
+})
+
+# --- \def command ---
+
+test_that("\\def defines a zero-argument macro and renders identically to \\newcommand", {
+  # \def\mymacroA{x^2} should produce the same layout as \newcommand{\mymacroB}{x^2}
+  layout_nc  <- parse_latex_cpp("\\newcommand{\\mymacroB}{x^2} \\mymacroB", text_size = 20)
+  layout_def <- parse_latex_cpp("\\def\\mymacroA{x^2} \\mymacroA",           text_size = 20)
+  expect_equal(nrow(layout_def), nrow(layout_nc))
+})
+
+test_that("\\def silently overwrites an existing macro", {
+  # First define, then redefine with \def — no error should be thrown
+  expect_no_error(
+    parse_latex_cpp("\\def\\myoverwrite{x} \\def\\myoverwrite{y} \\myoverwrite", text_size = 20)
+  )
+})
+
+test_that("\\def with invalid control sequence name throws a parse error", {
+  expect_error(
+    parse_latex_cpp("\\def{notacontrolseq}{body}", text_size = 20)
+  )
+})
+
+test_that("\\def with sequential #1..#N parameters expands like \\newcommand[N]", {
+  # Single-arg form: \def\sq#1{#1^2} should match \newcommand{\sq}[1]{#1^2}
+  layout_nc1  <- parse_latex_cpp("\\newcommand{\\sqB}[1]{#1^2} \\sqB{a}", text_size = 20)
+  layout_def1 <- parse_latex_cpp("\\def\\sqA#1{#1^2} \\sqA{a}",           text_size = 20)
+  expect_equal(nrow(layout_def1), nrow(layout_nc1))
+
+  # Two-arg form: \def\pair#1#2{#1+#2}
+  layout_nc2  <- parse_latex_cpp("\\newcommand{\\pairB}[2]{#1+#2} \\pairB{a}{b}", text_size = 20)
+  layout_def2 <- parse_latex_cpp("\\def\\pairA#1#2{#1+#2} \\pairA{a}{b}",         text_size = 20)
+  expect_equal(nrow(layout_def2), nrow(layout_nc2))
+})
+
+test_that("\\def rejects non-sequential or malformed parameter patterns", {
+  # Out-of-order parameters: #2 before #1
+  expect_error(
+    parse_latex_cpp("\\def\\bad#2#1{#1#2}", text_size = 20)
+  )
+  # Skipping a parameter: #1 then #3
+  expect_error(
+    parse_latex_cpp("\\def\\skip#1#3{#1#3}", text_size = 20)
+  )
+  # '#' not followed by a digit
+  expect_error(
+    parse_latex_cpp("\\def\\noarg#x{x}", text_size = 20)
+  )
 })

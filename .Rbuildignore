@@ -1,7 +1,5 @@
 ^LICENSE\.md$
 ^README\.Rmd$
-^README\.md$
-^man/figures/.*$
 ^gridmicrotex\.Rproj$
 ^mytest/.*$
 ^src/MicroTeX/lib/CMakeLists\.txt$
@@ -28,3 +26,7 @@ src/.*\.dll$
 ^\..+$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
+^\.Rproj\.user$
+^\.positai$
+^\.claude$
+^CLAUDE\.md$

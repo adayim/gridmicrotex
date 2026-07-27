@@ -16,6 +16,7 @@ geom_latex(
   math_font = "",
   lineheight = 1.2,
   max_width = 0,
+  input_mode = c("mixed", "math"),
   render_mode = c("typeface", "path"),
   na.rm = FALSE,
   show.legend = NA,
@@ -82,10 +83,21 @@ aesthetic if mapped.}
 \item{max_width}{Maximum width in big points for automatic line
 wrapping (default: 0, no wrapping).}
 
+\item{input_mode}{How \code{tex} is interpreted before being parsed.
+\code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
+string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
+opens math mode, matching document-level LaTeX semantics. Useful for
+labels that arrive from external sources mixing prose and math without
+explicit \code{\\text{}} markers. \code{"math"} is the classic
+MicroTeX behaviour --- the whole string is treated as math, so unwrapped
+prose renders as spaced math italics. The default can be changed globally via
+\code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
+for details on the wrapping process.}
+
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_font}}
+Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files --- no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
@@ -148,7 +160,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
   # Use annotate() for single annotations (no legend, no data frame needed)
   ggplot(mtcars, aes(wt, mpg)) + geom_point() +
     annotate("latex", x = 4, y = 30,
-             label = "\\\\hat{y} = \\\\beta_0 + \\\\beta_1 x")
+             label = r"($\hat{y} = \beta_0 + \beta_1 x$)")
 }
 }
 }
