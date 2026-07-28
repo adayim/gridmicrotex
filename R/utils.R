@@ -338,6 +338,56 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   }
 }
 
+# Rewrite `\url{X}` and `\href{U}{X}` to styled text. There is no link in a
+# grob, so only the appearance is reproduced -- and it follows LaTeX's
+# convention rather than HTML's: hyperref with `colorlinks=true` (which is
+# what almost every document sets) colours the text and does not underline
+# it, and the `url` package sets a URL in monospace. The markdown side uses
+# the HTML convention instead; see the `a` rule in .md_default_rules().
+#
+# A URL is verbatim in real LaTeX, so its LaTeX-special characters are
+# escaped here -- an unescaped `_` in `example.com/a_b` would otherwise open
+# a subscript.
+.MD_LINK_COLOR <- "#0969DA"
+
+.replace_links <- function(tex) {
+  esc <- function(s) gsub("([{}$&#_%~^])", "\\\\\\1", s)
+
+  # \href{destination}{text}: drop the destination, style the text. The
+  # text is *not* escaped -- unlike a URL it is ordinary LaTeX and may
+  # legitimately contain markup.
+  repeat {
+    m <- regexpr("\\\\href\\{", tex, perl = TRUE)
+    if (m == -1L) break
+    o1 <- m + attr(m, "match.length") - 1L
+    c1 <- .find_close_brace(tex, o1 + 1L)
+    if (is.na(c1)) break
+    # The second group must follow immediately for this to be an \href.
+    rest <- substr(tex, c1 + 1L, nchar(tex))
+    if (!startsWith(rest, "{")) break
+    c2 <- .find_close_brace(tex, c1 + 2L)
+    if (is.na(c2)) break
+    txt <- substr(tex, c1 + 2L, c2 - 1L)
+    tex <- paste0(substr(tex, 1L, m - 1L),
+                  "\\textcolor{", .MD_LINK_COLOR, "}{", txt, "}",
+                  substr(tex, c2 + 1L, nchar(tex)))
+  }
+
+  # \url{X}: monospace and coloured, with X escaped.
+  repeat {
+    m <- regexpr("\\\\url\\{", tex, perl = TRUE)
+    if (m == -1L) break
+    o1 <- m + attr(m, "match.length") - 1L
+    c1 <- .find_close_brace(tex, o1 + 1L)
+    if (is.na(c1)) break
+    txt <- esc(substr(tex, o1 + 1L, c1 - 1L))
+    tex <- paste0(substr(tex, 1L, m - 1L),
+                  "\\textcolor{", .MD_LINK_COLOR, "}{\\texttt{", txt, "}}",
+                  substr(tex, c1 + 1L, nchar(tex)))
+  }
+  tex
+}
+
 # Rewrite `\caption[opt]?{X}` → `\text{X}\\` inline at source position.
 # Position-preserving: where the caption is written in the source is where
 # it renders, separated from neighbouring content by a line break.
@@ -368,6 +418,11 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
 # not be added.
 .strip_document_wrappers <- function(tex) {
   if (!nzchar(tex)) return(tex)
+
+  # 0. Links, before the comment stripper: a `%` inside a URL is a real
+  # character, and .replace_links() escapes it to `\%`, which step 1 then
+  # leaves alone. Stripping comments first would eat the rest of the URL.
+  tex <- .replace_links(tex)
 
   # 1. `%`-to-EOL comments, preserving `\%`.
   tex <- gsub("(?<!\\\\)%[^\n]*\n?", "", tex, perl = TRUE)

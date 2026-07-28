@@ -37,31 +37,57 @@ means it needs \code{\link{markdown_box_grob}}.
 \code{font_weight} \tab inline + block \tab prose blocks only, see below \cr
 \code{font_style} \tab inline + block \tab prose blocks only, see below \cr
 \code{text_decoration} \tab inline + block \tab \code{underline},
-\code{line-through} \cr
+\code{overline}, \code{line-through} \cr
+\code{background} \tab inline + block \tab a fill behind the text \cr
+\code{border} \tab inline \tab a frame; the inset is fixed \cr
+\code{border_style} \tab inline \tab only \code{double} \cr
+\code{border_radius} \tab inline \tab rounds the frame \cr
+\code{box_shadow} \tab inline \tab \cr
+\code{visibility} \tab inline \tab \code{hidden} keeps the space \cr
+\code{vertical_align} \tab inline \tab \code{super}, \code{sub},
+or a length \cr
+\code{transform} \tab inline \tab \code{rotate()}, \code{scale()},
+\code{scaleX(-1)} \cr
 \code{line_height} \tab block \tab unitless, as \code{gpar()} wants it \cr
 \code{margin_top}, \code{margin_bottom} \tab block \tab margins do not
 collapse \cr
-\code{padding_left} \tab block \tab \cr
+\code{margin_left}, \code{margin_right} \tab block \tab \cr
+\code{padding_left}, \code{padding_right} \tab block \tab \cr
+\code{padding_top}, \code{padding_bottom} \tab block \tab \cr
 \code{text_align} \tab block \tab \code{left}, \code{center},
 \code{right} \cr
 \code{border_left} \tab block \tab the \code{blockquote} bar \cr
 \code{border_top} \tab block \tab the \code{hr} rule \cr
+\code{border_bottom} \tab \code{tr} \tab a rule under each table row \cr
+\code{border_color} \tab \code{table} \tab colour of the table's rules \cr
+\code{table_layout} \tab \code{table} \tab \code{fixed} divides the
+width between the columns so a wide table wraps \cr
 \code{height} \tab block \tab the band an \code{hr} sits in \cr
 \code{bullet} \tab \code{ul} \tab raw LaTeX for the marker glyph \cr
 \code{marker_gap} \tab \code{ul}, \code{ol} \tab marker to text \cr
 }
+
+\code{font_size} also accepts CSS's keywords --- \code{xx-small} through
+\code{xx-large}, plus \code{smaller} and \code{larger} --- taken from the
+\code{\\tiny}..\code{\\Huge} ladder MicroTeX implements.
 
 Anything else is an error --- unlike a pasted stylesheet, where an
 unknown property is ignored the way a browser ignores it.
 
 \strong{One limitation worth knowing.} \code{font_weight} and
 \code{font_style} apply to blocks whose content is prose --- paragraphs,
-headings, list items, block quotes and \code{<div>}s. They do
-\emph{not} apply to \code{pre}, \code{table} or an image's alt text,
-which build their own LaTeX and impose their own font handling. This
-is a MicroTeX constraint rather than a choice: \code{\\text\{\}} resets
-the font style, so emphasis has to be decided when the content is
-generated, not wrapped around it afterwards.
+headings, list items, block quotes, table cells and \code{<div>}s. They
+do \emph{not} apply to \code{pre} or an image's alt text, which build
+their own LaTeX and impose their own font handling. This is a MicroTeX
+constraint rather than a choice: \code{\\text\{\}} resets the font
+style, so emphasis has to be decided when the content is generated,
+not wrapped around it afterwards.
+
+\strong{What cannot be styled at all.} There is no small-caps
+(\code{\\textsc} is not a MicroTeX command), no
+\code{font-variant-numeric}, no right-to-left or bidirectional text,
+and no padding inside an inline \code{border} --- MicroTeX has no
+\code{\\fboxsep}, so that inset is fixed.
 }
 \examples{
 md_style(color = "steelblue", font_size = 2.5, margin_top = 1.2)

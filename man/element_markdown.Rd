@@ -11,6 +11,7 @@ element_markdown(
   max_width = 0,
   render_mode = c("typeface", "path"),
   justify = FALSE,
+  style = NA,
   ...
 )
 }
@@ -30,6 +31,13 @@ wrapping (default: 0, no wrapping).}
 
 \item{justify}{Logical; justify wrapped lines. Requires
 \code{max_width}.}
+
+\item{style}{A \code{\link{markdown_style}} object, CSS text, or the
+path to a \code{.css} file, applied to labels drawn through this
+theme element. \code{NA}, the default, means unset --- the global
+\code{\link{latex_options}(markdown_style = )} applies instead. Only
+the properties that compile to LaTeX have an effect, since a theme
+label has no block layout. See \code{\link{md_style}}.}
 
 \item{...}{Additional arguments passed to
 \code{ggplot2::element_text()} (e.g. \code{colour}, \code{hjust}).}

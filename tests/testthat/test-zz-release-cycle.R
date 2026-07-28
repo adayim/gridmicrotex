@@ -37,4 +37,18 @@ test_that("a release / re-init cycle leaves the macro registry usable", {
 
   # ...and the formula that used to blow up still parses identically.
   expect_equal(nrow(latex_grob(big, input_mode = "math")$layout_df), before)
+
+  # The p{} column type is registered by the vendored spec parser, not by
+  # a macro, so it should be unaffected by a release -- assert it rather
+  # than assume it.
+  wide <- "\\begin{tabular}{p{3cm}}\\text{wrap me over several lines}\\end{tabular}"
+  expect_equal(
+    as.numeric(latex_dims(wide, input_mode = "math",
+                          gp = grid::gpar(fontsize = 16))$width),
+    as.numeric(latex_dims(wide, input_mode = "math",
+                          gp = grid::gpar(fontsize = 16))$width)
+  )
+  expect_gt(as.numeric(latex_dims(wide, input_mode = "math",
+                                  gp = grid::gpar(fontsize = 16))$height),
+            20)
 })

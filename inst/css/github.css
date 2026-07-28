@@ -35,7 +35,21 @@ pre {
   font-family: monospace;
   line-height: 1.45;
   margin-top: 0.8rem;
+  background: #F6F8FA;
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
+
+/* A link cannot be clicked in a grob, only styled to look like one. */
+a { color: #0969DA; text-decoration: underline }
+
+/* Footnotes are set smaller at the foot of the document. */
+footnote { font-size: 0.85rem; color: #59636E }
+
+/* Display math -- a paragraph that is nothing but $$...$$. */
+math { margin-top: 1rem; text-align: center }
 
 hr {
   height: 1rem;
@@ -46,4 +60,9 @@ hr {
 ul, ol { margin-top: 0.8rem; marker-gap: 0.5rem }
 li     { margin-top: 0.25rem }
 
-table  { margin-top: 0.8rem }
+/* Tables. GitHub rules every row and shades alternate ones; a shaded
+ * header plus row rules is the closest the tabular primitives get. */
+table { margin-top: 0.8rem; border-color: #D1D9E0 }
+th    { font-weight: bold; background: #F6F8FA }
+tr    { border-bottom: 1px solid #D1D9E0 }
+td    { padding-left: 0.6rem }

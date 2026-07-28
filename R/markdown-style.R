@@ -22,10 +22,14 @@
 .MD_STYLE_PROPS <- c(
   # inline-capable: compiled to LaTeX commands by .md_css_inline_latex()
   "color", "font-size", "font-family", "font-weight", "font-style",
-  "text-decoration",
+  "text-decoration", "border", "border-style", "border-radius",
+  "box-shadow", "visibility", "vertical-align", "transform",
   # block-only: read by the layout
-  "line-height", "margin-top", "margin-bottom", "padding-left",
-  "text-align", "border-left", "border-top", "height",
+  "line-height", "margin-top", "margin-bottom", "margin-left",
+  "margin-right", "padding-left", "padding-right", "padding-top",
+  "padding-bottom", "text-align", "border-left", "border-top", "height",
+  # tables: background is read on tr/td/th, the rest on table/tr/td
+  "background", "border-bottom", "border-color", "table-layout",
   # no sensible CSS spelling here
   "bullet", "marker-gap"
 )
@@ -52,11 +56,25 @@
   h <- c(2.5, 2, 1.75, 17 / 12, 7 / 6, 1)
   d <- list(
     p          = list("margin-top" = 0.55),
+    # A `$$...$$` paragraph. Centred, as display math is everywhere else.
+    math       = list("margin-top" = 0.55, "text-align" = "center"),
+    # A link cannot be clicked in a grob, but it should still look like
+    # one. Blue and underlined is what a browser does; the LaTeX side
+    # follows hyperref's convention instead -- see .strip_document_wrappers().
+    a          = list(color = "#0969DA", "text-decoration" = "underline"),
+    # The footnote section at the foot of the document: smaller, and set
+    # off from the body above it.
+    footnote   = list("margin-top" = 0.3, "font-size" = 0.85),
     blockquote = list("margin-top" = 0.55, "padding-left" = 0.75,
                       "border-left" = 0.125),
     pre        = list("margin-top" = 0.55, "line-height" = 1.15,
                       "font-family" = "mono"),
     table      = list("margin-top" = 0.55),
+    # A header row is bold everywhere else markdown is rendered. It could
+    # not be before: \textbf{\text{x}} reports plain, so the emphasis has
+    # to be applied when the cell content is generated -- see
+    # .md_table_tex(), which is why this is a `th` rule and not a wrapper.
+    th         = list("font-weight" = "bold"),
     img        = list("margin-top" = 0.55),
     hr         = list("margin-top" = 0.55, "height" = 0.5),
     ul         = list("margin-top" = 0.55, "marker-gap" = 0.4,
@@ -111,31 +129,57 @@
 #'   \code{font_weight} \tab inline + block \tab prose blocks only, see below \cr
 #'   \code{font_style} \tab inline + block \tab prose blocks only, see below \cr
 #'   \code{text_decoration} \tab inline + block \tab \code{underline},
-#'     \code{line-through} \cr
+#'     \code{overline}, \code{line-through} \cr
+#'   \code{background} \tab inline + block \tab a fill behind the text \cr
+#'   \code{border} \tab inline \tab a frame; the inset is fixed \cr
+#'   \code{border_style} \tab inline \tab only \code{double} \cr
+#'   \code{border_radius} \tab inline \tab rounds the frame \cr
+#'   \code{box_shadow} \tab inline \tab \cr
+#'   \code{visibility} \tab inline \tab \code{hidden} keeps the space \cr
+#'   \code{vertical_align} \tab inline \tab \code{super}, \code{sub},
+#'     or a length \cr
+#'   \code{transform} \tab inline \tab \code{rotate()}, \code{scale()},
+#'     \code{scaleX(-1)} \cr
 #'   \code{line_height} \tab block \tab unitless, as \code{gpar()} wants it \cr
 #'   \code{margin_top}, \code{margin_bottom} \tab block \tab margins do not
 #'     collapse \cr
-#'   \code{padding_left} \tab block \tab \cr
+#'   \code{margin_left}, \code{margin_right} \tab block \tab \cr
+#'   \code{padding_left}, \code{padding_right} \tab block \tab \cr
+#'   \code{padding_top}, \code{padding_bottom} \tab block \tab \cr
 #'   \code{text_align} \tab block \tab \code{left}, \code{center},
 #'     \code{right} \cr
 #'   \code{border_left} \tab block \tab the \code{blockquote} bar \cr
 #'   \code{border_top} \tab block \tab the \code{hr} rule \cr
+#'   \code{border_bottom} \tab \code{tr} \tab a rule under each table row \cr
+#'   \code{border_color} \tab \code{table} \tab colour of the table's rules \cr
+#'   \code{table_layout} \tab \code{table} \tab \code{fixed} divides the
+#'     width between the columns so a wide table wraps \cr
 #'   \code{height} \tab block \tab the band an \code{hr} sits in \cr
 #'   \code{bullet} \tab \code{ul} \tab raw LaTeX for the marker glyph \cr
 #'   \code{marker_gap} \tab \code{ul}, \code{ol} \tab marker to text \cr
 #' }
+#'
+#' \code{font_size} also accepts CSS's keywords --- \code{xx-small} through
+#' \code{xx-large}, plus \code{smaller} and \code{larger} --- taken from the
+#' \code{\\tiny}..\code{\\Huge} ladder MicroTeX implements.
 #'
 #' Anything else is an error --- unlike a pasted stylesheet, where an
 #' unknown property is ignored the way a browser ignores it.
 #'
 #' \strong{One limitation worth knowing.} \code{font_weight} and
 #' \code{font_style} apply to blocks whose content is prose --- paragraphs,
-#' headings, list items, block quotes and \code{<div>}s. They do
-#' \emph{not} apply to \code{pre}, \code{table} or an image's alt text,
-#' which build their own LaTeX and impose their own font handling. This
-#' is a MicroTeX constraint rather than a choice: \code{\\text\{\}} resets
-#' the font style, so emphasis has to be decided when the content is
-#' generated, not wrapped around it afterwards.
+#' headings, list items, block quotes, table cells and \code{<div>}s. They
+#' do \emph{not} apply to \code{pre} or an image's alt text, which build
+#' their own LaTeX and impose their own font handling. This is a MicroTeX
+#' constraint rather than a choice: \code{\\text\{\}} resets the font
+#' style, so emphasis has to be decided when the content is generated,
+#' not wrapped around it afterwards.
+#'
+#' \strong{What cannot be styled at all.} There is no small-caps
+#' (\code{\\textsc} is not a MicroTeX command), no
+#' \code{font-variant-numeric}, no right-to-left or bidirectional text,
+#' and no padding inside an inline \code{border} --- MicroTeX has no
+#' \code{\\fboxsep}, so that inset is fixed.
 #'
 #' @param ... Named declarations.
 #' @return An object of class \code{gridmicrotex_md_style}.
@@ -240,8 +284,16 @@ print.gridmicrotex_md_style <- function(x, ...) {
 #' expects: \code{body} (the document root, which every other tag
 #' inherits from), \code{p}, \code{h1} ... \code{h6}, \code{ul},
 #' \code{ol}, \code{li}, \code{blockquote}, \code{pre} (a code block),
-#' \code{code} (an inline code span), \code{table}, \code{hr},
-#' \code{img}, \code{div} and \code{span}.
+#' \code{code} (an inline code span), \code{strong} and \code{em} (what
+#' markdown's \code{**} and \code{*} produce), \code{table}, \code{tr},
+#' \code{td}, \code{th}, \code{hr}, \code{img}, \code{a} (a link),
+#' \code{math} (a paragraph that is nothing but \code{$$...$$}),
+#' \code{footnote}, \code{div} and \code{span}.
+#'
+#' The table tags nest as they do in HTML: \code{tr}, \code{td} and
+#' \code{th} inherit through \code{table}, so \code{table \{ color: \}}
+#' reaches the cells. \code{background} on \code{tr} fills the row, on
+#' \code{td}/\code{th} the individual cell.
 #'
 #' Four things can style a document, and they resolve in CSS's own order:
 #' the built-in defaults, then a type selector (\code{h1}), then a class

@@ -129,6 +129,75 @@ package also exports an `element_markdown()`; if both are attached, call
 `gridmicrotex::element_markdown()` to be explicit. The two are not
 interchangeable --- ggtext renders HTML/CSS, this renders LaTeX math.
 
+### Annotating with markdown
+
+`annotate("markdown", ...)` is the markdown counterpart of
+`annotate("latex", ...)`. It suits a callout that is part prose and part
+formula --- and because `<br>` starts a new line, one annotation can hold
+several:
+
+```{r markdown-annotation, out.width="70%"}
+fit <- lm(mpg ~ wt, data = mtcars)
+
+note <- sprintf(
+  "**Linear fit**<br>$\\hat{y} = %s %s x$<br>$R^2 = %s$, *p* < 0.001",
+  round(coef(fit)[1], 1),
+  round(coef(fit)[2], 1),
+  round(summary(fit)$r.squared, 3)
+)
+
+ggplot(mtcars, aes(wt, mpg)) +
+  geom_point(colour = "grey65") +
+  geom_smooth(method = "lm", se = FALSE, colour = "#1F6FB2") +
+  annotate("markdown", x = 4.1, y = 32, label = note, size = 11,
+           style = "strong { color: #B22222 }") +
+  theme_minimal()
+```
+
+The LaTeX version of the same annotation would need `\text{}` around
+every word and could not set the heading in bold on its own line. As
+with `annotate("latex", ...)`, no data frame is needed and the legend is
+suppressed automatically.
+
+### Styling labels
+
+Both take a `style`: a `markdown_style()` object, CSS text, or the path
+to a `.css` file. It is the same cascade `markdown_box_grob()` uses --- so
+a stylesheet can set the look of every label at once, and `<span
+class=>` picks out one run inside a label.
+
+```{r style, out.width="70%"}
+css <- "
+  body   { color: #33475B }
+  strong { color: #B22222 }
+  code   { color: #1F6FB2 }
+  .unit  { color: grey55; font-size: smaller }
+"
+
+df <- data.frame(
+  x = 1:3, y = c(2, 3, 1),
+  lab = c("**bold** is red", "`code` is blue",
+          'plain <span class="unit">with a note</span>')
+)
+
+ggplot(df, aes(x, y, label = lab)) +
+  geom_point() +
+  geom_markdown(style = css, fontsize = 11, vjust = -0.8) +
+  ylim(0.5, 3.8) +
+  labs(title = "**Styled** labels and $\\beta_1$",
+       x = 'weight <span class="unit">(1000 lbs)</span>') +
+  theme(
+    plot.title   = element_markdown(style = css, fontsize = 14),
+    axis.title.x = element_markdown(style = css)
+  )
+```
+
+Only the properties that compile to LaTeX apply --- colour, the `font-*`
+family, decorations. A label has no block layout, so margins, padding and
+backgrounds are ignored; `markdown_box_grob()` is the place for those.
+`latex_options(markdown_style = )` sets a default for a whole document,
+so the argument is only needed to override it.
+
 
 
 

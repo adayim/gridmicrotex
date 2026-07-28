@@ -131,8 +131,8 @@
 <text x='228.92' y='204.59' style='font-size: 13.00px; font-family: sans;' textLength='4.33px' lengthAdjust='spacingAndGlyphs'>-</text>
 <text x='236.49' y='204.59' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>2</text>
 <rect x='211.56' y='217.61' width='40.46' height='1.72' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<text x='218.06' y='231.68' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>a</text>
-<text x='238.29' y='231.68' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>b</text>
+<text x='218.06' y='231.68' style='font-size: 13.00px; font-weight: bold; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>a</text>
+<text x='238.29' y='231.68' style='font-size: 13.00px; font-weight: bold; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>b</text>
 <rect x='211.56' y='234.73' width='40.46' height='0.86' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
 <text x='218.06' y='247.59' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>1</text>
 <text x='238.29' y='247.59' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>2</text>

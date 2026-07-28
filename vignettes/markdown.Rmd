@@ -68,7 +68,7 @@ grid.markdown(
 
 Set `max_width` (in big points) to wrap a long label over several lines.
 
-```{r wrap, fig.height = 1.4, fig.width = 4, out.width = "60%"}
+```{r wrap, fig.height = 0.8, fig.width = 4, out.width = "60%"}
 grid.newpage()
 grid.markdown(
   paste(
@@ -100,8 +100,14 @@ default rendering says it should:
 | `<mark>` | yellow highlight |
 | `<small>`, `<big>` | smaller / larger |
 | `<q>` | wrapped in quotation marks |
+| `<ruby>`, `<rt>` | annotation above the base (furigana) |
+| `&nbsp;` | non-breaking space |
 | `<br>` | line break |
-| `<span style="…">` | `color`, `text-decoration`, `font-size`, `font-family` |
+| `<span style="…">` | any property from `?md_style` |
+
+`<ruby>` is worth singling out: `<ruby>漢<rt>かん</rt></ruby>` sets the
+annotation above its base with `\overset`, which is how furigana and
+bopomofo are typeset. Neither marquee nor gridtext can do this.
 
 In a `style` attribute: `color` takes any R colour name, the nine CSS
 names R happens to lack (`crimson`, `teal`, `rebeccapurple` and friends),
@@ -184,7 +190,7 @@ heading, paragraph, list, quote, code, table --- becomes its own grob,
 stacked top to bottom. The `width` you give is the box width; prose
 wraps to fit it.
 
-```{r block, fig.height = 4.4, fig.width = 4.6, out.width = "80%"}
+```{r block, fig.height = 3, fig.width = 4.6, out.width = "80%"}
 md <- "
 # Model summary
 
@@ -220,7 +226,7 @@ Ordered and unordered lists, GFM task lists, and tables all render.
 Markdown tables become real typeset tables, with column alignment taken
 from the `|:---:|` markers --- something a text renderer cannot do.
 
-```{r lists-tables, fig.height = 3.6, fig.width = 4.4, out.width = "80%"}
+```{r lists-tables, fig.height = 2, fig.width = 4.4, out.width = "80%"}
 md <- "
 ### Checklist
 
@@ -229,8 +235,8 @@ md <- "
 
 Coefficients:
 
-| term | estimate | *p* |
-|:-----|---------:|:---:|
+| term | $\\beta$  | *p* |
+|:-----|------------:|:---:|
 | intercept | 30.1 | *** |
 | slope | -5.3 | *** |
 "
@@ -250,7 +256,7 @@ An image on its own line is drawn as a raster, scaled to the column
 width. `png` and `jpeg` are optional --- if neither is installed, or the
 file is missing, the image degrades to its alt text.
 
-```{r image, fig.height = 2.4, fig.width = 4, out.width = "70%"}
+```{r image, fig.height = 1.8, fig.width = 4, out.width = "70%"}
 # Make a small PNG to embed (any .png / .jpeg path works).
 img <- tempfile(fileext = ".png")
 ragg::agg_png(img, width = 300, height = 90, res = 100)
@@ -280,7 +286,7 @@ Everything above uses the built-in look. To change it, hand
 markdown tags, and it takes CSS directly --- as text, or as the path to
 a `.css` file:
 
-```{r style-css, fig.height = 2.6, fig.width = 5, out.width = "85%"}
+```{r style-css, fig.height = 1.2, fig.width = 5, out.width = "85%"}
 doc <- "
 # Results
 
@@ -317,7 +323,8 @@ font size; a string is whatever CSS says (`"1.8rem"`, `"12pt"`, `"150%"`);
 and a `grid::unit()` is absolute.
 
 Tags are named as in HTML --- `body`, `p`, `h1`--`h6`, `ul`, `ol`, `li`,
-`blockquote`, `pre`, `code`, `table`, `hr`, `img`, `div`, `span`. The
+`blockquote`, `pre`, `code`, `strong`, `em`, `a`, `table`, `tr`, `td`,
+`th`, `hr`, `img`, `math`, `footnote`, `div`, `span`. The
 properties are the ones MicroTeX and grid can honour --- colour, the
 font family, size, weight and slant, decorations, line height, margins,
 left padding, alignment and the two borders. `?md_style` has the full
@@ -346,7 +353,7 @@ chunk, wrap it in a `<div>` with a `class` or a `style`. **Leave blank
 lines around the tags** --- that is what makes CommonMark parse the
 markdown between them rather than treating the whole block as raw HTML:
 
-```{r style-div, fig.height = 2.4, fig.width = 5, out.width = "85%"}
+```{r style-div, fig.height = 1, fig.width = 5, out.width = "85%"}
 doc <- '
 Ordinary text.
 
@@ -372,6 +379,111 @@ Inheritable properties --- colour and the `font-*` family --- fall
 through to everything inside the div, exactly as in CSS; margins,
 padding and borders do not. `<span class="...">` works the same way for
 an inline run.
+
+### Styling tables
+
+Because a markdown table is compiled to a real MicroTeX `tabular`, it can
+be styled with the primitives LaTeX already has for tables --- row and
+cell fills, rule colour and weight, and column spacing. The tags nest as
+in HTML: `tr`, `td` and `th` inherit through `table`.
+
+| CSS | effect |
+|---|---|
+| `table { border-color }` | colour of every rule |
+| `tr { background }` | fills a whole row |
+| `td`, `th ` `{ background }` | fills one cell |
+| `tr { border-bottom }` | a rule under each row |
+| `td { border-left }` | vertical rules between columns |
+| `td { padding-left }` | the gap between columns |
+| `table { table-layout: fixed }` | see below |
+
+Header cells are **bold** by default, which needs saying because it could
+not be done before: `\text{}` resets the font style, so wrapping a
+finished table in `\textbf{}` has no effect. The emphasis is applied as
+each cell is generated instead.
+
+By default a table sizes to its content, so a wide one overflows the box.
+`table-layout: fixed` divides the available width between the columns and
+lets the cells wrap:
+
+```{r style-table, fig.height = 2, fig.width = 5, out.width = "85%"}
+tbl <- "
+| Term | Meaning |
+|:-----|:--------|
+| $\\beta_1$ | the slope, which needs a good deal of room to explain |
+| $\\sigma$ | the residual standard deviation |
+"
+
+grid.newpage()
+grid.draw(markdown_box_grob(
+  tbl,
+  width = unit(4, "in"), padding = unit(8, "pt"),
+  style = "
+    table { table-layout: fixed; border-color: #D1D9E0 }
+    th    { background: #F6F8FA }
+    tr    { border-bottom: 1px solid #D1D9E0 }
+  ",
+  gp = gpar(fontsize = 12)
+))
+```
+
+## Dropping down to LaTeX
+
+Markdown only has syntax for so much. Anything it cannot express can be
+written as LaTeX inside a math span, which is passed through to MicroTeX
+byte-for-byte --- so the whole engine is available from inside a markdown
+document, not just the parts markdown has a spelling for.
+
+The clearest case is a table that GFM cannot describe. Markdown table
+syntax has no spanning cells and no per-cell colour --- a cmark table
+cell carries no attributes at all --- but LaTeX's `array` has both:
+
+```{r latex-escape, fig.height = 2.4, fig.width = 4.6, out.width = "80%"}
+tbl <- paste0(
+  "$$\\begin{array}{|l|c|c|}\\hline",
+  "\\rowcolor{#F6F8FA}",
+  "\\multicolumn{3}{|c|}{\\textbf{Model comparison}}\\\\\\hline",
+  "\\textbf{Model}&\\textbf{AIC}&\\textbf{R}^2\\\\\\hline",
+  "\\text{linear}&214.3&0.71\\\\",
+  "\\cellcolor{#DDF0DD}\\text{quadratic}",
+  "&\\cellcolor{#DDF0DD}201.8&\\cellcolor{#DDF0DD}0.87\\\\\\hline",
+  "\\end{array}$$"
+)
+
+grid.newpage()
+grid.draw(markdown_box_grob(
+  paste0("Compare the two fits.\n\n", tbl, "\n\nThe quadratic wins."),
+  width = unit(4.6, "in"), padding = unit(10, "pt"),
+  style = "math { color: #1F3864; font-size: 1.1rem }",
+  gp = gpar(fontsize = 12)
+))
+```
+
+That is one `\multicolumn` spanning header, a `\rowcolor` band and three
+`\cellcolor` cells --- none of which GFM table syntax can express. The
+same route reaches `cases`, `aligned`, `\multirow`, `\newcolumntype` and
+everything else in `vignette("getting-started")`.
+
+Note the header cell written `\textbf{R}^2` rather than `\textbf{R^2}`.
+Inside `$$…$$` you are already in math mode, so `^` superscripts --- but
+`\textbf{}` switches to *text* mode, where `^` is an accent rather than
+a superscript operator and `R^2` comes out flat. Put the superscript
+outside the text command. There is no need to open `$…$` again either:
+delimiters do not nest, and an escaped `\$` would simply typeset a
+dollar sign.
+
+**Styling reaches the block, not inside it**, and that figure shows both
+halves at once. The `math` rule sets the colour and size of the table's
+text but leaves the prose either side black, because those properties
+travel on the block's `gp`. The cell fills ignore it completely: they are
+`\rowcolor{}` and `\cellcolor{}`, drawn by MicroTeX.
+
+So the cascade cannot see *through* a math span. That `array` is math,
+not a markdown table, and `table`, `tr` and `td` rules leave it untouched
+--- which is why its colours had to be written in LaTeX rather than CSS.
+That is the trade: a GFM table is styled by the cascade but cannot span
+cells; a LaTeX `array` does anything MicroTeX does but is styled in
+LaTeX.
 
 ## Line breaking and justification
 
@@ -415,13 +527,54 @@ popViewport()
 The parser is the full CommonMark specification plus all five GitHub
 extensions --- tables, strikethrough, autolinks, task lists and the
 `tagfilter` that strips `<script>` and friends --- so parsing is never
-the limitation. On the rendering side:
+the limitation.
+
+Nothing errors: anything that cannot be drawn degrades to its text. This
+one document contains every degradation at once, so it is easier to see
+what "unsupported" actually looks like than to read about it:
+
+```{r degrade, fig.height = 1.5, fig.width = 4.4, out.width = "80%"}
+doc <- paste0(
+  "A [link](https://example.org) keeps its text, an ",
+  "![inline diagram](missing.png) becomes its alt text, and an ",
+  "<unknown>unknown tag</unknown> keeps its content.\n\n",
+  "Footnotes[^1] land at the foot.\n\n",
+  "<table><tr><td>an HTML table is dropped</td></tr></table>\n\n",
+  "[^1]: Like this one."
+)
+
+grid.newpage()
+grid.draw(markdown_box_grob(
+  doc,
+  width = unit(4.4, "in"), padding = unit(8, "pt"),
+  gp = gpar(fontsize = 11)
+))
+```
+
+The link is styled but inert, the missing image shows its alt text, the
+unknown tag is stripped and its words kept, the footnote is numbered and
+moved to the foot, and the HTML table is gone entirely --- no error, no
+placeholder. In detail:
 
 - **Inline images** keep their alt text only. A block-level image (alone
   on its line) is drawn; one in the middle of a sentence is not, because
   a single MicroTeX line has no raster.
 - **Links** keep their text; the destination is dropped, since a grob
-  cannot be a hyperlink.
+  cannot be a hyperlink. They are styled like links --- blue and
+  underlined --- through the `a` tag, so a stylesheet can change or
+  remove that.
+- **Footnotes** (`[^1]` with a `[^1]:` definition) render a superscript
+  marker where they are referenced, and the notes themselves in smaller
+  type at the foot of the document, after a rule. They need somewhere to
+  sit, so this applies to `markdown_box_grob()`; `markdown_grob()` shows
+  the marker and drops the note.
+- **Display math** --- a paragraph that is nothing but `$$…$$` --- gets
+  its own centred line, styleable as the `math` tag. Inline `$…$` is
+  unaffected.
+- **Right-to-left and complex scripts** are not supported. MicroTeX
+  places text one character at a time, so Arabic letters do not join and
+  word order is not reversed.
+- **Small caps** and `font-variant-numeric` have no MicroTeX command.
 - **Block-level HTML** other than `<div>` is dropped rather than typeset.
   A `<div>` with blank lines around its tags is read as a styled chunk
   --- see *Styling* above. Inline HTML is rendered; see *Colour and
@@ -435,4 +588,13 @@ the limitation. On the rendering side:
   that matters.
 
 Everything else --- emphasis, headings, lists, quotes, tables, rules,
-block images, and of course `$math$` --- renders.
+block images, footnotes, ruby annotation, and of course `$math$` ---
+renders.
+
+- **HTML tables** are not read. CommonMark treats `<table>` as a raw HTML
+  block, which is dropped; only `<div>` is interpreted. GFM's own table
+  syntax is the one that renders.
+- **Spanning cells** have no GFM syntax --- a cmark table cell carries no
+  colspan attribute to read --- so `\multicolumn` and `\multirow` are not
+  reachable from markdown table syntax. Write the table as LaTeX in a
+  math span instead; see *Dropping down to LaTeX*.

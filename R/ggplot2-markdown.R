@@ -53,6 +53,12 @@
 #'   \code{\link{latex_grob}}.
 #' @param justify Logical; justify wrapped lines. Requires
 #'   \code{max_width}. See \code{\link{latex_grob}}.
+#' @param style A \code{\link{markdown_style}} object, CSS text, or the
+#'   path to a \code{.css} file, applied to every label this layer draws.
+#'   \code{NULL} falls back to
+#'   \code{\link{latex_options}(markdown_style = )}. Only the properties
+#'   that compile to LaTeX apply here --- a label has no block layout, so
+#'   margins and padding are ignored. See \code{\link{md_style}}.
 #' @param na.rm If \code{FALSE}, the default, missing values are removed
 #'   with a warning. If \code{TRUE}, they are removed silently.
 #' @param ... Other arguments passed to \code{\link[ggplot2]{layer}}.
@@ -77,7 +83,7 @@ geom_markdown <- function(mapping = NULL, data = NULL, stat = "identity",
                           fontsize = 11, math_font = "",
                           lineheight = 1.2, max_width = 0,
                           render_mode = c("typeface", "path"),
-                          justify = FALSE,
+                          justify = FALSE, style = NULL,
                           na.rm = FALSE, show.legend = NA,
                           inherit.aes = TRUE) {
   .apply_opts("math_font", "render_mode", "justify")
@@ -104,6 +110,7 @@ geom_markdown <- function(mapping = NULL, data = NULL, stat = "identity",
       max_width = max_width,
       render_mode = render_mode,
       justify = justify,
+      style = style,
       na.rm = na.rm,
       ...
     )
@@ -147,6 +154,12 @@ GeomMarkdown <- NULL
 #' @param render_mode \code{"typeface"} (default) or \code{"path"}.
 #' @param justify Logical; justify wrapped lines. Requires
 #'   \code{max_width}.
+#' @param style A \code{\link{markdown_style}} object, CSS text, or the
+#'   path to a \code{.css} file, applied to labels drawn through this
+#'   theme element. \code{NA}, the default, means unset --- the global
+#'   \code{\link{latex_options}(markdown_style = )} applies instead. Only
+#'   the properties that compile to LaTeX have an effect, since a theme
+#'   label has no block layout. See \code{\link{md_style}}.
 #' @param ... Additional arguments passed to
 #'   \code{ggplot2::element_text()} (e.g. \code{colour}, \code{hjust}).
 #'
@@ -167,7 +180,7 @@ GeomMarkdown <- NULL
 element_markdown <- function(math_font = "", fontsize = NULL,
                              lineheight = 1.2, max_width = 0,
                              render_mode = c("typeface", "path"),
-                             justify = FALSE, ...) {
+                             justify = FALSE, style = NA, ...) {
   .apply_opts("math_font", "render_mode", "justify")
   render_mode <- match.arg(render_mode)
   .check_justify(justify)
@@ -182,7 +195,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
   obj <- do.call(.element_markdown_class, c(
     list(math_font = math_font, lineheight = lineheight,
          max_width = max_width, render_mode = render_mode,
-         justify = justify),
+         justify = justify, style = style),
     dots
   ))
   # ggplot2's element_text constructor injects legacy "element_text" and
@@ -240,7 +253,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
     draw_panel = function(data, panel_params, coord, fontsize = 11,
                           math_font = "", lineheight = 1.2, max_width = 0,
                           render_mode = "typeface", justify = FALSE,
-                          na.rm = FALSE) {
+                          style = NULL, na.rm = FALSE) {
       coords <- coord$transform(data, panel_params)
 
       grobs <- lapply(seq_len(nrow(coords)), function(i) {
@@ -265,6 +278,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
           max_width = max_width,
           render_mode = render_mode,
           justify = justify,
+          style = style,
           gp = grid::gpar(col = col, fontsize = row$size,
                           lineheight = lineheight)
         )
@@ -283,7 +297,18 @@ element_markdown <- function(math_font = "", fontsize = NULL,
       max_width = S7::new_property(S7::class_numeric, default = 0),
       render_mode = S7::new_property(S7::class_character,
                                      default = "typeface"),
-      justify = S7::new_property(S7::class_logical, default = FALSE)
+      justify = S7::new_property(S7::class_logical, default = FALSE),
+      # A markdown_style object, CSS text or a .css path -- whatever
+      # markdown_grob(style =) takes, hence class_any.
+      #
+      # The default is NA, not NULL: ggplot2's theme merge reads an unset
+      # property from the parent element, and a plain element_text has no
+      # @style, so a NULL default fails with "Can't find property
+      # <ggplot2::element_text>@style" as soon as the element is inherited
+      # into. Every other property here has a non-NULL typed default for
+      # the same reason. .element_grob_markdown() maps NA back to NULL,
+      # which is what means "fall back to latex_options(markdown_style=)".
+      style = S7::new_property(S7::class_any, default = NA)
     )
   )
 
@@ -323,6 +348,10 @@ element_markdown <- function(math_font = "", fontsize = NULL,
   max_width   <- element@max_width   %||% 0
   render_mode <- element@render_mode %||% "typeface"
   justify     <- element@justify     %||% FALSE
+  # NA is the element's "unset" (see the property definition); markdown_grob
+  # wants NULL for that, so it can fall back to the global option.
+  style       <- element@style
+  if (is.atomic(style) && length(style) == 1L && is.na(style)) style <- NULL
 
   gp <- grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
   if (!is.null(family) && nzchar(family)) gp$fontfamily <- family
@@ -343,7 +372,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
       md = label, x = x, y = y,
       hjust = hjust, vjust = vjust, rot = angle,
       math_font = math_font, max_width = max_width,
-      render_mode = render_mode, justify = justify,
+      render_mode = render_mode, justify = justify, style = style,
       gp = gp
     ))
   }
@@ -361,7 +390,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
       md = lab, x = .pick_unit(x, i), y = .pick_unit(y, i),
       hjust = hjust, vjust = vjust, rot = angle,
       math_font = math_font, max_width = max_width,
-      render_mode = render_mode, justify = justify,
+      render_mode = render_mode, justify = justify, style = style,
       gp = gp,
       name = paste0("ticklabel.", i)
     ))

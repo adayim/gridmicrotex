@@ -467,8 +467,11 @@ test_that("every supported tag renders what HTML prescribes for it", {
   # Tags with no default rendering are absent on purpose: <a>, <abbr>, a
   # bare <span> and friends change nothing visually in a browser either,
   # so dropping the markup and keeping the text *is* the rendering.
+  # <ruby> is not in this list any more: it annotates its content with
+  # \overset, so it does have a rendering. A raw <a> tag still is --
+  # only a markdown link ([x](u), a `link` node) picks up the `a` rule.
   for (tag in c("a", "abbr", "span", "bdi", "bdo", "data", "time", "wbr",
-                "ruby", "output", "nobr")) {
+                "output", "nobr")) {
     expect_equal(.md_to_tex(sprintf("<%s>Hg</%s>", tag, tag)), "\\text{Hg}",
                  label = tag)
   }
@@ -794,4 +797,62 @@ test_that("private-use characters in the input cannot forge a math span", {
 
 test_that("markdown_grob() rejects input_mode instead of failing obscurely", {
   expect_error(markdown_grob("x", input_mode = "mixed"), "input_mode")
+})
+
+test_that("<ruby> annotates its base with \\overset", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+
+  # The one construct whose pieces arrive as siblings but come out in the
+  # other order, because \overset takes the annotation first.
+  expect_equal(.md_to_tex("<ruby>base<rt>gloss</rt></ruby>"),
+               "\\overset{\\scalebox{0.5}{\\text{gloss}}}{\\text{base}}")
+  # It composes with markdown inside the base.
+  expect_match(.md_to_tex("<ruby>**b**<rt>g</rt></ruby>"),
+               "{\\textbf{b}}", fixed = TRUE)
+  # Surrounding text is unaffected.
+  expect_match(.md_to_tex("x <ruby>a<rt>b</rt></ruby> y"), "text{x }",
+               fixed = TRUE)
+
+  # Degenerate forms keep the text rather than losing it.
+  expect_equal(.md_to_tex("<ruby>no rt</ruby>"), "\\text{no rt}")
+  expect_match(.md_to_tex("<ruby>unclosed<rt>g"), "overset", fixed = TRUE)
+  expect_equal(.md_to_tex("<rt>orphan</rt>"), "\\text{orphan}")
+
+  # An annotation adds height, not width -- it sits above the base.
+  w <- function(t) as.numeric(latex_dims(t, input_mode = "math",
+                                         gp = grid::gpar(fontsize = 16))$width)
+  h <- function(t) as.numeric(latex_dims(t, input_mode = "math",
+                                         gp = grid::gpar(fontsize = 16))$height)
+  plain <- .md_to_tex("base")
+  ruby <- .md_to_tex("<ruby>base<rt>gloss</rt></ruby>")
+  expect_equal(w(ruby), w(plain))
+  expect_gt(h(ruby), h(plain))
+})
+
+test_that("&nbsp; becomes a non-breaking space between text runs", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # \nbsp only works *between* \text{} runs: inside one it typesets the
+  # letters. Measured, so the split is not taken on faith.
+  w <- function(t) as.numeric(latex_dims(t, input_mode = "math",
+                                         gp = grid::gpar(fontsize = 16))$width)
+  expect_gt(w("\\text{a\\nbsp b}"), w("\\text{a}\\nbsp\\text{b}"))
+
+  expect_equal(.md_to_tex("a&nbsp;b"), "\\text{a}\\nbsp \\text{b}")
+  # It measures the same as an ordinary space, but cannot be broken at.
+  expect_equal(w(.md_to_tex("a&nbsp;b")), w(.md_to_tex("a b")))
+  # Text with no nbsp takes the untouched path.
+  expect_equal(.md_to_tex("plain text"), "\\text{plain text}")
+})
+
+test_that("font-size takes CSS absolute keywords", {
+  # Read off the \tiny..\Huge ladder MicroTeX implements.
+  expect_equal(.md_css_size("medium", 20), 1)
+  expect_lt(.md_css_size("xx-small", 20), .md_css_size("x-small", 20))
+  expect_lt(.md_css_size("x-small", 20), .md_css_size("small", 20))
+  expect_lt(.md_css_size("small", 20), .md_css_size("medium", 20))
+  expect_lt(.md_css_size("medium", 20), .md_css_size("large", 20))
+  expect_lt(.md_css_size("large", 20), .md_css_size("x-large", 20))
+  expect_lt(.md_css_size("x-large", 20), .md_css_size("xx-large", 20))
+  # Unknown keywords stay invalid.
+  expect_null(.md_css_size("enormous", 20))
 })

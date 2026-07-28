@@ -267,3 +267,33 @@ test_that("strip emits no messages — all transforms are silent", {
   )
   expect_equal(length(msgs), 0L)
 })
+
+test_that("links are styled, following LaTeX's convention not HTML's", {
+  strip <- gridmicrotex:::.strip_document_wrappers
+  col <- gridmicrotex:::.MD_LINK_COLOR
+
+  # hyperref with colorlinks=true colours a link and does not underline it;
+  # the `url` package sets a URL in monospace. The markdown side uses the
+  # HTML convention (blue AND underlined) instead -- see the `a` rule.
+  expect_equal(strip("\\href{https://ex.org}{the text}"),
+               paste0("\\textcolor{", col, "}{the text}"))
+  expect_equal(strip("\\url{https://ex.org}"),
+               paste0("\\textcolor{", col, "}{\\texttt{https://ex.org}}"))
+
+  # A URL is verbatim in real LaTeX, so its specials are escaped: an
+  # unescaped _ would open a subscript.
+  expect_equal(strip("\\url{a.io/x_y}"),
+               paste0("\\textcolor{", col, "}{\\texttt{a.io/x\\_y}}"))
+
+  # Links are rewritten before the comment stripper, so a % inside a URL
+  # survives as \% instead of eating the rest of the line.
+  expect_equal(strip("\\url{a.io/x%20y} tail"),
+               paste0("\\textcolor{", col, "}{\\texttt{a.io/x\\%20y}} tail"))
+
+  # \href text is ordinary LaTeX and keeps its markup.
+  expect_equal(strip("\\href{u}{\\textbf{b}}"),
+               paste0("\\textcolor{", col, "}{\\textbf{b}}"))
+
+  # Malformed input is left alone rather than half-rewritten.
+  expect_equal(strip("\\href{only-one-group}"), "\\href{only-one-group}")
+})

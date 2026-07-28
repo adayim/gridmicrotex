@@ -111,3 +111,50 @@ test_that("dollar delimiters are never stripped", {
   # Rendered as math (glyphs), not as the literal characters.
   expect_true("glyph" %in% g$layout_df$type)
 })
+
+test_that("style= reaches both ggplot2 entry points", {
+  skip_if_not_installed("ggplot2")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  cols <- function(g) unique(stats::na.omit(g$layout_df$color))
+
+  # element_markdown stores it and element_grob honours it.
+  e <- element_markdown(style = "body { color: #B22222 }")
+  expect_equal(cols(ggplot2::element_grob(e, label = "**hi**")), "#B22222")
+  expect_equal(cols(ggplot2::element_grob(element_markdown(), label = "hi")),
+               "#000000")
+
+  # The multi-label path (axis tick labels) carries it too.
+  g <- ggplot2::element_grob(e, label = c("**a**", "*b*"))
+  ticks <- unlist(lapply(g$children, function(k) cols(k)))
+  expect_equal(unique(ticks), "#B22222")
+
+  # geom_markdown takes it as a layer parameter.
+  expect_true("style" %in% names(formals(geom_markdown)))
+
+  # The element must still merge into a theme. A NULL default would fail
+  # here with "Can't find property <ggplot2::element_text>@style", because
+  # ggplot2 reads an unset property off the parent element -- which is why
+  # the property defaults to NA and is mapped back to NULL on use.
+  p <- ggplot2::ggplot(data.frame(x = 1, y = 1, lab = "**a**"),
+                       ggplot2::aes(x, y, label = lab)) +
+    ggplot2::geom_point() +
+    geom_markdown(style = "body { color: #1F6FB2 }") +
+    ggplot2::labs(x = "**wt**") +
+    ggplot2::theme(axis.title.x = element_markdown(style = "body { color: red }"))
+  expect_no_error(ggplot2::ggplot_build(p))
+})
+
+test_that("body seeds inheritance for inline markdown too", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # markdown_box_grob() has always seeded from `body`; markdown_grob() did
+  # not, so a stylesheet written against the box grob silently did nothing
+  # when handed to the inline one.
+  cols <- function(g) unique(stats::na.omit(g$layout_df$color))
+  expect_equal(cols(markdown_grob("hi", style = "body { color: #B22222 }")),
+               "#B22222")
+  # An explicit tag rule still wins over the body seed.
+  expect_equal(
+    cols(markdown_grob("hi",
+                       style = "body { color: #B22222 } p { color: #1F6FB2 }")),
+    "#1F6FB2")
+})
