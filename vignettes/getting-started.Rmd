@@ -327,11 +327,13 @@ This is only for **math** fonts. Text fonts need no loading at all --- set
 ## Devices and render modes
 
 - **`"typeface"`** (default) draws glyphs as native text, so PDF and SVG
-  output stays selectable and searchable. Fonts are read straight from
-  their OTF files, with no system-wide install --- but this needs a
-  device with the R \eqn{\geq} 4.3 glyph engine (`ragg`, `svglite`,
-  `cairo_pdf`). On others, such as the base `pdf()` device, it falls back
-  to path mode with a warning.
+  output stays selectable and searchable --- prose inside `\text{}` is
+  emitted one word per element, so a viewer can find a word, though not a
+  phrase spanning a space. Fonts are read straight from their OTF files,
+  with no system-wide install --- but this needs a device with the R
+  \eqn{\geq} 4.3 glyph engine (`ragg`, `svglite`, `cairo_pdf`). On
+  others, such as the base `pdf()` device, it falls back to path mode
+  with a warning.
 - **`"path"`** draws each glyph as a filled vector path. Works on every
   device; the text is not selectable, and files are larger.
 

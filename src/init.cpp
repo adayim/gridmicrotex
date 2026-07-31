@@ -5,6 +5,8 @@
 #include "font_family_atom.h"
 #include "macro/macro.h"
 #include "mark_atom.h"
+#include "hyphenator.h"
+#include "utils/utf.h"
 #include "unimath/font_src.h"
 #include "unimath/uni_font.h"
 #include "otf/otf.h"
@@ -340,6 +342,46 @@ std::vector<std::string> microtex_math_font_names() {
 bool microtex_set_default_math_font(std::string name) {
     if (!s_initialized) return false;
     return MicroTeX::setDefaultMathFont(name);
+}
+
+// --- Hyphenation patterns ---
+//
+// Loaded from R, which reads a bundled `hyph-*.tex` in TeX's own format.
+// Registered on first use rather than at load, like the math fonts.
+
+// [[Rcpp::export]]
+void microtex_register_hyphenation(std::vector<std::string> patterns,
+                                   std::vector<std::string> exceptions,
+                                   int left_min = 2,
+                                   int right_min = 3) {
+    gridmicrotex::Hyphenator::load(patterns, exceptions, left_min, right_min);
+}
+
+// [[Rcpp::export]]
+bool microtex_has_hyphenation() {
+    return gridmicrotex::Hyphenator::ready();
+}
+
+// [[Rcpp::export]]
+void microtex_clear_hyphenation() {
+    gridmicrotex::Hyphenator::clear();
+}
+
+// Break points for one word, in characters from its start. Exposed so the
+// pattern loading can be tested without rendering anything.
+// [[Rcpp::export]]
+std::vector<int> microtex_hyphenate_word(std::string word) {
+    std::vector<microtex::c32> cs;
+    int i = 0;
+    const int n = static_cast<int>(word.size());
+    while (i < n) {
+        int len = 0;
+        const microtex::c32 c = microtex::nextUnicode(word, i, len);
+        if (len <= 0) break;
+        cs.push_back(c);
+        i += len;
+    }
+    return gridmicrotex::Hyphenator::points(cs);
 }
 
 // [[Rcpp::export]]

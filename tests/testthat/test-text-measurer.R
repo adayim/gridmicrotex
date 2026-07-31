@@ -115,8 +115,11 @@ test_that("\\textrm returns to the caller's font", {
   expect_equal(fam("\\gmfontfamily{Georgia}{a\\textrm{b}c}"),
                c("Georgia", "BODY", "Georgia"))
 
-  # On its own it is still ordinary body text, as it always was.
-  expect_equal(fam("\\textrm{ab}"), c("BODY", "BODY"))
+  # On its own it is still ordinary body text, as it always was. One
+  # record, not one per letter: consecutive text characters are drawn as
+  # a word (see RowAtom::processTextRun). The three cases above stay
+  # one-per-record because each letter sits in a different font scope.
+  expect_equal(fam("\\textrm{ab}"), "BODY")
 
   # Emphasis survives: the override keeps upstream's *nested* FontStyleAtom,
   # so only the family is replaced, not the bold/italic bits.

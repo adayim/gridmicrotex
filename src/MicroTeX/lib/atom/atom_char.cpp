@@ -101,3 +101,9 @@ sptr<Box> CharAtom::createBox(Env& env) {
 sptr<Box> BreakMarkAtom::createBox(Env& env) {
   return StrutBox::empty();
 }
+
+sptr<Box> HyphenMarkAtom::hyphen(Env& env) const {
+  // A TextBox, not a CharBox, so the hyphen comes from the same font as
+  // the word it ends -- these marks only ever sit inside text.
+  return sptrOf<TextBox>("-", env.textFontStyle(), Env::fixedTextSize() * env.scale());
+}

@@ -129,6 +129,14 @@ public:
 
   bool isMathMode() const override { return _mathMode; }
 
+  /**
+   * The font style this atom carries, or FontStyle::invalid to follow the
+   * environment. RowAtom needs to read it before merging characters into
+   * a text run: TextAtom has no equivalent field, so an atom carrying its
+   * own style must not be merged away.
+   */
+  FontStyle fontStyle() const { return _fontStyle; }
+
   Char getChar(Env& env) const override;
 
   std::string name() const override;
@@ -140,6 +148,20 @@ public:
 class BreakMarkAtom : public Atom {
 public:
   sptr<Box> createBox(Env& env) override;
+};
+
+/**
+ * A break mark that draws a hyphen when the line is broken there: TeX's
+ * discretionary, `\-`, and the points automatic hyphenation finds.
+ *
+ * Zero width when the break is not taken, exactly like a plain break
+ * mark. The hyphen itself is built by RowAtom while it still has an Env;
+ * BoxSplitter is static and has none by the time it takes the break.
+ */
+class HyphenMarkAtom : public BreakMarkAtom {
+public:
+  /** The hyphen to append to a line that ends at this mark. */
+  sptr<Box> hyphen(Env& env) const;
 };
 
 }  // namespace microtex

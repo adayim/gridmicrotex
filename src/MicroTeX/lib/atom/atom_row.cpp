@@ -8,6 +8,7 @@
 #include "box/box_single.h"
 #include "core/glue.h"
 #include "env/env.h"
+#include "hyphenator.h"
 #include "utils/utf.h"
 
 using namespace std;
@@ -51,6 +52,73 @@ void AtomDecor::setPreviousAtom(const sptr<AtomDecor>& prev) {
 }
 
 bool RowAtom::_breakEverywhere = false;
+bool RowAtom::_hyphenate = false;
+
+// Offer a break inside every word the patterns allow one in, by splicing
+// discretionary marks into the element list before any box is built.
+//
+// Doing it here, on atoms, keeps hyphenation and word runs independent:
+// a HyphenMarkAtom is an ordinary break mark, so run merging stops at it,
+// step 6 below records a break position for it, and the splitter draws
+// its hyphen -- none of which knows hyphenation exists.
+void RowAtom::hyphenate() {
+  if (_hyphenated) return;
+  _hyphenated = true;
+  if (!gridmicrotex::Hyphenator::ready()) return;
+
+  std::vector<sptr<Atom>> out;
+  out.reserve(_elements.size());
+
+  size_t i = 0;
+  while (i < _elements.size()) {
+    // A word: the maximal run of plain text characters. A mark already
+    // in it means the author has hyphenated by hand, and TeX leaves such
+    // a word alone rather than adding points of its own.
+    std::vector<c32> word;
+    bool manual = false;
+    size_t j = i;
+    for (; j < _elements.size(); j++) {
+      const auto* a = _elements[j].get();
+      if (dynamic_cast<const HyphenMarkAtom*>(a) != nullptr) {
+        manual = true;
+        continue;
+      }
+      const auto* ca = dynamic_cast<const CharAtom*>(a);
+      if (ca == nullptr || ca->isMathMode() || ca->fontStyle() != FontStyle::invalid) {
+        break;
+      }
+      word.push_back(ca->unicode());
+    }
+
+    if (j == i) {
+      out.push_back(_elements[i]);
+      i++;
+      continue;
+    }
+
+    const auto points =
+      manual ? std::vector<int>() : gridmicrotex::Hyphenator::points(word);
+    if (points.empty()) {
+      for (size_t k = i; k < j; k++) out.push_back(_elements[k]);
+    } else {
+      // No marks are present in this branch (that would have set
+      // `manual`), so element k holds character k - i of the word.
+      size_t p = 0;
+      for (size_t k = i; k < j; k++) {
+        const int off = static_cast<int>(k - i);
+        while (p < points.size() && points[p] < off) p++;
+        if (p < points.size() && points[p] == off) {
+          out.push_back(sptrOf<HyphenMarkAtom>());
+          p++;
+        }
+        out.push_back(_elements[k]);
+      }
+    }
+    i = j;
+  }
+
+  _elements = std::move(out);
+}
 
 // clang-format off
 bitset<16> RowAtom::_binSet = bitset<16>()
@@ -171,7 +239,47 @@ sptr<TextAtom> RowAtom::processContinues(int& i, bool isMathMode) {
   return txt;
 }
 
+// Merge a run of ordinary text characters into one TextAtom, so the
+// backend draws and measures a word rather than a row of isolated
+// glyphs. Laid out per character, a `\text{}` run costs one draw record
+// per letter: the width becomes exactly the sum of the per-character
+// advances, so kerning is lost, and no output element holds more than a
+// single letter, so a PDF/SVG viewer cannot find the word.
+//
+// Only ordinary text merges. Each exclusion below is load-bearing:
+//
+//   math mode         math layout positions every glyph itself
+//   _breakEverywhere  that mode exists to break between all children
+//   a style override  TextAtom has no such field, so it would be lost
+//   digits            createBox() adds a break position after each one
+//
+// Anything that is not a character atom -- a space, a break mark, nested
+// math -- ends the run for free, because currentChar() returns null for
+// it. That is what lets line breaking, and hyphenation, keep working.
+sptr<TextAtom> RowAtom::processTextRun(int& i, bool isMathMode) {
+  if (isMathMode || _breakEverywhere) return nullptr;
+  int cnt = 0;
+  auto txt = sptrOf<TextAtom>(false);
+  while (true) {
+    const auto a = currentChar(i + cnt);
+    if (a == nullptr || a->isMathMode()) break;
+    const auto* ca = dynamic_cast<const CharAtom*>(a.get());
+    if (ca == nullptr || ca->fontStyle() != FontStyle::invalid) break;
+    const c32 u = ca->unicode();
+    if (isUnicodeDigit(u)) break;
+    txt->append(u);
+    ++cnt;
+  }
+  if (cnt <= 1) return nullptr;
+  i += cnt - 1;
+  return txt;
+}
+
 sptr<Box> RowAtom::createBox(Env& env) {
+  // Off by default, so this costs one predictable branch on the path
+  // every formula takes.
+  if (_hyphenate) hyphenate();
+
   auto hbox = new HBox();
   // convert atoms to boxes and add to the horizontal box
   const int end = _elements.size() - 1;
@@ -180,9 +288,16 @@ sptr<Box> RowAtom::createBox(Env& env) {
 
     // 1. Skip break marks
     bool hasBreak = false;
+    // What the break draws if it is taken -- a hyphen, for a break inside
+    // a word. Built here because Env is in hand; BoxSplitter is static
+    // and has none by the time it chooses the break.
+    sptr<Box> breakBox = nullptr;
     auto ba = dynamic_cast<BreakMarkAtom*>(raw.get());
     while (ba != nullptr) {
       hasBreak = true;
+      if (const auto* hm = dynamic_cast<const HyphenMarkAtom*>(ba)) {
+        breakBox = hm->hyphen(env);
+      }
       if (i < end) {
         raw = _elements[++i];
         ba = dynamic_cast<BreakMarkAtom*>(raw.get());
@@ -196,6 +311,10 @@ sptr<Box> RowAtom::createBox(Env& env) {
 
     // 2. process continued and invalid chars
     auto t = processContinues(i, curr->isMathMode());
+    // A continued sequence (joiners, variation selectors) wins; a plain
+    // word only merges when that found nothing, so existing behaviour is
+    // untouched wherever it already applied.
+    if (t == nullptr) t = processTextRun(i, curr->isMathMode());
     if (t != nullptr) {
       curr = sptrOf<AtomDecor>(t);
       tmp = i < end ? sptrOf<AtomDecor>(_elements[i + 1]) : sptrOf<AtomDecor>(EmptyAtom::create());
@@ -292,7 +411,7 @@ sptr<Box> RowAtom::createBox(Env& env) {
         hbox->addBreakPosition(hbox->size());
       } else {
         if (hasBreak) {
-          hbox->addBreakPosition(hbox->size());
+          hbox->addBreakPosition(hbox->size(), breakBox);
         } else {
           auto charAtom = dynamic_cast<CharAtom*>(raw.get());
           if (charAtom != nullptr && isUnicodeDigit(charAtom->unicode())) {

@@ -127,8 +127,27 @@ private:
 
   sptr<TextAtom> processContinues(int& i, bool isMathMode);
 
+  sptr<TextAtom> processTextRun(int& i, bool isMathMode);
+
+  /** Splice discretionary marks into this row's words. Idempotent. */
+  void hyphenate();
+
+  // Whether hyphenate() has already run on this row. createBox() can be
+  // called more than once on the same atom, and the pass mutates the
+  // element list.
+  bool _hyphenated = false;
+
 public:
   static bool _breakEverywhere;
+
+  /**
+   * Break long words at the points the registered patterns allow.
+   *
+   * A static toggle guarded per parse, exactly like BoxSplitter::_justify
+   * -- see the guard in src/parse_latex.cpp. Off by default, and when off
+   * the pass does not run at all.
+   */
+  static bool _hyphenate;
 
   bool _lookAtLastAtom;
 

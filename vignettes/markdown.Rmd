@@ -463,8 +463,13 @@ text).
 `justify = TRUE` stretches the interword spaces so every line but the
 last fills the width exactly. `line_break = "optimal"` chooses the line
 breaks by total fit rather than greedily, so the paragraph reads more
-evenly. Note that `gridmicrotex` does not hyphenate, so a justified
-*narrow* column can open wide word gaps.
+evenly. `hyphenate = TRUE` lets a long word break across lines, with a
+hyphen --- worth pairing with `justify` in a narrow column, where
+justifying on its own opens wide word gaps.
+
+`markdown_grob()` takes `hyphenate` directly, since it passes its extra
+arguments to `latex_grob()`. For `markdown_box_grob()`, set it for the
+document with `latex_options(hyphenate = TRUE)`.
 
 ```{r justify, fig.height = 2.6, fig.width = 4, out.width = "70%"}
 prose <- paste(rep(
@@ -541,9 +546,10 @@ placeholder. In detail:
 - **Display math** --- a paragraph that is nothing but `$$…$$` --- gets
   its own centred line, styleable as the `math` tag. Inline `$…$` is
   unaffected.
-- **Right-to-left and complex scripts** are not supported. MicroTeX
-  places text one character at a time, so Arabic letters do not join and
-  word order is not reversed.
+- **Right-to-left text** is only partly supported. Each word is handed to
+  the device as one run, so Arabic letters *do* join and shape correctly
+  --- but MicroTeX places the words themselves left to right, so a phrase
+  of more than one word comes out in the wrong order.
 - **Small caps** and `font-variant-numeric` have no MicroTeX command.
 - **Block-level HTML** other than `<div>` is dropped rather than typeset.
   A `<div>` with blank lines around its tags is read as a styled chunk

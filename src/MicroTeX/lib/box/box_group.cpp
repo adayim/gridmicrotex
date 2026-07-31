@@ -125,7 +125,9 @@ pair<sptr<HBox>, sptr<HBox>> HBox::split(int pos, int shift) {
   if (!_breakPositions.empty()) {
     for (int _breakPosition : _breakPositions) {
       if (_breakPosition > pos + 1) {
-        hb2->addBreakPosition(_breakPosition - pos - 1);
+        // Anything the break draws travels with it, or a second hyphen
+        // later in the same row would break without one.
+        hb2->addBreakPosition(_breakPosition - pos - 1, breakBoxAt(_breakPosition));
       }
     }
   }

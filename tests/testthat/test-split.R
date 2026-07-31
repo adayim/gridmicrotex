@@ -103,15 +103,31 @@ just_para <- paste0(
   "}"
 )
 
-# Right edge of each rendered line. Text records carry no width, so this
-# is the last glyph's origin -- fine for comparing lines with each other,
-# which is all these tests do.
+# Right edge of each rendered line.
+#
+# A text record carries no width of its own. That used to make its origin
+# a fair proxy for the line's right edge, because every record held a
+# single character. It no longer is: consecutive characters are drawn as
+# one word-level record (RowAtom::processTextRun), so the last origin on
+# a line sits a whole word short of the edge, by a different amount on
+# every line. Measure the glyphs the record actually holds instead.
+.rec_width <- function(txt, size) {
+  grid::pushViewport(grid::viewport(gp = grid::gpar(fontsize = size)))
+  on.exit(grid::popViewport())
+  grid::convertWidth(grid::stringWidth(txt), "bigpts", valueOnly = TRUE)
+}
+
 line_edges <- function(g) {
   df <- g$layout_df
   ys <- sort(unique(round(df$y, 1)))
   vapply(ys, function(yy) {
-    s <- abs(round(df$y, 1) - yy) < 0.01
-    max(df$x[s] + ifelse(is.na(df$width[s]), 0, df$width[s]))
+    d <- df[abs(round(df$y, 1) - yy) < 0.01, , drop = FALSE]
+    w <- vapply(seq_len(nrow(d)), function(i) {
+      if (!is.na(d$width[i])) return(d$width[i])
+      if (!identical(d$type[i], "text") || is.na(d$text[i])) return(0)
+      .rec_width(d$text[i], d$font_size[i])
+    }, numeric(1))
+    max(d$x + w)
   }, numeric(1))
 }
 

@@ -146,7 +146,10 @@ inline macro(rmoustache) {
 }
 
 inline macro(breakmark) {
-  return sptrOf<BreakMarkAtom>();
+  // `\-` is TeX's discretionary hyphen: it offers a break and draws a
+  // hyphen if that break is taken. It used to offer the break and draw
+  // nothing, which is worse than not breaking at all.
+  return sptrOf<HyphenMarkAtom>();
 }
 
 inline macro(nokern) {

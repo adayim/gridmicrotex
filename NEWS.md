@@ -1,9 +1,11 @@
 # gridmicrotex 0.1.0
 
+- Text inside `\text{}` is drawn a word at a time rather than a letter at a time, so kerning is applied, PDF/SVG output can be searched for a word, and files are several times smaller.
+- New `hyphenate` argument on `latex_grob()`, `latex_dims()` and `latex_options()` breaks long words across lines, with a hyphen. Off by default.
 - New `markdown_grob()` and `grid.markdown()` render inline markdown with LaTeX math; `markdown_box_grob()` renders a block document.
-- New `geom_markdown()` and `element_markdown()` for ggplot2, both taking `style`.
+- New `geom_markdown()` and `element_markdown()` for ggplot2, both taking `style`. A title containing headings or lists is laid out as blocks, not flattened.
 - Markdown covers headings, lists, task lists, quotes, code, tables, images, footnotes, display `$$…$$`, links and inline HTML.
-- New `markdown_style()` and `md_style()` style markdown through a CSS cascade of HTML tag names.
+- New `markdown_style()` and `md_style()` style markdown through a CSS cascade of HTML tag names; the `body` rule styles the box itself.
 - New `latex_options(markdown_style = )` sets a document-wide default.
 - New `"github"` style preset, shipped as a CSS file.
 - `<div class=>` and `<div style=>` style a chunk of markdown; `<span class=>` styles an inline run.
@@ -18,6 +20,8 @@
 - Bug fix: `max_width` is now honoured by content containing `\\` line breaks.
 - Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room and they overlapped the axis title.
 - Bug fix: reloading the package corrupted MicroTeX's macro registry, so a later large formula could crash R.
+- Bug fix: `\-` offered a line break but drew no hyphen at it.
+
 
 # gridmicrotex 0.0.5
 
