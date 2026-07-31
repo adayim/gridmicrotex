@@ -146,6 +146,7 @@ test_that("\\textrm is measured in the font it is drawn in", {
 })
 
 test_that("register/clear measurer lifecycle and integration", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   m <- gridmicrotex:::.make_text_measurer(grid::gpar())
   m2 <- gridmicrotex:::.make_text_measurer(grid::gpar(fontfamily = "mono"))
   # The two closures must actually disagree, or "the second registration

@@ -128,6 +128,7 @@ test_that("inheritable properties cascade and box properties do not", {
 # --- lengths -------------------------------------------------------------
 
 test_that("lengths accept a bare number, a CSS string and a unit", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   # A bare number is rem: a multiple of the body size, not the element's.
   expect_equal(.md_css_length(2.5, body = 10, own = 20), 25)
   expect_equal(.md_css_length("2.5rem", body = 10, own = 20), 25)
@@ -144,6 +145,7 @@ test_that("lengths accept a bare number, a CSS string and a unit", {
 })
 
 test_that("a unitless CSS string stays invalid, as it is in CSS", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   # `font-size: 12` is ignored by a browser; only the R spelling
   # md_style(font_size = 12) means a multiple.
   expect_null(.md_css_size("12", 20))

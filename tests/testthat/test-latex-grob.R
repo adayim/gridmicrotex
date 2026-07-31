@@ -1,6 +1,7 @@
 # --- latex_grob creation and structure ---
 
 test_that("latex_grob creates valid grob and returns correct dimensions", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- latex_grob("\\frac{x^{2}+1}{\\sqrt{y}}")
   expect_s3_class(g, "latexgrob")
   expect_true(nrow(g$layout_df) > 0)
@@ -26,6 +27,7 @@ test_that("latex_grob creates valid grob and returns correct dimensions", {
 # --- latex_grob parameters ---
 
 test_that("latex_grob parameters work correctly", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   # Rotation
   expect_equal(latex_grob("x^2", rot = 45)$vp$angle, 45)
 
@@ -148,6 +150,7 @@ test_that("editGrob on non-parse fields does not re-parse", {
 })
 
 test_that("ascentDetails + descentDetails sum to heightDetails", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- latex_grob("\\frac{a}{b}", render_mode = "path", gp = grid::gpar(fontsize = 24))
   asc  <- grid::convertHeight(grid::ascentDetails(g),  "bigpts", valueOnly = TRUE)
   desc <- grid::convertHeight(grid::descentDetails(g), "bigpts", valueOnly = TRUE)
@@ -168,6 +171,7 @@ test_that("editGrob keeps viewport just in sync with hjust/vjust", {
 })
 
 test_that("latex_dims respects math_font parameter", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   expr <- "$\\int_0^1 f(x)\\,dx + x + y$"
   dims_lete <- latex_dims(expr, math_font = "lete", gp = grid::gpar(fontsize = 20))
   dims_stix <- latex_dims(expr, math_font = "stix", gp = grid::gpar(fontsize = 20))

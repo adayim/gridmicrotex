@@ -139,6 +139,7 @@ test_that("justified text fills the measure exactly", {
 })
 
 test_that("justification evens the lines out", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   g_just <- latex_grob(just_para, max_width = 300, justify = TRUE)
   g_rag  <- latex_grob(just_para, max_width = 300, justify = FALSE)
   # Drop the last line: it is deliberately left ragged.
@@ -150,6 +151,7 @@ test_that("justification evens the lines out", {
 })
 
 test_that("the last line stays ragged", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- latex_grob(just_para, max_width = 300, justify = TRUE)
   e <- line_edges(g)
   expect_lt(e[length(e)], min(head(e, -1)) - 10)
