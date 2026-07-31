@@ -761,3 +761,67 @@ test_that("strong and em are styleable tags, like code", {
   expect_equal(.md_to_tex("*i*"), "\\textit{i}")
   expect_equal(.md_to_tex("***both***"), "\\textit{\\textbf{both}}")
 })
+
+test_that("body {} styles the box itself", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # These are box properties, so .md_cascade() strips them out of the seed
+  # it hands the blocks -- a background on `body` must not become a
+  # background on every paragraph. That leaves the box as the only thing
+  # that can consume them.
+  plain <- .md_box_layout(markdown_box_grob("a note", width = grid::unit(3, "in")))
+  expect_null(plain$box_gp)
+  expect_equal(plain$padding, c(0, 0, 0, 0))
+
+  styled <- .md_box_layout(markdown_box_grob(
+    "a note", width = grid::unit(3, "in"),
+    style = paste("body { background: #EEF3FB; padding: 10px;",
+                  "border: 2px solid steelblue; border-radius: 5px }")))
+  expect_equal(styled$box_gp$fill, "#EEF3FB")
+  expect_false(is.na(styled$box_gp$col))
+  expect_equal(styled$padding, rep(7.5, 4))   # 10px == 7.5bp
+  expect_false(is.null(styled$r))
+
+  # And the rect is actually emitted, not merely resolved.
+  kids <- grid::makeContent(markdown_box_grob(
+    "a note", width = grid::unit(3, "in"),
+    style = "body { background: #EEF3FB }"))$children
+  expect_true(any(vapply(kids, function(z) inherits(z, "rect"), logical(1))))
+})
+
+test_that("an explicit box argument beats the body rule", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The argument is the inline style, and inline wins.
+  lay <- .md_box_layout(markdown_box_grob(
+    "a note", width = grid::unit(3, "in"),
+    padding = grid::unit(2, "bigpts"), style = "body { padding: 30px }"))
+  expect_equal(lay$padding, rep(2, 4))
+})
+
+test_that("the padding/margin shorthand expands to the longhands", {
+  one <- .md_expand_shorthand(list(padding = "4px"))
+  expect_null(one[["padding"]])
+  expect_equal(unlist(one[paste0("padding", c("-top", "-right", "-bottom",
+                                              "-left"))]),
+               c("padding-top" = "4px", "padding-right" = "4px",
+                 "padding-bottom" = "4px", "padding-left" = "4px"))
+
+  # CSS's own order: vertical/horizontal, then top/horizontal/bottom.
+  two <- .md_expand_shorthand(list(margin = "1px 2px"))
+  expect_equal(two[["margin-top"]], "1px")
+  expect_equal(two[["margin-right"]], "2px")
+  expect_equal(two[["margin-bottom"]], "1px")
+  expect_equal(two[["margin-left"]], "2px")
+
+  three <- .md_expand_shorthand(list(margin = "1px 2px 3px"))
+  expect_equal(three[["margin-bottom"]], "3px")
+  expect_equal(three[["margin-left"]], "2px")
+
+  # A longhand stated alongside the shorthand is the more specific one.
+  mix <- .md_expand_shorthand(list(padding = "4px", "padding-left" = "9px"))
+  expect_equal(mix[["padding-left"]], "9px")
+  expect_equal(mix[["padding-top"]], "4px")
+
+  # It reaches every route a declaration can arrive by.
+  expect_equal(md_style(padding = "4px")[["padding-top"]], "4px")
+  expect_equal(.md_parse_css("padding: 4px")[["padding-top"]], "4px")
+})

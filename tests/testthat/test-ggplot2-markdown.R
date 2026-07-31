@@ -158,3 +158,87 @@ test_that("body seeds inheritance for inline markdown too", {
                        style = "body { color: #B22222 } p { color: #1F6FB2 }")),
     "#1F6FB2")
 })
+
+test_that(".md_needs_blocks agrees with what .md_blocks() would build", {
+  expect_false(.md_needs_blocks("plain **text** with $x$ math"))
+  expect_false(.md_needs_blocks(""))
+  # Inline $$..$$ in the middle of a sentence stays a paragraph...
+  expect_false(.md_needs_blocks("a $$x$$ inline"))
+  # ...but a paragraph that is nothing else becomes a centred math block.
+  expect_true(.md_needs_blocks("$$x^2$$"))
+  expect_true(.md_needs_blocks("# H"))
+  expect_true(.md_needs_blocks("one\n\ntwo"))
+  expect_true(.md_needs_blocks("- a\n- b"))
+})
+
+test_that("a block-structured label is laid out as blocks, a paragraph is not", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  eg <- function(lab, ...) {
+    ggplot2::element_grob(element_markdown(...), label = lab)
+  }
+  # The run path flattens blocks: list markers and indents are simply
+  # lost, which is what promotion exists to fix.
+  expect_s3_class(eg("The **fitted** slope is $\\beta_1$"), "latexgrob")
+  expect_s3_class(eg("## H\n\n- one\n- two"), "markdownbox")
+  # A width asks for the box even with only a paragraph: a run cannot
+  # wrap to a unit.
+  expect_s3_class(eg("just a paragraph", width = grid::unit(2, "in")),
+                  "markdownbox")
+})
+
+test_that("a rotated block label keeps its angle and warns", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The box cannot rotate, so one of the two has to give. Losing the
+  # angle would lay a y-axis title horizontally across the panel; losing
+  # the block layout only flattens it, which is today's behaviour anyway.
+  expect_warning(
+    g <- ggplot2::element_grob(element_markdown(angle = 90),
+                               label = "# H\n\n- a"),
+    "rotated"
+  )
+  expect_s3_class(g, "latexgrob")
+
+  # A width alongside an angle is not ignored either -- it becomes the
+  # run's own wrapping measure.
+  expect_no_warning(
+    g2 <- ggplot2::element_grob(
+      element_markdown(angle = 90, width = grid::unit(100, "bigpts")),
+      label = "a long paragraph that will want to wrap somewhere along it")
+  )
+  expect_s3_class(g2, "latexgrob")
+})
+
+test_that("axis tick labels are never laid out as blocks", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # ggplot2 asks an element for its height before placing it, so a box
+  # sized in npc measures against the whole device -- every tick would
+  # claim the full width.
+  g <- ggplot2::element_grob(element_markdown(), label = c("# H", "# H"))
+  expect_s3_class(g, "gridmicrotex_labels")
+})
+
+test_that("a promoted label's height does not depend on the parent width", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- ggplot2::element_grob(element_markdown(), label = "# H\n\n- one\n- two")
+  h <- vapply(c(2, 6, 9), function(w) {
+    grid::pushViewport(grid::viewport(width = grid::unit(w, "in")))
+    on.exit(grid::popViewport(), add = TRUE)
+    grid::convertHeight(grid::heightDetails(g), "bigpts", valueOnly = TRUE)
+  }, numeric(1))
+  expect_equal(h, rep(h[1], 3))
+})
+
+test_that("plots with block titles build and draw", {
+  skip_on_cran()
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  mk <- function(...) {
+    ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+      ggplot2::geom_point() +
+      ggplot2::labs(title = "## Findings\n\n- slope $\\beta_1$\n- *p* < 0.001") +
+      ggplot2::theme(plot.title = element_markdown(...))
+  }
+  expect_no_error(grid::grid.draw(ggplot2::ggplotGrob(mk())))
+  expect_no_error(grid::grid.draw(ggplot2::ggplotGrob(
+    mk(width = grid::unit(1, "npc"),
+       style = "body { background: #EEF3FB; padding: 8px }"))))
+})

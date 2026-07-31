@@ -54,6 +54,8 @@ collapse \cr
 \code{margin_left}, \code{margin_right} \tab block \tab \cr
 \code{padding_left}, \code{padding_right} \tab block \tab \cr
 \code{padding_top}, \code{padding_bottom} \tab block \tab \cr
+\code{margin}, \code{padding} \tab block \tab the CSS shorthand: one
+to four lengths, in CSS's order \cr
 \code{text_align} \tab block \tab \code{left}, \code{center},
 \code{right} \cr
 \code{border_left} \tab block \tab the \code{blockquote} bar \cr
@@ -70,6 +72,21 @@ width between the columns so a wide table wraps \cr
 \code{font_size} also accepts CSS's keywords --- \code{xx-small} through
 \code{xx-large}, plus \code{smaller} and \code{larger} --- taken from the
 \code{\\tiny}..\code{\\Huge} ladder MicroTeX implements.
+
+\strong{The \code{body} rule styles the box itself.} On any other tag,
+\code{background}, \code{border}, \code{border_radius}, \code{padding}
+and \code{margin} apply to that block. On \code{body} they apply to the
+whole \code{\link{markdown_box_grob}} --- its fill, its frame, its
+corner radius, and the space inside and outside it. That is the only
+way to give a \code{\link{element_markdown}} title a background, since
+the theme element takes no box arguments of its own:
+
+\preformatted{body \{ background: grey95; padding: 8px;
+        border: 1px solid grey60; border-radius: 4px \}}
+
+An explicit \code{box_gp}, \code{padding}, \code{margin} or \code{r}
+argument to \code{markdown_box_grob()} wins over the rule, the way an
+inline style wins in CSS.
 
 Anything else is an error --- unlike a pasted stylesheet, where an
 unknown property is ignored the way a browser ignores it.

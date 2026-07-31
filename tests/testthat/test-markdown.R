@@ -856,3 +856,66 @@ test_that("font-size takes CSS absolute keywords", {
   # Unknown keywords stay invalid.
   expect_null(.md_css_size("enormous", 20))
 })
+
+test_that("width = NULL sizes the box to its content", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_box_grob(
+    "a **long** paragraph that would certainly wrap in a narrow box",
+    width = NULL)
+  w <- vapply(c(2, 6, 9), function(wd) {
+    grid::pushViewport(grid::viewport(width = grid::unit(wd, "in")))
+    on.exit(grid::popViewport(), add = TRUE)
+    grid::convertWidth(grid::widthDetails(g), "bigpts", valueOnly = TRUE)
+  }, numeric(1))
+  # The whole point: nothing about the size depends on the parent, which
+  # is what makes it safe to measure before ggplot2 has placed the grob.
+  expect_equal(w, rep(w[1], 3))
+  expect_gt(w[1], 100)
+
+  h <- vapply(c(2, 9), function(wd) {
+    grid::pushViewport(grid::viewport(width = grid::unit(wd, "in")))
+    on.exit(grid::popViewport(), add = TRUE)
+    grid::convertHeight(grid::heightDetails(g), "bigpts", valueOnly = TRUE)
+  }, numeric(1))
+  expect_equal(h[1], h[2])
+})
+
+test_that("the natural width does not re-break the line it was measured from", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # latex_dims() reports whole big points, so handing the rounded width
+  # back as the measure can be up to half a point short -- enough for
+  # MicroTeX to break the very line the number came from. The symptom is
+  # a heading that wraps in a box that was sized not to wrap.
+  head_only <- "## Fuel economy falls with weight"
+  one <- markdown_box_grob(head_only, width = NULL)
+  h1 <- grid::convertHeight(grid::heightDetails(one), "bigpts",
+                            valueOnly = TRUE)
+  # One line of an h2, not two.
+  expect_lt(h1, 40)
+
+  with_list <- markdown_box_grob(
+    paste(head_only, "", "- a bullet", sep = "\n"), width = NULL)
+  h2 <- grid::convertHeight(grid::heightDetails(with_list), "bigpts",
+                            valueOnly = TRUE)
+  expect_lt(h2 - h1, 40)
+})
+
+test_that("a rule does not inflate the natural width", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # An <hr>, and a block background, span whatever width they are handed,
+  # so a naive max() over the probe layout hands the probe width straight
+  # back and the box comes out metres wide.
+  g <- markdown_box_grob("short\n\n---\n\nalso short", width = NULL)
+  w <- grid::convertWidth(grid::widthDetails(g), "bigpts", valueOnly = TRUE)
+  expect_lt(w, .MD_PROBE_W / 10)
+})
+
+test_that("a natural-width box still draws, and honours hjust", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # With no width there is nothing to build a viewport from at
+  # construction, so makeContent() has to supply one of the measured size.
+  g <- markdown_box_grob("# H\n\n- a\n- b", width = NULL, hjust = 0)
+  expect_null(g$vp)
+  expect_s3_class(grid::makeContent(g), "markdownbox")
+  expect_no_error(grid::grid.draw(g))
+})

@@ -12,6 +12,7 @@ element_markdown(
   render_mode = c("typeface", "path"),
   justify = FALSE,
   style = NA,
+  width = NA,
   ...
 )
 }
@@ -36,8 +37,15 @@ wrapping (default: 0, no wrapping).}
 path to a \code{.css} file, applied to labels drawn through this
 theme element. \code{NA}, the default, means unset --- the global
 \code{\link{latex_options}(markdown_style = )} applies instead. Only
-the properties that compile to LaTeX have an effect, since a theme
-label has no block layout. See \code{\link{md_style}}.}
+the properties that compile to LaTeX have an effect, unless the label
+is laid out as blocks (see \emph{Block labels}). See
+\code{\link{md_style}}.}
+
+\item{width}{Wrapping measure for the label, as a
+\code{\link[grid]{unit}}. \code{NA}, the default, means unset: the
+label is sized to its content and does not wrap.
+\code{unit(1, "npc")} is the useful value for a plot title, whose
+cell really is the full plot width. See \emph{Block labels}.}
 
 \item{...}{Additional arguments passed to
 \code{ggplot2::element_text()} (e.g. \code{colour}, \code{hjust}).}
@@ -55,6 +63,41 @@ other text element. The label is parsed as markdown --- including
 This is an S7 subclass of \code{ggplot2::element_text}, so it inherits
 the standard text properties (size, colour, hjust, ...) from the theme
 and merges correctly with inherited theme entries.
+}
+\section{Block labels}{
+
+A label with real block structure --- a heading, a list, a table, a
+rule, or more than one paragraph --- is laid out by
+\code{\link{markdown_box_grob}} rather than flattened into one run, so
+list markers, indents and block spacing survive. That makes a title
+like this work:
+
+\preformatted{labs(title = "## Findings\\n\\n- slope $\\\\beta_1$\\n- *p* < 0.001")}
+
+The box's own background, border, padding and corner radius come from
+the stylesheet's \code{body} rule --- \code{style = "body \{ background:
+grey95; padding: 8px \}"} --- not from arguments here. See
+\code{\link{markdown_style}}.
+
+Three details follow from how ggplot2 measures theme elements:
+
+\itemize{
+\item \strong{Wrapping is opt-in.} Without \code{width} the label is
+sized to its content, because ggplot2 asks an element for its
+height before placing it, when a relative width would resolve
+against the whole device rather than the element's cell.
+\item \strong{Axis tick labels are never laid out as blocks},
+whatever they contain, for the same reason.
+\item \strong{A rotated label is never laid out as blocks.} The box
+cannot rotate, so a label with both blocks and a non-zero
+\code{angle} keeps the angle, is rendered as a single run, and
+warns. A \code{width} given with an angle becomes the run's
+wrapping measure instead.
+}
+
+\code{math_font}, \code{render_mode} and \code{justify} are not
+forwarded to the box; a block label takes those from
+\code{\link{latex_options}}.
 
 Note that \pkg{ggtext} also exports a function called
 \code{element_markdown()}. If both packages are attached, the one loaded
@@ -62,6 +105,7 @@ later wins; call \code{gridmicrotex::element_markdown()} explicitly to
 be unambiguous. The two are not interchangeable --- ggtext renders
 HTML/CSS and images, this renders LaTeX math.
 }
+
 \examples{
 \donttest{
 if (requireNamespace("ggplot2", quietly = TRUE)) {

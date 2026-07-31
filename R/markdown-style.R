@@ -24,9 +24,10 @@
   "color", "font-size", "font-family", "font-weight", "font-style",
   "text-decoration", "border", "border-style", "border-radius",
   "box-shadow", "visibility", "vertical-align", "transform",
-  # block-only: read by the layout
-  "line-height", "margin-top", "margin-bottom", "margin-left",
-  "margin-right", "padding-left", "padding-right", "padding-top",
+  # block-only: read by the layout. `padding` and `margin` are the CSS
+  # shorthands, expanded into the four longhands by .md_expand_shorthand().
+  "line-height", "margin", "margin-top", "margin-bottom", "margin-left",
+  "margin-right", "padding", "padding-left", "padding-right", "padding-top",
   "padding-bottom", "text-align", "border-left", "border-top", "height",
   # tables: background is read on tr/td/th, the rest on table/tr/td
   "background", "border-bottom", "border-color", "table-layout",
@@ -146,6 +147,8 @@
 #'   \code{margin_left}, \code{margin_right} \tab block \tab \cr
 #'   \code{padding_left}, \code{padding_right} \tab block \tab \cr
 #'   \code{padding_top}, \code{padding_bottom} \tab block \tab \cr
+#'   \code{margin}, \code{padding} \tab block \tab the CSS shorthand: one
+#'     to four lengths, in CSS's order \cr
 #'   \code{text_align} \tab block \tab \code{left}, \code{center},
 #'     \code{right} \cr
 #'   \code{border_left} \tab block \tab the \code{blockquote} bar \cr
@@ -162,6 +165,21 @@
 #' \code{font_size} also accepts CSS's keywords --- \code{xx-small} through
 #' \code{xx-large}, plus \code{smaller} and \code{larger} --- taken from the
 #' \code{\\tiny}..\code{\\Huge} ladder MicroTeX implements.
+#'
+#' \strong{The \code{body} rule styles the box itself.} On any other tag,
+#' \code{background}, \code{border}, \code{border_radius}, \code{padding}
+#' and \code{margin} apply to that block. On \code{body} they apply to the
+#' whole \code{\link{markdown_box_grob}} --- its fill, its frame, its
+#' corner radius, and the space inside and outside it. That is the only
+#' way to give a \code{\link{element_markdown}} title a background, since
+#' the theme element takes no box arguments of its own:
+#'
+#' \preformatted{body \{ background: grey95; padding: 8px;
+#'         border: 1px solid grey60; border-radius: 4px \}}
+#'
+#' An explicit \code{box_gp}, \code{padding}, \code{margin} or \code{r}
+#' argument to \code{markdown_box_grob()} wins over the rule, the way an
+#' inline style wins in CSS.
 #'
 #' Anything else is an error --- unlike a pasted stylesheet, where an
 #' unknown property is ignored the way a browser ignores it.
@@ -208,7 +226,7 @@ md_style <- function(...) {
   names(props) <- nm
   # A NULL means "say nothing", which is how a tag opts out of a default.
   props <- props[!vapply(props, is.null, logical(1))]
-  structure(props, class = "gridmicrotex_md_style")
+  structure(.md_expand_shorthand(props), class = "gridmicrotex_md_style")
 }
 
 #' @export
@@ -282,7 +300,8 @@ print.gridmicrotex_md_style <- function(x, ...) {
 #' @details
 #' Tags are named as in HTML, so a stylesheet reads the way a CSS author
 #' expects: \code{body} (the document root, which every other tag
-#' inherits from), \code{p}, \code{h1} ... \code{h6}, \code{ul},
+#' inherits from --- and which also styles the box itself, see
+#' \code{\link{md_style}}), \code{p}, \code{h1} ... \code{h6}, \code{ul},
 #' \code{ol}, \code{li}, \code{blockquote}, \code{pre} (a code block),
 #' \code{code} (an inline code span), \code{strong} and \code{em} (what
 #' markdown's \code{**} and \code{*} produce), \code{table}, \code{tr},

@@ -138,6 +138,40 @@ GeomMarkdown <- NULL
 #' the standard text properties (size, colour, hjust, ...) from the theme
 #' and merges correctly with inherited theme entries.
 #'
+#' @section Block labels:
+#' A label with real block structure --- a heading, a list, a table, a
+#' rule, or more than one paragraph --- is laid out by
+#' \code{\link{markdown_box_grob}} rather than flattened into one run, so
+#' list markers, indents and block spacing survive. That makes a title
+#' like this work:
+#'
+#' \preformatted{labs(title = "## Findings\\n\\n- slope $\\\\beta_1$\\n- *p* < 0.001")}
+#'
+#' The box's own background, border, padding and corner radius come from
+#' the stylesheet's \code{body} rule --- \code{style = "body \{ background:
+#' grey95; padding: 8px \}"} --- not from arguments here. See
+#' \code{\link{markdown_style}}.
+#'
+#' Three details follow from how ggplot2 measures theme elements:
+#'
+#' \itemize{
+#'   \item \strong{Wrapping is opt-in.} Without \code{width} the label is
+#'     sized to its content, because ggplot2 asks an element for its
+#'     height before placing it, when a relative width would resolve
+#'     against the whole device rather than the element's cell.
+#'   \item \strong{Axis tick labels are never laid out as blocks},
+#'     whatever they contain, for the same reason.
+#'   \item \strong{A rotated label is never laid out as blocks.} The box
+#'     cannot rotate, so a label with both blocks and a non-zero
+#'     \code{angle} keeps the angle, is rendered as a single run, and
+#'     warns. A \code{width} given with an angle becomes the run's
+#'     wrapping measure instead.
+#' }
+#'
+#' \code{math_font}, \code{render_mode} and \code{justify} are not
+#' forwarded to the box; a block label takes those from
+#' \code{\link{latex_options}}.
+#'
 #' Note that \pkg{ggtext} also exports a function called
 #' \code{element_markdown()}. If both packages are attached, the one loaded
 #' later wins; call \code{gridmicrotex::element_markdown()} explicitly to
@@ -158,8 +192,14 @@ GeomMarkdown <- NULL
 #'   path to a \code{.css} file, applied to labels drawn through this
 #'   theme element. \code{NA}, the default, means unset --- the global
 #'   \code{\link{latex_options}(markdown_style = )} applies instead. Only
-#'   the properties that compile to LaTeX have an effect, since a theme
-#'   label has no block layout. See \code{\link{md_style}}.
+#'   the properties that compile to LaTeX have an effect, unless the label
+#'   is laid out as blocks (see \emph{Block labels}). See
+#'   \code{\link{md_style}}.
+#' @param width Wrapping measure for the label, as a
+#'   \code{\link[grid]{unit}}. \code{NA}, the default, means unset: the
+#'   label is sized to its content and does not wrap.
+#'   \code{unit(1, "npc")} is the useful value for a plot title, whose
+#'   cell really is the full plot width. See \emph{Block labels}.
 #' @param ... Additional arguments passed to
 #'   \code{ggplot2::element_text()} (e.g. \code{colour}, \code{hjust}).
 #'
@@ -180,7 +220,7 @@ GeomMarkdown <- NULL
 element_markdown <- function(math_font = "", fontsize = NULL,
                              lineheight = 1.2, max_width = 0,
                              render_mode = c("typeface", "path"),
-                             justify = FALSE, style = NA, ...) {
+                             justify = FALSE, style = NA, width = NA, ...) {
   .apply_opts("math_font", "render_mode", "justify")
   render_mode <- match.arg(render_mode)
   .check_justify(justify)
@@ -195,7 +235,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
   obj <- do.call(.element_markdown_class, c(
     list(math_font = math_font, lineheight = lineheight,
          max_width = max_width, render_mode = render_mode,
-         justify = justify, style = style),
+         justify = justify, style = style, width = width),
     dots
   ))
   # ggplot2's element_text constructor injects legacy "element_text" and
@@ -298,6 +338,9 @@ element_markdown <- function(math_font = "", fontsize = NULL,
       render_mode = S7::new_property(S7::class_character,
                                      default = "typeface"),
       justify = S7::new_property(S7::class_logical, default = FALSE),
+      # A grid unit, or NA for "unset" -- see the note on `style` below
+      # for why no property here may default to NULL.
+      width = S7::new_property(S7::class_any, default = NA),
       # A markdown_style object, CSS text or a .css path -- whatever
       # markdown_grob(style =) takes, hence class_any.
       #
@@ -350,8 +393,12 @@ element_markdown <- function(math_font = "", fontsize = NULL,
   justify     <- element@justify     %||% FALSE
   # NA is the element's "unset" (see the property definition); markdown_grob
   # wants NULL for that, so it can fall back to the global option.
+  unset <- function(v) is.atomic(v) && length(v) == 1L && is.na(v)
   style       <- element@style
-  if (is.atomic(style) && length(style) == 1L && is.na(style)) style <- NULL
+  if (unset(style)) style <- NULL
+  width       <- element@width
+  if (unset(width)) width <- NULL
+  margin      <- margin %||% element@margin
 
   gp <- grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
   if (!is.null(family) && nzchar(family)) gp$fontfamily <- family
@@ -366,6 +413,49 @@ element_markdown <- function(math_font = "", fontsize = NULL,
   default_just <- .rotate_just(angle, hjust, vjust)
 
   if (length(label) == 1L) {
+    # A label with real block structure -- a heading, a list, a table, more
+    # than one paragraph -- cannot be laid out as a single run: the run
+    # path flattens it and the list markers and indents are lost. Fall
+    # through to the box, which is the only thing here that does blocks.
+    #
+    # Tick labels never take this path: the multi-label branch below is
+    # left alone deliberately, because a box sized in npc would measure
+    # against the whole device (ggplot2 has not placed the element in its
+    # cell when it asks for the height) and every tick would claim it.
+    promote <- .md_needs_blocks(label)
+
+    if (promote && angle %% 360 != 0) {
+      # The box has no rotation, so one of the two has to give. Keeping
+      # the angle and flattening the blocks is much the smaller loss: a
+      # rotated axis title laid out horizontally would cross the panel.
+      warning("A rotated `element_markdown()` label cannot use block ",
+              "layout; rendering it as a single run. Set `angle = 0` to ",
+              "lay the blocks out.", call. = FALSE)
+      promote <- FALSE
+    }
+    if (!is.null(width) && angle %% 360 != 0) {
+      # Still honour the requested measure, as the run path's own.
+      max_width <- grid::convertWidth(width, "bigpts", valueOnly = TRUE)
+      width <- NULL
+    }
+
+    if (promote || !is.null(width)) {
+      return(markdown_box_grob(
+        md = label,
+        x = x %||% grid::unit(hjust, "npc"),
+        y = y %||% grid::unit(vjust, "npc"),
+        # NULL sizes the box to its content, so nothing wraps and the
+        # reported height does not depend on a width that is not yet known.
+        width = width,
+        hjust = hjust, vjust = vjust,
+        # hjust positions a content-sized box; halign is what aligns the
+        # blocks when the box spans its cell. Both are wanted.
+        halign = hjust,
+        margin = if (grid::is.unit(margin) && length(margin) == 4L) margin,
+        style = style, gp = gp
+      ))
+    }
+
     if (is.null(x)) x <- grid::unit(default_just$hjust, "npc")
     if (is.null(y)) y <- grid::unit(default_just$vjust, "npc")
     return(markdown_grob(

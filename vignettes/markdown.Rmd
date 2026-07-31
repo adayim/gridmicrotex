@@ -39,27 +39,19 @@ There are two entry points:
 
 ## Inline markdown
 
-`markdown_grob()` handles the inline part of markdown: `**bold**`,
-`*italic*`, `` `code` ``, `~~strikethrough~~`, and any `$math$`.
+`markdown_grob()` handles the inline part of markdown --- `**bold**`,
+`*italic*`, `` `code` ``, `~~strikethrough~~` --- and any `$math$`.
+Because the math is real MicroTeX, the whole engine is available inside a
+markdown string: fractions, sums, matrices, Greek, accents.
 
-```{r inline, fig.height = 0.7, fig.width = 6, out.width = "90%"}
+Write the string with `r"(...)"`, R's raw-string syntax. LaTeX is full of
+backslashes, and a raw string passes them through untouched instead of
+making you double every one.
+
+```{r inline, fig.height = 0.8, fig.width = 6, out.width = "90%"}
 grid.newpage()
 grid.markdown(
-  "The **fitted** slope is $\\beta_1 = 0.42$ (*p* < 0.001).",
-  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
-)
-```
-
-Because the math is real MicroTeX, the full engine is available inside a
-markdown string --- fractions, sums, matrices, Greek, accents:
-
-```{r inline-math, fig.height = 0.9, fig.width = 6, out.width = "90%"}
-grid.newpage()
-grid.markdown(
-  paste(
-    "The estimator $\\hat{\\beta} = (X^\\top X)^{-1} X^\\top y$",
-    "has variance $\\sigma^2$."
-  ),
+  r"(The **fitted** $\hat{\beta} = (X^\top X)^{-1} X^\top y$ has ~~no~~ `se` = *0.42*.)",
   x = 0.02, hjust = 0, gp = gpar(fontsize = 18)
 )
 ```
@@ -71,10 +63,8 @@ Set `max_width` (in big points) to wrap a long label over several lines.
 ```{r wrap, fig.height = 0.8, fig.width = 4, out.width = "60%"}
 grid.newpage()
 grid.markdown(
-  paste(
-    "This is a **long caption** with some $x^2$ math that is wide enough",
-    "to wrap across several lines when a maximum width is set."
-  ),
+  r"(This is a **long caption** with some $x^2$ math that is wide enough
+      to wrap across several lines when a maximum width is set.)",
   x = 0.02, y = 0.95, hjust = 0, vjust = 1,
   max_width = 4 * 72,          # 4 inches, in big points
   gp = gpar(fontsize = 14)
@@ -121,17 +111,26 @@ ones, so that they mean the same thing here as in `gpar(col = ...)`;
 fallback list like `'Courier New', monospace`. Any other property is
 ignored.
 
-```{r html-css, fig.height = 0.7, fig.width = 6, out.width = "90%"}
+One figure with most of the table in it --- a sized and coloured span,
+two font families, a subscript, an underline, a highlight, and the blank
+line that two `<br>` leave behind:
+
+```{r html-css, fig.height = 1.3, fig.width = 6, out.width = "90%"}
 grid.newpage()
 grid.markdown(
-  paste0(
-    '<span style="font-size:26pt;color:#2E5E8E">Big</span> and ',
-    '<span style="font-family:serif">serif</span> and ',
-    '<span style="font-family:monospace">mono</span>.'
-  ),
-  x = 0.02, hjust = 0, gp = gpar(fontsize = 16)
+  r"(<span style="font-size:22pt;color:#2E5E8E">Model fit</span>,
+     <span style="font-family:serif">serif</span> and
+     <span style="font-family:monospace">mono</span>.<br><br>
+     The <span style="color:#B22222">**residual**</span> for H<sub>0</sub>
+     is <u>within</u> <mark>$2\sigma$</mark>.)",
+  x = 0.02, y = 0.9, hjust = 0, vjust = 1, gp = gpar(fontsize = 16)
 )
 ```
+
+Tags nest, and markdown and `$math$` keep working inside them, so
+`<u>**bold underlined**</u>` and `**<u>the same thing</u>**` render alike.
+Any other tag is dropped and its text kept --- as a browser does with
+`<a>` or a bare `<span>`, which have no rendering of their own.
 
 ### Which fonts are available
 
@@ -157,32 +156,6 @@ grid.markdown('<span style="font-family:MyFont">x</span>')
 A span's own family wins over `gp$fontfamily`, except for the width of
 the spaces *between* its words. Set both to the same family if that shows.
 
-```{r html-spans, fig.height = 0.7, fig.width = 6, out.width = "90%"}
-grid.newpage()
-grid.markdown(
-  paste0(
-    'The <span style="color:#B22222">**residual**</span> for ',
-    "H<sub>0</sub> is <u>within</u> $2\\sigma$."
-  ),
-  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
-)
-```
-
-Tags nest, and markdown and `$math$` keep working inside them, so
-`<u>**bold underlined**</u>` and `**<u>the same thing</u>**` render
-alike. Any other tag is dropped and its text kept --- as a browser does
-with `<a>` or a bare `<span>`, which have no rendering of their own.
-
-Two `<br>` in a row leave a blank line, as in HTML:
-
-```{r html-br, fig.height = 1.1, fig.width = 6, out.width = "90%"}
-grid.newpage()
-grid.markdown(
-  "**Model fit**<br><br>Deviance <mark>412.7</mark> on term<sub>1</sub>.",
-  x = 0.02, y = 0.85, vjust = 1, hjust = 0, gp = gpar(fontsize = 18)
-)
-```
-
 ## Block documents
 
 `markdown_box_grob()` lays out a full markdown document. Each block ---
@@ -191,10 +164,10 @@ stacked top to bottom. The `width` you give is the box width; prose
 wraps to fit it.
 
 ```{r block, fig.height = 3, fig.width = 4.6, out.width = "80%"}
-md <- "
+md <- r"(
 # Model summary
 
-The slope is $\\beta_1$ with *p* < 0.001, and this paragraph is long
+The slope is $\beta_1$ with *p* < 0.001, and this paragraph is long
 enough that it wraps inside the column.
 
 ## Diagnostics
@@ -204,7 +177,7 @@ enough that it wraps inside the column.
 - no influential points
 
 > Assumptions were checked and hold.
-"
+)"
 
 grid.newpage()
 grid.draw(markdown_box_grob(
@@ -227,7 +200,7 @@ Markdown tables become real typeset tables, with column alignment taken
 from the `|:---:|` markers --- something a text renderer cannot do.
 
 ```{r lists-tables, fig.height = 2, fig.width = 4.4, out.width = "80%"}
-md <- "
+md <- r"(
 ### Checklist
 
 - [x] fit the model
@@ -235,11 +208,11 @@ md <- "
 
 Coefficients:
 
-| term | $\\beta$  | *p* |
+| term | $\beta$  | *p* |
 |:-----|------------:|:---:|
 | intercept | 30.1 | *** |
 | slope | -5.3 | *** |
-"
+)"
 
 grid.newpage()
 grid.draw(markdown_box_grob(
@@ -287,13 +260,13 @@ markdown tags, and it takes CSS directly --- as text, or as the path to
 a `.css` file:
 
 ```{r style-css, fig.height = 1.2, fig.width = 5, out.width = "85%"}
-doc <- "
+doc <- r"(
 # Results
 
-The slope is $\\beta_1$ with *p* < 0.001.
+The slope is $\beta_1$ with *p* < 0.001.
 
 > Worth a second look.
-"
+)"
 
 grid.newpage()
 grid.draw(markdown_box_grob(
@@ -407,12 +380,12 @@ By default a table sizes to its content, so a wide one overflows the box.
 lets the cells wrap:
 
 ```{r style-table, fig.height = 2, fig.width = 5, out.width = "85%"}
-tbl <- "
+tbl <- r"(
 | Term | Meaning |
 |:-----|:--------|
-| $\\beta_1$ | the slope, which needs a good deal of room to explain |
-| $\\sigma$ | the residual standard deviation |
-"
+| $\beta_1$ | the slope, which needs a good deal of room to explain |
+| $\sigma$ | the residual standard deviation |
+)"
 
 grid.newpage()
 grid.draw(markdown_box_grob(
@@ -439,16 +412,12 @@ syntax has no spanning cells and no per-cell colour --- a cmark table
 cell carries no attributes at all --- but LaTeX's `array` has both:
 
 ```{r latex-escape, fig.height = 2.4, fig.width = 4.6, out.width = "80%"}
-tbl <- paste0(
-  "$$\\begin{array}{|l|c|c|}\\hline",
-  "\\rowcolor{#F6F8FA}",
-  "\\multicolumn{3}{|c|}{\\textbf{Model comparison}}\\\\\\hline",
-  "\\textbf{Model}&\\textbf{AIC}&\\textbf{R}^2\\\\\\hline",
-  "\\text{linear}&214.3&0.71\\\\",
-  "\\cellcolor{#DDF0DD}\\text{quadratic}",
-  "&\\cellcolor{#DDF0DD}201.8&\\cellcolor{#DDF0DD}0.87\\\\\\hline",
-  "\\end{array}$$"
-)
+tbl <- r"($$\begin{array}{|l|c|c|}\hline
+\rowcolor{#F6F8FA}\multicolumn{3}{|c|}{\textbf{Model comparison}}\\\hline
+\textbf{Model}&\textbf{AIC}&\textbf{R}^2\\\hline
+\text{linear}&214.3&0.71\\
+\cellcolor{#DDF0DD}\text{quadratic}&\cellcolor{#DDF0DD}201.8&\cellcolor{#DDF0DD}0.87\\\hline
+\end{array}$$)"
 
 grid.newpage()
 grid.draw(markdown_box_grob(
@@ -534,14 +503,15 @@ one document contains every degradation at once, so it is easier to see
 what "unsupported" actually looks like than to read about it:
 
 ```{r degrade, fig.height = 1.5, fig.width = 4.4, out.width = "80%"}
-doc <- paste0(
-  "A [link](https://example.org) keeps its text, an ",
-  "![inline diagram](missing.png) becomes its alt text, and an ",
-  "<unknown>unknown tag</unknown> keeps its content.\n\n",
-  "Footnotes[^1] land at the foot.\n\n",
-  "<table><tr><td>an HTML table is dropped</td></tr></table>\n\n",
-  "[^1]: Like this one."
-)
+doc <- r"(A [link](https://example.org) keeps its text, an
+![inline diagram](missing.png) becomes its alt text, and an
+<unknown>unknown tag</unknown> keeps its content.
+
+Footnotes[^1] land at the foot.
+
+<table><tr><td>an HTML table is dropped</td></tr></table>
+
+[^1]: Like this one.)"
 
 grid.newpage()
 grid.draw(markdown_box_grob(
@@ -578,7 +548,13 @@ placeholder. In detail:
 - **Block-level HTML** other than `<div>` is dropped rather than typeset.
   A `<div>` with blank lines around its tags is read as a styled chunk
   --- see *Styling* above. Inline HTML is rendered; see *Colour and
-  inline HTML*.
+  inline HTML*. **HTML tables** are part of this: CommonMark treats
+  `<table>` as a raw HTML block, so it is dropped --- GFM's own table
+  syntax is the one that renders.
+- **Spanning cells** have no GFM syntax --- a cmark table cell carries no
+  colspan attribute to read --- so `\multicolumn` and `\multirow` are not
+  reachable from markdown table syntax. Write the table as LaTeX in a
+  math span instead; see *Dropping down to LaTeX*.
 - **Syntax highlighting** of code blocks is not applied --- code is set
   in a monospace font, unhighlighted.
 - **Monospace spacing** depends on the device. `ragg`, `pdf()` and
@@ -590,11 +566,3 @@ placeholder. In detail:
 Everything else --- emphasis, headings, lists, quotes, tables, rules,
 block images, footnotes, ruby annotation, and of course `$math$` ---
 renders.
-
-- **HTML tables** are not read. CommonMark treats `<table>` as a raw HTML
-  block, which is dropped; only `<div>` is interpreted. GFM's own table
-  syntax is the one that renders.
-- **Spanning cells** have no GFM syntax --- a cmark table cell carries no
-  colspan attribute to read --- so `\multicolumn` and `\multirow` are not
-  reachable from markdown table syntax. Write the table as LaTeX in a
-  math span instead; see *Dropping down to LaTeX*.

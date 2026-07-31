@@ -30,7 +30,8 @@ which are honoured where, see \code{\link{md_style}}.
 \details{
 Tags are named as in HTML, so a stylesheet reads the way a CSS author
 expects: \code{body} (the document root, which every other tag
-inherits from), \code{p}, \code{h1} ... \code{h6}, \code{ul},
+inherits from --- and which also styles the box itself, see
+\code{\link{md_style}}), \code{p}, \code{h1} ... \code{h6}, \code{ul},
 \code{ol}, \code{li}, \code{blockquote}, \code{pre} (a code block),
 \code{code} (an inline code span), \code{strong} and \code{em} (what
 markdown's \code{**} and \code{*} produce), \code{table}, \code{tr},
