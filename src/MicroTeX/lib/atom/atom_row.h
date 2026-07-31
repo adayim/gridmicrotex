@@ -132,6 +132,12 @@ private:
   /** Splice discretionary marks into this row's words. Idempotent. */
   void hyphenate();
 
+  /**
+   * The row's text, and where each element starts in it. Used to resolve
+   * bidirectional levels while the atoms still hold their characters.
+   */
+  void collectText(std::vector<c32>& text, std::vector<int>& charStart) const;
+
   // Whether hyphenate() has already run on this row. createBox() can be
   // called more than once on the same atom, and the pass mutates the
   // element list.
@@ -148,6 +154,22 @@ public:
    * the pass does not run at all.
    */
   static bool _hyphenate;
+
+  /**
+   * Fold a whole row of text -- words and the spaces between them -- into
+   * a single run, so the graphics backend receives a phrase rather than a
+   * sequence of words.
+   *
+   * Only correct when nothing will wrap, because the spaces a line breaks
+   * at stop being separate boxes. Set from `max_width <= 0`, where the
+   * splitter is not called at all (see builder.cpp), and guarded per parse
+   * like BoxSplitter::_justify.
+   *
+   * This is what makes right-to-left text come out in the right order:
+   * ordering is the device's job once it can see the whole string, and it
+   * implements the bidirectional algorithm that MicroTeX does not.
+   */
+  static bool _mergeText;
 
   bool _lookAtLastAtom;
 

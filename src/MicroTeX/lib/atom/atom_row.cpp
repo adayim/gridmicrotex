@@ -8,6 +8,7 @@
 #include "box/box_single.h"
 #include "core/glue.h"
 #include "env/env.h"
+#include "bidi.h"
 #include "hyphenator.h"
 #include "utils/utf.h"
 
@@ -53,6 +54,7 @@ void AtomDecor::setPreviousAtom(const sptr<AtomDecor>& prev) {
 
 bool RowAtom::_breakEverywhere = false;
 bool RowAtom::_hyphenate = false;
+bool RowAtom::_mergeText = false;
 
 // Offer a break inside every word the patterns allow one in, by splicing
 // discretionary marks into the element list before any box is built.
@@ -258,15 +260,42 @@ sptr<TextAtom> RowAtom::processContinues(int& i, bool isMathMode) {
 // it. That is what lets line breaking, and hyphenation, keep working.
 sptr<TextAtom> RowAtom::processTextRun(int& i, bool isMathMode) {
   if (isMathMode || _breakEverywhere) return nullptr;
+  const int n = static_cast<int>(_elements.size());
   int cnt = 0;
   auto txt = sptrOf<TextAtom>(false);
-  while (true) {
-    const auto a = currentChar(i + cnt);
-    if (a == nullptr || a->isMathMode()) break;
-    const auto* ca = dynamic_cast<const CharAtom*>(a.get());
-    if (ca == nullptr || ca->fontStyle() != FontStyle::invalid) break;
+  while (i + cnt < n) {
+    const auto& el = _elements[i + cnt];
+
+    // With _mergeText the word spaces go into the run as well, so the
+    // backend is handed a phrase. It can then apply the bidirectional
+    // algorithm and kern across the spaces, neither of which is possible
+    // when each word is positioned separately. Only a word space
+    // qualifies: a `\quad` is a measured skip and keeps its own box.
+    if (_mergeText) {
+      if (const auto* sp = dynamic_cast<const SpaceAtom*>(el.get())) {
+        if (!sp->isInterword()) break;
+        txt->append(' ');
+        ++cnt;
+        continue;
+      }
+      // The parser emits one of these after every space. There is nothing
+      // to break here, so it is simply absorbed.
+      if (dynamic_cast<const BreakMarkAtom*>(el.get()) != nullptr) {
+        ++cnt;
+        continue;
+      }
+    }
+
+    const auto* ca = dynamic_cast<const CharAtom*>(el.get());
+    if (ca == nullptr || ca->isMathMode() ||
+        ca->fontStyle() != FontStyle::invalid) {
+      break;
+    }
     const c32 u = ca->unicode();
-    if (isUnicodeDigit(u)) break;
+    // Digits are held out only to keep the break position createBox()
+    // adds after each one, which is what lets a long number wrap. When
+    // nothing wraps there is nothing to protect.
+    if (!_mergeText && isUnicodeDigit(u)) break;
     txt->append(u);
     ++cnt;
   }
@@ -275,12 +304,54 @@ sptr<TextAtom> RowAtom::processTextRun(int& i, bool isMathMode) {
   return txt;
 }
 
+// One entry per element: how many characters it contributes to the row's
+// text, and where in that text it starts. Non-textual atoms contribute
+// nothing, which is what lets a level be looked up from an element index.
+void RowAtom::collectText(
+  std::vector<c32>& text,
+  std::vector<int>& charStart
+) const {
+  charStart.assign(_elements.size(), -1);
+  for (size_t k = 0; k < _elements.size(); k++) {
+    const auto* a = _elements[k].get();
+    if (const auto* ca = dynamic_cast<const CharAtom*>(a)) {
+      if (ca->isMathMode()) continue;
+      charStart[k] = static_cast<int>(text.size());
+      text.push_back(ca->unicode());
+      continue;
+    }
+    if (const auto* sp = dynamic_cast<const SpaceAtom*>(a)) {
+      if (!sp->isInterword()) continue;
+      charStart[k] = static_cast<int>(text.size());
+      text.push_back(' ');
+    }
+  }
+}
+
 sptr<Box> RowAtom::createBox(Env& env) {
   // Off by default, so this costs one predictable branch on the path
-  // every formula takes.
-  if (_hyphenate) hyphenate();
+  // every formula takes. Skipped when the row is being merged: the marks
+  // exist to offer line breaks, and _mergeText means nothing will break.
+  if (_hyphenate && !_mergeText) hyphenate();
 
   auto hbox = new HBox();
+
+  // Bidirectional levels, resolved here because a box does not keep the
+  // text it was built from (TextBox holds an opaque layout). Only worth
+  // doing when the row will be broken -- an unmerged row is one run per
+  // word, and it is those runs that need reordering. A row with nothing
+  // right-to-left in it costs one scan and stops.
+  std::vector<c32> rowText;
+  std::vector<int> charStart;
+  std::vector<std::uint8_t> levels;
+  std::uint8_t curLevel = 0;
+  bool levelled = false;
+  if (!_mergeText && gridmicrotex::bidi_available()) {
+    collectText(rowText, charStart);
+    if (gridmicrotex::bidi_has_rtl(rowText)) {
+      levelled = gridmicrotex::bidi_levels(rowText, levels);
+    }
+  }
   // convert atoms to boxes and add to the horizontal box
   const int end = _elements.size() - 1;
   for (int i = -1; i < end;) {
@@ -303,6 +374,15 @@ sptr<Box> RowAtom::createBox(Env& env) {
         ba = dynamic_cast<BreakMarkAtom*>(raw.get());
       } else {
         break;
+      }
+    }
+
+    // Where this atom's content starts in the row's text, captured before
+    // step 2 advances `i` over a merged run.
+    if (levelled) {
+      const int at = charStart[static_cast<size_t>(i)];
+      if (at >= 0 && at < static_cast<int>(levels.size())) {
+        curLevel = levels[static_cast<size_t>(at)];
       }
     }
 
@@ -438,6 +518,15 @@ sptr<Box> RowAtom::createBox(Env& env) {
     // 8. Append atom's box and kerning to horizontal box
     hbox->add(box);
     if (std::abs(kern) > PREC) hbox->add(StrutBox::create(kern));
+
+    // Every box this atom produced -- its own, plus any glue or kern that
+    // came with it -- takes the atom's direction, so a space between two
+    // right-to-left words travels with them when the line is reordered.
+    if (levelled) {
+      while (hbox->_childLevels.size() < hbox->_children.size()) {
+        hbox->_childLevels.push_back(curLevel);
+      }
+    }
 
     env.setLastFontId(box->lastFontId());
     // kerning do not interfere with the normal glue-rules without kerning

@@ -28,6 +28,16 @@ public:
   SpaceAtom(UnitType unit, float width, float height, float depth) noexcept
       : _width(width), _height(height), _depth(depth), _unit(unit) {}
 
+  /**
+   * Whether this is an ordinary space between words, as opposed to a
+   * measured skip such as `\quad` or an explicit dimension.
+   *
+   * RowAtom needs to tell them apart: a word space may be folded into the
+   * text run around it so the device sees a whole phrase, a `\quad` may
+   * not. These are the two conditions createBox() itself branches on.
+   */
+  bool isInterword() const { return _blankSpace && _blankType == SpaceType::none; }
+
   sptr<Box> createBox(Env& env) override;
 
   static sptr<SpaceAtom> empty() { return sptrOf<SpaceAtom>(UnitType::em, 0.f, 0.f, 0.f); }

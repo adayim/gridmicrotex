@@ -21,10 +21,17 @@ test_that("second resolve of the same family hits the in-process cache", {
   expect_lt(t, 0.05)
 })
 
-test_that("unknown family falls back without erroring (systemfonts returns default)", {
+test_that("unknown family falls back to a registered font, or to no font", {
   expect_silent(fam <- gridmicrotex:::.resolve_text_font("TotallyNotAFontFamily123"))
-  # systemfonts picks a fallback; we should still end up with *some* registered family.
-  expect_true(is.character(fam))
+  expect_length(fam, 1L)
+  # Only two answers are usable: a family MicroTeX has actually registered,
+  # or "" meaning "fall back to the default text metrics". Anything else is
+  # a name the layout engine will not find, and metrics silently go wrong.
+  if (nzchar(fam)) {
+    expect_true(fam %in% microtex_main_font_families())
+  } else {
+    expect_identical(fam, "")
+  }
 })
 
 test_that("latex_grob renders with gp$fontfamily and registers main_font", {

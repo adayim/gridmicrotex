@@ -37,6 +37,10 @@ microtex_has_hyphenation <- function() {
     .Call(`_gridmicrotex_microtex_has_hyphenation`)
 }
 
+microtex_bidi_available <- function() {
+    .Call(`_gridmicrotex_microtex_bidi_available`)
+}
+
 microtex_clear_hyphenation <- function() {
     invisible(.Call(`_gridmicrotex_microtex_clear_hyphenation`))
 }

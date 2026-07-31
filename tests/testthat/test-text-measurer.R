@@ -147,13 +147,16 @@ test_that("\\textrm is measured in the font it is drawn in", {
 
 test_that("register/clear measurer lifecycle and integration", {
   m <- gridmicrotex:::.make_text_measurer(grid::gpar())
-  expect_silent(register_text_measurer(m))
-  expect_silent(clear_text_measurer())
-
-  # Double-register replaces previous without error
   m2 <- gridmicrotex:::.make_text_measurer(grid::gpar(fontfamily = "mono"))
+  # The two closures must actually disagree, or "the second registration
+  # replaced the first" is unfalsifiable below.
+  expect_false(isTRUE(all.equal(m("Wig", 0L), m2("Wig", 0L))))
+
   register_text_measurer(m)
-  expect_silent(register_text_measurer(m2))
+  clear_text_measurer()
+  # Double-register replaces the previous one rather than stacking.
+  register_text_measurer(m)
+  register_text_measurer(m2)
   clear_text_measurer()
 
   # CJK layout uses measurer for dimensions

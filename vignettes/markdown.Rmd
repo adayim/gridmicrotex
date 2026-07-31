@@ -546,10 +546,14 @@ placeholder. In detail:
 - **Display math** --- a paragraph that is nothing but `$$…$$` --- gets
   its own centred line, styleable as the `math` tag. Inline `$…$` is
   unaffected.
-- **Right-to-left text** is only partly supported. Each word is handed to
-  the device as one run, so Arabic letters *do* join and shape correctly
-  --- but MicroTeX places the words themselves left to right, so a phrase
-  of more than one word comes out in the wrong order.
+- **Right-to-left text** is supported. A label that does not wrap is
+  handed to the device as one run, so the device applies the
+  bidirectional algorithm --- mixed Arabic and Latin included. Text that
+  *wraps* is broken into lines in logical order and each line is then put
+  into visual order, as the Unicode algorithm prescribes. The second half
+  needs [FriBidi](https://github.com/fribidi/fribidi), which is optional:
+  built without it, a wrapped right-to-left paragraph keeps left-to-right
+  word order and everything else is unaffected.
 - **Small caps** and `font-variant-numeric` have no MicroTeX command.
 - **Block-level HTML** other than `<div>` is dropped rather than typeset.
   A `<div>` with blank lines around its tags is read as a styled chunk

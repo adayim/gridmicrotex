@@ -65,14 +65,16 @@ test_that("device support detection and typeface fallback work", {
   grDevices::postscript(tf_ps)
   on.exit({ grDevices::dev.off(); unlink(tf_ps) }, add = TRUE)
   expect_false(gridmicrotex:::.device_supports_typeface_glyphs())
-  expect_warning(
-    expect_no_error({
-      g <- latex_grob("\\frac{a}{b}", render_mode = "typeface", gp = grid::gpar(fontsize = 20))
-      grid::grid.newpage()
-      grid::grid.draw(g)
-    }),
-    "falling back to path mode"
-  )
+  expect_warning({
+    g <- latex_grob("\\frac{a}{b}", render_mode = "typeface",
+                    gp = grid::gpar(fontsize = 20))
+    grid::grid.newpage()
+    grid::grid.draw(g)
+  }, "falling back to path mode")
+  # The fallback has to substitute the path layout, not merely warn: the
+  # children it draws must be outlines, not glyphs the device cannot set.
+  kids <- suppressWarnings(grid::makeContent(g))$children
+  expect_true("pathgrob" %in% vapply(kids, function(k) class(k)[1], ""))
 })
 
 # --- edge cases: empty and invalid input ---
@@ -85,10 +87,13 @@ test_that("latex_grob handles empty input as a zero-size grob", {
   expect_equal(nrow(g$layout_df), 0L)
 })
 
-test_that("latex_grob handles invalid LaTeX commands gracefully", {
-  # MicroTeX silently ignores unknown commands; verify it doesn't crash
-  g <- latex_grob("\\notavalidcommand{x}")
-  expect_s3_class(g, "latexgrob")
+test_that("an unknown command is set as its own name, not dropped", {
+  # MicroTeX is lenient rather than strict: \notavalidcommand comes out as
+  # the letters of its name followed by its argument. Rendering nothing
+  # would hide a typo completely, so assert the name is actually drawn.
+  g <- latex_grob("\\notavalidcommand{x}", input_mode = "math")
+  expect_gte(nrow(g$layout_df), nchar("notavalidcommand"))
+  expect_gt(g$bbox_w, 0)
 })
 
 # --- editGrob: re-parse on parse-affecting fields ---
@@ -98,7 +103,10 @@ test_that("editGrob re-parses when tex changes", {
   g2 <- grid::editGrob(g, tex = "x^{2} + y^{2} + z^{2}")
   expect_equal(g2$tex, "x^{2} + y^{2} + z^{2}")
   expect_true(g2$bbox_w > g$bbox_w)
-  expect_true(nrow(g2$layout_df) > nrow(g$layout_df))
+  # That the layout is genuinely rebuilt, without assuming how many
+  # records a given string produces -- consecutive text is drawn as one
+  # run when nothing wraps, so record count is not a proxy for length.
+  expect_false(identical(g2$layout_df, g$layout_df))
   # viewport width/height tracked bbox
   expect_equal(
     as.numeric(g2$vp$width),
@@ -179,11 +187,13 @@ test_that("\\def defines a zero-argument macro and renders identically to \\newc
   expect_equal(nrow(layout_def), nrow(layout_nc))
 })
 
-test_that("\\def silently overwrites an existing macro", {
-  # First define, then redefine with \def — no error should be thrown
-  expect_no_error(
-    parse_latex_cpp("\\def\\myoverwrite{x} \\def\\myoverwrite{y} \\myoverwrite", text_size = 20)
-  )
+test_that("\\def silently overwrites an existing macro, and the last wins", {
+  # \newcommand errors on redefinition; \def replaces. Asserting only that
+  # it does not error would pass if the *first* body were kept.
+  got <- parse_latex_cpp(
+    "\\def\\myoverwrite{x} \\def\\myoverwrite{y} \\myoverwrite", text_size = 20)
+  expect_equal(got, parse_latex_cpp("y", text_size = 20))
+  expect_false(isTRUE(all.equal(got, parse_latex_cpp("x", text_size = 20))))
 })
 
 test_that("\\def with invalid control sequence name throws a parse error", {

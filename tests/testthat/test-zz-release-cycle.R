@@ -26,7 +26,13 @@ test_that("a release / re-init cycle leaves the macro registry usable", {
     nrow(latex_grob("\\gmfontfamily{A}{x}", input_mode = "math")$layout_df),
     1L
   )
-  expect_no_error(latex_grob("a\\mark{m}b", input_mode = "math"))
+  # \mark is ours, registered at init. After a release it must still be
+  # recognised: the anchor is recorded and the marker itself draws
+  # nothing, so the layout is exactly that of the text without it.
+  marked <- latex_grob("a\\mark{m}b", input_mode = "math")
+  expect_equal(marked$marks$name, "m")
+  expect_equal(nrow(marked$layout_df),
+               nrow(latex_grob("ab", input_mode = "math")$layout_df))
   expect_equal(
     .resolve_text_family(
       latex_grob("\\textsf{\\textrm{a}}", input_mode = "math")$layout_df$font_style[1],
@@ -42,13 +48,12 @@ test_that("a release / re-init cycle leaves the macro registry usable", {
   # a macro, so it should be unaffected by a release -- assert it rather
   # than assume it.
   wide <- "\\begin{tabular}{p{3cm}}\\text{wrap me over several lines}\\end{tabular}"
-  expect_equal(
-    as.numeric(latex_dims(wide, input_mode = "math",
-                          gp = grid::gpar(fontsize = 16))$width),
-    as.numeric(latex_dims(wide, input_mode = "math",
-                          gp = grid::gpar(fontsize = 16))$width)
-  )
-  expect_gt(as.numeric(latex_dims(wide, input_mode = "math",
-                                  gp = grid::gpar(fontsize = 16))$height),
-            20)
+  free <- "\\begin{tabular}{l}\\text{wrap me over several lines}\\end{tabular}"
+  d <- latex_dims(wide, input_mode = "math", gp = grid::gpar(fontsize = 16))
+  # p{3cm} still constrains the column: narrower than the same cell in a
+  # free column, and tall enough to have wrapped onto more than one line.
+  expect_lt(as.numeric(d$width),
+            as.numeric(latex_dims(free, input_mode = "math",
+                                  gp = grid::gpar(fontsize = 16))$width))
+  expect_gt(as.numeric(d$height), 20)
 })

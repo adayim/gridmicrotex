@@ -870,7 +870,7 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
 #' @return A function taking \code{(text, font_style)} that returns
 #'   \code{c(width_ratio, ascent_ratio, height_ratio)} where ratios
 #'   are relative to the font size.
-#' @keywords internal
+#' @noRd
 .make_text_measurer <- function(text_gp) {
   ref_size <- 72  # reference size in points for measurement precision
 

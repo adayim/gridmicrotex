@@ -206,9 +206,14 @@ test_that("justify is validated and settable as an option", {
 })
 
 test_that("a line of one long word is left alone", {
-  # No interword glue to stretch, and nothing should crash or blow up.
   solid <- paste0("\\text{", strrep("x", 80), "}")
-  expect_no_error(latex_dims(solid, max_width = 100, justify = TRUE))
+  plain <- as.numeric(latex_dims(solid, max_width = 100)$width)
+  just  <- as.numeric(latex_dims(solid, max_width = 100, justify = TRUE)$width)
+  # There is no interword glue to stretch, so justification must leave the
+  # line exactly as it was -- and it overruns the measure rather than
+  # being padded out to it.
+  expect_equal(just, plain)
+  expect_gt(just, 100)
 })
 
 # --- optimal (total-fit) line breaking ---------------------------------
@@ -321,7 +326,6 @@ test_that("greedy and optimal layouts are cached separately", {
 
 test_that("content with nothing to break is unaffected", {
   solid <- paste0("\\text{", strrep("x", 60), "}")
-  expect_no_error(latex_dims(solid, max_width = 100, line_break = "optimal"))
   expect_equal(
     as.numeric(latex_dims(solid, max_width = 100, line_break = "optimal")$width),
     as.numeric(latex_dims(solid, max_width = 100, line_break = "greedy")$width),

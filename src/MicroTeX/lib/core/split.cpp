@@ -1,5 +1,6 @@
 #include "core/split.h"
 
+#include "bidi.h"
 #include "box/box_group.h"
 // glue.h only forward-declares GlueBox; justifyLine() needs the
 // definition to reach _stretch and _width.
@@ -326,8 +327,28 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<Box>& b, float width, f
   return {splitted, box};
 }
 
+// Put one finished line into visual order.
+//
+// Lines are built in logical order -- that is the order the breaks have
+// to be chosen in -- and only then reordered, which is what the Unicode
+// algorithm prescribes. Does nothing unless the row carried levels, i.e.
+// unless something in it was right-to-left.
+static void reorderLine(const sptr<Box>& line) {
+  auto h = std::dynamic_pointer_cast<HBox>(line);
+  if (h == nullptr || h->_childLevels.empty()) return;
+  gridmicrotex::bidi_reorder(h->_children, h->_childLevels);
+  // Reordering is a permutation, not a normalisation: applying it twice
+  // would put the line back the wrong way round. Dropping the levels once
+  // they have been used makes a second call a no-op rather than a bug.
+  h->_childLevels.clear();
+}
+
 std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width, float lineSpace) {
-  if (width == 0 || hb->_width <= width) return {false, hb};
+  // A single line that already fits still has to be ordered.
+  if (width == 0 || hb->_width <= width) {
+    reorderLine(hb);
+    return {false, hb};
+  }
 
   auto* vbox = new VBox();
   sptr<HBox> first, second;
@@ -377,6 +398,10 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
       first = hboxes.first;
       second = hboxes.second;
     }
+    // Visual order before justification: justifyLine() drops the spaces
+    // that end the line and stretches the rest, and which spaces those
+    // are depends on the direction.
+    reorderLine(first);
     // `first` is a completed line and something follows it, so it is
     // never the last line of the paragraph -- the one case TeX leaves
     // ragged. The trailing `second` added after this loop is that line,
@@ -388,6 +413,8 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
   }
 
   if (second != nullptr) {
+    // The last line, left ragged but still ordered.
+    reorderLine(second);
     vbox->add(second, lineSpace);
     return {splitted, sptr<Box>(vbox)};
   }

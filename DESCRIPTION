@@ -20,7 +20,7 @@ Description: Renders 'LaTeX' math equations as native R grid graphics objects
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-SystemRequirements: C++17, FreeType (>= 2.9), pkg-config
+SystemRequirements: C++17, FreeType (>= 2.9), pkg-config, FriBidi
 Depends:
     R (>= 4.2.0)
 LinkingTo:

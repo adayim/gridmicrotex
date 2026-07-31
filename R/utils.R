@@ -255,11 +255,33 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   pos <- 1L
   unclosed <- FALSE
 
+  # A break -- a newline, or a literal `\\` -- that tops or tails a run of
+  # prose is separating that prose from the math beside it, so it belongs
+  # at the formula level. Left inside the \text{} it only adds an empty
+  # line to the text box, and the box and the math still sit side by side
+  # in the enclosing row: that is why "Title\n$x^2$" came out on one line,
+  # and why a pasted \caption landed to the left of its table rather than
+  # above it. Interior newlines keep their old meaning.
+  brk <- "(?:[ \t\r]*(?:\n|\\\\\\\\)[ \t\r]*)+"
+
   emit_text <- function(s) {
-    if (nzchar(s)) {
-      s <- gsub("\n", " \\\\\\\\", s, perl = TRUE)   # was " \\\\\\\\ "
-      out <<- c(out, paste0("\\text{", s, "}"))
+    if (!nzchar(s)) return()
+    lead <- regmatches(s, regexpr(paste0("^", brk), s, perl = TRUE))
+    lead <- if (length(lead)) lead else ""
+    rest <- substring(s, nchar(lead) + 1L)
+    trail <- regmatches(rest, regexpr(paste0(brk, "$"), rest, perl = TRUE))
+    trail <- if (length(trail)) trail else ""
+    core <- substr(rest, 1L, nchar(rest) - nchar(trail))
+
+    # A run of them collapses to one, the way consecutive blank lines make
+    # a single paragraph break in LaTeX. Stripping document wrappers
+    # leaves blank lines behind, and each would otherwise be an empty row.
+    if (nzchar(lead)) out <<- c(out, "\\\\")
+    if (nzchar(core)) {
+      out <<- c(out, paste0("\\text{",
+                            gsub("\n", " \\\\\\\\", core, perl = TRUE), "}"))
     }
+    if (nzchar(trail)) out <<- c(out, "\\\\")
   }
 
   for (sp in spans) {
@@ -283,6 +305,13 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
 
   if (unclosed) {
     warning("Unclosed math delimiter detected and auto-closed at end of string.")
+  }
+
+  # A break at either end has nothing to separate -- it would only add a
+  # blank first or last row.
+  while (length(out) && identical(out[1L], "\\\\")) out <- out[-1L]
+  while (length(out) && identical(out[length(out)], "\\\\")) {
+    out <- out[-length(out)]
   }
 
   paste(out, collapse = "")   # <-- no space

@@ -56,24 +56,37 @@ test_that("math and escapes survive inside emphasis", {
   expect_true("text" %in% g$layout_df$type)    # the prose
 })
 
-test_that("geom_markdown builds a plot", {
+test_that("geom_markdown contributes one rendered grob per row", {
+  # "the plot builds" is ggplot2's business; ours is that the layer hands
+  # back a grob per row with something in it.
   df <- data.frame(x = 1:3, y = 1:3,
                    lab = c("**b**", "*i* $\\beta_1$", "`c` $x^2$"))
-  p <- ggplot2::ggplot(df, ggplot2::aes(x, y, label = lab)) +
-    geom_markdown(fontsize = 12)
-  expect_s3_class(ggplot2::ggplot_gtable(ggplot2::ggplot_build(p)), "gtable")
+  gs <- ggplot2::layer_grob(
+    ggplot2::ggplot(df, ggplot2::aes(x, y, label = lab)) +
+      geom_markdown(fontsize = 12))[[1]]
+  expect_length(gs, 3L)
+  expect_true(all(vapply(gs, inherits, logical(1), "latexgrob")))
+  expect_true(all(vapply(gs, function(g) nrow(g$layout_df) > 0, logical(1))))
 })
 
-test_that("element_markdown works for titles and tick labels", {
+test_that("element_markdown installs our grob as the axis titles", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   df <- data.frame(x = 1:3, y = 1:3)
   p <- ggplot2::ggplot(df, ggplot2::aes(x, y)) + ggplot2::geom_point() +
     ggplot2::labs(x = "**w** in $10^3$", y = "*eta* $\\eta$") +
     ggplot2::theme(
       axis.title.x = element_markdown(),
-      axis.title.y = element_markdown(),
-      axis.text.x  = element_markdown(fontsize = 9)
+      axis.title.y = element_markdown()
     )
-  expect_s3_class(ggplot2::ggplot_gtable(ggplot2::ggplot_build(p)), "gtable")
+  gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
+  named <- function(nm) gt$grobs[[which(gt$layout$name == nm)]]
+
+  # Both titles, so the y case -- which is rotated and takes a different
+  # branch -- is covered too.
+  expect_s3_class(named("xlab-b"), "latexgrob")
+  expect_s3_class(named("ylab-l"), "latexgrob")
+  # Rendered as markdown, not as the literal asterisks.
+  expect_false(any(grepl("*", named("xlab-b")$layout_df$text, fixed = TRUE)))
 })
 
 test_that("a bundle of tick labels reports a non-zero size", {
@@ -215,6 +228,10 @@ test_that("axis tick labels are never laid out as blocks", {
   # claim the full width.
   g <- ggplot2::element_grob(element_markdown(), label = c("# H", "# H"))
   expect_s3_class(g, "gridmicrotex_labels")
+  # The heading would promote to a box on its own; in a tick bundle each
+  # label has to stay a run.
+  expect_true(all(vapply(g$children, inherits, logical(1), "latexgrob")))
+  expect_false(any(vapply(g$children, inherits, logical(1), "markdownbox")))
 })
 
 test_that("a promoted label's height does not depend on the parent width", {
@@ -228,7 +245,7 @@ test_that("a promoted label's height does not depend on the parent width", {
   expect_equal(h, rep(h[1], 3))
 })
 
-test_that("plots with block titles build and draw", {
+test_that("a block plot title is promoted to a box, and its style applies", {
   skip_on_cran()
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   mk <- function(...) {
@@ -237,8 +254,21 @@ test_that("plots with block titles build and draw", {
       ggplot2::labs(title = "## Findings\n\n- slope $\\beta_1$\n- *p* < 0.001") +
       ggplot2::theme(plot.title = element_markdown(...))
   }
-  expect_no_error(grid::grid.draw(ggplot2::ggplotGrob(mk())))
-  expect_no_error(grid::grid.draw(ggplot2::ggplotGrob(
-    mk(width = grid::unit(1, "npc"),
-       style = "body { background: #EEF3FB; padding: 8px }"))))
+  title_grob <- function(p) {
+    gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
+    gt$grobs[[which(gt$layout$name == "title")]]
+  }
+  height <- function(g) {
+    grid::convertHeight(grid::heightDetails(g), "bigpts", valueOnly = TRUE)
+  }
+
+  plain <- title_grob(mk())
+  expect_s3_class(plain, "markdownbox")
+
+  styled <- title_grob(mk(width = grid::unit(1, "npc"),
+                          style = "body { background: #EEF3FB; padding: 8px }"))
+  expect_s3_class(styled, "markdownbox")
+  # 8px of padding above and below has to reach the box, or the style is
+  # being carried but never resolved.
+  expect_gt(height(styled), height(plain))
 })

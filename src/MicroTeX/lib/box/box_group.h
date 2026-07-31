@@ -30,6 +30,16 @@ public:
    */
   std::map<int, sptr<Box>> _breakBoxes;
 
+  /**
+   * Bidirectional embedding level per child, or empty when the row holds
+   * nothing right-to-left -- which is the usual case and costs nothing.
+   *
+   * Resolved while the atoms still hold their text (a box does not: see
+   * TextBox), carried through split() so each line keeps the levels of
+   * its own children, and consumed by BoxSplitter once the line is built.
+   */
+  std::vector<std::uint8_t> _childLevels;
+
   HBox() = default;
 
   /** Create a horizontal box with alignment */

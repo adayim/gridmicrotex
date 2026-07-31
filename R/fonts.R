@@ -13,7 +13,7 @@
 #'
 #' @param name Font name or alias. Empty string uses the default font.
 #' @return The resolved font name.
-#' @keywords internal
+#' @noRd
 resolve_math_font <- function(name) {
   if (is.null(name) || !nzchar(name)) return("")
 

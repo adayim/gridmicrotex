@@ -25,7 +25,11 @@ test_that("a taken discretionary draws its hyphen", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # Before this, `\-` broke the word and drew nothing, which is worse
   # than not breaking: the reader sees "hy" and "phenation" as two words.
-  expect_equal(frags("\\text{hy\\-phen\\-ation}"), c("hy", "phen", "ation"))
+  #
+  # Unwrapped, the marks are inert -- there is no line to break -- so the
+  # word merges into one run like any other text and no hyphen appears.
+  expect_equal(frags("\\text{hy\\-phen\\-ation}"), "hyphenation")
+  # Given a measure, each taken break draws its hyphen.
   expect_equal(frags("\\text{hy\\-phen\\-ation}", max_width = 60),
                c("hy", "-", "phen", "-", "ation"))
 })

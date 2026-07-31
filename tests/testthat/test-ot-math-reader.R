@@ -37,9 +37,9 @@ test_that("load_math_font synthesises CLM from a bare OTF", {
   file.copy(src, tmp, overwrite = TRUE)
   on.exit(unlink(tmp), add = TRUE)
 
-  # load_math_font is silent on success; a2 might warn if systemfonts
+  # load_math_font is silent on success; it might warn if systemfonts
   # reports a duplicate registration.
-  expect_no_error(suppressWarnings(load_math_font(tmp)))
+  suppressWarnings(load_math_font(tmp))
   # The font registers under its family name (Lete Sans Math) — same as
   # the bundled font because it IS the same OTF.
   expect_true("Lete Sans Math" %in% available_math_fonts())

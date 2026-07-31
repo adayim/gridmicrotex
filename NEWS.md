@@ -1,6 +1,7 @@
 # gridmicrotex 0.1.0
 
-- Text inside `\text{}` is drawn a word at a time rather than a letter at a time, so kerning is applied, PDF/SVG output can be searched for a word, and files are several times smaller.
+- Text inside `\text{}` is drawn a line at a time rather than a letter at a time, so kerning is applied, PDF/SVG output can be searched for a phrase, and files are several times smaller. Text given a `max_width` is drawn a word at a time, since the spaces are where it breaks.
+- Right-to-left text renders in the correct order. Wrapped text additionally needs FriBidi, which is optional; without it a wrapped right-to-left paragraph keeps left-to-right word order.
 - New `hyphenate` argument on `latex_grob()`, `latex_dims()` and `latex_options()` breaks long words across lines, with a hyphen. Off by default.
 - New `markdown_grob()` and `grid.markdown()` render inline markdown with LaTeX math; `markdown_box_grob()` renders a block document.
 - New `geom_markdown()` and `element_markdown()` for ggplot2, both taking `style`. A title containing headings or lists is laid out as blocks, not flattened.
@@ -18,6 +19,7 @@
 - Bug fix: `\textrm{}` now returns text to `gp$fontfamily`; it previously did nothing.
 - Bug fix: `\texttt{}` drew in the body font instead of a monospace one.
 - Bug fix: `max_width` is now honoured by content containing `\\` line breaks.
+- Bug fix: in `"mixed"` mode a line break between prose and math was swallowed, so the two were drawn side by side. A pasted `\caption` landed to the left of its table.
 - Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room and they overlapped the axis title.
 - Bug fix: reloading the package corrupted MicroTeX's macro registry, so a later large formula could crash R.
 - Bug fix: `\-` offered a line break but drew no hyphen at it.

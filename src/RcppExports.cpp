@@ -106,6 +106,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// microtex_bidi_available
+bool microtex_bidi_available();
+RcppExport SEXP _gridmicrotex_microtex_bidi_available() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(microtex_bidi_available());
+    return rcpp_result_gen;
+END_RCPP
+}
 // microtex_clear_hyphenation
 void microtex_clear_hyphenation();
 RcppExport SEXP _gridmicrotex_microtex_clear_hyphenation() {
@@ -245,6 +255,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_microtex_set_default_math_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_math_font, 1},
     {"_gridmicrotex_microtex_register_hyphenation", (DL_FUNC) &_gridmicrotex_microtex_register_hyphenation, 4},
     {"_gridmicrotex_microtex_has_hyphenation", (DL_FUNC) &_gridmicrotex_microtex_has_hyphenation, 0},
+    {"_gridmicrotex_microtex_bidi_available", (DL_FUNC) &_gridmicrotex_microtex_bidi_available, 0},
     {"_gridmicrotex_microtex_clear_hyphenation", (DL_FUNC) &_gridmicrotex_microtex_clear_hyphenation, 0},
     {"_gridmicrotex_microtex_hyphenate_word", (DL_FUNC) &_gridmicrotex_microtex_hyphenate_word, 1},
     {"_gridmicrotex_microtex_release", (DL_FUNC) &_gridmicrotex_microtex_release, 0},

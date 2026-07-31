@@ -24,6 +24,7 @@ struct LayoutModeGuard {
         BoxSplitter::_justify = false;
         BoxSplitter::_optimalBreak = false;
         RowAtom::_hyphenate = false;
+        RowAtom::_mergeText = false;
     }
 };
 
@@ -92,6 +93,11 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // Hyphenation needs patterns; without them the pass is a no-op, so
     // there is nothing to check here.
     RowAtom::_hyphenate = hyphenate;
+    // With no width limit the splitter is never called (builder.cpp), so
+    // the spaces a line would break at are free to be folded into the
+    // text run around them -- which is what lets the backend order
+    // right-to-left text correctly and kern across spaces.
+    RowAtom::_mergeText = (max_width <= 0);
 
     // Decode foreground color
     color fg = decodeColor(fg_color);

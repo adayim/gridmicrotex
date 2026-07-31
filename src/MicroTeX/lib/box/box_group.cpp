@@ -114,12 +114,17 @@ void HBox::replaceFirst(const sptr<Box>& from, const sptr<Box>& to) {
 pair<sptr<HBox>, sptr<HBox>> HBox::split(int pos, int shift) {
   auto hb1 = cloneBox();
   auto hb2 = cloneBox();
+  // A child's embedding level travels with it, so each line can be put
+  // into visual order using only its own children.
+  const bool levelled = _childLevels.size() == _children.size();
   for (int i = 0; i <= pos; i++) {
     hb1->add(_children[i]);
+    if (levelled) hb1->_childLevels.push_back(_childLevels[i]);
   }
 
   for (size_t i = pos + shift; i < _children.size(); i++) {
     hb2->add(_children[i]);
+    if (levelled) hb2->_childLevels.push_back(_childLevels[i]);
   }
 
   if (!_breakPositions.empty()) {

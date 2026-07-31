@@ -5,7 +5,7 @@
 #'
 #' @param tex_pt Numeric value in TeX points.
 #' @return Numeric value in big (PostScript) points.
-#' @keywords internal
+#' @noRd
 tex_pt_to_bigpt <- function(tex_pt) {
   tex_pt * (72 / 72.27)
 }
@@ -14,7 +14,7 @@ tex_pt_to_bigpt <- function(tex_pt) {
 #'
 #' @param big_pt Numeric value in PostScript points.
 #' @return Numeric value in TeX points.
-#' @keywords internal
+#' @noRd
 bigpt_to_tex_pt <- function(big_pt) {
   big_pt * (72.27 / 72)
 }

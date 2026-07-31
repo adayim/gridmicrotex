@@ -15,6 +15,23 @@
 using namespace std;
 using namespace microtex;
 
+namespace {
+
+// Turn RowAtom::_mergeText off for one scope, restoring it on every exit
+// path -- createBox() can throw, and leaking the cleared flag would stop
+// every later row in the formula from merging.
+struct MergeTextGuard {
+  const bool _saved;
+
+  explicit MergeTextGuard(bool disable) : _saved(RowAtom::_mergeText) {
+    if (disable) RowAtom::_mergeText = false;
+  }
+
+  ~MergeTextGuard() { RowAtom::_mergeText = _saved; }
+};
+
+}  // namespace
+
 color MatrixAtom::LINE_COLOR = transparent;
 
 map<string, string> MatrixAtom::_colspeReplacement;
@@ -458,7 +475,15 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
       }
 
       sptr<Atom> atom = _matrix->_array[i][j];
-      boxarr[i][j] = (atom == nullptr) ? _nullbox : atom->createBox(env);
+      {
+        // A p{} column is broken to its own measure just below, whatever
+        // the global width is. Its cells therefore have to keep the
+        // word-level runs the breaker needs: folded into one phrase they
+        // would be unbreakable, and the column would silently size to its
+        // content instead of wrapping.
+        MergeTextGuard guard(_colWidths.find(j) != _colWidths.end());
+        boxarr[i][j] = (atom == nullptr) ? _nullbox : atom->createBox(env);
+      }
       if (atom != nullptr && atom->_type == AtomType::interText) {
         boxarr[i][j]->_type = AtomType::interText;
       }
