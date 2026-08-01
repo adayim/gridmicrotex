@@ -9,7 +9,6 @@
 #include "core/glue.h"
 #include "env/env.h"
 #include "bidi.h"
-#include "hyphenator.h"
 #include "utils/utf.h"
 
 using namespace std;
@@ -53,74 +52,8 @@ void AtomDecor::setPreviousAtom(const sptr<AtomDecor>& prev) {
 }
 
 bool RowAtom::_breakEverywhere = false;
-bool RowAtom::_hyphenate = false;
 bool RowAtom::_mergeText = false;
-
-// Offer a break inside every word the patterns allow one in, by splicing
-// discretionary marks into the element list before any box is built.
-//
-// Doing it here, on atoms, keeps hyphenation and word runs independent:
-// a HyphenMarkAtom is an ordinary break mark, so run merging stops at it,
-// step 6 below records a break position for it, and the splitter draws
-// its hyphen -- none of which knows hyphenation exists.
-void RowAtom::hyphenate() {
-  if (_hyphenated) return;
-  _hyphenated = true;
-  if (!gridmicrotex::Hyphenator::ready()) return;
-
-  std::vector<sptr<Atom>> out;
-  out.reserve(_elements.size());
-
-  size_t i = 0;
-  while (i < _elements.size()) {
-    // A word: the maximal run of plain text characters. A mark already
-    // in it means the author has hyphenated by hand, and TeX leaves such
-    // a word alone rather than adding points of its own.
-    std::vector<c32> word;
-    bool manual = false;
-    size_t j = i;
-    for (; j < _elements.size(); j++) {
-      const auto* a = _elements[j].get();
-      if (dynamic_cast<const HyphenMarkAtom*>(a) != nullptr) {
-        manual = true;
-        continue;
-      }
-      const auto* ca = dynamic_cast<const CharAtom*>(a);
-      if (ca == nullptr || ca->isMathMode() || ca->fontStyle() != FontStyle::invalid) {
-        break;
-      }
-      word.push_back(ca->unicode());
-    }
-
-    if (j == i) {
-      out.push_back(_elements[i]);
-      i++;
-      continue;
-    }
-
-    const auto points =
-      manual ? std::vector<int>() : gridmicrotex::Hyphenator::points(word);
-    if (points.empty()) {
-      for (size_t k = i; k < j; k++) out.push_back(_elements[k]);
-    } else {
-      // No marks are present in this branch (that would have set
-      // `manual`), so element k holds character k - i of the word.
-      size_t p = 0;
-      for (size_t k = i; k < j; k++) {
-        const int off = static_cast<int>(k - i);
-        while (p < points.size() && points[p] < off) p++;
-        if (p < points.size() && points[p] == off) {
-          out.push_back(sptrOf<HyphenMarkAtom>());
-          p++;
-        }
-        out.push_back(_elements[k]);
-      }
-    }
-    i = j;
-  }
-
-  _elements = std::move(out);
-}
+bool RowAtom::_levelled = false;
 
 // clang-format off
 bitset<16> RowAtom::_binSet = bitset<16>()
@@ -304,54 +237,37 @@ sptr<TextAtom> RowAtom::processTextRun(int& i, bool isMathMode) {
   return txt;
 }
 
-// One entry per element: how many characters it contributes to the row's
-// text, and where in that text it starts. Non-textual atoms contribute
-// nothing, which is what lets a level be looked up from an element index.
-void RowAtom::collectText(
-  std::vector<c32>& text,
-  std::vector<int>& charStart
-) const {
-  charStart.assign(_elements.size(), -1);
-  for (size_t k = 0; k < _elements.size(); k++) {
-    const auto* a = _elements[k].get();
-    if (const auto* ca = dynamic_cast<const CharAtom*>(a)) {
-      if (ca->isMathMode()) continue;
-      charStart[k] = static_cast<int>(text.size());
-      text.push_back(ca->unicode());
-      continue;
-    }
-    if (const auto* sp = dynamic_cast<const SpaceAtom*>(a)) {
-      if (!sp->isInterword()) continue;
-      charStart[k] = static_cast<int>(text.size());
-      text.push_back(' ');
-    }
+// An element may be a whole group -- `\textbf{...}` is one element holding
+// a nested row -- so both traversals ask the element for its subtree
+// rather than reading characters off it directly. A row that only looked
+// at its direct children collected an empty string whenever the text sat
+// in sibling groups, which is exactly when nothing was ever reordered.
+void RowAtom::collectBidiText(std::vector<c32>& out) const {
+  for (const auto& el : _elements) {
+    if (el != nullptr) el->collectBidiText(out);
   }
 }
 
-sptr<Box> RowAtom::createBox(Env& env) {
-  // Off by default, so this costs one predictable branch on the path
-  // every formula takes. Skipped when the row is being merged: the marks
-  // exist to offer line breaks, and _mergeText means nothing will break.
-  if (_hyphenate && !_mergeText) hyphenate();
+void RowAtom::assignBidiLevels(const std::vector<std::uint8_t>& lv, std::size_t& cursor) {
+  const std::size_t start = cursor;
+  for (const auto& el : _elements) {
+    if (el != nullptr) el->assignBidiLevels(lv, cursor);
+  }
+  _bidiLevel = subtreeLevel(lv, start, cursor);
+}
 
+sptr<Box> RowAtom::createBox(Env& env) {
   auto hbox = new HBox();
 
-  // Bidirectional levels, resolved here because a box does not keep the
-  // text it was built from (TextBox holds an opaque layout). Only worth
-  // doing when the row will be broken -- an unmerged row is one run per
-  // word, and it is those runs that need reordering. A row with nothing
-  // right-to-left in it costs one scan and stops.
-  std::vector<c32> rowText;
-  std::vector<int> charStart;
-  std::vector<std::uint8_t> levels;
+  // Bidirectional levels were resolved once for the whole formula, before
+  // any box was built -- see the pre-pass in src/parse_latex.cpp. They are
+  // read off the atoms here because a box does not keep the text it was
+  // built from (TextBox holds an opaque layout).
+  //
+  // `_levelled` says the pre-pass ran and found something right-to-left;
+  // without it every atom still carries level 0 and no row reorders.
   std::uint8_t curLevel = 0;
-  bool levelled = false;
-  if (!_mergeText && gridmicrotex::bidi_available()) {
-    collectText(rowText, charStart);
-    if (gridmicrotex::bidi_has_rtl(rowText)) {
-      levelled = gridmicrotex::bidi_levels(rowText, levels);
-    }
-  }
+  const bool levelled = _levelled;
   // convert atoms to boxes and add to the horizontal box
   const int end = _elements.size() - 1;
   for (int i = -1; i < end;) {
@@ -377,14 +293,10 @@ sptr<Box> RowAtom::createBox(Env& env) {
       }
     }
 
-    // Where this atom's content starts in the row's text, captured before
-    // step 2 advances `i` over a merged run.
-    if (levelled) {
-      const int at = charStart[static_cast<size_t>(i)];
-      if (at >= 0 && at < static_cast<int>(levels.size())) {
-        curLevel = levels[static_cast<size_t>(at)];
-      }
-    }
+    // This atom's level, read before step 2 advances `i` over a merged
+    // run. An atom that contributed no text keeps whatever the pre-pass
+    // gave it, which is the level current at its position.
+    if (levelled) curLevel = raw->_bidiLevel;
 
     auto curr = sptrOf<AtomDecor>(raw);
     auto tmp = curr;
@@ -540,3 +452,4 @@ sptr<Box> RowAtom::createBox(Env& env) {
 void RowAtom::setPreviousAtom(const sptr<AtomDecor>& prev) {
   _previousAtom = prev;
 }
+

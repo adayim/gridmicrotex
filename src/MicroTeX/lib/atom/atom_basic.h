@@ -201,6 +201,16 @@ public:
 
   void setPreviousAtom(const sptr<AtomDecor>& prev) override { _elements->setPreviousAtom(prev); }
 
+  void collectBidiText(std::vector<c32>& out) const override {
+    if (_elements != nullptr) _elements->collectBidiText(out);
+  }
+
+  void assignBidiLevels(const std::vector<std::uint8_t>& lv, std::size_t& cursor) override {
+    const std::size_t start = cursor;
+    if (_elements != nullptr) _elements->assignBidiLevels(lv, cursor);
+    _bidiLevel = subtreeLevel(lv, start, cursor);
+  }
+
   /**
    * Parse color from given name. The name can be one of the following format:
    * [#AARRGGBB] or [AARRGGBB], [gray color], [c,m,y,k], [c;m;y;k], [r,g,b], [r;g;b]

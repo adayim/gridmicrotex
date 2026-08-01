@@ -53,8 +53,8 @@
 #'   \code{max_width} exactly. Requires \code{max_width}: it acts on the
 #'   lines the wrapper produces, so it does nothing on its own.
 #'   \code{FALSE} (default) leaves the right edge ragged, matching R's own
-#'   text drawing. In a narrow column, pair it with \code{hyphenate}:
-#'   justifying without hyphenation opens wide word spaces.
+#'   text drawing. In a narrow column, expect wide word spaces; mark the
+#'   words that may break with \code{\\-} to tighten them.
 #' @param line_break How lines are chosen when wrapping.
 #'   \code{"greedy"} (default) fills each line as far as it will go and
 #'   never reconsiders. \code{"optimal"} chooses the breaks together so
@@ -62,14 +62,6 @@
 #'   pulling one word down early can improve every later line, which a
 #'   greedy pass cannot see. Requires \code{max_width}, and costs a
 #'   little more layout time.
-#' @param hyphenate Logical. When \code{TRUE}, a long word may be broken
-#'   across lines at a point Liang's algorithm allows, with a hyphen drawn
-#'   at the break. Uses the patterns and the
-#'   \code{\\lefthyphenmin}/\code{\\righthyphenmin} of 2 and 3 that TeX
-#'   uses for American English; the patterns are read on first use.
-#'   Requires \code{max_width}. \code{FALSE} is the default. A word
-#'   carrying an explicit \code{\\-} is left alone, as in TeX --- use that
-#'   to override a break the patterns get wrong.
 #' @param debug Logical; if \code{TRUE}, draws diagnostic overlays on the
 #'   grob --- the full bounding box (dashed gray), the baseline (solid
 #'   red), the depth line (dashed gray), and a small dot at each
@@ -238,25 +230,22 @@ latex_grob <- function(tex,
                        render_mode = c("typeface", "path"),
                        justify = FALSE,
                        line_break = c("greedy", "optimal"),
-                       hyphenate = FALSE,
                        debug = FALSE,
                        name = NULL,
                        gp = grid::gpar()) {
 
   .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
-              "justify", "line_break", "hyphenate")
+              "justify", "line_break")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
   line_break <- match.arg(line_break)
   .check_justify(justify)
-  .check_hyphenate(hyphenate)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
     input_mode = input_mode,
-    with_path_fallback = TRUE, justify = justify, line_break = line_break,
-    hyphenate = hyphenate
+    with_path_fallback = TRUE, justify = justify, line_break = line_break
   )
 
   # Convert numeric x/y to units
@@ -298,7 +287,6 @@ latex_grob <- function(tex,
     input_mode = input_mode,
     justify = justify,
     line_break = line_break,
-    hyphenate = hyphenate,
     text_gp = parsed$text_gp,
     render_mode = parsed$render_mode,
     path_layout_df = parsed$path_layout,
@@ -458,9 +446,8 @@ grobMark <- function(grob, name) {
 .parse_from_gp <- function(tex, gp, math_font, max_width, tex_style,
                            render_mode, input_mode = "mixed",
                            with_path_fallback = FALSE, justify = FALSE,
-                           line_break = "greedy", hyphenate = FALSE) {
+                           line_break = "greedy") {
   # Patterns are registered on first use, not at load.
-  if (isTRUE(hyphenate)) .ensure_hyphenation()
   .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
   input_mode <- match.arg(input_mode, c("math", "mixed"))
@@ -520,7 +507,7 @@ grobMark <- function(grob, name) {
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
     tex_style = tex_style, text_family = text_family, justify = justify,
-    optimal_break = identical(line_break, "optimal"), hyphenate = hyphenate
+    optimal_break = identical(line_break, "optimal")
   )
 
   path_layout <- NULL
@@ -530,7 +517,7 @@ grobMark <- function(grob, name) {
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style,
       text_family = text_family, justify = justify,
-      optimal_break = identical(line_break, "optimal"), hyphenate = hyphenate
+      optimal_break = identical(line_break, "optimal")
     )
   }
 
@@ -603,7 +590,7 @@ makeContent.latexgrob <- function(x) {
 # re-parse so the layout/bbox/text metrics stay in sync with the inputs.
 .latex_parse_fields <- c("tex", "math_font", "max_width", "tex_style",
                          "input_mode", "render_mode", "justify",
-                         "line_break", "hyphenate", "gp")
+                         "line_break", "gp")
 
 #' @method editDetails latexgrob
 #' @export
@@ -620,8 +607,7 @@ editDetails.latexgrob <- function(x, specs) {
       input_mode = x$input_mode %||% "math",
       render_mode = x$render_mode, with_path_fallback = TRUE,
       justify = isTRUE(x$justify),
-      line_break = x$line_break %||% "greedy",
-      hyphenate = isTRUE(x$hyphenate)
+      line_break = x$line_break %||% "greedy"
     )
     layout <- parsed$layout
     x$tex            <- parsed$tex
@@ -808,21 +794,18 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
                        render_mode = c("typeface", "path"),
                        justify = FALSE,
                        line_break = c("greedy", "optimal"),
-                       hyphenate = FALSE,
                        gp = grid::gpar()) {
   .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
-              "justify", "line_break", "hyphenate")
+              "justify", "line_break")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
   line_break <- match.arg(line_break)
   .check_justify(justify)
-  .check_hyphenate(hyphenate)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
-    input_mode = input_mode, justify = justify, line_break = line_break,
-    hyphenate = hyphenate
+    input_mode = input_mode, justify = justify, line_break = line_break
   )
   layout <- parsed$layout
   bbox_h <- attr(layout, "bbox_height")

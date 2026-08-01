@@ -133,6 +133,19 @@ public:
   static bool _optimalBreak;
 
   static std::pair<bool, sptr<Box>> split(const sptr<Box>& box, float width, float lineSpace);
+
+  /**
+   * Put one finished line into visual order (Unicode rule L2).
+   *
+   * Public because a formula with no width limit never reaches the
+   * splitter at all, and it still has to be ordered: `\text{<hebrew>}
+   * \textbf{...}` is a single line whose two children belong the other
+   * way round. The builder calls this directly in that case.
+   *
+   * A no-op unless the row carried levels, i.e. unless something in it
+   * was right-to-left, so left-to-right layout is untouched.
+   */
+  static void reorderLine(const sptr<Box>& line);
 };
 
 }  // namespace microtex

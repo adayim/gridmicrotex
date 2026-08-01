@@ -236,3 +236,37 @@ test_that("measuring leaves the caller's display list untouched", {
                              render_mode = "path"))
   expect_gt(dl_len(), 0L)
 })
+
+test_that("a cached layout is not reused across graphics devices", {
+  skip_if_not_installed("ragg")
+  # \text{} runs are sized by the R text-measurer, which measures through
+  # grid on the *current* device -- and devices disagree. Without the
+  # device in the cache key, a layout measured on the screen device was
+  # handed back verbatim to a later ggsave(), placing text at widths the
+  # output device never agreed to.
+  key <- gridmicrotex:::.parse_cache_key
+  args <- list("\\text{x}", 20, 10, "#000000", 0, "", "", "", FALSE, "",
+               FALSE, FALSE)
+  expect_false(identical(do.call(key, c(args, device = "pdf")),
+                         do.call(key, c(args, device = "agg_png"))))
+
+  # End to end: the width from a device must not depend on which device
+  # happened to parse the same expression first.
+  f <- tempfile(fileext = ".png")
+  on.exit(unlink(f), add = TRUE)
+  tex <- "\\text{Hello world}"
+  on_agg <- function() {
+    ragg::agg_png(f)
+    on.exit(grDevices::dev.off(), add = TRUE)
+    as.numeric(latex_dims(tex, input_mode = "math")$width)
+  }
+
+  latex_cache_clear()
+  alone <- on_agg()
+
+  latex_cache_clear()
+  grDevices::pdf(NULL)
+  latex_dims(tex, input_mode = "math")
+  grDevices::dev.off()
+  expect_equal(on_agg(), alone)
+})

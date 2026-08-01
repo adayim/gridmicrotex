@@ -333,14 +333,29 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<Box>& b, float width, f
 // to be chosen in -- and only then reordered, which is what the Unicode
 // algorithm prescribes. Does nothing unless the row carried levels, i.e.
 // unless something in it was right-to-left.
-static void reorderLine(const sptr<Box>& line) {
+void BoxSplitter::reorderLine(const sptr<Box>& line) {
   auto h = std::dynamic_pointer_cast<HBox>(line);
-  if (h == nullptr || h->_childLevels.empty()) return;
-  gridmicrotex::bidi_reorder(h->_children, h->_childLevels);
-  // Reordering is a permutation, not a normalisation: applying it twice
-  // would put the line back the wrong way round. Dropping the levels once
-  // they have been used makes a second call a no-op rather than a bug.
-  h->_childLevels.clear();
+  if (h == nullptr) return;
+  if (!h->_childLevels.empty()) {
+    gridmicrotex::bidi_reorder(h->_children, h->_childLevels);
+    // Reordering is a permutation, not a normalisation: applying it twice
+    // would put the line back the wrong way round. Dropping the levels once
+    // they have been used makes a second call a no-op rather than a bug.
+    h->_childLevels.clear();
+  }
+  // A child may be a whole group -- `\textbf{...}` builds its own row --
+  // which the step above moves as one unit. Its contents still have to be
+  // ordered among themselves, and they carry the levels their own row
+  // resolved. Reversing the groups and then reversing within each group is
+  // rule L2 applied at two embedding levels.
+  //
+  // Descending through a *vertical* box as well would not help today: no
+  // structural atom (VRowAtom, FracAtom, MatrixAtom, ...) forwards
+  // collectBidiText/assignBidiLevels, so rows inside one never carry
+  // levels to act on. Widening the walk was tried and changed nothing.
+  for (const auto& child : h->_children) {
+    if (child != line) reorderLine(child);
+  }
 }
 
 std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width, float lineSpace) {
@@ -401,11 +416,40 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
       }
       first->add(brk);
     }
+    // A nested box joins its parent as one more child, so it needs one
+    // more level or the vectors no longer line up and bidi_reorder gives
+    // up on the whole line. It takes the level of its own first child --
+    // the direction of the text inside it.
+    auto addLevelled = [](const sptr<HBox>& parent, const sptr<HBox>& child,
+                          bool atFront) {
+      if (parent->_childLevels.size() != parent->_children.size()) return;
+      if (parent->_childLevels.empty() && child->_childLevels.empty()) return;
+      // The box's own first level when it has one. Levels are resolved
+      // for the whole formula now, so a box built from a row always has
+      // them; a box built any other way may not, and it still has to
+      // travel with the text around it. It then takes the level of the
+      // neighbour it is placed against, because level 0 would strand it:
+      // rule L2 reverses runs at or above the lowest odd level, so a 0
+      // sitting among 1s splits the reversal in two.
+      std::uint8_t lv = 0;
+      if (!child->_childLevels.empty()) {
+        lv = child->_childLevels.front();
+      } else if (!parent->_childLevels.empty()) {
+        lv = atFront ? parent->_childLevels.front() : parent->_childLevels.back();
+      }
+      if (atFront) {
+        parent->_childLevels.insert(parent->_childLevels.begin(), lv);
+      } else {
+        parent->_childLevels.push_back(lv);
+      }
+    };
     while (!positions.empty()) {
       pos = positions.top();
       positions.pop();
       hboxes = pos._box->splitRemove(pos._index);
+      addLevelled(hboxes.first, first, false);
       hboxes.first->add(first);
+      addLevelled(hboxes.second, second, true);
       hboxes.second->add(0, second);
       first = hboxes.first;
       second = hboxes.second;

@@ -38,6 +38,17 @@ public:
    */
   bool isInterword() const { return _blankSpace && _blankType == SpaceType::none; }
 
+  void collectBidiText(std::vector<c32>& out) const override {
+    // Only the word space is text; a \quad is a measured skip.
+    if (isInterword()) out.push_back(U' ');
+  }
+
+  void assignBidiLevels(const std::vector<std::uint8_t>& lv, std::size_t& cursor) override {
+    if (!isInterword()) return;               // contributed no character
+    Atom::assignBidiLevels(lv, cursor);
+    cursor++;
+  }
+
   sptr<Box> createBox(Env& env) override;
 
   static sptr<SpaceAtom> empty() { return sptrOf<SpaceAtom>(UnitType::em, 0.f, 0.f, 0.f); }

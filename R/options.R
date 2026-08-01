@@ -11,7 +11,6 @@
   input_mode  = NULL,
   justify     = NULL,
   line_break  = NULL,
-  hyphenate   = NULL,
   markdown_style = NULL
 )
 
@@ -62,15 +61,8 @@
 #'   \code{max_width} exactly. Has no effect without \code{max_width},
 #'   since it acts on the lines the wrapper produces. \code{FALSE}
 #'   (default) leaves the right edge ragged, matching R's own text
-#'   drawing. Pair it with \code{hyphenate = TRUE} in a narrow column,
-#'   where justifying alone opens noticeably wide word spaces.
-#' @param hyphenate Logical. When \code{TRUE}, long words may be broken
-#'   across lines at the points Liang's algorithm allows, with a hyphen
-#'   drawn at the break --- the same patterns and the same
-#'   \code{\\lefthyphenmin}/\code{\\righthyphenmin} of 2 and 3 that TeX
-#'   uses for American English. Has no effect without \code{max_width}.
-#'   \code{FALSE} is the default. A word already carrying an explicit
-#'   \code{\\-} is left alone, as in TeX.
+#'   drawing. In a narrow column, justifying alone opens noticeably wide
+#'   word spaces; mark the words that may break with \code{\\-}.
 #' @param line_break How lines are chosen when wrapping.
 #'   \code{"greedy"} (default) fills each line as far as it will go and
 #'   never reconsiders. \code{"optimal"} chooses the breaks together so
@@ -95,7 +87,7 @@
 latex_options <- function(math_font = NULL, render_mode = NULL,
                           tex_style = NULL, input_mode = NULL,
                           justify = NULL, line_break = NULL,
-                          hyphenate = NULL, markdown_style = NULL) {
+                          markdown_style = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -127,10 +119,6 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     line_break <- match.arg(line_break, c("greedy", "optimal"))
     .latex_options$values$line_break <- line_break
   }
-  if (!is.null(hyphenate)) {
-    .check_hyphenate(hyphenate)
-    .latex_options$values$hyphenate <- hyphenate
-  }
   if (!is.null(markdown_style)) {
     # Coerce here rather than at each use, so a bad value is rejected by
     # the call that set it.
@@ -150,7 +138,6 @@ reset_latex_options <- function() {
     input_mode  = NULL,
     justify     = NULL,
     line_break  = NULL,
-    hyphenate   = NULL,
     markdown_style = NULL
   )
   invisible(NULL)

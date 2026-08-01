@@ -100,6 +100,20 @@ latex_cache_info <- function() {
   )
 }
 
+# The graphics device the layout was measured on. `\text{}` runs are sized
+# by the R text-measurer callback, which measures through grid on the
+# current device -- and devices disagree: the same phrase came out 99bp on
+# pdf() and 98bp on ragg, and much further apart when one device cannot
+# resolve the requested family and silently substitutes another. Without
+# this in the key, a layout measured on the screen device was reused
+# verbatim by a later ggsave(), placing text using the wrong widths.
+#
+# With no device open the measurer opens a pdf(NULL) of its own, so that
+# is the device the measurements will come from.
+.cache_device <- function() {
+  if (grDevices::dev.cur() == 1L) "pdf" else names(grDevices::dev.cur())
+}
+
 # Cache key for a parse_latex_cpp call. Concatenation is fine because the
 # tex string is included and the remaining inputs are short numerics/strings.
 # `text_family` is the *requested* gp$fontfamily, not the resolved
@@ -108,12 +122,14 @@ latex_cache_info <- function() {
 # callback, so they can produce different layouts and must not share a key.
 .parse_cache_key <- function(tex, text_size, line_space, fg_color, max_width,
                              math_font, main_font, text_family, use_path,
-                             tex_style, justify, optimal_break, hyphenate) {
+                             tex_style, justify, optimal_break,
+                             device = "") {
   paste(
     tex, "|", text_size, "|", line_space, "|", fg_color, "|",
     max_width, "|", math_font, "|", main_font, "|", text_family, "|",
     as.integer(use_path), "|", tex_style, "|", as.integer(justify),
-    "|", as.integer(optimal_break), "|", as.integer(hyphenate),
+    "|", as.integer(optimal_break),
+    "|", device,
     sep = ""
   )
 }
@@ -123,18 +139,18 @@ latex_cache_info <- function() {
 .parse_latex_cached <- function(tex, text_size, line_space, fg_color,
                                 max_width, math_font, main_font, use_path,
                                 tex_style = "", text_family = "",
-                                justify = FALSE, optimal_break = FALSE,
-                                hyphenate = FALSE) {
+                                justify = FALSE, optimal_break = FALSE) {
   key <- .parse_cache_key(tex, text_size, line_space, fg_color, max_width,
                           math_font, main_font, text_family, use_path,
-                          tex_style, justify, optimal_break, hyphenate)
+                          tex_style, justify, optimal_break,
+                          device = .cache_device())
   hit <- .cache_get(key)
   if (!is.null(hit)) return(hit)
   layout <- parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = use_path, tex_style = tex_style,
-    justify = justify, optimal_break = optimal_break, hyphenate = hyphenate
+    justify = justify, optimal_break = optimal_break
   )
   .cache_put(key, layout)
   layout

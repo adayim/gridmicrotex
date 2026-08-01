@@ -115,21 +115,30 @@ test_that("visual: text direction", {
   skip_if_not_installed("vdiffr")
   skip_on_os("mac")
   # Unlike the gallery, this figure is drawn with system fonts rather than
-  # bundled outlines, so it needs the machine to have an Arabic and a
+  # bundled outlines, so it needs the machine to have a Perso-Arabic and a
   # Hebrew face. A CI image that lacks one would fail on the missing font
   # rather than on anything we changed. Drop this line if the runners are
   # known to have them.
   skip_on_ci()
 
   # Escaped so the source file stays ASCII, which is what R CMD check
-  # wants. Arabic: "marhaban bik", "fi al-'alam". Hebrew: "shalom olam".
-  hello <- "\u0645\u0631\u062d\u0628\u0627 \u0628\u0643"
-  more  <- "\u0641\u064a \u0627\u0644\u0639\u0627\u0644\u0645"
+  # wants.
+  #
+  # Uyghur, in the Perso-Arabic script: "xush keldingiz" (welcome) and
+  # "bu dunyagha" (to this world). It is written right to left and its
+  # letters join, like Arabic, but it reaches further into the Arabic
+  # block for the vowels Arabic does not write -- U+06C7, U+06D5, U+06AD
+  # here -- so the shaping is a little more demanding than Arabic alone.
+  # Hebrew, which does not join, stays as the second script:
+  # "shalom olam".
+  hello <- "\u062e\u06c7\u0634 \u0643\u06d5\u0644\u062f\u0649\u06ad\u0649\u0632"
+  more  <- "\u0628\u06c7 \u062f\u06c7\u0646\u064a\u0627\u063a\u0627"
   heb   <- "\u05e9\u05dc\u05d5\u05dd \u05e2\u05d5\u05dc\u05dd"
 
   # Only unwrapped rows here. Wrapped right-to-left is correct, but this
-  # figure cannot show it: vdiffr's device measures an Arabic run about
-  # twice as wide as the truth, so the words land at meaningless offsets
+  # figure cannot show it: vdiffr's device measures a Perso-Arabic run
+  # about twice as wide as the truth, so the words land at meaningless
+  # offsets
   # and the picture records the device's font handling rather than ours.
   # The wrapped case is asserted on coordinates in test-text-runs.R,
   # which is unaffected by how wide the device thinks the words are.
@@ -156,7 +165,7 @@ test_that("visual: text direction", {
 
     rows <- list(
       list(24,  "left-to-right (control)", "Hello world"),
-      list(74,  "right-to-left, Arabic", hello),
+      list(74,  "right-to-left, Uyghur", hello),
       list(124, "right-to-left, Hebrew", heb),
       # A right-to-left run inside a left-to-right sentence and the other
       # way round: the paragraph direction is resolved from the first

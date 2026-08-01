@@ -357,3 +357,98 @@ test_that("links are styled, following LaTeX's convention not HTML's", {
   # Malformed input is left alone rather than half-rewritten.
   expect_equal(strip("\\href{only-one-group}"), "\\href{only-one-group}")
 })
+
+test_that("an ampersand in prose is a literal, not an alignment tab", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # MicroTeX reads a bare `&` as an alignment tab even inside \text{} and
+  # drops everything after it, so "Treatment & Control" rendered as
+  # "Treatment " -- half the label gone, with no error. `&` cannot mean
+  # alignment in prose: math spans and tabular environments are passed
+  # through verbatim by the scanner and never reach the prose escaper.
+  drawn <- function(s) {
+    d <- latex_grob(s, gp = grid::gpar(fontsize = 14))$layout_df
+    paste(d$text[d$type == "text" & !is.na(d$text)], collapse = "")
+  }
+  expect_equal(drawn("Treatment & Control"), "Treatment  Control")
+  expect_equal(drawn("Cats & Dogs & Mice"), "Cats  Dogs  Mice")
+
+  # An ampersand the user already escaped must not be escaped twice.
+  expect_equal(latex_wrap("a \\& b"), "\\text{a \\& b}")
+  expect_equal(latex_wrap("a & b"), "\\text{a \\& b}")
+
+  # Verbatim regions keep their real alignment tabs.
+  expect_equal(latex_wrap("\\begin{tabular}{ll}a&b\\end{tabular}"),
+               "\\begin{tabular}{ll}a&b\\end{tabular}")
+  expect_equal(latex_wrap("$\\begin{matrix}a&b\\end{matrix}$"),
+               "\\begin{matrix}a&b\\end{matrix}")
+})
+
+test_that("a line break inside a group re-opens the group on the next line", {
+  # Each segment becomes its own \text{}, so a break inside \textbf{}
+  # used to leave the group open at the end of one segment and unopened
+  # at the start of the next: the second line came out unstyled and any
+  # text after the group escaped the \text{} wrapper entirely.
+  expect_equal(latex_wrap("Hello \\textbf{big\nbold} world"),
+               "\\text{Hello \\textbf{big}}\\\\\\text{\\textbf{bold} world}")
+
+  # The re-opener carries the command's arguments, not just its name --
+  # matching only `\textcolor` reopened a plain `{two}` and lost the colour.
+  expect_equal(latex_wrap("\\textcolor{red}{one\ntwo}"),
+               "\\text{\\textcolor{red}{one}}\\\\\\text{\\textcolor{red}{two}}")
+
+  # Nesting re-opens every level, outermost first.
+  expect_equal(latex_wrap("a \\textbf{\\textit{p\nq}} b"),
+               "\\text{a \\textbf{\\textit{p}}}\\\\\\text{\\textbf{\\textit{q}} b}")
+
+  # A literal \\ inside the group behaves the same as a newline.
+  expect_equal(latex_wrap("A \\textbf{x \\\\ y} B"),
+               "\\text{A \\textbf{x}}\\\\\\text{\\textbf{y} B}")
+
+  # Escaped braces are literals and must not move the group depth.
+  expect_equal(latex_wrap("a \\{b\nc\\} d"),
+               "\\text{a \\{b}\\\\\\text{c\\} d}")
+
+  # Breaks outside any group are unchanged.
+  expect_equal(latex_wrap("plain\ntext"), "\\text{plain}\\\\\\text{text}")
+})
+
+test_that("the styling really survives the break, not just the source", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  face <- function(s) {
+    d <- latex_grob(s, gp = grid::gpar(fontsize = 14))$layout_df
+    d <- d[d$type == "text" & !is.na(d$text), ]
+    stats::setNames(d$font_style, d$text)
+  }
+  # FontStyle is a bitmask: 1 = rm, +2 = bold, +4 = italic.
+  f <- face("Hello \\textbf{big\nbold} world")
+  expect_equal(unname(f[["big"]]), 3L)
+  expect_equal(unname(f[["bold"]]), 3L)   # was 1L: the emphasis was lost
+  expect_equal(unname(f[["Hello "]]), 1L)
+
+  f <- face("a \\textbf{\\textit{p\nq}} b")
+  expect_equal(unname(f[["p"]]), 7L)
+  expect_equal(unname(f[["q"]]), 7L)
+
+  col <- function(s) {
+    d <- latex_grob(s, gp = grid::gpar(fontsize = 14))$layout_df
+    d <- d[d$type == "text" & !is.na(d$text), ]
+    stats::setNames(d$color, d$text)
+  }
+  cc <- col("\\textcolor{red}{one\ntwo}")
+  expect_equal(unname(cc[["one"]]), "#FF0000")
+  expect_equal(unname(cc[["two"]]), "#FF0000")
+})
+
+test_that("tabular* renders instead of erroring on its width argument", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # `tabular*` takes a target width before the column spec. Stripping only
+  # the star left the width where the alignment belonged, and MicroTeX
+  # rejected it outright with "Invalid alignment in array environment".
+  strip <- gridmicrotex:::.strip_document_wrappers
+  expect_equal(strip("\\begin{tabular*}{\\textwidth}{lcr}a\\end{tabular*}"),
+               "\\begin{tabular}{lcr}a\\end{tabular}")
+
+  starred <- latex_dims("\\begin{tabular*}{\\textwidth}{lcr}a&b&c\\end{tabular*}")
+  plain <- latex_dims("\\begin{tabular}{lcr}a&b&c\\end{tabular}")
+  expect_equal(as.numeric(starred$width), as.numeric(plain$width))
+})

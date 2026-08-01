@@ -12,7 +12,6 @@ latex_options(
   input_mode = NULL,
   justify = NULL,
   line_break = NULL,
-  hyphenate = NULL,
   markdown_style = NULL
 )
 
@@ -45,8 +44,8 @@ its interword spaces so every line but the last fills
 \code{max_width} exactly. Has no effect without \code{max_width},
 since it acts on the lines the wrapper produces. \code{FALSE}
 (default) leaves the right edge ragged, matching R's own text
-drawing. Pair it with \code{hyphenate = TRUE} in a narrow column,
-where justifying alone opens noticeably wide word spaces.}
+drawing. In a narrow column, justifying alone opens noticeably wide
+word spaces; mark the words that may break with \code{\\-}.}
 
 \item{line_break}{How lines are chosen when wrapping.
 \code{"greedy"} (default) fills each line as far as it will go and
@@ -55,14 +54,6 @@ the paragraph as a whole reads best, in the spirit of Knuth-Plass:
 pulling one word down early can improve every later line, which a
 greedy pass cannot see. Requires \code{max_width}, and costs a
 little more layout time.}
-
-\item{hyphenate}{Logical. When \code{TRUE}, long words may be broken
-across lines at the points Liang's algorithm allows, with a hyphen
-drawn at the break --- the same patterns and the same
-\code{\\lefthyphenmin}/\code{\\righthyphenmin} of 2 and 3 that TeX
-uses for American English. Has no effect without \code{max_width}.
-\code{FALSE} is the default. A word already carrying an explicit
-\code{\\-} is left alone, as in TeX.}
 
 \item{markdown_style}{Default style for \code{\link{markdown_grob}} and
 \code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}

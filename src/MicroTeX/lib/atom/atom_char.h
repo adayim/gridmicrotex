@@ -129,6 +129,17 @@ public:
 
   bool isMathMode() const override { return _mathMode; }
 
+  void collectBidiText(std::vector<c32>& out) const override {
+    // Math positions every glyph itself, so it takes no part in bidi.
+    if (!_mathMode) out.push_back(_unicode);
+  }
+
+  void assignBidiLevels(const std::vector<std::uint8_t>& lv, std::size_t& cursor) override {
+    if (_mathMode) return;                    // contributed no character
+    Atom::assignBidiLevels(lv, cursor);
+    cursor++;
+  }
+
   /**
    * The font style this atom carries, or FontStyle::invalid to follow the
    * environment. RowAtom needs to read it before merging characters into

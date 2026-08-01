@@ -129,31 +129,14 @@ private:
 
   sptr<TextAtom> processTextRun(int& i, bool isMathMode);
 
-  /** Splice discretionary marks into this row's words. Idempotent. */
-  void hyphenate();
-
-  /**
-   * The row's text, and where each element starts in it. Used to resolve
-   * bidirectional levels while the atoms still hold their characters.
-   */
-  void collectText(std::vector<c32>& text, std::vector<int>& charStart) const;
-
-  // Whether hyphenate() has already run on this row. createBox() can be
-  // called more than once on the same atom, and the pass mutates the
-  // element list.
-  bool _hyphenated = false;
-
 public:
-  static bool _breakEverywhere;
+  /** Every element's text, in order, so a parent row sees this whole row. */
+  void collectBidiText(std::vector<c32>& out) const override;
 
-  /**
-   * Break long words at the points the registered patterns allow.
-   *
-   * A static toggle guarded per parse, exactly like BoxSplitter::_justify
-   * -- see the guard in src/parse_latex.cpp. Off by default, and when off
-   * the pass does not run at all.
-   */
-  static bool _hyphenate;
+  /** The mirror of collectBidiText: same atoms, same order, writing back. */
+  void assignBidiLevels(const std::vector<std::uint8_t>& lv, std::size_t& cursor) override;
+
+  static bool _breakEverywhere;
 
   /**
    * Fold a whole row of text -- words and the spaces between them -- into
@@ -170,6 +153,14 @@ public:
    * implements the bidirectional algorithm that MicroTeX does not.
    */
   static bool _mergeText;
+
+  /**
+   * Whether the per-parse bidi pre-pass ran and found right-to-left text,
+   * so the levels on the atoms mean something. Set by parse_latex.cpp and
+   * cleared by the same guard as the flags above; without it every atom
+   * carries level 0 and no row reorders, which is the left-to-right path.
+   */
+  static bool _levelled;
 
   bool _lookAtLastAtom;
 
