@@ -65,23 +65,24 @@ test_that("editGrob() preserves string-valued vjust across reparse", {
 # Regression: \def with backslash control sequences in the body used to fail
 # on subsequent parses because MicroTeX's static macro table leaked the name
 # into the next parse's preprocess pass, which then mis-tokenised the body.
-test_that("plain-TeX \\def with parameterised body parses correctly", {
-  expect_s3_class(
-    latex_grob(r"(\def\norm#1{\left\lVert #1 \right\rVert} \norm{v})",
-               input_mode = "math"),
-    "latexgrob"
-  )
-  expect_s3_class(
-    latex_grob(r"(\def\inner#1#2{\langle #1, #2 \rangle} \inner{u}{v})",
-               input_mode = "math"),
-    "latexgrob"
-  )
+# A macro is only doing its job if the call lays out exactly as the body
+# written out longhand. Asserting the class alone catches a parse error
+# and nothing else -- an expansion that silently dropped its argument
+# would still return a latexgrob.
+expands_to <- function(macro, longhand, ...) {
+  expect_equal(latex_grob(macro, ...)$layout_df,
+               latex_grob(longhand, ...)$layout_df)
+}
+
+test_that("plain-TeX \\def with parameterised body expands to its body", {
+  expands_to(r"(\def\norm#1{\left\lVert #1 \right\rVert} \norm{v})",
+             r"(\left\lVert v \right\rVert)", input_mode = "math")
+  expands_to(r"(\def\inner#1#2{\langle #1, #2 \rangle} \inner{u}{v})",
+             r"(\langle u, v \rangle)", input_mode = "math")
   # The typeface path triggers a second internal parse for the path-mode
   # fallback layout — exercise it explicitly.
-  expect_s3_class(
-    latex_grob(r"(\def\frob#1{|#1|} \frob{M})", render_mode = "typeface"),
-    "latexgrob"
-  )
+  expands_to(r"(\def\frob#1{|#1|} \frob{M})", r"(|M|)",
+             render_mode = "typeface", input_mode = "math")
 })
 
 test_that("\\newcommand survives the typeface mode double-parse", {
@@ -90,11 +91,9 @@ test_that("\\newcommand survives the typeface mode double-parse", {
   # second internal parse hit "Command already exists!" because
   # MicroTeX's static _codes map persisted the registration from the
   # first parse.
-  expect_s3_class(
-    latex_grob(r"(\newcommand{\xyznorm}[1]{\lVert #1 \rVert} \xyznorm{v})",
-               render_mode = "typeface"),
-    "latexgrob"
-  )
+  expands_to(r"(\newcommand{\xyznorm}[1]{\lVert #1 \rVert} \xyznorm{v})",
+             r"(\lVert v \rVert)", render_mode = "typeface",
+             input_mode = "math")
 })
 
 test_that("\\textcolor body inherits the surrounding math/text mode", {
@@ -127,23 +126,22 @@ test_that("\\color declaration colours the rest of the enclosing group", {
 })
 
 test_that("\\newcommand and \\def do not leak between independent latex_grob calls", {
-  expect_s3_class(
-    latex_grob(r"(\newcommand{\xyzleak}{Q} \xyzleak)", input_mode = "math"),
-    "latexgrob"
-  )
-  # A second call with the same definition must succeed — would error
-  # "already exists" if state leaked between parses.
-  expect_s3_class(
-    latex_grob(r"(\newcommand{\xyzleak}{Q} \xyzleak)", input_mode = "math"),
-    "latexgrob"
-  )
+  src <- r"(\newcommand{\xyzleak}{Q} \xyzleak)"
+  first <- latex_grob(src, input_mode = "math")$layout_df
+  # A second call with the same definition must succeed -- it errored
+  # "already exists" when state leaked between parses -- and must lay out
+  # the same, which a re-registration that shadowed the body would not.
+  expect_equal(latex_grob(src, input_mode = "math")$layout_df, first)
+  expands_to(src, "Q", input_mode = "math")
+
   # And built-in environments must still be available after the leak guard
   # runs (it cleared _codes wholesale in an earlier iteration of the fix).
-  expect_s3_class(
-    latex_grob(r"(\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix})",
-               input_mode = "math"),
-    "latexgrob"
-  )
+  pmat <- latex_grob(r"(\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix})",
+                     input_mode = "math")
+  # Four cells and a pair of delimiters, not the literal source text.
+  expect_gte(nrow(pmat$layout_df), 4L)
+  expect_false(any(pmat$layout_df$type == "text" &
+                     grepl("pmatrix", pmat$layout_df$text, fixed = TRUE)))
 })
 
 # --- grobX / grobY boundary points ---

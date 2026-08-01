@@ -34,7 +34,20 @@ private:
 
   static float canBreak(std::stack<Position>& stack, const sptr<HBox>& hbox, float width);
 
-  static int getBreakPosition(const sptr<HBox>& hb, int index);
+  /**
+   * The break to take when the content overruns at child `index`.
+   *
+   * `cumWidth` and `width` are needed only for breaks that draw a box --
+   * a hyphen widens the line beyond the content before it, so the choice
+   * has to account for it here rather than discovering the overrun after
+   * the line is built.
+   */
+  static int getBreakPosition(
+    const sptr<HBox>& hb,
+    int index,
+    const float* cumWidth,
+    float width
+  );
 
   static std::pair<bool, sptr<Box>> split(const sptr<HBox>& hb, float width, float lineSpace);
 

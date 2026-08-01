@@ -1,5 +1,6 @@
 #include "core/split.h"
 
+#include "bidi.h"
 #include "box/box_group.h"
 // glue.h only forward-declares GlueBox; justifyLine() needs the
 // definition to reach _stretch and _width.
@@ -326,8 +327,28 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<Box>& b, float width, f
   return {splitted, box};
 }
 
+// Put one finished line into visual order.
+//
+// Lines are built in logical order -- that is the order the breaks have
+// to be chosen in -- and only then reordered, which is what the Unicode
+// algorithm prescribes. Does nothing unless the row carried levels, i.e.
+// unless something in it was right-to-left.
+static void reorderLine(const sptr<Box>& line) {
+  auto h = std::dynamic_pointer_cast<HBox>(line);
+  if (h == nullptr || h->_childLevels.empty()) return;
+  gridmicrotex::bidi_reorder(h->_children, h->_childLevels);
+  // Reordering is a permutation, not a normalisation: applying it twice
+  // would put the line back the wrong way round. Dropping the levels once
+  // they have been used makes a second call a no-op rather than a bug.
+  h->_childLevels.clear();
+}
+
 std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width, float lineSpace) {
-  if (width == 0 || hb->_width <= width) return {false, hb};
+  // A single line that already fits still has to be ordered.
+  if (width == 0 || hb->_width <= width) {
+    reorderLine(hb);
+    return {false, hb};
+  }
 
   auto* vbox = new VBox();
   sptr<HBox> first, second;
@@ -358,9 +379,28 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
     line++;
     Position pos = positions.top();
     positions.pop();
+    const auto brk = pos._box->breakBoxAt(pos._index);
     auto hboxes = pos._box->split(pos._index - 1);
     first = hboxes.first;
     second = hboxes.second;
+    // A break that draws something puts it on the line it ends -- the
+    // hyphen of a word broken across lines. getBreakPosition() has
+    // already reserved room for it, and this has to happen before
+    // justifyLine() below, which stretches the line's glue to fill the
+    // measure exactly and would otherwise be pushed past it.
+    if (brk != nullptr) {
+      // The hyphen belongs to the word it follows, so it takes that word's
+      // embedding level; that is what puts it at the visual left of a
+      // right-to-left line. It also has to be pushed at all: bidi_reorder
+      // requires one level per child and silently does nothing when the
+      // two disagree, so appending the box alone left the whole line in
+      // logical order.
+      if (!first->_childLevels.empty() &&
+          first->_childLevels.size() == first->_children.size()) {
+        first->_childLevels.push_back(first->_childLevels.back());
+      }
+      first->add(brk);
+    }
     while (!positions.empty()) {
       pos = positions.top();
       positions.pop();
@@ -370,6 +410,10 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
       first = hboxes.first;
       second = hboxes.second;
     }
+    // Visual order before justification: justifyLine() drops the spaces
+    // that end the line and stretches the rest, and which spaces those
+    // are depends on the direction.
+    reorderLine(first);
     // `first` is a completed line and something follows it, so it is
     // never the last line of the paragraph -- the one case TeX leaves
     // ragged. The trailing `second` added after this loop is that line,
@@ -381,6 +425,8 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
   }
 
   if (second != nullptr) {
+    // The last line, left ragged but still ordered.
+    reorderLine(second);
     vbox->add(second, lineSpace);
     return {splitted, sptr<Box>(vbox)};
   }
@@ -398,7 +444,7 @@ float BoxSplitter::canBreak(stack<Position>& s, const sptr<HBox>& hbox, const fl
     auto box = children[i];
     cumWidth[i + 1] = cumWidth[i] + box->_width;
     if (cumWidth[i + 1] <= width) continue;
-    int pos = getBreakPosition(hbox, i);
+    int pos = getBreakPosition(hbox, i, cumWidth, width);
     auto h = dynamic_pointer_cast<HBox>(box);
     if (h != nullptr) {
       stack<Position> sub;
@@ -431,20 +477,40 @@ float BoxSplitter::canBreak(stack<Position>& s, const sptr<HBox>& hbox, const fl
   return hbox->_width;
 }
 
-int BoxSplitter::getBreakPosition(const sptr<HBox>& hb, int i) {
-  if (hb->_breakPositions.empty()) return -1;
+int BoxSplitter::getBreakPosition(
+  const sptr<HBox>& hb,
+  int i,
+  const float* cumWidth,
+  float width
+) {
+  const auto& bp = hb->_breakPositions;
+  if (bp.empty()) return -1;
 
-  if (hb->_breakPositions.size() == 1 && hb->_breakPositions[0] <= i) {
-    return hb->_breakPositions[0];
+  // The last recorded break at or before i. Positions are appended in
+  // increasing order as the row is built, and split() preserves that.
+  int k = -1;
+  for (size_t j = 0; j < bp.size(); j++) {
+    if (bp[j] > i) break;
+    k = static_cast<int>(j);
   }
+  if (k < 0) return -1;
 
-  size_t pos = 0;
-  for (; pos < hb->_breakPositions.size(); pos++) {
-    if (hb->_breakPositions[pos] > i) {
-      if (pos == 0) return -1;
-      return hb->_breakPositions[pos - 1];
-    }
+  // A break that draws something -- a hyphen -- makes the line it ends
+  // wider than the content preceding it, so it has to be paid for *here*,
+  // where the break is chosen, not where the line is built. Otherwise
+  // every hyphenated line overruns the measure by the width of its own
+  // hyphen. Back off to an earlier break when it will not fit.
+  //
+  // A plain break records no box, takes the first branch, and keeps
+  // exactly the position it has always had.
+  for (int j = k; j >= 0; j--) {
+    const auto extra = hb->breakBoxAt(bp[j]);
+    if (extra == nullptr) return bp[j];
+    if (cumWidth[bp[j]] + extra->_width <= width) return bp[j];
   }
-
-  return hb->_breakPositions[pos - 1];
+  // Every candidate is a hyphen and none of them fits, which happens when
+  // the measure is narrower than the shortest fragment plus its hyphen.
+  // Take the last one regardless: an overfull line is bad, but refusing
+  // to break leaves the whole unbroken word sticking out, which is worse.
+  return bp[k];
 }

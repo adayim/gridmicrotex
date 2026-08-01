@@ -18,6 +18,7 @@ geom_markdown(
   max_width = 0,
   render_mode = c("typeface", "path"),
   justify = FALSE,
+  style = NULL,
   na.rm = FALSE,
   show.legend = NA,
   inherit.aes = TRUE
@@ -88,6 +89,13 @@ wrapping (default: 0, no wrapping).}
 
 \item{justify}{Logical; justify wrapped lines. Requires
 \code{max_width}. See \code{\link{latex_grob}}.}
+
+\item{style}{A \code{\link{markdown_style}} object, CSS text, or the
+path to a \code{.css} file, applied to every label this layer draws.
+\code{NULL} falls back to
+\code{\link{latex_options}(markdown_style = )}. Only the properties
+that compile to LaTeX apply here --- a label has no block layout, so
+margins and padding are ignored. See \code{\link{md_style}}.}
 
 \item{na.rm}{If \code{FALSE}, the default, missing values are removed
 with a warning. If \code{TRUE}, they are removed silently.}

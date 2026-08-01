@@ -78,16 +78,21 @@ MICROTEX_OBJECTS = $(MICROTEX_SOURCES:.cpp=.o)
 FT_CFLAGS = @FT_CFLAGS@
 FT_LIBS = @FT_LIBS@
 
+# FriBidi is optional. When configure.win cannot find it these are empty,
+# -DHAVE_FRIBIDI is absent, and the bidirectional reordering compiles out.
+BIDI_CFLAGS = @BIDI_CFLAGS@
+BIDI_LIBS = @BIDI_LIBS@
+
 PKG_CPPFLAGS = -I. -I$(MICROTEX_DIR) \
 	-DGLYPH_RENDER_TYPE=0 \
 	-include microtexconfig.h \
-	$(FT_CFLAGS)
+	$(FT_CFLAGS) $(BIDI_CFLAGS)
 
 # PKG_CXXFLAGS_EXTRA is an opt-in slot for dev-time flags (e.g.
 # `-Wextra -Wpedantic`). CRAN builds leave it empty; devs can set it via
 # `Sys.setenv(PKG_CXXFLAGS_EXTRA = "-Wextra -Wpedantic")` before R CMD INSTALL.
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS) $(PKG_CXXFLAGS_EXTRA)
 
-PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(FT_LIBS)
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(FT_LIBS) $(BIDI_LIBS)
 
-OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o mark_atom.o font_family_atom.o otf_math_reader.o $(MICROTEX_OBJECTS)
+OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o mark_atom.o font_family_atom.o otf_math_reader.o hyphenator.o bidi.o $(MICROTEX_OBJECTS)

@@ -102,7 +102,10 @@ test_that("grid.markdown() draws and returns the grob invisibly", {
   pdf(NULL)
   on.exit(dev.off(), add = TRUE)
   grid::grid.newpage()
-  expect_invisible(grid.markdown("**hi** $x$"))
+  expect_invisible(g <- grid.markdown("**hi** $x$"))
+  # The returned grob is the one that was drawn, not a fresh empty shell.
+  expect_s3_class(g, "latexgrob")
+  expect_true(all(c("text", "glyph") %in% g$layout_df$type))
 })
 
 # --- block-level markdown (markdown_box_grob) ------------------------
@@ -219,19 +222,19 @@ test_that("markdown_box_grob validates its input", {
   expect_s3_class(markdown_box_grob("ok"), "markdownbox")
 })
 
-test_that("it draws without error", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  grid::grid.newpage()
-  expect_silent(grid::grid.draw(markdown_box_grob(
-    md_doc, width = grid::unit(4, "in"),
-    padding = grid::unit(8, "pt"),
-    box_gp = grid::gpar(fill = "grey95", col = "grey40")
-  )))
-})
+# "it draws without error" lived here. The snapshot below draws the same
+# document and compares every coordinate, so the weaker claim added
+# nothing that could fail on its own.
 
 test_that("visual: markdown document box", {
   skip_if_not_installed("vdiffr")
   skip_on_os("mac")
+  # The code block looks like body text in this snapshot, and "x <- 1"
+  # reads as an underscore because a proportional hyphen sits low. That
+  # is the snapshot device, not the layout: vdiffr writes one family name
+  # for every family, so a mono run is recorded as `font-family: sans`
+  # and any viewer draws it proportionally. The grob really does carry
+  # fontfamily="mono" -- see the `pre` rule in .md_default_rules().
   vdiffr::expect_doppelganger("markdown-box", function() {
     grid::grid.draw(markdown_box_grob(
       md_doc,
@@ -467,8 +470,11 @@ test_that("every supported tag renders what HTML prescribes for it", {
   # Tags with no default rendering are absent on purpose: <a>, <abbr>, a
   # bare <span> and friends change nothing visually in a browser either,
   # so dropping the markup and keeping the text *is* the rendering.
+  # <ruby> is not in this list any more: it annotates its content with
+  # \overset, so it does have a rendering. A raw <a> tag still is --
+  # only a markdown link ([x](u), a `link` node) picks up the `a` rule.
   for (tag in c("a", "abbr", "span", "bdi", "bdo", "data", "time", "wbr",
-                "ruby", "output", "nobr")) {
+                "output", "nobr")) {
     expect_equal(.md_to_tex(sprintf("<%s>Hg</%s>", tag, tag)), "\\text{Hg}",
                  label = tag)
   }
@@ -700,13 +706,25 @@ test_that("an absolute font-size resolves inside a list item or image alt", {
   # units reach it -- em/rem/% return before base is touched, which is
   # why this went unnoticed.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Every font size anywhere in the laid-out box.
+  sizes <- function(md) {
+    out <- numeric()
+    walk <- function(g) {
+      out <<- c(out, g$layout_df$font_size)
+      for (ch in g$children) walk(ch)
+    }
+    walk(grid::makeContent(markdown_box_grob(md, width = grid::unit(3, "in"))))
+    sort(unique(stats::na.omit(out)))
+  }
   for (md in c("- <span style=\"font-size:12pt\">big</span> item",
                "![<span style=\"font-size:12pt\">alt</span>](missing.png)",
                "| <span style=\"font-size:12pt\">a</span> | b |\n|---|---|\n| 1 | 2 |")) {
-    expect_s3_class(
-      grid::makeContent(markdown_box_grob(md, width = grid::unit(3, "in"))),
-      "markdownbox")
+    # Not just "it laid out": the 12pt has to arrive, or the length was
+    # resolved against the wrong reference and nobody would notice.
+    expect_true(12 %in% sizes(md), info = md)
   }
+  # And it is a real override, not the default in disguise.
+  expect_false(12 %in% sizes("- big item"))
 })
 
 test_that("a table cell sizes against the caller's font size", {
@@ -722,13 +740,24 @@ test_that("a rule, image or quote nested in a container lays out", {
   # images and block-quote bars are rect/raster grobs with no viewport,
   # so "object is not coercible to a unit" came out of ordinary markdown.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
+  kinds <- function(md) {
+    out <- character()
+    walk <- function(g) {
+      out <<- c(out, class(g)[1])
+      for (ch in g$children) walk(ch)
+    }
+    walk(grid::makeContent(markdown_box_grob(md, width = grid::unit(3, "in"))))
+    out
+  }
   for (md in c("> a\n>\n> ---\n>\n> b",
                "- a\n\n  ---\n\n- b",
                "- item\n\n  > quoted",
                "> outer\n>\n> > inner")) {
-    expect_s3_class(
-      grid::makeContent(markdown_box_grob(md, width = grid::unit(3, "in"))),
-      "markdownbox")
+    k <- kinds(md)
+    # Each case pairs prose with a rect -- the rule, or the quote bar.
+    # Laying out to nothing would also not error.
+    expect_true("latexgrob" %in% k, info = md)
+    expect_true("rect" %in% k, info = md)
   }
 })
 
@@ -794,4 +823,136 @@ test_that("private-use characters in the input cannot forge a math span", {
 
 test_that("markdown_grob() rejects input_mode instead of failing obscurely", {
   expect_error(markdown_grob("x", input_mode = "mixed"), "input_mode")
+})
+
+test_that("<ruby> annotates its base with \\overset", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+
+  # The one construct whose pieces arrive as siblings but come out in the
+  # other order, because \overset takes the annotation first.
+  expect_equal(.md_to_tex("<ruby>base<rt>gloss</rt></ruby>"),
+               "\\overset{\\scalebox{0.5}{\\text{gloss}}}{\\text{base}}")
+  # It composes with markdown inside the base.
+  expect_match(.md_to_tex("<ruby>**b**<rt>g</rt></ruby>"),
+               "{\\textbf{b}}", fixed = TRUE)
+  # Surrounding text is unaffected.
+  expect_match(.md_to_tex("x <ruby>a<rt>b</rt></ruby> y"), "text{x }",
+               fixed = TRUE)
+
+  # Degenerate forms keep the text rather than losing it.
+  expect_equal(.md_to_tex("<ruby>no rt</ruby>"), "\\text{no rt}")
+  expect_match(.md_to_tex("<ruby>unclosed<rt>g"), "overset", fixed = TRUE)
+  expect_equal(.md_to_tex("<rt>orphan</rt>"), "\\text{orphan}")
+
+  # An annotation adds height, not width -- it sits above the base.
+  w <- function(t) as.numeric(latex_dims(t, input_mode = "math",
+                                         gp = grid::gpar(fontsize = 16))$width)
+  h <- function(t) as.numeric(latex_dims(t, input_mode = "math",
+                                         gp = grid::gpar(fontsize = 16))$height)
+  plain <- .md_to_tex("base")
+  ruby <- .md_to_tex("<ruby>base<rt>gloss</rt></ruby>")
+  expect_equal(w(ruby), w(plain))
+  expect_gt(h(ruby), h(plain))
+})
+
+test_that("&nbsp; becomes a non-breaking space between text runs", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # \nbsp only works *between* \text{} runs: inside one it typesets the
+  # letters. Measured, so the split is not taken on faith.
+  w <- function(t) as.numeric(latex_dims(t, input_mode = "math",
+                                         gp = grid::gpar(fontsize = 16))$width)
+  expect_gt(w("\\text{a\\nbsp b}"), w("\\text{a}\\nbsp\\text{b}"))
+
+  expect_equal(.md_to_tex("a&nbsp;b"), "\\text{a}\\nbsp \\text{b}")
+  # It measures about the same as an ordinary space, but cannot be broken
+  # at. Only about: an ordinary space is now folded into the phrase and
+  # measured by the device, while \nbsp sits between two \text{} runs and
+  # keeps MicroTeX's own space metric. The two differ by a fraction of a
+  # point -- visually identical, no longer equal to the last digit.
+  expect_equal(w(.md_to_tex("a&nbsp;b")), w(.md_to_tex("a b")),
+               tolerance = 0.1)
+  # Text with no nbsp takes the untouched path.
+  expect_equal(.md_to_tex("plain text"), "\\text{plain text}")
+})
+
+test_that("font-size takes CSS absolute keywords", {
+  # Read off the \tiny..\Huge ladder MicroTeX implements.
+  expect_equal(.md_css_size("medium", 20), 1)
+  expect_lt(.md_css_size("xx-small", 20), .md_css_size("x-small", 20))
+  expect_lt(.md_css_size("x-small", 20), .md_css_size("small", 20))
+  expect_lt(.md_css_size("small", 20), .md_css_size("medium", 20))
+  expect_lt(.md_css_size("medium", 20), .md_css_size("large", 20))
+  expect_lt(.md_css_size("large", 20), .md_css_size("x-large", 20))
+  expect_lt(.md_css_size("x-large", 20), .md_css_size("xx-large", 20))
+  # Unknown keywords stay invalid.
+  expect_null(.md_css_size("enormous", 20))
+})
+
+test_that("width = NULL sizes the box to its content", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  g <- markdown_box_grob(
+    "a **long** paragraph that would certainly wrap in a narrow box",
+    width = NULL)
+  w <- vapply(c(2, 6, 9), function(wd) {
+    grid::pushViewport(grid::viewport(width = grid::unit(wd, "in")))
+    on.exit(grid::popViewport(), add = TRUE)
+    grid::convertWidth(grid::widthDetails(g), "bigpts", valueOnly = TRUE)
+  }, numeric(1))
+  # The whole point: nothing about the size depends on the parent, which
+  # is what makes it safe to measure before ggplot2 has placed the grob.
+  expect_equal(w, rep(w[1], 3))
+  expect_gt(w[1], 100)
+
+  h <- vapply(c(2, 9), function(wd) {
+    grid::pushViewport(grid::viewport(width = grid::unit(wd, "in")))
+    on.exit(grid::popViewport(), add = TRUE)
+    grid::convertHeight(grid::heightDetails(g), "bigpts", valueOnly = TRUE)
+  }, numeric(1))
+  expect_equal(h[1], h[2])
+})
+
+test_that("the natural width does not re-break the line it was measured from", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # latex_dims() reports whole big points, so handing the rounded width
+  # back as the measure can be up to half a point short -- enough for
+  # MicroTeX to break the very line the number came from. The symptom is
+  # a heading that wraps in a box that was sized not to wrap.
+  head_only <- "## Fuel economy falls with weight"
+  one <- markdown_box_grob(head_only, width = NULL)
+  h1 <- grid::convertHeight(grid::heightDetails(one), "bigpts",
+                            valueOnly = TRUE)
+  # One line of an h2, not two.
+  expect_lt(h1, 40)
+
+  with_list <- markdown_box_grob(
+    paste(head_only, "", "- a bullet", sep = "\n"), width = NULL)
+  h2 <- grid::convertHeight(grid::heightDetails(with_list), "bigpts",
+                            valueOnly = TRUE)
+  expect_lt(h2 - h1, 40)
+})
+
+test_that("a rule does not inflate the natural width", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # An <hr>, and a block background, span whatever width they are handed,
+  # so a naive max() over the probe layout hands the probe width straight
+  # back and the box comes out metres wide.
+  g <- markdown_box_grob("short\n\n---\n\nalso short", width = NULL)
+  w <- grid::convertWidth(grid::widthDetails(g), "bigpts", valueOnly = TRUE)
+  expect_lt(w, .MD_PROBE_W / 10)
+})
+
+test_that("a natural-width box still draws, and honours hjust", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # With no width there is nothing to build a viewport from at
+  # construction, so makeContent() has to supply one of the measured size.
+  g <- markdown_box_grob("# H\n\n- a\n- b", width = NULL, hjust = 0)
+  expect_null(g$vp)
+  # hjust rides on the supplied viewport's justification, so read it
+  # there -- the viewport's x stays at 0.5npc whatever hjust is.
+  for (hj in c(0, 0.5, 1)) {
+    ct <- grid::makeContent(
+      markdown_box_grob("# H\n\n- a\n- b", width = NULL, hjust = hj))
+    expect_s3_class(ct, "markdownbox")
+    expect_equal(ct$children[[1]]$vp$justification[1], hj)
+  }
 })

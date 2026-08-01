@@ -103,15 +103,31 @@ just_para <- paste0(
   "}"
 )
 
-# Right edge of each rendered line. Text records carry no width, so this
-# is the last glyph's origin -- fine for comparing lines with each other,
-# which is all these tests do.
+# Right edge of each rendered line.
+#
+# A text record carries no width of its own. That used to make its origin
+# a fair proxy for the line's right edge, because every record held a
+# single character. It no longer is: consecutive characters are drawn as
+# one word-level record (RowAtom::processTextRun), so the last origin on
+# a line sits a whole word short of the edge, by a different amount on
+# every line. Measure the glyphs the record actually holds instead.
+.rec_width <- function(txt, size) {
+  grid::pushViewport(grid::viewport(gp = grid::gpar(fontsize = size)))
+  on.exit(grid::popViewport())
+  grid::convertWidth(grid::stringWidth(txt), "bigpts", valueOnly = TRUE)
+}
+
 line_edges <- function(g) {
   df <- g$layout_df
   ys <- sort(unique(round(df$y, 1)))
   vapply(ys, function(yy) {
-    s <- abs(round(df$y, 1) - yy) < 0.01
-    max(df$x[s] + ifelse(is.na(df$width[s]), 0, df$width[s]))
+    d <- df[abs(round(df$y, 1) - yy) < 0.01, , drop = FALSE]
+    w <- vapply(seq_len(nrow(d)), function(i) {
+      if (!is.na(d$width[i])) return(d$width[i])
+      if (!identical(d$type[i], "text") || is.na(d$text[i])) return(0)
+      .rec_width(d$text[i], d$font_size[i])
+    }, numeric(1))
+    max(d$x + w)
   }, numeric(1))
 }
 
@@ -123,6 +139,7 @@ test_that("justified text fills the measure exactly", {
 })
 
 test_that("justification evens the lines out", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   g_just <- latex_grob(just_para, max_width = 300, justify = TRUE)
   g_rag  <- latex_grob(just_para, max_width = 300, justify = FALSE)
   # Drop the last line: it is deliberately left ragged.
@@ -134,6 +151,7 @@ test_that("justification evens the lines out", {
 })
 
 test_that("the last line stays ragged", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- latex_grob(just_para, max_width = 300, justify = TRUE)
   e <- line_edges(g)
   expect_lt(e[length(e)], min(head(e, -1)) - 10)
@@ -190,9 +208,14 @@ test_that("justify is validated and settable as an option", {
 })
 
 test_that("a line of one long word is left alone", {
-  # No interword glue to stretch, and nothing should crash or blow up.
   solid <- paste0("\\text{", strrep("x", 80), "}")
-  expect_no_error(latex_dims(solid, max_width = 100, justify = TRUE))
+  plain <- as.numeric(latex_dims(solid, max_width = 100)$width)
+  just  <- as.numeric(latex_dims(solid, max_width = 100, justify = TRUE)$width)
+  # There is no interword glue to stretch, so justification must leave the
+  # line exactly as it was -- and it overruns the measure rather than
+  # being padded out to it.
+  expect_equal(just, plain)
+  expect_gt(just, 100)
 })
 
 # --- optimal (total-fit) line breaking ---------------------------------
@@ -305,7 +328,6 @@ test_that("greedy and optimal layouts are cached separately", {
 
 test_that("content with nothing to break is unaffected", {
   solid <- paste0("\\text{", strrep("x", 60), "}")
-  expect_no_error(latex_dims(solid, max_width = 100, line_break = "optimal"))
   expect_equal(
     as.numeric(latex_dims(solid, max_width = 100, line_break = "optimal")$width),
     as.numeric(latex_dims(solid, max_width = 100, line_break = "greedy")$width),

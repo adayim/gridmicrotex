@@ -67,7 +67,11 @@ test_that("build_latex_children processes all layout types", {
   children <- gridmicrotex:::build_latex_children(
     layout, attr(layout, "bbox_height"), render_mode = "path"
   )
-  expect_true(length(children) > 0)
+  # One grob type per record type: glyph outlines as paths, the array's
+  # rules as segments, and \cancel's strike as a rect. "more than zero"
+  # would pass with the rules silently dropped.
+  expect_setequal(vapply(children, function(k) class(k)[1], character(1)),
+                  c("pathgrob", "segments", "rect"))
 
   # Glyph rows in typeface mode
   layout2 <- gridmicrotex:::parse_latex_cpp("a+b", use_path = FALSE)

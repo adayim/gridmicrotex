@@ -8,7 +8,9 @@ Authors@R: c(
     person("Nano", "Michael", role = "cph",
            comment = "Author of included 'MicroTeX' library"),
     person(family = "Bundled math font authors", role = "cph",
-           comment = "See inst/COPYRIGHTS for the full list of authors of the bundled math fonts."))
+           comment = "See inst/COPYRIGHTS for the full list of authors of the bundled math fonts."),
+    person("Gerard D.C.", "Kuiken", role = "cph",
+           comment = "Author of the bundled American English hyphenation patterns."))
 Description: Renders 'LaTeX' math equations as native R grid graphics objects
     (grobs) using the 'MicroTeX' 'C++' library as the layout engine. Produces
     resolution-independent vector output that works on any R graphics device,
@@ -18,7 +20,9 @@ Description: Renders 'LaTeX' math equations as native R grid graphics objects
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-SystemRequirements: C++17, FreeType (>= 2.9), pkg-config
+SystemRequirements: C++17, FreeType (>= 2.9), pkg-config, FriBidi
+    (optional; without it right-to-left text that wraps keeps left-to-right
+    word order)
 Depends:
     R (>= 4.2.0)
 LinkingTo:
@@ -47,5 +51,4 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://github.com/adayim/gridmicrotex, https://adayim.github.io/gridmicrotex/
 BugReports: https://github.com/adayim/gridmicrotex/issues
-Config/roxygen2/version: 8.0.0
 RoxygenNote: 7.3.3

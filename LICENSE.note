@@ -150,3 +150,15 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+
+
+===============================================================================
+American English hyphenation patterns (inst/hyph/hyph-en-us.tex)
+===============================================================================
+
+Copyright (C) 1990, 2004, 2005 Gerard D.C. Kuiken.
+Part of the hyph-utf8 package; see http://www.hyphenation.org/tex
+
+Copying and distribution of this file, with or without modification, are
+permitted in any medium without royalty provided the copyright notice and
+this notice are preserved.

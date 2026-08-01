@@ -12,7 +12,7 @@
 #' @param render_mode Character string: \code{"path"} or \code{"typeface"}.
 #'   In typeface mode, glyph records are rendered via \code{glyphGrob}.
 #' @return A \code{grid::gList} of child grobs.
-#' @keywords internal
+#' @noRd
 build_latex_children <- function(layout_df, total_h, depth = 0,
                                  text_gp = NULL,
                                  render_mode = "typeface") {
@@ -179,7 +179,7 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
 #' @param total_h Total height for y-axis flipping.
 #'
 #' @return A \code{grid::pathGrob} or \code{NULL}.
-#' @keywords internal
+#' @noRd
 build_path_grob <- function(path_data, col, idx, total_h) {
   cmds <- path_data$cmd
   coords <- path_data$coords
@@ -264,7 +264,7 @@ build_path_grob <- function(path_data, col, idx, total_h) {
 }
 
 #' Approximate a cubic bezier curve with line segments
-#' @keywords internal
+#' @noRd
 cubic_bezier <- function(x0, y0, x1, y1, x2, y2, x3, y3, n = 16) {
   t <- seq(0, 1, length.out = n)
   mt <- 1 - t
@@ -274,7 +274,7 @@ cubic_bezier <- function(x0, y0, x1, y1, x2, y2, x3, y3, n = 16) {
 }
 
 #' Approximate a quadratic bezier curve with line segments
-#' @keywords internal
+#' @noRd
 quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
   t <- seq(0, 1, length.out = n)
   mt <- 1 - t
@@ -290,7 +290,7 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 #' @param style Integer font style bitmask.
 #' @return Character: \code{"plain"}, \code{"bold"}, \code{"italic"},
 #'   or \code{"bold.italic"}.
-#' @keywords internal
+#' @noRd
 .resolve_text_face <- function(style) {
   if (is.na(style)) return("plain")
   is_bold   <- bitwAnd(style, 2L) != 0L
@@ -344,7 +344,7 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 #'
 #' @param font_file Absolute path to the OTF/TTF font file.
 #' @return A \code{glyphFont} object.
-#' @keywords internal
+#' @noRd
 .get_glyph_font <- function(font_file) {
   cached <- .glyph_font_cache[[font_file]]
   if (!is.null(cached)) return(cached)
@@ -374,7 +374,7 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 #' @param font_files Character vector of font file paths.
 #' @param depth Depth below the baseline in bigpts (default 0).
 #' @return A \code{grid::glyphGrob} or \code{NULL}.
-#' @keywords internal
+#' @noRd
 .build_glyph_grob <- function(ids, x, y, sizes, cols, font_files, depth = 0) {
   n <- length(ids)
   if (n == 0) return(NULL)

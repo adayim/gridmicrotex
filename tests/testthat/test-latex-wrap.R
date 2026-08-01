@@ -9,7 +9,7 @@ test_that("latex_wrap converts correctly", {
   expect_equal(latex_wrap("cost \\$5 for $x$"),
                "\\text{cost \\$5 for }x")
   expect_equal(latex_wrap("Line 1\nLine 2"),
-               "\\text{Line 1 \\\\Line 2}")
+               "\\text{Line 1}\\\\\\text{Line 2}")
 })
 
 test_that("latex_wrap is vectorized over its input", {
@@ -143,6 +143,66 @@ test_that("\\caption{X} is extracted as inline \\text{X}\\\\", {
                "\\text{Foo $x_{i}$}\\\\")
 })
 
+test_that("every break lands at the formula level, not inside the text", {
+  # A break kept inside the \text{} makes a multi-line text *box*, and a
+  # box is one item in the enclosing row -- so anything after it was set
+  # beside the whole box rather than on the line it was written on.
+  expect_equal(latex_wrap("Title\n$x^2$"), "\\text{Title}\\\\x^2")
+  expect_equal(latex_wrap("Caption\n\\begin{array}{l}a\\end{array}"),
+               "\\text{Caption}\\\\\\begin{array}{l}a\\end{array}")
+  # Interior breaks too, which is what puts trailing math on the right
+  # line instead of centring it between the two.
+  expect_equal(latex_wrap("Line 1\nLine 2"), "\\text{Line 1}\\\\\\text{Line 2}")
+  expect_equal(latex_wrap("a\nb $x$"), "\\text{a}\\\\\\text{b }x")
+  # A literal \\ is a break like any other.
+  expect_equal(latex_wrap("a\\\\b"), "\\text{a}\\\\\\text{b}")
+  # Nothing but breaks between two math spans is a separator, not text.
+  expect_equal(latex_wrap("$a$\n$b$"), "a\\\\b")
+  # A break with nothing on one side of it would only add a blank first
+  # or last row.
+  expect_equal(latex_wrap("\n\nTitle\n"), "\\text{Title}")
+  # A run collapses to one, the way consecutive blank lines do in LaTeX.
+  expect_equal(latex_wrap("a\n\n\n$x$"), "\\text{a}\\\\x")
+  # No break, no change.
+  expect_equal(latex_wrap("It is $x^2$"), "\\text{It is }x^2")
+  expect_equal(latex_wrap(" "), "\\text{ }")
+})
+
+test_that("splitting a prose run does not move it", {
+  # The split is only free if the two forms lay out identically.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  xy <- function(tex) {
+    d <- latex_grob(tex, input_mode = "math",
+                    gp = grid::gpar(fontsize = 14))$layout_df
+    d[, c("x", "y")]
+  }
+  expect_equal(xy("\\text{line one}\\\\\\text{line two}"),
+               xy("\\text{line one \\\\line two}"))
+})
+
+test_that("a pasted caption sits above its table, not beside it", {
+  # End to end, because the regression was invisible in the wrapped string
+  # alone: \caption becomes \text{X}\\, and in mixed mode that trailing
+  # break used to be swallowed into the surrounding \text{}, leaving the
+  # caption as a box to the LEFT of the tabular.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  snippet <- paste(
+    "\\begin{table}[ht]", "\\centering", "\\caption{Model coefficients}",
+    "\\begin{tabular}{lr}", "\\toprule", "Term & Estimate \\\\",
+    "\\midrule", "Intercept & 2.14 \\\\", "\\bottomrule",
+    "\\end{tabular}", "\\end{table}", sep = "\n")
+
+  d <- latex_grob(snippet, input_mode = "mixed",
+                  gp = grid::gpar(fontsize = 11))$layout_df
+  cap <- d[!is.na(d$text) & grepl("Model", d$text), ]
+  rules <- d[d$type == "line", ]
+  expect_equal(nrow(cap), 1L)
+  # Above: the caption's baseline is higher up the page than the top rule
+  # (y grows downward), and it starts at the same left edge.
+  expect_lt(cap$y, min(rules$y))
+  expect_equal(cap$x, min(rules$x))
+})
+
 test_that("strip preserves legitimate MicroTeX math commands", {
   strip <- gridmicrotex:::.strip_document_wrappers
 
@@ -266,4 +326,34 @@ test_that("strip emits no messages — all transforms are silent", {
     latex_dims("\\caption{X}\\usepackage{amsmath}\\toprule x \\bottomrule")
   )
   expect_equal(length(msgs), 0L)
+})
+
+test_that("links are styled, following LaTeX's convention not HTML's", {
+  strip <- gridmicrotex:::.strip_document_wrappers
+  col <- gridmicrotex:::.MD_LINK_COLOR
+
+  # hyperref with colorlinks=true colours a link and does not underline it;
+  # the `url` package sets a URL in monospace. The markdown side uses the
+  # HTML convention (blue AND underlined) instead -- see the `a` rule.
+  expect_equal(strip("\\href{https://ex.org}{the text}"),
+               paste0("\\textcolor{", col, "}{the text}"))
+  expect_equal(strip("\\url{https://ex.org}"),
+               paste0("\\textcolor{", col, "}{\\texttt{https://ex.org}}"))
+
+  # A URL is verbatim in real LaTeX, so its specials are escaped: an
+  # unescaped _ would open a subscript.
+  expect_equal(strip("\\url{a.io/x_y}"),
+               paste0("\\textcolor{", col, "}{\\texttt{a.io/x\\_y}}"))
+
+  # Links are rewritten before the comment stripper, so a % inside a URL
+  # survives as \% instead of eating the rest of the line.
+  expect_equal(strip("\\url{a.io/x%20y} tail"),
+               paste0("\\textcolor{", col, "}{\\texttt{a.io/x\\%20y}} tail"))
+
+  # \href text is ordinary LaTeX and keeps its markup.
+  expect_equal(strip("\\href{u}{\\textbf{b}}"),
+               paste0("\\textcolor{", col, "}{\\textbf{b}}"))
+
+  # Malformed input is left alone rather than half-rewritten.
+  expect_equal(strip("\\href{only-one-group}"), "\\href{only-one-group}")
 })

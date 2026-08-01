@@ -20,6 +20,7 @@ latex_grob(
   render_mode = c("typeface", "path"),
   justify = FALSE,
   line_break = c("greedy", "optimal"),
+  hyphenate = FALSE,
   debug = FALSE,
   name = NULL,
   gp = grid::gpar()
@@ -86,8 +87,8 @@ its interword spaces so every line but the last fills
 \code{max_width} exactly. Requires \code{max_width}: it acts on the
 lines the wrapper produces, so it does nothing on its own.
 \code{FALSE} (default) leaves the right edge ragged, matching R's own
-text drawing. gridmicrotex does not hyphenate, so justifying a narrow
-column opens noticeably wide word spaces.}
+text drawing. In a narrow column, pair it with \code{hyphenate}:
+justifying without hyphenation opens wide word spaces.}
 
 \item{line_break}{How lines are chosen when wrapping.
 \code{"greedy"} (default) fills each line as far as it will go and
@@ -96,6 +97,15 @@ the paragraph as a whole reads best, in the spirit of Knuth-Plass:
 pulling one word down early can improve every later line, which a
 greedy pass cannot see. Requires \code{max_width}, and costs a
 little more layout time.}
+
+\item{hyphenate}{Logical. When \code{TRUE}, a long word may be broken
+across lines at a point Liang's algorithm allows, with a hyphen drawn
+at the break. Uses the patterns and the
+\code{\\lefthyphenmin}/\code{\\righthyphenmin} of 2 and 3 that TeX
+uses for American English; the patterns are read on first use.
+Requires \code{max_width}. \code{FALSE} is the default. A word
+carrying an explicit \code{\\-} is left alone, as in TeX --- use that
+to override a break the patterns get wrong.}
 
 \item{debug}{Logical; if \code{TRUE}, draws diagnostic overlays on the
 grob --- the full bounding box (dashed gray), the baseline (solid

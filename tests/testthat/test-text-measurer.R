@@ -115,8 +115,11 @@ test_that("\\textrm returns to the caller's font", {
   expect_equal(fam("\\gmfontfamily{Georgia}{a\\textrm{b}c}"),
                c("Georgia", "BODY", "Georgia"))
 
-  # On its own it is still ordinary body text, as it always was.
-  expect_equal(fam("\\textrm{ab}"), c("BODY", "BODY"))
+  # On its own it is still ordinary body text, as it always was. One
+  # record, not one per letter: consecutive text characters are drawn as
+  # a word (see RowAtom::processTextRun). The three cases above stay
+  # one-per-record because each letter sits in a different font scope.
+  expect_equal(fam("\\textrm{ab}"), "BODY")
 
   # Emphasis survives: the override keeps upstream's *nested* FontStyleAtom,
   # so only the family is replaced, not the bold/italic bits.
@@ -143,14 +146,18 @@ test_that("\\textrm is measured in the font it is drawn in", {
 })
 
 test_that("register/clear measurer lifecycle and integration", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   m <- gridmicrotex:::.make_text_measurer(grid::gpar())
-  expect_silent(register_text_measurer(m))
-  expect_silent(clear_text_measurer())
-
-  # Double-register replaces previous without error
   m2 <- gridmicrotex:::.make_text_measurer(grid::gpar(fontfamily = "mono"))
+  # The two closures must actually disagree, or "the second registration
+  # replaced the first" is unfalsifiable below.
+  expect_false(isTRUE(all.equal(m("Wig", 0L), m2("Wig", 0L))))
+
   register_text_measurer(m)
-  expect_silent(register_text_measurer(m2))
+  clear_text_measurer()
+  # Double-register replaces the previous one rather than stacking.
+  register_text_measurer(m)
+  register_text_measurer(m2)
   clear_text_measurer()
 
   # CJK layout uses measurer for dimensions
