@@ -61,6 +61,8 @@ other text element. The label is parsed as markdown — including
 <span>  max_width <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span>,</span>
 <span>  justify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  style <span class="op">=</span> <span class="cn">NA</span>,</span>
+<span>  width <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -97,6 +99,24 @@ wrapping (default: 0, no wrapping).</p></dd>
 <code>max_width</code>.</p></dd>
 
 
+<dt id="arg-style">style<a class="anchor" aria-label="anchor" href="#arg-style"></a></dt>
+<dd><p>A <code><a href="markdown_style.html">markdown_style</a></code> object, CSS text, or the
+path to a <code>.css</code> file, applied to labels drawn through this
+theme element. <code>NA</code>, the default, means unset — the global
+<code><a href="latex_options.html">latex_options</a>(markdown_style = )</code> applies instead. Only
+the properties that compile to LaTeX have an effect, unless the label
+is laid out as blocks (see <em>Block labels</em>). See
+<code><a href="md_style.html">md_style</a></code>.</p></dd>
+
+
+<dt id="arg-width">width<a class="anchor" aria-label="anchor" href="#arg-width"></a></dt>
+<dd><p>Wrapping measure for the label, as a
+<code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></code>. <code>NA</code>, the default, means unset: the
+label is sized to its content and does not wrap.
+<code>unit(1, "npc")</code> is the useful value for a plot title, whose
+cell really is the full plot width. See <em>Block labels</em>.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to
 <code><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">ggplot2::element_text()</a></code> (e.g. <code>colour</code>, <code>hjust</code>).</p></dd>
@@ -112,6 +132,37 @@ wrapping (default: 0, no wrapping).</p></dd>
     <p>This is an S7 subclass of <code><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">ggplot2::element_text</a></code>, so it inherits
 the standard text properties (size, colour, hjust, ...) from the theme
 and merges correctly with inherited theme entries.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="block-labels">Block labels<a class="anchor" aria-label="anchor" href="#block-labels"></a></h2>
+
+
+<p>A label with real block structure — a heading, a list, a table, a
+rule, or more than one paragraph — is laid out by
+<code><a href="markdown_box_grob.html">markdown_box_grob</a></code> rather than flattened into one run, so
+list markers, indents and block spacing survive. That makes a title
+like this work:</p>
+<div class="sourceCode"><pre><code><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"## Findings\n\n- slope $\\beta_1$\n- *p* &lt; 0.001"</span><span class="op">)</span></span></code></pre></div>
+
+<p>The box's own background, border, padding and corner radius come from
+the stylesheet's <code>body</code> rule — <code>style = "body \{ background:
+grey95; padding: 8px \}"</code> — not from arguments here. See
+<code><a href="markdown_style.html">markdown_style</a></code>.</p>
+<p>Three details follow from how ggplot2 measures theme elements:</p>
+<ul><li><p><strong>Wrapping is opt-in.</strong> Without <code>width</code> the label is
+sized to its content, because ggplot2 asks an element for its
+height before placing it, when a relative width would resolve
+against the whole device rather than the element's cell.</p></li>
+<li><p><strong>Axis tick labels are never laid out as blocks</strong>,
+whatever they contain, for the same reason.</p></li>
+<li><p><strong>A rotated label is never laid out as blocks.</strong> The box
+cannot rotate, so a label with both blocks and a non-zero
+<code>angle</code> keeps the angle, is rendered as a single run, and
+warns. A <code>width</code> given with an angle becomes the run's
+wrapping measure instead.</p></li>
+</ul><p><code>math_font</code>, <code>render_mode</code> and <code>justify</code> are not
+forwarded to the box; a block label takes those from
+<code><a href="latex_options.html">latex_options</a></code>.</p>
 <p>Note that <span class="pkg">ggtext</span> also exports a function called
 <code>element_markdown()</code>. If both packages are attached, the one loaded
 later wins; call <code>gridmicrotex::element_markdown()</code> explicitly to

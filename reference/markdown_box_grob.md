@@ -21,10 +21,10 @@ markdown_box_grob(
   vjust = 0.5,
   halign = 0,
   valign = 1,
-  padding = grid::unit(0, "pt"),
-  margin = grid::unit(0, "pt"),
+  padding = NULL,
+  margin = NULL,
   box_gp = NULL,
-  r = grid::unit(0, "pt"),
+  r = NULL,
   style = NULL,
   name = NULL,
   gp = grid::gpar(),
@@ -44,7 +44,9 @@ markdown_box_grob(
 
 - width:
 
-  Width of the box, including `margin`.
+  Width of the box, including `margin`. `NULL` sizes the box to its
+  content, so nothing wraps — useful where the available width is not
+  known, as in a ggplot2 theme element.
 
 - height:
 
@@ -69,16 +71,20 @@ markdown_box_grob(
 
   A [`unit`](https://rdrr.io/r/grid/unit.html) of length 1 or 4 giving
   top, right, bottom and left. Padding is inside the box, margin outside
-  it.
+  it. `NULL` (default) takes them from the stylesheet's `body` rule, and
+  is zero if that says nothing.
 
 - box_gp:
 
   Graphical parameters for the box itself, e.g.
-  `gpar(fill = "grey95", col = "black")`. `NULL` (default) draws no box.
+  `gpar(fill = "grey95", col = "black")`. `NULL` (default) takes the
+  fill from `body { background }` and the border from `body { border }`,
+  and draws no box if neither is set.
 
 - r:
 
-  Corner radius; a non-zero value draws a rounded box.
+  Corner radius; a non-zero value draws a rounded box. `NULL` (default)
+  takes it from `body { border-radius }`.
 
 - style:
 

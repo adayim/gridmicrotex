@@ -91,10 +91,18 @@ leading dot for a class, e.g. <code>.note = md_style(...)</code>.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Tags are named as in HTML, so a stylesheet reads the way a CSS author
 expects: <code>body</code> (the document root, which every other tag
-inherits from), <code>p</code>, <code>h1</code> ... <code>h6</code>, <code>ul</code>,
+inherits from — and which also styles the box itself, see
+<code><a href="md_style.html">md_style</a></code>), <code>p</code>, <code>h1</code> ... <code>h6</code>, <code>ul</code>,
 <code>ol</code>, <code>li</code>, <code>blockquote</code>, <code>pre</code> (a code block),
-<code>code</code> (an inline code span), <code>table</code>, <code>hr</code>,
-<code>img</code>, <code>div</code> and <code>span</code>.</p>
+<code>code</code> (an inline code span), <code>strong</code> and <code>em</code> (what
+markdown's <code>**</code> and <code>*</code> produce), <code>table</code>, <code>tr</code>,
+<code>td</code>, <code>th</code>, <code>hr</code>, <code>img</code>, <code>a</code> (a link),
+<code>math</code> (a paragraph that is nothing but <code>$$...$$</code>),
+<code>footnote</code>, <code>div</code> and <code>span</code>.</p>
+<p>The table tags nest as they do in HTML: <code>tr</code>, <code>td</code> and
+<code>th</code> inherit through <code>table</code>, so <code>table { color: }</code>
+reaches the cells. <code>background</code> on <code>tr</code> fills the row, on
+<code>td</code>/<code>th</code> the individual cell.</p>
 <p>Four things can style a document, and they resolve in CSS's own order:
 the built-in defaults, then a type selector (<code>h1</code>), then a class
 selector (<code>.note</code>), then an inline <code>style</code> attribute. Ties
@@ -117,11 +125,15 @@ over and the parts that apply still take effect.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">markdown_style</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;markdown_style&gt; 15 rules, 15 selectors</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;markdown_style&gt; 19 rules, 19 selectors</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   p            margin-top: 0.55</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   math         margin-top: 0.55; text-align: center</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   a            color: #0969DA; text-decoration: underline</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   footnote     margin-top: 0.3; font-size: 0.85</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   blockquote   margin-top: 0.55; padding-left: 0.75; border-left: 0.125</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   pre          margin-top: 0.55; line-height: 1.15; font-family: mono</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   table        margin-top: 0.55</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   th           font-weight: bold</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   img          margin-top: 0.55</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   hr           margin-top: 0.55; height: 0.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ul           margin-top: 0.55; marker-gap: 0.4; bullet: \bullet</span>
@@ -134,11 +146,15 @@ over and the parts that apply still take effect.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   h5           margin-top: 0.95; font-size: 1.166667; font-weight: bold</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   h6           margin-top: 0.95; font-size: 1; font-weight: bold</span>
 <span class="r-in"><span><span class="fu">markdown_style</span><span class="op">(</span><span class="st">"github"</span>, h1 <span class="op">=</span> <span class="fu"><a href="md_style.html">md_style</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"firebrick"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;markdown_style&gt; 36 rules, 15 selectors</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;markdown_style&gt; 46 rules, 21 selectors</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   p            margin-top: 0.8rem</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   math         margin-top: 1rem; text-align: center</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   a            color: #0969DA; text-decoration: underline</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   footnote     margin-top: 0.3; font-size: 0.85rem; color: #59636E</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   blockquote   margin-top: 0.8rem; padding-left: 1rem; border-left: 0.25rem solid #D1D9E0; color: #59636E</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   pre          margin-top: 0.8rem; line-height: 1.45; font-family: monospace</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   table        margin-top: 0.8rem</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   pre          margin-top: 0.8rem; line-height: 1.45; font-family: monospace; background: #F6F8FA; padding-left: 0.6rem; padding-right: 0.6rem; padding-top: 0.5rem; padding-bottom: 0.5rem</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   table        margin-top: 0.8rem; border-color: #D1D9E0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   th           font-weight: bold; background: #F6F8FA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   img          margin-top: 0.55</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   hr           margin-top: 1.5rem; height: 1rem; border-top: 0.25rem solid #D1D9E0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ul           margin-top: 0.8rem; marker-gap: 0.5rem; bullet: \bullet</span>
@@ -150,12 +166,18 @@ over and the parts that apply still take effect.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   h4           margin-top: 1.2rem; font-size: 1rem; font-weight: bold</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   h5           margin-top: 1.2rem; font-size: 0.875rem; font-weight: bold</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   h6           margin-top: 1.2rem; font-size: 0.85rem; font-weight: bold; color: #59636E</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   tr           border-bottom: 1px solid #D1D9E0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   td           padding-left: 0.6rem</span>
 <span class="r-in"><span><span class="fu">markdown_style</span><span class="op">(</span>css <span class="op">=</span> <span class="st">"h1 { color: steelblue } .note { padding-left: 2em }"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;markdown_style&gt; 17 rules, 16 selectors</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;markdown_style&gt; 21 rules, 20 selectors</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   p            margin-top: 0.55</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   math         margin-top: 0.55; text-align: center</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   a            color: #0969DA; text-decoration: underline</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   footnote     margin-top: 0.3; font-size: 0.85</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   blockquote   margin-top: 0.55; padding-left: 0.75; border-left: 0.125</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   pre          margin-top: 0.55; line-height: 1.15; font-family: mono</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   table        margin-top: 0.55</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   th           font-weight: bold</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   img          margin-top: 0.55</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   hr           margin-top: 0.55; height: 0.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ul           margin-top: 0.55; marker-gap: 0.4; bullet: \bullet</span>

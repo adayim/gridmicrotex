@@ -98,7 +98,7 @@ math.</p>
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
 <span>  y <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
-<span>  eq <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"$x^2$"</span>, <span class="st">"\\frac{a}{b}"</span>, <span class="st">"$\\sum_{i=1}^n x_i$"</span><span class="op">)</span>,</span>
+<span>  eq <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">r"($x^2$)"</span>, <span class="st">r"(\frac{a}{b})"</span>, <span class="st">r"($\sum_{i=1}^n x_i$)"</span><span class="op">)</span>,</span>
 <span>  col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"red"</span>, <span class="st">"blue"</span>, <span class="st">"green"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -110,17 +110,20 @@ math.</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_identity.html" class="external-link">scale_colour_identity</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_identity.html" class="external-link">scale_size_identity</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
-<span>    x <span class="op">=</span> <span class="st">"$\\beta_1 \\cdot x + \\beta_0$"</span>,</span>
-<span>    y <span class="op">=</span> <span class="st">"$\\mathrm{mpg}$"</span></span>
+<span>    x <span class="op">=</span> <span class="st">r"($\beta_1 \cdot x + \beta_0$)"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">r"($\mathrm{mpg}$)"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span></span>
 <span>    axis.title.x <span class="op">=</span> <span class="fu"><a href="../reference/element_latex.html">element_latex</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
 <span>    axis.title.y <span class="op">=</span> <span class="fu"><a href="../reference/element_latex.html">element_latex</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
 <p><img src="ggplot2-integration_files/figure-html/geom-basic-1.png" class="r-plt" alt="" width="70%"></p>
-<p>Dollar-sign delimiters (<code>$...$</code>) are stripped
-automatically, so both <code>"\\frac{a}{b}"</code> and
-<code>"$\\frac{a}{b}$"</code> produce the same output.</p>
+<p>Labels are written with <code>r"(...)"</code>, R’s raw-string syntax,
+so backslashes pass through untouched rather than needing to be doubled
+— as in <code><a href="../articles/getting-started.html">vignette("getting-started")</a></code>. Dollar-sign delimiters
+(<code>$...$</code>) are stripped automatically, so
+<code>r"(\frac{a}{b})"</code> and <code>r"($\frac{a}{b}$)"</code>
+produce the same output.</p>
 <div class="section level3">
 <h3 id="adding-equation-annotations-to-a-scatter-plot">Adding equation annotations to a scatter plot<a class="anchor" aria-label="anchor" href="#adding-equation-annotations-to-a-scatter-plot"></a>
 </h3>
@@ -134,8 +137,7 @@ a data frame and automatically hides the legend.</p>
 <span><span class="va">b1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">r2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">$</span><span class="va">r.squared</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">eq_label</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"$\\hat{y} = %s %s x, \\quad R^2 = %s$"</span>,</span>
-<span>                     <span class="va">b0</span>, <span class="va">b1</span>, <span class="va">r2</span><span class="op">)</span></span>
+<span><span class="va">eq_label</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">r"($\hat{y} = %s %s x, \quad R^2 = %s$)"</span>, <span class="va">b0</span>, <span class="va">b1</span>, <span class="va">r2</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
@@ -158,7 +160,7 @@ their LaTeX counterparts; only the label syntax differs.</p>
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  x   <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
 <span>  y   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span>,</span>
-<span>  lab <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"**bold**"</span>, <span class="st">"*slope* $\\beta_1$"</span>, <span class="st">"`code` and $x^2$"</span><span class="op">)</span></span>
+<span>  lab <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"**bold**"</span>, <span class="st">r"(*slope* $\beta_1$)"</span>, <span class="st">"`code` and $x^2$"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, label <span class="op">=</span> <span class="va">lab</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -166,9 +168,9 @@ their LaTeX counterparts; only the label syntax differs.</p>
 <span>  <span class="fu"><a href="../reference/geom_markdown.html">geom_markdown</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">12</span>, vjust <span class="op">=</span> <span class="op">-</span><span class="fl">0.6</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">3.6</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
-<span>    title <span class="op">=</span> <span class="st">"*Fitted* model: $\\hat{y} = \\beta_0 + \\beta_1 x$"</span>,</span>
+<span>    title <span class="op">=</span> <span class="st">r"(*Fitted* model: $\hat{y} = \beta_0 + \beta_1 x$)"</span>,</span>
 <span>    x     <span class="op">=</span> <span class="st">"**weight** in $10^3$ lbs"</span>,</span>
-<span>    y     <span class="op">=</span> <span class="st">"*efficiency* $\\eta$"</span></span>
+<span>    y     <span class="op">=</span> <span class="st">r"(*efficiency* $\eta$)"</span></span>
 <span>  <span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span></span>
 <span>    plot.title   <span class="op">=</span> <span class="fu"><a href="../reference/element_markdown.html">element_markdown</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
@@ -184,6 +186,111 @@ change the label. Note that the <a href="https://wilkelab.org/ggtext/" class="ex
 <code><a href="../reference/element_markdown.html">gridmicrotex::element_markdown()</a></code> to be explicit. The two
 are not interchangeable — ggtext renders HTML/CSS, this renders LaTeX
 math.</p>
+<div class="section level3">
+<h3 id="annotating-with-markdown">Annotating with markdown<a class="anchor" aria-label="anchor" href="#annotating-with-markdown"></a>
+</h3>
+<p><code>annotate("markdown", ...)</code> is the markdown counterpart of
+<code>annotate("latex", ...)</code>. It suits a callout that is part
+prose and part formula — and because <code>&lt;br&gt;</code> starts a
+new line, one annotation can hold several:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">wt</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">note</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
+<span>  <span class="st">r"(**Linear fit**&lt;br&gt;$\hat{y} = %s %s x$&lt;br&gt;$R^2 = %s$, *p* &lt; 0.001)"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">$</span><span class="va">r.squared</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>colour <span class="op">=</span> <span class="st">"grey65"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_smooth.html" class="external-link">geom_smooth</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"lm"</span>, se <span class="op">=</span> <span class="cn">FALSE</span>, colour <span class="op">=</span> <span class="st">"#1F6FB2"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/annotate.html" class="external-link">annotate</a></span><span class="op">(</span><span class="st">"markdown"</span>, x <span class="op">=</span> <span class="fl">4.1</span>, y <span class="op">=</span> <span class="fl">32</span>, label <span class="op">=</span> <span class="va">note</span>, size <span class="op">=</span> <span class="fl">11</span>,</span>
+<span>           style <span class="op">=</span> <span class="st">"strong { color: #B22222 }"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; `geom_smooth()` using formula = 'y ~ x'</span></span></code></pre></div>
+<p><img src="ggplot2-integration_files/figure-html/markdown-annotation-1.png" class="r-plt" alt="" width="70%"></p>
+<p>The LaTeX version of the same annotation would need
+<code>\text{}</code> around every word and could not set the heading in
+bold on its own line. As with <code>annotate("latex", ...)</code>, no
+data frame is needed and the legend is suppressed automatically.</p>
+</div>
+<div class="section level3">
+<h3 id="styling-labels">Styling labels<a class="anchor" aria-label="anchor" href="#styling-labels"></a>
+</h3>
+<p>Both take a <code>style</code>: a <code><a href="../reference/markdown_style.html">markdown_style()</a></code>
+object, CSS text, or the path to a <code>.css</code> file. It is the
+same cascade <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code> uses — so a stylesheet can
+set the look of every label at once, and
+<code>&lt;span class=&gt;</code> picks out one run inside a label.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">css</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<span><span class="st">  body   { color: #33475B }</span></span>
+<span><span class="st">  strong { color: #B22222 }</span></span>
+<span><span class="st">  code   { color: #1F6FB2 }</span></span>
+<span><span class="st">  .unit  { color: grey55; font-size: smaller }</span></span>
+<span><span class="st">"</span></span>
+<span></span>
+<span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  lab <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"**bold** is red"</span>, <span class="st">"`code` is blue"</span>,</span>
+<span>          <span class="st">'plain &lt;span class="unit"&gt;with a note&lt;/span&gt;'</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, label <span class="op">=</span> <span class="va">lab</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="../reference/geom_markdown.html">geom_markdown</a></span><span class="op">(</span>style <span class="op">=</span> <span class="va">css</span>, fontsize <span class="op">=</span> <span class="fl">11</span>, vjust <span class="op">=</span> <span class="op">-</span><span class="fl">0.8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/lims.html" class="external-link">ylim</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">3.8</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">r"(**Styled** labels and $\beta_1$)"</span>,</span>
+<span>       x <span class="op">=</span> <span class="st">'weight &lt;span class="unit"&gt;(1000 lbs)&lt;/span&gt;'</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span></span>
+<span>    plot.title   <span class="op">=</span> <span class="fu"><a href="../reference/element_markdown.html">element_markdown</a></span><span class="op">(</span>style <span class="op">=</span> <span class="va">css</span>, fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span>,</span>
+<span>    axis.title.x <span class="op">=</span> <span class="fu"><a href="../reference/element_markdown.html">element_markdown</a></span><span class="op">(</span>style <span class="op">=</span> <span class="va">css</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span></code></pre></div>
+<p><img src="ggplot2-integration_files/figure-html/style-1.png" class="r-plt" alt="" width="70%"></p>
+<p>On a single-run label only the properties that compile to LaTeX apply
+— colour, the <code>font-*</code> family, decorations. Margins, padding
+and backgrounds need block layout, which is the next section.
+<code>latex_options(markdown_style = )</code> sets a default for a whole
+document, so the argument is only needed to override it.</p>
+</div>
+<div class="section level3">
+<h3 id="block-titles">Block titles<a class="anchor" aria-label="anchor" href="#block-titles"></a>
+</h3>
+<p>A label with real block structure — a heading, a list, a table, or
+more than one paragraph — is laid out as blocks instead of being
+flattened into a single run. There is nothing to switch on:
+<code><a href="../reference/element_markdown.html">element_markdown()</a></code> notices. That makes a title a small
+document, and the <code>body</code> rule styles the box around it.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>colour <span class="op">=</span> <span class="st">"grey40"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">r"(## Fuel economy falls with weight</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">- slope $\beta_1 = -5.34$, *p* &lt; 0.001</span></span>
+<span><span class="st">- $R^2 = 0.75$ over $n = 32$ cars)"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>plot.title <span class="op">=</span> <span class="fu"><a href="../reference/element_markdown.html">element_markdown</a></span><span class="op">(</span>style <span class="op">=</span> <span class="st">"</span></span>
+<span><span class="st">    body { background: #F4F7FB; padding: 10px;</span></span>
+<span><span class="st">           border: 1px solid #C7D6E5; border-radius: 4px }</span></span>
+<span><span class="st">  "</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="ggplot2-integration_files/figure-html/blocktitle-1.png" class="r-plt" alt="" width="70%"></p>
+<p>Two consequences of how ggplot2 measures theme elements are worth
+knowing.</p>
+<p><strong>Wrapping is opt-in.</strong> ggplot2 asks an element how tall
+it is before it knows how wide the element’s cell will be, so a relative
+width would be resolved against the whole device and the title would
+reserve the wrong height. Without <code>width</code> the label is sized
+to its content and never wraps. Pass one when you want wrapping —
+<code>unit(1, "npc")</code> is the right value for a title, whose cell
+really is the plot width.</p>
+<p><strong>Tick labels and rotated labels stay single runs.</strong>
+Axis tick labels for the same measuring reason. Rotated labels because
+the box cannot rotate: a rotated label with blocks in it keeps its
+angle, renders as one run, and warns, since laying a
+<code>axis.title.y</code> out horizontally across the panel would be the
+worse of the two failures.</p>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

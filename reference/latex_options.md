@@ -19,6 +19,7 @@ latex_options(
   input_mode = NULL,
   justify = NULL,
   line_break = NULL,
+  hyphenate = NULL,
   markdown_style = NULL
 )
 
@@ -60,8 +61,8 @@ reset_latex_options()
   spaces so every line but the last fills `max_width` exactly. Has no
   effect without `max_width`, since it acts on the lines the wrapper
   produces. `FALSE` (default) leaves the right edge ragged, matching R's
-  own text drawing. Note that gridmicrotex does not hyphenate, so
-  justifying a narrow column opens noticeably wide word spaces.
+  own text drawing. Pair it with `hyphenate = TRUE` in a narrow column,
+  where justifying alone opens noticeably wide word spaces.
 
 - line_break:
 
@@ -71,6 +72,15 @@ reset_latex_options()
   spirit of Knuth-Plass: pulling one word down early can improve every
   later line, which a greedy pass cannot see. Requires `max_width`, and
   costs a little more layout time.
+
+- hyphenate:
+
+  Logical. When `TRUE`, long words may be broken across lines at the
+  points Liang's algorithm allows, with a hyphen drawn at the break —
+  the same patterns and the same `\lefthyphenmin`/`\righthyphenmin` of 2
+  and 3 that TeX uses for American English. Has no effect without
+  `max_width`. `FALSE` is the default. A word already carrying an
+  explicit `\-` is left alone, as in TeX.
 
 - markdown_style:
 

@@ -50,7 +50,7 @@ subset, works inside every block."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Render a markdown document as a boxed grid grob</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/markdown.R" class="external-link"><code>R/markdown.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/markdown-box.R" class="external-link"><code>R/markdown-box.R</code></a></small>
       <div class="d-none name"><code>markdown_box_grob.Rd</code></div>
     </div>
 
@@ -76,10 +76,10 @@ subset, works inside every block.</p>
 <span>  vjust <span class="op">=</span> <span class="fl">0.5</span>,</span>
 <span>  halign <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  valign <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  padding <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0</span>, <span class="st">"pt"</span><span class="op">)</span>,</span>
-<span>  margin <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0</span>, <span class="st">"pt"</span><span class="op">)</span>,</span>
+<span>  padding <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  margin <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  box_gp <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  r <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0</span>, <span class="st">"pt"</span><span class="op">)</span>,</span>
+<span>  r <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  style <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -100,7 +100,9 @@ subset, works inside every block.</p>
 
 
 <dt id="arg-width">width<a class="anchor" aria-label="anchor" href="#arg-width"></a></dt>
-<dd><p>Width of the box, including <code>margin</code>.</p></dd>
+<dd><p>Width of the box, including <code>margin</code>. <code>NULL</code>
+sizes the box to its content, so nothing wraps — useful where the
+available width is not known, as in a ggplot2 theme element.</p></dd>
 
 
 <dt id="arg-height">height<a class="anchor" aria-label="anchor" href="#arg-height"></a></dt>
@@ -126,17 +128,20 @@ leaves room to spare: <code>1</code> top (default), <code>0</code> bottom.</p></
 <dt id="arg-padding-margin">padding, margin<a class="anchor" aria-label="anchor" href="#arg-padding-margin"></a></dt>
 <dd><p>A <code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></code> of length 1 or 4
 giving top, right, bottom and left. Padding is inside the box,
-margin outside it.</p></dd>
+margin outside it. <code>NULL</code> (default) takes them from the
+stylesheet's <code>body</code> rule, and is zero if that says nothing.</p></dd>
 
 
 <dt id="arg-box-gp">box_gp<a class="anchor" aria-label="anchor" href="#arg-box-gp"></a></dt>
 <dd><p>Graphical parameters for the box itself, e.g.
 <code>gpar(fill = "grey95", col = "black")</code>. <code>NULL</code> (default)
-draws no box.</p></dd>
+takes the fill from <code>body { background }</code> and the border from
+<code>body { border }</code>, and draws no box if neither is set.</p></dd>
 
 
 <dt id="arg-r">r<a class="anchor" aria-label="anchor" href="#arg-r"></a></dt>
-<dd><p>Corner radius; a non-zero value draws a rounded box.</p></dd>
+<dd><p>Corner radius; a non-zero value draws a rounded box.
+<code>NULL</code> (default) takes it from <code>body { border-radius }</code>.</p></dd>
 
 
 <dt id="arg-style">style<a class="anchor" aria-label="anchor" href="#arg-style"></a></dt>

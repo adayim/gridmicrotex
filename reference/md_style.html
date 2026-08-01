@@ -83,18 +83,43 @@ says it is (<code>"2.5em"</code>, <code>"12pt"</code>, <code>"150%"</code>); and
 <code><a href="markdown_grob.html">markdown_grob</a></code>, which has no block layout; <em>block</em>
 means it needs <code><a href="markdown_box_grob.html">markdown_box_grob</a></code>.</p>
 <table class="table table"><tr><td><strong>property</strong></td><td><strong>scope</strong></td><td><strong>notes</strong></td></tr><tr><td><code>color</code></td><td>inline + block</td><td></td></tr><tr><td><code>font_size</code></td><td>inline + block</td><td></td></tr><tr><td><code>font_family</code></td><td>inline + block</td><td></td></tr><tr><td><code>font_weight</code></td><td>inline + block</td><td>prose blocks only, see below</td></tr><tr><td><code>font_style</code></td><td>inline + block</td><td>prose blocks only, see below</td></tr><tr><td><code>text_decoration</code></td><td>inline + block</td><td><code>underline</code>,
-<code>line-through</code></td></tr><tr><td><code>line_height</code></td><td>block</td><td>unitless, as <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> wants it</td></tr><tr><td><code>margin_top</code>, <code>margin_bottom</code></td><td>block</td><td>margins do not
-collapse</td></tr><tr><td><code>padding_left</code></td><td>block</td><td></td></tr><tr><td><code>text_align</code></td><td>block</td><td><code>left</code>, <code>center</code>,
-<code>right</code></td></tr><tr><td><code>border_left</code></td><td>block</td><td>the <code>blockquote</code> bar</td></tr><tr><td><code>border_top</code></td><td>block</td><td>the <code>hr</code> rule</td></tr><tr><td><code>height</code></td><td>block</td><td>the band an <code>hr</code> sits in</td></tr><tr><td><code>bullet</code></td><td><code>ul</code></td><td>raw LaTeX for the marker glyph</td></tr><tr><td><code>marker_gap</code></td><td><code>ul</code>, <code>ol</code></td><td>marker to text</td></tr></table><p>Anything else is an error — unlike a pasted stylesheet, where an
+<code>overline</code>, <code>line-through</code></td></tr><tr><td><code>background</code></td><td>inline + block</td><td>a fill behind the text</td></tr><tr><td><code>border</code></td><td>inline</td><td>a frame; the inset is fixed</td></tr><tr><td><code>border_style</code></td><td>inline</td><td>only <code>double</code></td></tr><tr><td><code>border_radius</code></td><td>inline</td><td>rounds the frame</td></tr><tr><td><code>box_shadow</code></td><td>inline</td><td></td></tr><tr><td><code>visibility</code></td><td>inline</td><td><code>hidden</code> keeps the space</td></tr><tr><td><code>vertical_align</code></td><td>inline</td><td><code>super</code>, <code>sub</code>,
+or a length</td></tr><tr><td><code>transform</code></td><td>inline</td><td><code>rotate()</code>, <code><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale()</a></code>,
+<code>scaleX(-1)</code></td></tr><tr><td><code>line_height</code></td><td>block</td><td>unitless, as <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> wants it</td></tr><tr><td><code>margin_top</code>, <code>margin_bottom</code></td><td>block</td><td>margins do not
+collapse</td></tr><tr><td><code>margin_left</code>, <code>margin_right</code></td><td>block</td><td></td></tr><tr><td><code>padding_left</code>, <code>padding_right</code></td><td>block</td><td></td></tr><tr><td><code>padding_top</code>, <code>padding_bottom</code></td><td>block</td><td></td></tr><tr><td><code>margin</code>, <code>padding</code></td><td>block</td><td>the CSS shorthand: one
+to four lengths, in CSS's order</td></tr><tr><td><code>text_align</code></td><td>block</td><td><code>left</code>, <code>center</code>,
+<code>right</code></td></tr><tr><td><code>border_left</code></td><td>block</td><td>the <code>blockquote</code> bar</td></tr><tr><td><code>border_top</code></td><td>block</td><td>the <code>hr</code> rule</td></tr><tr><td><code>border_bottom</code></td><td><code>tr</code></td><td>a rule under each table row</td></tr><tr><td><code>border_color</code></td><td><code>table</code></td><td>colour of the table's rules</td></tr><tr><td><code>table_layout</code></td><td><code>table</code></td><td><code>fixed</code> divides the
+width between the columns so a wide table wraps</td></tr><tr><td><code>height</code></td><td>block</td><td>the band an <code>hr</code> sits in</td></tr><tr><td><code>bullet</code></td><td><code>ul</code></td><td>raw LaTeX for the marker glyph</td></tr><tr><td><code>marker_gap</code></td><td><code>ul</code>, <code>ol</code></td><td>marker to text</td></tr></table><p><code>font_size</code> also accepts CSS's keywords — <code>xx-small</code> through
+<code>xx-large</code>, plus <code>smaller</code> and <code>larger</code> — taken from the
+<code>\tiny</code>..<code>\Huge</code> ladder MicroTeX implements.</p>
+<p><strong>The <code>body</code> rule styles the box itself.</strong> On any other tag,
+<code>background</code>, <code>border</code>, <code>border_radius</code>, <code>padding</code>
+and <code>margin</code> apply to that block. On <code>body</code> they apply to the
+whole <code><a href="markdown_box_grob.html">markdown_box_grob</a></code> — its fill, its frame, its
+corner radius, and the space inside and outside it. That is the only
+way to give a <code><a href="element_markdown.html">element_markdown</a></code> title a background, since
+the theme element takes no box arguments of its own:</p>
+<div class="sourceCode"><pre><code>body { background: grey95; padding: 8px;
+        border: 1px solid grey60; border-radius: 4px }</code></pre></div>
+
+<p>An explicit <code>box_gp</code>, <code>padding</code>, <code>margin</code> or <code>r</code>
+argument to <code><a href="markdown_box_grob.html">markdown_box_grob()</a></code> wins over the rule, the way an
+inline style wins in CSS.</p>
+<p>Anything else is an error — unlike a pasted stylesheet, where an
 unknown property is ignored the way a browser ignores it.</p>
 <p><strong>One limitation worth knowing.</strong> <code>font_weight</code> and
 <code>font_style</code> apply to blocks whose content is prose — paragraphs,
-headings, list items, block quotes and <code>&lt;div&gt;</code>s. They do
-<em>not</em> apply to <code>pre</code>, <code>table</code> or an image's alt text,
-which build their own LaTeX and impose their own font handling. This
-is a MicroTeX constraint rather than a choice: <code>\text{}</code> resets
-the font style, so emphasis has to be decided when the content is
-generated, not wrapped around it afterwards.</p>
+headings, list items, block quotes, table cells and <code>&lt;div&gt;</code>s. They
+do <em>not</em> apply to <code>pre</code> or an image's alt text, which build
+their own LaTeX and impose their own font handling. This is a MicroTeX
+constraint rather than a choice: <code>\text{}</code> resets the font
+style, so emphasis has to be decided when the content is generated,
+not wrapped around it afterwards.</p>
+<p><strong>What cannot be styled at all.</strong> There is no small-caps
+(<code>\textsc</code> is not a MicroTeX command), no
+<code>font-variant-numeric</code>, no right-to-left or bidirectional text,
+and no padding inside an inline <code>border</code> — MicroTeX has no
+<code>\fboxsep</code>, so that inset is fixed.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

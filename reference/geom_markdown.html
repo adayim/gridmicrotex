@@ -69,6 +69,7 @@ MicroTeX, so the output is resolution-independent vector graphics.</p>
 <span>  max_width <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span>,</span>
 <span>  justify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  style <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  na.rm <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  show.legend <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  inherit.aes <span class="op">=</span> <span class="cn">TRUE</span></span>
@@ -157,6 +158,15 @@ wrapping (default: 0, no wrapping).</p></dd>
 <dt id="arg-justify">justify<a class="anchor" aria-label="anchor" href="#arg-justify"></a></dt>
 <dd><p>Logical; justify wrapped lines. Requires
 <code>max_width</code>. See <code><a href="latex_grob.html">latex_grob</a></code>.</p></dd>
+
+
+<dt id="arg-style">style<a class="anchor" aria-label="anchor" href="#arg-style"></a></dt>
+<dd><p>A <code><a href="markdown_style.html">markdown_style</a></code> object, CSS text, or the
+path to a <code>.css</code> file, applied to every label this layer draws.
+<code>NULL</code> falls back to
+<code><a href="latex_options.html">latex_options</a>(markdown_style = )</code>. Only the properties
+that compile to LaTeX apply here — a label has no block layout, so
+margins and padding are ignored. See <code><a href="md_style.html">md_style</a></code>.</p></dd>
 
 
 <dt id="arg-na-rm">na.rm<a class="anchor" aria-label="anchor" href="#arg-na-rm"></a></dt>

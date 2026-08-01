@@ -93,41 +93,31 @@ optional padded, filled box.</li>
 <div class="section level2">
 <h2 id="inline-markdown">Inline markdown<a class="anchor" aria-label="anchor" href="#inline-markdown"></a>
 </h2>
-<p><code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> handles the inline part of markdown:
+<p><code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> handles the inline part of markdown —
 <code>**bold**</code>, <code>*italic*</code>, <code>`code`</code>,
-<code>~~strikethrough~~</code>, and any <code>$math$</code>.</p>
+<code>~~strikethrough~~</code> — and any <code>$math$</code>. Because
+the math is real MicroTeX, the whole engine is available inside a
+markdown string: fractions, sums, matrices, Greek, accents.</p>
+<p>Write the string with <code>r"(...)"</code>, R’s raw-string syntax.
+LaTeX is full of backslashes, and a raw string passes them through
+untouched instead of making you double every one.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
-<span>  <span class="st">"The **fitted** slope is $\\beta_1 = 0.42$ (*p* &lt; 0.001)."</span>,</span>
-<span>  x <span class="op">=</span> <span class="fl">0.02</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><img src="markdown_files/figure-html/inline-1.png" class="r-plt" alt="" width="90%"></p>
-<p>Because the math is real MicroTeX, the full engine is available
-inside a markdown string — fractions, sums, matrices, Greek,
-accents:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>    <span class="st">"The estimator $\\hat{\\beta} = (X^\\top X)^{-1} X^\\top y$"</span>,</span>
-<span>    <span class="st">"has variance $\\sigma^2$."</span></span>
-<span>  <span class="op">)</span>,</span>
+<span>  <span class="st">r"(The **fitted** $\hat{\beta} = (X^\top X)^{-1} X^\top y$ has ~~no~~ `se` = *0.42*.)"</span>,</span>
 <span>  x <span class="op">=</span> <span class="fl">0.02</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">18</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="markdown_files/figure-html/inline-math-1.png" class="r-plt" alt="" width="90%"></p>
+<p><img src="markdown_files/figure-html/inline-1.png" class="r-plt" alt="" width="90%"></p>
 <div class="section level3">
 <h3 id="wrapping-long-labels">Wrapping long labels<a class="anchor" aria-label="anchor" href="#wrapping-long-labels"></a>
 </h3>
 <p>Set <code>max_width</code> (in big points) to wrap a long label over
 several lines.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>    <span class="st">"This is a **long caption** with some $x^2$ math that is wide enough"</span>,</span>
-<span>    <span class="st">"to wrap across several lines when a maximum width is set."</span></span>
-<span>  <span class="op">)</span>,</span>
+<span>  <span class="st">r"(This is a **long caption** with some $x^2$ math that is wide enough</span></span>
+<span><span class="st">      to wrap across several lines when a maximum width is set.)"</span>,</span>
 <span>  x <span class="op">=</span> <span class="fl">0.02</span>, y <span class="op">=</span> <span class="fl">0.95</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  max_width <span class="op">=</span> <span class="fl">4</span> <span class="op">*</span> <span class="fl">72</span>,          <span class="co"># 4 inches, in big points</span></span>
 <span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span></span>
@@ -143,10 +133,6 @@ conformant way to ask for them is the inline HTML that CommonMark
 already includes, so that is what <code>gridmicrotex</code> reads. Each
 tag does what HTML’s own default rendering says it should:</p>
 <table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
 <thead><tr class="header">
 <th>tag</th>
 <th>effect</th>
@@ -207,18 +193,31 @@ tag does what HTML’s own default rendering says it should:</p>
 <td>wrapped in quotation marks</td>
 </tr>
 <tr class="even">
+<td>
+<code>&lt;ruby&gt;</code>, <code>&lt;rt&gt;</code>
+</td>
+<td>annotation above the base (furigana)</td>
+</tr>
+<tr class="odd">
+<td><code>&amp;nbsp;</code></td>
+<td>non-breaking space</td>
+</tr>
+<tr class="even">
 <td><code>&lt;br&gt;</code></td>
 <td>line break</td>
 </tr>
 <tr class="odd">
 <td><code>&lt;span style="…"&gt;</code></td>
-<td>
-<code>color</code>, <code>text-decoration</code>,
-<code>font-size</code>, <code>font-family</code>
+<td>any property from <code><a href="../reference/md_style.html">?md_style</a></code>
 </td>
 </tr>
 </tbody>
 </table>
+<p><code>&lt;ruby&gt;</code> is worth singling out:
+<code>&lt;ruby&gt;漢&lt;rt&gt;かん&lt;/rt&gt;&lt;/ruby&gt;</code> sets
+the annotation above its base with <code>\overset</code>, which is how
+furigana and bopomofo are typeset. Neither marquee nor gridtext can do
+this.</p>
 <p>In a <code>style</code> attribute: <code>color</code> takes any R
 colour name, the nine CSS names R happens to lack (<code>crimson</code>,
 <code>teal</code>, <code>rebeccapurple</code> and friends),
@@ -236,17 +235,26 @@ in <code>gpar(col = ...)</code>; <code>text-decoration</code> takes
 or any font name, including via a fallback list like
 <code>'Courier New', monospace</code>. Any other property is
 ignored.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<p>One figure with most of the table in it — a sized and coloured span,
+two font families, a subscript, an underline, a highlight, and the blank
+line that two <code>&lt;br&gt;</code> leave behind:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
-<span>    <span class="st">'&lt;span style="font-size:26pt;color:#2E5E8E"&gt;Big&lt;/span&gt; and '</span>,</span>
-<span>    <span class="st">'&lt;span style="font-family:serif"&gt;serif&lt;/span&gt; and '</span>,</span>
-<span>    <span class="st">'&lt;span style="font-family:monospace"&gt;mono&lt;/span&gt;.'</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  x <span class="op">=</span> <span class="fl">0.02</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span></span>
+<span>  <span class="st">r"(&lt;span style="font-size:22pt;color:#2E5E8E"&gt;Model fit&lt;/span&gt;,</span></span>
+<span><span class="st">     &lt;span style="font-family:serif"&gt;serif&lt;/span&gt; and</span></span>
+<span><span class="st">     &lt;span style="font-family:monospace"&gt;mono&lt;/span&gt;.&lt;br&gt;&lt;br&gt;</span></span>
+<span><span class="st">     The &lt;span style="color:#B22222"&gt;**residual**&lt;/span&gt; for H&lt;sub&gt;0&lt;/sub&gt;</span></span>
+<span><span class="st">     is &lt;u&gt;within&lt;/u&gt; &lt;mark&gt;$2\sigma$&lt;/mark&gt;.)"</span>,</span>
+<span>  x <span class="op">=</span> <span class="fl">0.02</span>, y <span class="op">=</span> <span class="fl">0.9</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="markdown_files/figure-html/html-css-1.png" class="r-plt" alt="" width="90%"></p>
+<p>Tags nest, and markdown and <code>$math$</code> keep working inside
+them, so <code>&lt;u&gt;**bold underlined**&lt;/u&gt;</code> and
+<code>**&lt;u&gt;the same thing&lt;/u&gt;**</code> render alike. Any
+other tag is dropped and its text kept — as a browser does with
+<code>&lt;a&gt;</code> or a bare <code>&lt;span&gt;</code>, which have
+no rendering of their own.</p>
 </div>
 <div class="section level3">
 <h3 id="which-fonts-are-available">Which fonts are available<a class="anchor" aria-label="anchor" href="#which-fonts-are-available"></a>
@@ -296,37 +304,12 @@ named family will not resolve</td>
 installed system-wide first — <code><a href="../reference/load_math_font.html">load_math_font()</a></code> is
 <em>not</em> the function for this, as it registers <em>math</em> fonts
 with MicroTeX:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">systemfonts</span><span class="fu">::</span><span class="fu"><a href="https://systemfonts.r-lib.org/reference/register_font.html" class="external-link">register_font</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"MyFont"</span>, plain <span class="op">=</span> <span class="st">"path/to/MyFont.otf"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span><span class="st">'&lt;span style="font-family:MyFont"&gt;x&lt;/span&gt;'</span><span class="op">)</span></span></code></pre></div>
 <p>A span’s own family wins over <code>gp$fontfamily</code>, except for
 the width of the spaces <em>between</em> its words. Set both to the same
 family if that shows.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
-<span>    <span class="st">'The &lt;span style="color:#B22222"&gt;**residual**&lt;/span&gt; for '</span>,</span>
-<span>    <span class="st">"H&lt;sub&gt;0&lt;/sub&gt; is &lt;u&gt;within&lt;/u&gt; $2\\sigma$."</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  x <span class="op">=</span> <span class="fl">0.02</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><img src="markdown_files/figure-html/html-spans-1.png" class="r-plt" alt="" width="90%"></p>
-<p>Tags nest, and markdown and <code>$math$</code> keep working inside
-them, so <code>&lt;u&gt;**bold underlined**&lt;/u&gt;</code> and
-<code>**&lt;u&gt;the same thing&lt;/u&gt;**</code> render alike. Any
-other tag is dropped and its text kept — as a browser does with
-<code>&lt;a&gt;</code> or a bare <code>&lt;span&gt;</code>, which have
-no rendering of their own.</p>
-<p>Two <code>&lt;br&gt;</code> in a row leave a blank line, as in
-HTML:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/markdown_grob.html">grid.markdown</a></span><span class="op">(</span></span>
-<span>  <span class="st">"**Model fit**&lt;br&gt;&lt;br&gt;Deviance &lt;mark&gt;412.7&lt;/mark&gt; on term&lt;sub&gt;1&lt;/sub&gt;."</span>,</span>
-<span>  x <span class="op">=</span> <span class="fl">0.02</span>, y <span class="op">=</span> <span class="fl">0.85</span>, vjust <span class="op">=</span> <span class="fl">1</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">18</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><img src="markdown_files/figure-html/html-br-1.png" class="r-plt" alt="" width="90%"></p>
 </div>
 </div>
 <div class="section level2">
@@ -336,11 +319,11 @@ HTML:</p>
 Each block — heading, paragraph, list, quote, code, table — becomes its
 own grob, stacked top to bottom. The <code>width</code> you give is the
 box width; prose wraps to fit it.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">md</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">md</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
 <span><span class="st"># Model summary</span></span>
 <span><span class="st"></span></span>
-<span><span class="st">The slope is $\\beta_1$ with *p* &lt; 0.001, and this paragraph is long</span></span>
+<span><span class="st">The slope is $\beta_1$ with *p* &lt; 0.001, and this paragraph is long</span></span>
 <span><span class="st">enough that it wraps inside the column.</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">## Diagnostics</span></span>
@@ -350,7 +333,7 @@ box width; prose wraps to fit it.</p>
 <span><span class="st">- no influential points</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">&gt; Assumptions were checked and hold.</span></span>
-<span><span class="st">"</span></span>
+<span><span class="st">)"</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="fu"><a href="../reference/markdown_box_grob.html">markdown_box_grob</a></span><span class="op">(</span></span>
@@ -372,8 +355,8 @@ single unit or a length-4 unit giving top, right, bottom, left.</p>
 Markdown tables become real typeset tables, with column alignment taken
 from the <code>|:---:|</code> markers — something a text renderer cannot
 do.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">md</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">md</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
 <span><span class="st">### Checklist</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">- [x] fit the model</span></span>
@@ -381,11 +364,11 @@ do.</p>
 <span><span class="st"></span></span>
 <span><span class="st">Coefficients:</span></span>
 <span><span class="st"></span></span>
-<span><span class="st">| term | estimate | *p* |</span></span>
-<span><span class="st">|:-----|---------:|:---:|</span></span>
+<span><span class="st">| term | $\beta$  | *p* |</span></span>
+<span><span class="st">|:-----|------------:|:---:|</span></span>
 <span><span class="st">| intercept | 30.1 | *** |</span></span>
 <span><span class="st">| slope | -5.3 | *** |</span></span>
-<span><span class="st">"</span></span>
+<span><span class="st">)"</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="fu"><a href="../reference/markdown_box_grob.html">markdown_box_grob</a></span><span class="op">(</span></span>
@@ -403,7 +386,7 @@ do.</p>
 width. <code>png</code> and <code>jpeg</code> are optional — if neither
 is installed, or the file is missing, the image degrades to its alt
 text.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Make a small PNG to embed (any .png / .jpeg path works).</span></span>
 <span><span class="va">img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span></span>
 <span><span class="fu">ragg</span><span class="fu">::</span><span class="fu"><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">agg_png</a></span><span class="op">(</span><span class="va">img</span>, width <span class="op">=</span> <span class="fl">300</span>, height <span class="op">=</span> <span class="fl">90</span>, res <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
@@ -434,14 +417,14 @@ text.</p>
 <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code> a <code>style</code>. It is a small CSS
 cascade over the markdown tags, and it takes CSS directly — as text, or
 as the path to a <code>.css</code> file:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
 <span><span class="st"># Results</span></span>
 <span><span class="st"></span></span>
-<span><span class="st">The slope is $\\beta_1$ with *p* &lt; 0.001.</span></span>
+<span><span class="st">The slope is $\beta_1$ with *p* &lt; 0.001.</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">&gt; Worth a second look.</span></span>
-<span><span class="st">"</span></span>
+<span><span class="st">)"</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="fu"><a href="../reference/markdown_box_grob.html">markdown_box_grob</a></span><span class="op">(</span></span>
@@ -456,7 +439,7 @@ as the path to a <code>.css</code> file:</p>
 <p><img src="markdown_files/figure-html/style-css-1.png" class="r-plt" alt="" width="85%"></p>
 <p>The same thing written in R, which validates property names and
 autocompletes:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/markdown_style.html">markdown_style</a></span><span class="op">(</span></span>
 <span>  h1         <span class="op">=</span> <span class="fu"><a href="../reference/md_style.html">md_style</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"steelblue"</span>, font_size <span class="op">=</span> <span class="fl">1.8</span><span class="op">)</span>,</span>
 <span>  blockquote <span class="op">=</span> <span class="fu"><a href="../reference/md_style.html">md_style</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"grey40"</span>,</span>
@@ -469,12 +452,14 @@ multiple of the body font size; a string is whatever CSS says
 <p>Tags are named as in HTML — <code>body</code>, <code>p</code>,
 <code>h1</code>–<code>h6</code>, <code>ul</code>, <code>ol</code>,
 <code>li</code>, <code>blockquote</code>, <code>pre</code>,
-<code>code</code>, <code>table</code>, <code>hr</code>,
-<code>img</code>, <code>div</code>, <code>span</code>. The properties
-are the ones MicroTeX and grid can honour — colour, the font family,
-size, weight and slant, decorations, line height, margins, left padding,
-alignment and the two borders. <code><a href="../reference/md_style.html">?md_style</a></code> has the full
-table, including which of them work on an inline
+<code>code</code>, <code>strong</code>, <code>em</code>, <code>a</code>,
+<code>table</code>, <code>tr</code>, <code>td</code>, <code>th</code>,
+<code>hr</code>, <code>img</code>, <code>math</code>,
+<code>footnote</code>, <code>div</code>, <code>span</code>. The
+properties are the ones MicroTeX and grid can honour — colour, the font
+family, size, weight and slant, decorations, line height, margins, left
+padding, alignment and the two borders. <code><a href="../reference/md_style.html">?md_style</a></code> has the
+full table, including which of them work on an inline
 <code>&lt;span&gt;</code> as well as on a block. Anything outside it
 parses and is then ignored, the way a browser ignores what it does not
 implement — so an existing stylesheet can be pasted in and the parts
@@ -484,7 +469,7 @@ that apply still work.</p>
 </h3>
 <p><code>markdown_style("github")</code> is a GitHub-like look, shipped
 as a CSS file you can read and copy:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/markdown_style.html">markdown_style</a></span><span class="op">(</span><span class="st">"github"</span>, h1 <span class="op">=</span> <span class="fu"><a href="../reference/md_style.html">md_style</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"firebrick"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/file.show.html" class="external-link">file.show</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"css"</span>, <span class="st">"github.css"</span>, package <span class="op">=</span> <span class="st">"gridmicrotex"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Pass an existing style as the first argument to extend it, and use
@@ -500,7 +485,7 @@ particular chunk, wrap it in a <code>&lt;div&gt;</code> with a
 around the tags</strong> — that is what makes CommonMark parse the
 markdown between them rather than treating the whole block as raw
 HTML:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">'</span></span>
 <span><span class="st">Ordinary text.</span></span>
 <span><span class="st"></span></span>
@@ -526,6 +511,136 @@ fall through to everything inside the div, exactly as in CSS; margins,
 padding and borders do not. <code>&lt;span class="..."&gt;</code> works
 the same way for an inline run.</p>
 </div>
+<div class="section level3">
+<h3 id="styling-tables">Styling tables<a class="anchor" aria-label="anchor" href="#styling-tables"></a>
+</h3>
+<p>Because a markdown table is compiled to a real MicroTeX
+<code>tabular</code>, it can be styled with the primitives LaTeX already
+has for tables — row and cell fills, rule colour and weight, and column
+spacing. The tags nest as in HTML: <code>tr</code>, <code>td</code> and
+<code>th</code> inherit through <code>table</code>.</p>
+<table class="table">
+<thead><tr class="header">
+<th>CSS</th>
+<th>effect</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>table { border-color }</code></td>
+<td>colour of every rule</td>
+</tr>
+<tr class="even">
+<td><code>tr { background }</code></td>
+<td>fills a whole row</td>
+</tr>
+<tr class="odd">
+<td>
+<code>td</code>, <code>th</code> <code>{ background }</code>
+</td>
+<td>fills one cell</td>
+</tr>
+<tr class="even">
+<td><code>tr { border-bottom }</code></td>
+<td>a rule under each row</td>
+</tr>
+<tr class="odd">
+<td><code>td { border-left }</code></td>
+<td>vertical rules between columns</td>
+</tr>
+<tr class="even">
+<td><code>td { padding-left }</code></td>
+<td>the gap between columns</td>
+</tr>
+<tr class="odd">
+<td><code>table { table-layout: fixed }</code></td>
+<td>see below</td>
+</tr>
+</tbody>
+</table>
+<p>Header cells are <strong>bold</strong> by default, which needs saying
+because it could not be done before: <code>\text{}</code> resets the
+font style, so wrapping a finished table in <code>\textbf{}</code> has
+no effect. The emphasis is applied as each cell is generated
+instead.</p>
+<p>By default a table sizes to its content, so a wide one overflows the
+box. <code>table-layout: fixed</code> divides the available width
+between the columns and lets the cells wrap:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
+<span><span class="st">| Term | Meaning |</span></span>
+<span><span class="st">|:-----|:--------|</span></span>
+<span><span class="st">| $\beta_1$ | the slope, which needs a good deal of room to explain |</span></span>
+<span><span class="st">| $\sigma$ | the residual standard deviation |</span></span>
+<span><span class="st">)"</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="fu"><a href="../reference/markdown_box_grob.html">markdown_box_grob</a></span><span class="op">(</span></span>
+<span>  <span class="va">tbl</span>,</span>
+<span>  width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">4</span>, <span class="st">"in"</span><span class="op">)</span>, padding <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">8</span>, <span class="st">"pt"</span><span class="op">)</span>,</span>
+<span>  style <span class="op">=</span> <span class="st">"</span></span>
+<span><span class="st">    table { table-layout: fixed; border-color: #D1D9E0 }</span></span>
+<span><span class="st">    th    { background: #F6F8FA }</span></span>
+<span><span class="st">    tr    { border-bottom: 1px solid #D1D9E0 }</span></span>
+<span><span class="st">  "</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="markdown_files/figure-html/style-table-1.png" class="r-plt" alt="" width="85%"></p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="dropping-down-to-latex">Dropping down to LaTeX<a class="anchor" aria-label="anchor" href="#dropping-down-to-latex"></a>
+</h2>
+<p>Markdown only has syntax for so much. Anything it cannot express can
+be written as LaTeX inside a math span, which is passed through to
+MicroTeX byte-for-byte — so the whole engine is available from inside a
+markdown document, not just the parts markdown has a spelling for.</p>
+<p>The clearest case is a table that GFM cannot describe. Markdown table
+syntax has no spanning cells and no per-cell colour — a cmark table cell
+carries no attributes at all — but LaTeX’s <code>array</code> has
+both:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="st">r"($$\begin{array}{|l|c|c|}\hline</span></span>
+<span><span class="st">\rowcolor{#F6F8FA}\multicolumn{3}{|c|}{\textbf{Model comparison}}\\\hline</span></span>
+<span><span class="st">\textbf{Model}&amp;\textbf{AIC}&amp;\textbf{R}^2\\\hline</span></span>
+<span><span class="st">\text{linear}&amp;214.3&amp;0.71\\</span></span>
+<span><span class="st">\cellcolor{#DDF0DD}\text{quadratic}&amp;\cellcolor{#DDF0DD}201.8&amp;\cellcolor{#DDF0DD}0.87\\\hline</span></span>
+<span><span class="st">\end{array}$$)"</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="fu"><a href="../reference/markdown_box_grob.html">markdown_box_grob</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Compare the two fits.\n\n"</span>, <span class="va">tbl</span>, <span class="st">"\n\nThe quadratic wins."</span><span class="op">)</span>,</span>
+<span>  width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">4.6</span>, <span class="st">"in"</span><span class="op">)</span>, padding <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">10</span>, <span class="st">"pt"</span><span class="op">)</span>,</span>
+<span>  style <span class="op">=</span> <span class="st">"math { color: #1F3864; font-size: 1.1rem }"</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="markdown_files/figure-html/latex-escape-1.png" class="r-plt" alt="" width="80%"></p>
+<p>That is one <code>\multicolumn</code> spanning header, a
+<code>\rowcolor</code> band and three <code>\cellcolor</code> cells —
+none of which GFM table syntax can express. The same route reaches
+<code>cases</code>, <code>aligned</code>, <code>\multirow</code>,
+<code>\newcolumntype</code> and everything else in
+<code><a href="../articles/getting-started.html">vignette("getting-started")</a></code>.</p>
+<p>Note the header cell written <code>\textbf{R}^2</code> rather than
+<code>\textbf{R^2}</code>. Inside <code>$$…$$</code> you are already in
+math mode, so <code>^</code> superscripts — but <code>\textbf{}</code>
+switches to <em>text</em> mode, where <code>^</code> is an accent rather
+than a superscript operator and <code>R^2</code> comes out flat. Put the
+superscript outside the text command. There is no need to open
+<code>$…$</code> again either: delimiters do not nest, and an escaped
+<code>\$</code> would simply typeset a dollar sign.</p>
+<p><strong>Styling reaches the block, not inside it</strong>, and that
+figure shows both halves at once. The <code>math</code> rule sets the
+colour and size of the table’s text but leaves the prose either side
+black, because those properties travel on the block’s <code>gp</code>.
+The cell fills ignore it completely: they are <code>\rowcolor{}</code>
+and <code>\cellcolor{}</code>, drawn by MicroTeX.</p>
+<p>So the cascade cannot see <em>through</em> a math span. That
+<code>array</code> is math, not a markdown table, and
+<code>table</code>, <code>tr</code> and <code>td</code> rules leave it
+untouched — which is why its colours had to be written in LaTeX rather
+than CSS. That is the trade: a GFM table is styled by the cascade but
+cannot span cells; a LaTeX <code>array</code> does anything MicroTeX
+does but is styled in LaTeX.</p>
 </div>
 <div class="section level2">
 <h2 id="line-breaking-and-justification">Line breaking and justification<a class="anchor" aria-label="anchor" href="#line-breaking-and-justification"></a>
@@ -536,10 +651,15 @@ matches R’s usual ragged-right text).</p>
 <p><code>justify = TRUE</code> stretches the interword spaces so every
 line but the last fills the width exactly.
 <code>line_break = "optimal"</code> chooses the line breaks by total fit
-rather than greedily, so the paragraph reads more evenly. Note that
-<code>gridmicrotex</code> does not hyphenate, so a justified
-<em>narrow</em> column can open wide word gaps.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+rather than greedily, so the paragraph reads more evenly.
+<code>hyphenate = TRUE</code> lets a long word break across lines, with
+a hyphen — worth pairing with <code>justify</code> in a narrow column,
+where justifying on its own opens wide word gaps.</p>
+<p><code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> takes <code>hyphenate</code> directly,
+since it passes its extra arguments to <code><a href="../reference/latex_grob.html">latex_grob()</a></code>. For
+<code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code>, set it for the document with
+<code>latex_options(hyphenate = TRUE)</code>.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prose</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span></span>
 <span>  <span class="st">"The quick brown fox jumps over the lazy dog."</span>, <span class="fl">3</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">" "</span><span class="op">)</span></span>
 <span></span>
@@ -569,7 +689,32 @@ rather than greedily, so the paragraph reads more evenly. Note that
 <p>The parser is the full CommonMark specification plus all five GitHub
 extensions — tables, strikethrough, autolinks, task lists and the
 <code>tagfilter</code> that strips <code>&lt;script&gt;</code> and
-friends — so parsing is never the limitation. On the rendering side:</p>
+friends — so parsing is never the limitation.</p>
+<p>Nothing errors: anything that cannot be drawn degrades to its text.
+This one document contains every degradation at once, so it is easier to
+see what “unsupported” actually looks like than to read about it:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">r"(A [link](https://example.org) keeps its text, an</span></span>
+<span><span class="st">![inline diagram](missing.png) becomes its alt text, and an</span></span>
+<span><span class="st">&lt;unknown&gt;unknown tag&lt;/unknown&gt; keeps its content.</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">Footnotes[^1] land at the foot.</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">&lt;table&gt;&lt;tr&gt;&lt;td&gt;an HTML table is dropped&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">[^1]: Like this one.)"</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="fu"><a href="../reference/markdown_box_grob.html">markdown_box_grob</a></span><span class="op">(</span></span>
+<span>  <span class="va">doc</span>,</span>
+<span>  width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">4.4</span>, <span class="st">"in"</span><span class="op">)</span>, padding <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">8</span>, <span class="st">"pt"</span><span class="op">)</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="markdown_files/figure-html/degrade-1.png" class="r-plt" alt="" width="80%"></p>
+<p>The link is styled but inert, the missing image shows its alt text,
+the unknown tag is stripped and its words kept, the footnote is numbered
+and moved to the foot, and the HTML table is gone entirely — no error,
+no placeholder. In detail:</p>
 <ul>
 <li>
 <strong>Inline images</strong> keep their alt text only. A
@@ -577,13 +722,47 @@ block-level image (alone on its line) is drawn; one in the middle of a
 sentence is not, because a single MicroTeX line has no raster.</li>
 <li>
 <strong>Links</strong> keep their text; the destination is dropped,
-since a grob cannot be a hyperlink.</li>
+since a grob cannot be a hyperlink. They are styled like links — blue
+and underlined — through the <code>a</code> tag, so a stylesheet can
+change or remove that.</li>
+<li>
+<strong>Footnotes</strong> (<code>[^1]</code> with a
+<code>[^1]:</code> definition) render a superscript marker where they
+are referenced, and the notes themselves in smaller type at the foot of
+the document, after a rule. They need somewhere to sit, so this applies
+to <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code>; <code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> shows
+the marker and drops the note.</li>
+<li>
+<strong>Display math</strong> — a paragraph that is nothing but
+<code>$$…$$</code> — gets its own centred line, styleable as the
+<code>math</code> tag. Inline <code>$…$</code> is unaffected.</li>
+<li>
+<strong>Right-to-left text</strong> is supported. A label that does
+not wrap is handed to the device as one run, so the device applies the
+bidirectional algorithm — mixed Arabic and Latin included. Text that
+<em>wraps</em> is broken into lines in logical order and each line is
+then put into visual order, as the Unicode algorithm prescribes. The
+second half needs <a href="https://github.com/fribidi/fribidi" class="external-link">FriBidi</a>, which is
+optional: built without it, a wrapped right-to-left paragraph keeps
+left-to-right word order and everything else is unaffected.</li>
+<li>
+<strong>Small caps</strong> and <code>font-variant-numeric</code>
+have no MicroTeX command.</li>
 <li>
 <strong>Block-level HTML</strong> other than
 <code>&lt;div&gt;</code> is dropped rather than typeset. A
 <code>&lt;div&gt;</code> with blank lines around its tags is read as a
 styled chunk — see <em>Styling</em> above. Inline HTML is rendered; see
-<em>Colour and inline HTML</em>.</li>
+<em>Colour and inline HTML</em>. <strong>HTML tables</strong> are part
+of this: CommonMark treats <code>&lt;table&gt;</code> as a raw HTML
+block, so it is dropped — GFM’s own table syntax is the one that
+renders.</li>
+<li>
+<strong>Spanning cells</strong> have no GFM syntax — a cmark table
+cell carries no colspan attribute to read — so <code>\multicolumn</code>
+and <code>\multirow</code> are not reachable from markdown table syntax.
+Write the table as LaTeX in a math span instead; see <em>Dropping down
+to LaTeX</em>.</li>
 <li>
 <strong>Syntax highlighting</strong> of code blocks is not applied —
 code is set in a monospace font, unhighlighted.</li>
@@ -596,7 +775,8 @@ report correct metrics for the <code>"mono"</code> family; the base
 tight. Use <code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code> if that matters.</li>
 </ul>
 <p>Everything else — emphasis, headings, lists, quotes, tables, rules,
-block images, and of course <code>$math$</code> — renders.</p>
+block images, footnotes, ruby annotation, and of course
+<code>$math$</code> — renders.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

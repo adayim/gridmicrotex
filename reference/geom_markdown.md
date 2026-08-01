@@ -20,6 +20,7 @@ geom_markdown(
   max_width = 0,
   render_mode = c("typeface", "path"),
   justify = FALSE,
+  style = NULL,
   na.rm = FALSE,
   show.legend = NA,
   inherit.aes = TRUE
@@ -127,6 +128,17 @@ geom_markdown(
 
   Logical; justify wrapped lines. Requires `max_width`. See
   [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
+
+- style:
+
+  A
+  [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
+  object, CSS text, or the path to a `.css` file, applied to every label
+  this layer draws. `NULL` falls back to
+  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(markdown_style = )`.
+  Only the properties that compile to LaTeX apply here — a label has no
+  block layout, so margins and padding are ignored. See
+  [`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md).
 
 - na.rm:
 
