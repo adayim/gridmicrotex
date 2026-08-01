@@ -126,6 +126,54 @@ test_that("a wrapped right-to-left paragraph is reordered per line", {
   expect_equal(got, src)
 })
 
+test_that("an explicit right-to-left mark counts as right-to-left", {
+  skip_if_not(microtex_bidi_available(), "built without fribidi")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # U+200F carries no script of its own, so a scan for Hebrew/Arabic
+  # letters missed it -- yet it is exactly how a right-to-left run is
+  # marked when the characters themselves are direction-neutral.
+  rlm <- "\u200f"
+  words <- c("(a)", "(b)", "(c)")
+  order_of <- function(tex) {
+    d <- latex_grob(tex, input_mode = "math", max_width = 60,
+                    gp = grid::gpar(fontsize = 14))$layout_df
+    d <- d[d$type == "text", ]
+    d$text[order(-d$x)]                       # right to left
+  }
+  # With the mark the line reads right to left, so the source order comes
+  # back when read from the right. Without it, it does not.
+  marked <- order_of(paste0("\\text{", rlm, paste(words, collapse = " "), "}"))
+  expect_equal(length(marked), 3L)
+  expect_match(marked[1], "a", fixed = TRUE)
+  expect_equal(order_of(paste0("\\text{", paste(words, collapse = " "), "}"))[1],
+               "(c)")
+})
+
+test_that("a hyphenated line is still reordered", {
+  skip_if_not(microtex_bidi_available(), "built without fribidi")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The hyphen is appended to the finished line after the levels were
+  # assigned. Appending the box alone left one more child than levels,
+  # and bidi_reorder does nothing when the two disagree -- so the whole
+  # line silently stayed in logical order, but only when it hyphenated.
+  ar <- "\u0645\u0631\u062d\u0628\u0627"
+  tex <- paste0("\\text{", ar, " internationalization \u0628\u0643}")
+  first_line <- function(...) {
+    d <- latex_grob(tex, input_mode = "math", max_width = 130,
+                    gp = grid::gpar(fontsize = 14), ...)$layout_df
+    d <- d[d$type == "text", ]
+    d <- d[abs(round(d$y, 1) - min(round(d$y, 1))) < 0.01, ]
+    d$text[order(-d$x)]
+  }
+  hy <- first_line(hyphenate = TRUE)
+  expect_true("-" %in% hy)              # it really did hyphenate
+  # Base direction is right-to-left, so the Arabic word is rightmost and
+  # the Latin run sits to its left. Unreordered it comes out the other
+  # way round, with the Arabic first.
+  expect_equal(hy[1], ar)
+  expect_equal(first_line(hyphenate = FALSE)[1], ar)
+})
+
 test_that("a p{} cell wraps even when the formula as a whole does not", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # A fixed-width column is broken to its own measure whatever the global

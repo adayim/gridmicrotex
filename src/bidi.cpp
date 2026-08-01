@@ -27,6 +27,14 @@ bool bidi_has_rtl(const std::vector<microtex::c32>& text) {
         (c >= 0x1E800 && c <= 0x1EFFF)) {  // Adlam, Arabic mathematical
       return true;
     }
+    // The explicit formatting characters carry no script of their own, so
+    // the ranges above miss them -- yet they are exactly how a right-to-left
+    // run is marked when the letters themselves are direction-neutral.
+    if (c == 0x200F ||                  // RIGHT-TO-LEFT MARK
+        c == 0x202B || c == 0x202E ||   // RTL EMBEDDING / OVERRIDE
+        c == 0x2067) {                  // RIGHT-TO-LEFT ISOLATE
+      return true;
+    }
   }
   return false;
 }

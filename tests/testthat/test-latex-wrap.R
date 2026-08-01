@@ -9,7 +9,7 @@ test_that("latex_wrap converts correctly", {
   expect_equal(latex_wrap("cost \\$5 for $x$"),
                "\\text{cost \\$5 for }x")
   expect_equal(latex_wrap("Line 1\nLine 2"),
-               "\\text{Line 1 \\\\Line 2}")
+               "\\text{Line 1}\\\\\\text{Line 2}")
 })
 
 test_that("latex_wrap is vectorized over its input", {
@@ -143,23 +143,41 @@ test_that("\\caption{X} is extracted as inline \\text{X}\\\\", {
                "\\text{Foo $x_{i}$}\\\\")
 })
 
-test_that("a break between prose and math is a break, not text", {
-  # A newline (or a literal \\) that ends a run of prose separates it from
-  # the math beside it. Kept inside the \text{} it only added an empty row
-  # to the text box, and the box and the math still sat side by side.
+test_that("every break lands at the formula level, not inside the text", {
+  # A break kept inside the \text{} makes a multi-line text *box*, and a
+  # box is one item in the enclosing row -- so anything after it was set
+  # beside the whole box rather than on the line it was written on.
   expect_equal(latex_wrap("Title\n$x^2$"), "\\text{Title}\\\\x^2")
   expect_equal(latex_wrap("Caption\n\\begin{array}{l}a\\end{array}"),
                "\\text{Caption}\\\\\\begin{array}{l}a\\end{array}")
+  # Interior breaks too, which is what puts trailing math on the right
+  # line instead of centring it between the two.
+  expect_equal(latex_wrap("Line 1\nLine 2"), "\\text{Line 1}\\\\\\text{Line 2}")
+  expect_equal(latex_wrap("a\nb $x$"), "\\text{a}\\\\\\text{b }x")
+  # A literal \\ is a break like any other.
+  expect_equal(latex_wrap("a\\\\b"), "\\text{a}\\\\\\text{b}")
   # Nothing but breaks between two math spans is a separator, not text.
   expect_equal(latex_wrap("$a$\n$b$"), "a\\\\b")
-  # Interior newlines are untouched, and a break with nothing on one side
-  # of it would only add a blank first or last row.
-  expect_equal(latex_wrap("Line 1\nLine 2"), "\\text{Line 1 \\\\Line 2}")
+  # A break with nothing on one side of it would only add a blank first
+  # or last row.
   expect_equal(latex_wrap("\n\nTitle\n"), "\\text{Title}")
   # A run collapses to one, the way consecutive blank lines do in LaTeX.
   expect_equal(latex_wrap("a\n\n\n$x$"), "\\text{a}\\\\x")
   # No break, no change.
   expect_equal(latex_wrap("It is $x^2$"), "\\text{It is }x^2")
+  expect_equal(latex_wrap(" "), "\\text{ }")
+})
+
+test_that("splitting a prose run does not move it", {
+  # The split is only free if the two forms lay out identically.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  xy <- function(tex) {
+    d <- latex_grob(tex, input_mode = "math",
+                    gp = grid::gpar(fontsize = 14))$layout_df
+    d[, c("x", "y")]
+  }
+  expect_equal(xy("\\text{line one}\\\\\\text{line two}"),
+               xy("\\text{line one \\\\line two}"))
 })
 
 test_that("a pasted caption sits above its table, not beside it", {

@@ -388,7 +388,19 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
     // already reserved room for it, and this has to happen before
     // justifyLine() below, which stretches the line's glue to fill the
     // measure exactly and would otherwise be pushed past it.
-    if (brk != nullptr) first->add(brk);
+    if (brk != nullptr) {
+      // The hyphen belongs to the word it follows, so it takes that word's
+      // embedding level; that is what puts it at the visual left of a
+      // right-to-left line. It also has to be pushed at all: bidi_reorder
+      // requires one level per child and silently does nothing when the
+      // two disagree, so appending the box alone left the whole line in
+      // logical order.
+      if (!first->_childLevels.empty() &&
+          first->_childLevels.size() == first->_children.size()) {
+        first->_childLevels.push_back(first->_childLevels.back());
+      }
+      first->add(brk);
+    }
     while (!positions.empty()) {
       pos = positions.top();
       positions.pop();

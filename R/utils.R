@@ -255,33 +255,37 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   pos <- 1L
   unclosed <- FALSE
 
-  # A break -- a newline, or a literal `\\` -- that tops or tails a run of
-  # prose is separating that prose from the math beside it, so it belongs
-  # at the formula level. Left inside the \text{} it only adds an empty
-  # line to the text box, and the box and the math still sit side by side
-  # in the enclosing row: that is why "Title\n$x^2$" came out on one line,
-  # and why a pasted \caption landed to the left of its table rather than
-  # above it. Interior newlines keep their old meaning.
+  # A break is a newline or a literal `\\`, and every one of them belongs
+  # at the formula level rather than inside the \text{}.
+  #
+  # A break kept inside the text made a multi-line *text box*, and a box is
+  # one item in the enclosing row: anything after it was then set beside
+  # the whole box, vertically centred between its lines, instead of on the
+  # line it was written on. That is why "Title\n$x^2$" came out on one
+  # line, and why a pasted \caption landed to the left of its table.
+  #
+  # For prose with nothing beside it the two forms lay out identically, so
+  # splitting always is free.
   brk <- "(?:[ \t\r]*(?:\n|\\\\\\\\)[ \t\r]*)+"
 
   emit_text <- function(s) {
     if (!nzchar(s)) return()
-    lead <- regmatches(s, regexpr(paste0("^", brk), s, perl = TRUE))
-    lead <- if (length(lead)) lead else ""
-    rest <- substring(s, nchar(lead) + 1L)
-    trail <- regmatches(rest, regexpr(paste0(brk, "$"), rest, perl = TRUE))
-    trail <- if (length(trail)) trail else ""
-    core <- substr(rest, 1L, nchar(rest) - nchar(trail))
-
-    # A run of them collapses to one, the way consecutive blank lines make
-    # a single paragraph break in LaTeX. Stripping document wrappers
-    # leaves blank lines behind, and each would otherwise be an empty row.
-    if (nzchar(lead)) out <<- c(out, "\\\\")
-    if (nzchar(core)) {
-      out <<- c(out, paste0("\\text{",
-                            gsub("\n", " \\\\\\\\", core, perl = TRUE), "}"))
+    parts <- strsplit(s, brk, perl = TRUE)[[1]]
+    parts <- parts[nzchar(parts)]
+    # Nothing but breaks: a separator between its neighbours, not text.
+    if (length(parts) == 0L) {
+      out <<- c(out, "\\\\")
+      return()
     }
-    if (nzchar(trail)) out <<- c(out, "\\\\")
+    # A run of breaks collapses to one, the way consecutive blank lines
+    # make a single paragraph break in LaTeX. Stripping document wrappers
+    # leaves blank lines behind, and each would otherwise be an empty row.
+    if (grepl(paste0("^", brk), s, perl = TRUE)) out <<- c(out, "\\\\")
+    for (i in seq_along(parts)) {
+      if (i > 1L) out <<- c(out, "\\\\")
+      out <<- c(out, paste0("\\text{", parts[i], "}"))
+    }
+    if (grepl(paste0(brk, "$"), s, perl = TRUE)) out <<- c(out, "\\\\")
   }
 
   for (sp in spans) {
