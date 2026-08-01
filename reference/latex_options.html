@@ -67,7 +67,6 @@ supplied at the call site, so explicit arguments always win.</p>
 <span>  input_mode <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  justify <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  line_break <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  hyphenate <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  markdown_style <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -113,8 +112,8 @@ its interword spaces so every line but the last fills
 <code>max_width</code> exactly. Has no effect without <code>max_width</code>,
 since it acts on the lines the wrapper produces. <code>FALSE</code>
 (default) leaves the right edge ragged, matching R's own text
-drawing. Pair it with <code>hyphenate = TRUE</code> in a narrow column,
-where justifying alone opens noticeably wide word spaces.</p></dd>
+drawing. In a narrow column, justifying alone opens noticeably wide
+word spaces; mark the words that may break with <code>\-</code>.</p></dd>
 
 
 <dt id="arg-line-break">line_break<a class="anchor" aria-label="anchor" href="#arg-line-break"></a></dt>
@@ -125,16 +124,6 @@ the paragraph as a whole reads best, in the spirit of Knuth-Plass:
 pulling one word down early can improve every later line, which a
 greedy pass cannot see. Requires <code>max_width</code>, and costs a
 little more layout time.</p></dd>
-
-
-<dt id="arg-hyphenate">hyphenate<a class="anchor" aria-label="anchor" href="#arg-hyphenate"></a></dt>
-<dd><p>Logical. When <code>TRUE</code>, long words may be broken
-across lines at the points Liang's algorithm allows, with a hyphen
-drawn at the break — the same patterns and the same
-<code>\lefthyphenmin</code>/<code>\righthyphenmin</code> of 2 and 3 that TeX
-uses for American English. Has no effect without <code>max_width</code>.
-<code>FALSE</code> is the default. A word already carrying an explicit
-<code>\-</code> is left alone, as in TeX.</p></dd>
 
 
 <dt id="arg-markdown-style">markdown_style<a class="anchor" aria-label="anchor" href="#arg-markdown-style"></a></dt>

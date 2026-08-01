@@ -640,7 +640,8 @@ makes unsupported markup easy to spot.
 
 These need a real document compiler and are outside a formula renderer’s
 scope: document structure (`\section`, page layout, `\tableofcontents`);
-paragraph text (line breaking, hyphenation, justification); TikZ/PGF;
+automatic hyphenation (`\-` marks a break point yourself, and
+`max_width` / `justify` do handle line breaking); TikZ/PGF;
 `\includegraphics`; cross-references and bibliographies; theorem
 environments; the `description` list environment (`itemize` and
 `enumerate` *are* supported); and `\tag` / equation numbering.

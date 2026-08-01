@@ -491,16 +491,12 @@ text).
 `justify = TRUE` stretches the interword spaces so every line but the
 last fills the width exactly. `line_break = "optimal"` chooses the line
 breaks by total fit rather than greedily, so the paragraph reads more
-evenly. `hyphenate = TRUE` lets a long word break across lines, with a
-hyphen — worth pairing with `justify` in a narrow column, where
-justifying on its own opens wide word gaps.
+evenly.
 
-[`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-takes `hyphenate` directly, since it passes its extra arguments to
-[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
-For
-[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md),
-set it for the document with `latex_options(hyphenate = TRUE)`.
+Justifying a narrow column opens wide word gaps, since nothing may break
+inside a word. Mark the words that should be allowed to break with TeX’s
+discretionary hyphen, `\-`: `in\-ter\-na\-tion\-al` breaks at any of
+those points and draws a hyphen where it does.
 
 ``` r
 

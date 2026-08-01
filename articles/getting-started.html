@@ -802,13 +802,15 @@ glyphs.</li>
 </h3>
 <p>These need a real document compiler and are outside a formula
 renderer’s scope: document structure (<code>\section</code>, page
-layout, <code>\tableofcontents</code>); paragraph text (line breaking,
-hyphenation, justification); TikZ/PGF; <code>\includegraphics</code>;
-cross-references and bibliographies; theorem environments; the
-<code>description</code> list environment (<code>itemize</code> and
-<code>enumerate</code> <em>are</em> supported); and <code>\tag</code> /
-equation numbering. <code>\usepackage{…}</code> is accepted but loads
-nothing — every supported command is built into MicroTeX.</p>
+layout, <code>\tableofcontents</code>); automatic hyphenation
+(<code>\-</code> marks a break point yourself, and
+<code>max_width</code> / <code>justify</code> do handle line breaking);
+TikZ/PGF; <code>\includegraphics</code>; cross-references and
+bibliographies; theorem environments; the <code>description</code> list
+environment (<code>itemize</code> and <code>enumerate</code>
+<em>are</em> supported); and <code>\tag</code> / equation numbering.
+<code>\usepackage{…}</code> is accepted but loads nothing — every
+supported command is built into MicroTeX.</p>
 <p>For axis labels, annotations, legends and in-plot formulas, the
 supported set is more than sufficient.</p>
 </div>

@@ -6,17 +6,16 @@
   at a time, so kerning is applied, PDF/SVG output can be searched for a
   phrase, and files are several times smaller. Text given a `max_width`
   is drawn a word at a time, since the spaces are where it breaks.
-- Right-to-left text renders in the correct order. Wrapped text
-  additionally needs FriBidi, which is optional; without it a wrapped
-  right-to-left paragraph keeps left-to-right word order. Wrapped
-  right-to-left text that also carries emphasis or another font change
-  is a known gap and still comes out in left-to-right word order.
-- New `hyphenate` argument on
-  [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
-  [`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md)
-  and
-  [`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
-  breaks long words across lines, with a hyphen. Off by default.
+- Right-to-left text renders in the correct order, including across
+  emphasis, colour and other font changes, and with or without
+  `max_width`. Direction is resolved once for the whole label, so a run
+  follows the paragraph it sits in rather than its own contents. Needs
+  FriBidi, which is optional; without it right-to-left text keeps
+  left-to-right run order. Reordering covers a run of text and the font
+  groups in it; it does not yet reach inside a structural container, so
+  text in a `\\`-separated line, a fraction, or a table cell keeps
+  left-to-right order, as does math sitting beside right-to-left text. A
+  single group holding *both* directions is also placed as one unit.
 - New
   [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
   and
@@ -71,6 +70,17 @@
 - Bug fix: reloading the package corrupted MicroTeX’s macro registry, so
   a later large formula could crash R.
 - Bug fix: `\-` offered a line break but drew no hyphen at it.
+- Bug fix: an `&` in text was read as an alignment tab and everything
+  after it was dropped, so `"Treatment & Control"` rendered as
+  `"Treatment "`.
+- Bug fix: a line break inside `\textbf{}`, `\textcolor{}{}` or any
+  other text command lost that styling from the second line on, and
+  could push following text outside the `\text{}` block.
+- Bug fix: `tabular*` failed to parse, reporting an invalid alignment;
+  its width argument is now dropped along with the star.
+- Bug fix: a layout measured on one graphics device could be reused on
+  another, placing text at the wrong widths — the layout cache now keys
+  on the device.
 
 ## gridmicrotex 0.0.5
 

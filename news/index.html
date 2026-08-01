@@ -44,8 +44,7 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="gridmicrotex-010">gridmicrotex 0.1.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-010"></a></h2>
 <ul><li>Text inside <code>\text{}</code> is drawn a line at a time rather than a letter at a time, so kerning is applied, PDF/SVG output can be searched for a phrase, and files are several times smaller. Text given a <code>max_width</code> is drawn a word at a time, since the spaces are where it breaks.</li>
-<li>Right-to-left text renders in the correct order. Wrapped text additionally needs FriBidi, which is optional; without it a wrapped right-to-left paragraph keeps left-to-right word order. Wrapped right-to-left text that also carries emphasis or another font change is a known gap and still comes out in left-to-right word order.</li>
-<li>New <code>hyphenate</code> argument on <code><a href="../reference/latex_grob.html">latex_grob()</a></code>, <code><a href="../reference/latex_dims.html">latex_dims()</a></code> and <code><a href="../reference/latex_options.html">latex_options()</a></code> breaks long words across lines, with a hyphen. Off by default.</li>
+<li>Right-to-left text renders in the correct order, including across emphasis, colour and other font changes, and with or without <code>max_width</code>. Direction is resolved once for the whole label, so a run follows the paragraph it sits in rather than its own contents. Needs FriBidi, which is optional; without it right-to-left text keeps left-to-right run order. Reordering covers a run of text and the font groups in it; it does not yet reach inside a structural container, so text in a <code>\\</code>-separated line, a fraction, or a table cell keeps left-to-right order, as does math sitting beside right-to-left text. A single group holding <em>both</em> directions is also placed as one unit.</li>
 <li>New <code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> and <code><a href="../reference/markdown_grob.html">grid.markdown()</a></code> render inline markdown with LaTeX math; <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code> renders a block document.</li>
 <li>New <code><a href="../reference/geom_markdown.html">geom_markdown()</a></code> and <code><a href="../reference/element_markdown.html">element_markdown()</a></code> for ggplot2, both taking <code>style</code>. A title containing headings or lists is laid out as blocks, not flattened.</li>
 <li>Markdown covers headings, lists, task lists, quotes, code, tables, images, footnotes, display <code>$$…$$</code>, links and inline HTML.</li>
@@ -70,6 +69,10 @@
 <li>Bug fix: LaTeX tick labels measured 0 x 0, so ggplot2 reserved no room and they overlapped the axis title.</li>
 <li>Bug fix: reloading the package corrupted MicroTeX’s macro registry, so a later large formula could crash R.</li>
 <li>Bug fix: <code>\-</code> offered a line break but drew no hyphen at it.</li>
+<li>Bug fix: an <code>&amp;</code> in text was read as an alignment tab and everything after it was dropped, so <code>"Treatment &amp; Control"</code> rendered as <code>"Treatment "</code>.</li>
+<li>Bug fix: a line break inside <code>\textbf{}</code>, <code>\textcolor{}{}</code> or any other text command lost that styling from the second line on, and could push following text outside the <code>\text{}</code> block.</li>
+<li>Bug fix: <code>tabular*</code> failed to parse, reporting an invalid alignment; its width argument is now dropped along with the star.</li>
+<li>Bug fix: a layout measured on one graphics device could be reused on another, placing text at the wrong widths — the layout cache now keys on the device.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.5" id="gridmicrotex-005">gridmicrotex 0.0.5<a class="anchor" aria-label="anchor" href="#gridmicrotex-005"></a></h2><p class="text-muted">CRAN release: 2026-07-21</p>

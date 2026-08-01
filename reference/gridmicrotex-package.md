@@ -29,6 +29,3 @@ Other contributors:
 
 - Bundled math font authors (See inst/COPYRIGHTS for the full list of
   authors of the bundled math fonts.) \[copyright holder\]
-
-- Gerard D.C. Kuiken (Author of the bundled American English hyphenation
-  patterns.) \[copyright holder\]

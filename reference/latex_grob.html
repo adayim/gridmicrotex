@@ -81,7 +81,6 @@ immediately draws it on the current device via
 <span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span>,</span>
 <span>  justify <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  line_break <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"greedy"</span>, <span class="st">"optimal"</span><span class="op">)</span>,</span>
-<span>  hyphenate <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  debug <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -173,8 +172,8 @@ its interword spaces so every line but the last fills
 <code>max_width</code> exactly. Requires <code>max_width</code>: it acts on the
 lines the wrapper produces, so it does nothing on its own.
 <code>FALSE</code> (default) leaves the right edge ragged, matching R's own
-text drawing. In a narrow column, pair it with <code>hyphenate</code>:
-justifying without hyphenation opens wide word spaces.</p></dd>
+text drawing. In a narrow column, expect wide word spaces; mark the
+words that may break with <code>\-</code> to tighten them.</p></dd>
 
 
 <dt id="arg-line-break">line_break<a class="anchor" aria-label="anchor" href="#arg-line-break"></a></dt>
@@ -185,17 +184,6 @@ the paragraph as a whole reads best, in the spirit of Knuth-Plass:
 pulling one word down early can improve every later line, which a
 greedy pass cannot see. Requires <code>max_width</code>, and costs a
 little more layout time.</p></dd>
-
-
-<dt id="arg-hyphenate">hyphenate<a class="anchor" aria-label="anchor" href="#arg-hyphenate"></a></dt>
-<dd><p>Logical. When <code>TRUE</code>, a long word may be broken
-across lines at a point Liang's algorithm allows, with a hyphen drawn
-at the break. Uses the patterns and the
-<code>\lefthyphenmin</code>/<code>\righthyphenmin</code> of 2 and 3 that TeX
-uses for American English; the patterns are read on first use.
-Requires <code>max_width</code>. <code>FALSE</code> is the default. A word
-carrying an explicit <code>\-</code> is left alone, as in TeX — use that
-to override a break the patterns get wrong.</p></dd>
 
 
 <dt id="arg-debug">debug<a class="anchor" aria-label="anchor" href="#arg-debug"></a></dt>

@@ -12,9 +12,6 @@
   See inst/COPYRIGHTS for the full list of authors of the bundled math
   fonts.
 
-- **Gerard D.C. Kuiken**. Copyright holder.  
-  Author of the bundled American English hyphenation patterns.
-
 ## Citation
 
 Source:

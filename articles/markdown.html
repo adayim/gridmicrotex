@@ -651,14 +651,12 @@ matches R’s usual ragged-right text).</p>
 <p><code>justify = TRUE</code> stretches the interword spaces so every
 line but the last fills the width exactly.
 <code>line_break = "optimal"</code> chooses the line breaks by total fit
-rather than greedily, so the paragraph reads more evenly.
-<code>hyphenate = TRUE</code> lets a long word break across lines, with
-a hyphen — worth pairing with <code>justify</code> in a narrow column,
-where justifying on its own opens wide word gaps.</p>
-<p><code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> takes <code>hyphenate</code> directly,
-since it passes its extra arguments to <code><a href="../reference/latex_grob.html">latex_grob()</a></code>. For
-<code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code>, set it for the document with
-<code>latex_options(hyphenate = TRUE)</code>.</p>
+rather than greedily, so the paragraph reads more evenly.</p>
+<p>Justifying a narrow column opens wide word gaps, since nothing may
+break inside a word. Mark the words that should be allowed to break with
+TeX’s discretionary hyphen, <code>\-</code>:
+<code>in\-ter\-na\-tion\-al</code> breaks at any of those points and
+draws a hyphen where it does.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prose</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span></span>
 <span>  <span class="st">"The quick brown fox jumps over the lazy dog."</span>, <span class="fl">3</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">" "</span><span class="op">)</span></span>

@@ -120,23 +120,23 @@ A list with class `"latex_tree"` containing:
 #> <latex_tree>
 #>   tex:         \frac{a}{b}
 #>   render_mode: typeface
-#>   bbox:        width=7.00  height=25.00  depth=9.00  baseline=0.63 (bigpts)
+#>   bbox:        width=7.00  height=30.00  depth=11.00  baseline=0.61 (bigpts)
 #>   records:     3
 #>     glyph      2
 #>     line       1
   head(tree$records)
-#>    type         x      y glyph font_size   color    x2     y2 width height rx
-#> 1 glyph 0.1890002  7.196  3628        14 #000000    NA     NA    NA     NA NA
-#> 2  line 0.0000000 10.596    NA        NA #000000 7.392 10.596    NA     NA NA
-#> 3 glyph 0.0000000 25.796  3629        14 #000000    NA     NA    NA     NA NA
+#>    type         x         y glyph font_size   color   x2     y2 width height rx
+#> 1 glyph 0.0000000  6.705999  3326        14 #000000   NA     NA    NA     NA NA
+#> 2  line 0.0000000 13.245999    NA        NA #000000 7.77 13.246    NA     NA NA
+#> 3 glyph 0.2589999 30.105997  3327        14 #000000   NA     NA    NA     NA NA
 #>   ry  lwd text font_style rotation path codepoint
 #> 1 NA   NA <NA>         NA        0 NULL        NA
-#> 2 NA 1.32 <NA>         NA        0 NULL        NA
+#> 2 NA 1.36 <NA>         NA        0 NULL        NA
 #> 3 NA   NA <NA>         NA        0 NULL        NA
-#>                                                             font_file
-#> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
-#> 2                                                                <NA>
-#> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
+#>                                                                    font_file
+#> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf
+#> 2                                                                       <NA>
+#> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf
 #>   font_family
 #> 1        <NA>
 #> 2        <NA>

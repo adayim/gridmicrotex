@@ -14,7 +14,6 @@ latex_dims(
   render_mode = c("typeface", "path"),
   justify = FALSE,
   line_break = c("greedy", "optimal"),
-  hyphenate = FALSE,
   gp = grid::gpar()
 )
 ```
@@ -80,8 +79,8 @@ latex_dims(
   spaces so every line but the last fills `max_width` exactly. Requires
   `max_width`: it acts on the lines the wrapper produces, so it does
   nothing on its own. `FALSE` (default) leaves the right edge ragged,
-  matching R's own text drawing. In a narrow column, pair it with
-  `hyphenate`: justifying without hyphenation opens wide word spaces.
+  matching R's own text drawing. In a narrow column, expect wide word
+  spaces; mark the words that may break with `\-` to tighten them.
 
 - line_break:
 
@@ -91,16 +90,6 @@ latex_dims(
   spirit of Knuth-Plass: pulling one word down early can improve every
   later line, which a greedy pass cannot see. Requires `max_width`, and
   costs a little more layout time.
-
-- hyphenate:
-
-  Logical. When `TRUE`, a long word may be broken across lines at a
-  point Liang's algorithm allows, with a hyphen drawn at the break. Uses
-  the patterns and the `\lefthyphenmin`/`\righthyphenmin` of 2 and 3
-  that TeX uses for American English; the patterns are read on first
-  use. Requires `max_width`. `FALSE` is the default. A word carrying an
-  explicit `\-` is left alone, as in TeX — use that to override a break
-  the patterns get wrong.
 
 - gp:
 
