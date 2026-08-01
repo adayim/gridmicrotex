@@ -80,6 +80,17 @@ public:
 
     sptr<Box> createBox(Env& env) override;
 
+    void collectBidiText(std::vector<c32>& out) const override {
+        if (_atom != nullptr) _atom->collectBidiText(out);
+    }
+
+    void assignBidiLevels(const std::vector<std::uint8_t>& lv,
+                          std::size_t& cursor) override {
+        const std::size_t start = cursor;
+        if (_atom != nullptr) _atom->assignBidiLevels(lv, cursor);
+        _bidiLevel = subtreeLevel(lv, start, cursor);
+    }
+
 private:
     int _index;
     sptr<Atom> _atom;

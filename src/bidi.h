@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "atom/atom.h"
 #include "box/box.h"
 #include "utils/types.h"
 
@@ -59,6 +60,21 @@ void bidi_reorder(
   std::vector<microtex::sptr<microtex::Box>>& boxes,
   std::vector<std::uint8_t>& levels
 );
+
+/**
+ * Resolve the whole formula's levels once and write them onto its atoms.
+ *
+ * Runs before any box is built, because a box does not keep the text it
+ * was built from. Doing this per row instead would ask FriBidi to judge
+ * each group's direction from that group's own text, so `\textbf{abc}`
+ * inside a right-to-left paragraph came out level 0 where UAX #9 says 2,
+ * and a neutral run spanning a group boundary was resolved twice against
+ * two different contexts.
+ *
+ * Returns whether anything right-to-left was found. False leaves every
+ * atom at level 0, which is the left-to-right path.
+ */
+bool bidi_assign_levels(const microtex::sptr<microtex::Atom>& root);
 
 }  // namespace gridmicrotex
 

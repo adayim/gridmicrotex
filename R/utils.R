@@ -270,22 +270,27 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
 
   emit_text <- function(s) {
     if (!nzchar(s)) return()
-    parts <- strsplit(s, brk, perl = TRUE)[[1]]
+    parts <- .split_prose(s, brk)
+    # An empty segment at either end means the chunk began or ended with a
+    # break: a separator between neighbours, not a line of its own. A run
+    # of breaks collapses to one (the `+` in `brk`), the way consecutive
+    # blank lines make a single paragraph break in LaTeX -- stripping
+    # document wrappers leaves blank lines behind, and each would
+    # otherwise be an empty row.
+    lead  <- length(parts) > 0L && !nzchar(parts[1L])
+    trail <- length(parts) > 1L && !nzchar(parts[length(parts)])
     parts <- parts[nzchar(parts)]
     # Nothing but breaks: a separator between its neighbours, not text.
     if (length(parts) == 0L) {
       out <<- c(out, "\\\\")
       return()
     }
-    # A run of breaks collapses to one, the way consecutive blank lines
-    # make a single paragraph break in LaTeX. Stripping document wrappers
-    # leaves blank lines behind, and each would otherwise be an empty row.
-    if (grepl(paste0("^", brk), s, perl = TRUE)) out <<- c(out, "\\\\")
+    if (lead) out <<- c(out, "\\\\")
     for (i in seq_along(parts)) {
       if (i > 1L) out <<- c(out, "\\\\")
-      out <<- c(out, paste0("\\text{", parts[i], "}"))
+      out <<- c(out, paste0("\\text{", .escape_prose_amp(parts[i]), "}"))
     }
-    if (grepl(paste0(brk, "$"), s, perl = TRUE)) out <<- c(out, "\\\\")
+    if (trail) out <<- c(out, "\\\\")
   }
 
   for (sp in spans) {
@@ -319,6 +324,95 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   }
 
   paste(out, collapse = "")   # <-- no space
+}
+
+# An `&` in prose is a literal ampersand -- "R&D", "Treatment & Control".
+# MicroTeX reads it as an alignment tab even inside \text{}, and drops
+# everything after it, so the label lost its second half with no error.
+# Escape only the ones the user did not escape themselves.
+#
+# Prose is the only place this is safe, and it is the only place it is
+# applied: math spans and `\begin{tabular}` environments are passed
+# through verbatim by .scan_math_spans(), so a real alignment tab never
+# reaches here. (The markdown path escapes `&` too, in .md_escape_tex();
+# mixed-mode LaTeX was the one input that did not.)
+.escape_prose_amp <- function(s) {
+  gsub("(?<!\\\\)&", "\\\\&", s, perl = TRUE)
+}
+
+# Split a prose chunk at its line breaks, keeping every segment's braces
+# balanced.
+#
+# Each segment becomes its own `\text{}`, so a break inside a group --
+# `\textbf{one\\two}` -- used to leave the group open at the end of one
+# segment and unopened at the start of the next. The braces balanced out
+# across the whole string, so nothing errored; the second line just came
+# out unstyled, and any text after the group escaped the \text{} wrapper.
+#
+# Every group still open at a break is therefore closed before it and
+# re-opened after it, which is what LaTeX itself does across a line break
+# inside a text command. `\textbf{one\\two}` becomes
+# `\text{\textbf{one}}` + `\\` + `\text{\textbf{two}}`.
+#
+# Returns the segment bodies, without the `\text{}` wrapper. An empty
+# first or last element means the chunk began or ended with a break.
+.split_prose <- function(s, brk) {
+  m <- gregexpr(brk, s, perl = TRUE)[[1]]
+  starts <- if (m[1L] == -1L) integer(0) else as.integer(m)
+  lens <- if (length(starts)) attr(m, "match.length") else integer(0)
+
+  chars <- strsplit(s, "", fixed = TRUE)[[1]]
+  n <- length(chars)
+  # Segments are cut out of `s` by position rather than accumulated a
+  # character at a time: growing a vector per character made this
+  # quadratic, which showed at a few thousand characters.
+  segs <- character(0)
+  opens <- character(0)   # stack of opener strings, e.g. "\\textbf{"
+  reopen <- ""            # openers inherited from the previous segment
+  seg_start <- 1L
+
+  flush <- function(upto) {
+    body <- if (upto >= seg_start) substr(s, seg_start, upto) else ""
+    segs <<- c(segs, paste0(reopen, body, strrep("}", length(opens))))
+    reopen <<- paste(opens, collapse = "")
+  }
+
+  i <- 1L
+  while (i <= n) {
+    k <- match(i, starts)
+    if (!is.na(k)) {
+      flush(i - 1L)
+      i <- i + lens[k]
+      seg_start <- i
+      next
+    }
+    ch <- chars[i]
+    # An escaped literal (`\{`, `\}`, `\&`, ...) is two characters and
+    # never opens or closes a group.
+    if (ch == "\\" && i < n) {
+      i <- i + 2L
+      next
+    }
+    if (ch == "{") {
+      # Re-opening needs the command the brace belongs to, not a bare
+      # `{`: the group is `\textbf{`. Arguments already given are part of
+      # it, both optional (`\parbox[t]{`) and mandatory
+      # (`\textcolor{red}{`) -- matching only the command name reopened
+      # `\textcolor{red}{two}` as a plain `{two}` and dropped the colour.
+      # A command name and its arguments are short, so only the run just
+      # before the brace is examined.
+      sofar <- substr(s, max(1L, i - 64L), i - 1L)
+      cmd <- regmatches(
+        sofar,
+        regexpr("\\\\[A-Za-z]+(?:\\[[^]]*\\]|\\{[^{}]*\\})*$", sofar))
+      opens <- c(opens, paste0(if (length(cmd)) cmd else "", "{"))
+    } else if (ch == "}" && length(opens)) {
+      opens <- opens[-length(opens)]
+    }
+    i <- i + 1L
+  }
+  flush(n)
+  segs
 }
 
 # Find the position of the matching `}` for an opening `{` immediately
@@ -469,6 +563,14 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   tex <- gsub("\\\\begin\\{(?:table|figure)\\*?\\}(\\[[^]]*\\])?",
               "", tex, perl = TRUE)
   tex <- gsub("\\\\end\\{(?:table|figure)\\*?\\}", "", tex, perl = TRUE)
+
+  # 3a-i. `tabular*` takes a target width before its column spec, which
+  # `tabular` does not. Dropping only the star left the width where the
+  # alignment belonged and MicroTeX rejected it outright ("Invalid
+  # alignment in array environment"), so drop the width with it. A grob
+  # is sized by its content, so there is no width to honour.
+  tex <- gsub("\\\\begin\\{tabular\\*\\}\\s*\\{[^{}]*\\}", "\\\\begin{tabular}",
+              tex, perl = TRUE)
 
   # 3a. Strip the trailing `*` on env names. In amsmath, `align*` means
   # "no equation numbering" — MicroTeX doesn't number equations, so the

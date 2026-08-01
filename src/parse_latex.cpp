@@ -18,13 +18,13 @@ struct RenderModeGuard {
 
 // RAII guard: the paragraph-shaping modes are globals on the splitter and
 // on RowAtom, so clear them on every exit path -- otherwise one justified
-// or hyphenated call would silently shape every parse that followed it.
+// call would silently shape every parse that followed it.
 struct LayoutModeGuard {
     ~LayoutModeGuard() {
         BoxSplitter::_justify = false;
         BoxSplitter::_optimalBreak = false;
-        RowAtom::_hyphenate = false;
         RowAtom::_mergeText = false;
+        RowAtom::_levelled = false;
     }
 };
 
@@ -65,8 +65,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            bool use_path = true,
                            std::string tex_style = "",
                            bool justify = false,
-                           bool optimal_break = false,
-                           bool hyphenate = false) {
+                           bool optimal_break = false) {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
@@ -90,9 +89,6 @@ Rcpp::List parse_latex_cpp(std::string tex,
     LayoutModeGuard layout_guard;
     BoxSplitter::_justify = justify;
     BoxSplitter::_optimalBreak = optimal_break;
-    // Hyphenation needs patterns; without them the pass is a no-op, so
-    // there is nothing to check here.
-    RowAtom::_hyphenate = hyphenate;
     // With no width limit the splitter is never called (builder.cpp), so
     // the spaces a line would break at are free to be folded into the
     // text run around them -- which is what lets the backend order

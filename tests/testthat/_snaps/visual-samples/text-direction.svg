@@ -23,20 +23,20 @@
 <text x='23.91' y='29.42' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='69.80px' lengthAdjust='spacingAndGlyphs'>left-to-right (control)</text>
 <text x='23.91' y='48.46' style='font-size: 16.00px; font-family: sans;' textLength='79.14px' lengthAdjust='spacingAndGlyphs'>Hello world</text>
 <text x='378.58' y='47.87' style='font-size: 16.00px; font-family: sans;' textLength='79.14px' lengthAdjust='spacingAndGlyphs'>Hello world</text>
-<text x='23.91' y='79.23' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='65.36px' lengthAdjust='spacingAndGlyphs'>right-to-left, Arabic</text>
-<text x='23.91' y='97.69' style='font-size: 16.00px; font-family: sans;' textLength='88.44px' lengthAdjust='spacingAndGlyphs'>مرحبا بك</text>
-<text x='378.58' y='97.69' style='font-size: 16.00px; font-family: sans;' textLength='88.44px' lengthAdjust='spacingAndGlyphs'>مرحبا بك</text>
+<text x='23.91' y='79.23' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='68.47px' lengthAdjust='spacingAndGlyphs'>right-to-left, Uyghur</text>
+<text x='23.91' y='97.69' style='font-size: 16.00px; font-family: sans;' textLength='136.44px' lengthAdjust='spacingAndGlyphs'>خۇش كەلدىڭىز</text>
+<text x='378.58' y='97.69' style='font-size: 16.00px; font-family: sans;' textLength='136.44px' lengthAdjust='spacingAndGlyphs'>خۇش كەلدىڭىز</text>
 <text x='23.91' y='129.04' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='70.25px' lengthAdjust='spacingAndGlyphs'>right-to-left, Hebrew</text>
 <text x='23.91' y='149.50' style='font-size: 16.00px; font-family: sans;' textLength='72.42px' lengthAdjust='spacingAndGlyphs'>שלום עולם</text>
 <text x='378.58' y='147.50' style='font-size: 16.00px; font-family: sans;' textLength='72.42px' lengthAdjust='spacingAndGlyphs'>שלום עולם</text>
 <text x='23.91' y='178.86' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='101.81px' lengthAdjust='spacingAndGlyphs'>right-to-left inside left-to-right</text>
-<text x='23.91' y='197.90' style='font-size: 16.00px; font-family: sans;' textLength='302.80px' lengthAdjust='spacingAndGlyphs'>The greeting مرحبا بك means welcome</text>
-<text x='378.58' y='197.31' style='font-size: 16.00px; font-family: sans;' textLength='302.80px' lengthAdjust='spacingAndGlyphs'>The greeting مرحبا بك means welcome</text>
+<text x='23.91' y='197.90' style='font-size: 16.00px; font-family: sans;' textLength='350.80px' lengthAdjust='spacingAndGlyphs'>The greeting خۇش كەلدىڭىز means welcome</text>
+<text x='378.58' y='197.31' style='font-size: 16.00px; font-family: sans;' textLength='350.80px' lengthAdjust='spacingAndGlyphs'>The greeting خۇش كەلدىڭىز means welcome</text>
 <text x='23.91' y='228.67' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='101.81px' lengthAdjust='spacingAndGlyphs'>left-to-right inside right-to-left</text>
-<text x='23.91' y='247.71' style='font-size: 16.00px; font-family: sans;' textLength='224.48px' lengthAdjust='spacingAndGlyphs'>مرحبا بك and في العالم</text>
-<text x='378.58' y='247.13' style='font-size: 16.00px; font-family: sans;' textLength='224.48px' lengthAdjust='spacingAndGlyphs'>مرحبا بك and في العالم</text>
+<text x='23.91' y='247.71' style='font-size: 16.00px; font-family: sans;' textLength='284.48px' lengthAdjust='spacingAndGlyphs'>خۇش كەلدىڭىز and بۇ دۇنياغا</text>
+<text x='378.58' y='247.13' style='font-size: 16.00px; font-family: sans;' textLength='284.48px' lengthAdjust='spacingAndGlyphs'>خۇش كەلدىڭىز and بۇ دۇنياغا</text>
 <text x='23.91' y='278.48' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='82.26px' lengthAdjust='spacingAndGlyphs'>digits inside right-to-left</text>
-<text x='23.91' y='297.10' style='font-size: 16.00px; font-family: sans;' textLength='233.38px' lengthAdjust='spacingAndGlyphs'>مرحبا بك 2026 في العالم</text>
-<text x='378.58' y='296.94' style='font-size: 16.00px; font-family: sans;' textLength='233.38px' lengthAdjust='spacingAndGlyphs'>مرحبا بك 2026 في العالم</text>
+<text x='23.91' y='297.10' style='font-size: 16.00px; font-family: sans;' textLength='293.38px' lengthAdjust='spacingAndGlyphs'>خۇش كەلدىڭىز 2026 بۇ دۇنياغا</text>
+<text x='378.58' y='296.94' style='font-size: 16.00px; font-family: sans;' textLength='293.38px' lengthAdjust='spacingAndGlyphs'>خۇش كەلدىڭىز 2026 بۇ دۇنياغا</text>
 </g>
 </svg>

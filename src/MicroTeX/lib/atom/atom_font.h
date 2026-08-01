@@ -29,6 +29,19 @@ public:
 
   AtomType rightType() const override { return _atom->rightType(); }
 
+  // \text, \textbf, \textit, \textsf, \texttt and \textrm are all built
+  // from this one type, so forwarding here is what lets a row see the
+  // text of a sibling group at all.
+  void collectBidiText(std::vector<c32>& out) const override {
+    if (_atom != nullptr) _atom->collectBidiText(out);
+  }
+
+  void assignBidiLevels(const std::vector<std::uint8_t>& lv, std::size_t& cursor) override {
+    const std::size_t start = cursor;
+    if (_atom != nullptr) _atom->assignBidiLevels(lv, cursor);
+    _bidiLevel = subtreeLevel(lv, start, cursor);
+  }
+
   sptr<Box> createBox(Env& env) override;
 };
 

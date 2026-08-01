@@ -80,6 +80,24 @@ bool bidi_levels(
 #endif
 }
 
+bool bidi_assign_levels(const microtex::sptr<microtex::Atom>& root) {
+  if (root == nullptr || !bidi_available()) return false;
+
+  std::vector<microtex::c32> text;
+  root->collectBidiText(text);
+  if (!bidi_has_rtl(text)) return false;
+
+  std::vector<std::uint8_t> levels;
+  if (!bidi_levels(text, levels)) return false;
+
+  // The two traversals visit the same atoms in the same order, so the
+  // cursor lands on each atom's first character. A mismatch would show
+  // as every level after it being off by the same amount.
+  std::size_t cursor = 0;
+  root->assignBidiLevels(levels, cursor);
+  return true;
+}
+
 void bidi_reorder(
   std::vector<microtex::sptr<microtex::Box>>& boxes,
   std::vector<std::uint8_t>& levels

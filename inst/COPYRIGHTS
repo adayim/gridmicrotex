@@ -25,13 +25,3 @@ Copyright 2001-2021 The STIX Fonts Project Authors.
 Upstream: https://github.com/stipub/stixfonts
 License:  SIL Open Font License, Version 1.1
           (see inst/fonts/OFL.txt).
-
--------------------------------------------------------------------------------
-American English hyphenation patterns  (inst/hyph/hyph-en-us.tex)
--------------------------------------------------------------------------------
-Copyright (C) 1990, 2004, 2005 Gerard D.C. Kuiken.
-Upstream: https://ctan.org/pkg/hyph-utf8 (part of the hyph-utf8 package).
-License:  Copying and distribution of this file, with or without
-          modification, are permitted in any medium without royalty
-          provided the copyright notice and this notice are preserved.
-          The notice is preserved in the file's own header.

@@ -29,24 +29,8 @@ microtex_set_default_math_font <- function(name) {
     .Call(`_gridmicrotex_microtex_set_default_math_font`, name)
 }
 
-microtex_register_hyphenation <- function(patterns, exceptions, left_min = 2L, right_min = 3L) {
-    invisible(.Call(`_gridmicrotex_microtex_register_hyphenation`, patterns, exceptions, left_min, right_min))
-}
-
-microtex_has_hyphenation <- function() {
-    .Call(`_gridmicrotex_microtex_has_hyphenation`)
-}
-
 microtex_bidi_available <- function() {
     .Call(`_gridmicrotex_microtex_bidi_available`)
-}
-
-microtex_clear_hyphenation <- function() {
-    invisible(.Call(`_gridmicrotex_microtex_clear_hyphenation`))
-}
-
-microtex_hyphenate_word <- function(word) {
-    .Call(`_gridmicrotex_microtex_hyphenate_word`, word)
 }
 
 microtex_release <- function() {
@@ -81,7 +65,7 @@ microtex_add_font_from_otf <- function(otf_path, index = 0L) {
     .Call(`_gridmicrotex_microtex_add_font_from_otf`, otf_path, index)
 }
 
-parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "", justify = FALSE, optimal_break = FALSE, hyphenate = FALSE) {
-    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break, hyphenate)
+parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "", justify = FALSE, optimal_break = FALSE) {
+    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break)
 }
 
