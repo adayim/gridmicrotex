@@ -8,14 +8,7 @@
   is drawn a word at a time, since the spaces are where it breaks.
 - Right-to-left text renders in the correct order, including across
   emphasis, colour and other font changes, and with or without
-  `max_width`. Direction is resolved once for the whole label, so a run
-  follows the paragraph it sits in rather than its own contents. Needs
-  FriBidi, which is optional; without it right-to-left text keeps
-  left-to-right run order. Reordering covers a run of text and the font
-  groups in it; it does not yet reach inside a structural container, so
-  text in a `\\`-separated line, a fraction, or a table cell keeps
-  left-to-right order, as does math sitting beside right-to-left text. A
-  single group holding *both* directions is also placed as one unit.
+  `max_width`.
 - New
   [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
   and

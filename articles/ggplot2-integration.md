@@ -130,13 +130,7 @@ Unlike
 [`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md),
 [`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
 never strips `$` delimiters — in markdown a `$...$` pair *is* the math,
-so removing it would change the label. Note that the
-[ggtext](https://wilkelab.org/ggtext/) package also exports an
-[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md);
-if both are attached, call
-[`gridmicrotex::element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
-to be explicit. The two are not interchangeable — ggtext renders
-HTML/CSS, this renders LaTeX math.
+so removing it would change the label.
 
 ### Annotating with markdown
 
@@ -168,9 +162,7 @@ ggplot(mtcars, aes(wt, mpg)) +
 ![](ggplot2-integration_files/figure-html/markdown-annotation-1.png)
 
 The LaTeX version of the same annotation would need `\text{}` around
-every word and could not set the heading in bold on its own line. As
-with `annotate("latex", ...)`, no data frame is needed and the legend is
-suppressed automatically.
+every word and could not set the heading in bold on its own line.
 
 ### Styling labels
 

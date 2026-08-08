@@ -181,11 +181,7 @@ their LaTeX counterparts; only the label syntax differs.</p>
 <p>Unlike <code><a href="../reference/element_latex.html">element_latex()</a></code>, <code><a href="../reference/element_markdown.html">element_markdown()</a></code>
 never strips <code>$</code> delimiters — in markdown a
 <code>$...$</code> pair <em>is</em> the math, so removing it would
-change the label. Note that the <a href="https://wilkelab.org/ggtext/" class="external-link">ggtext</a> package also exports an
-<code><a href="../reference/element_markdown.html">element_markdown()</a></code>; if both are attached, call
-<code><a href="../reference/element_markdown.html">gridmicrotex::element_markdown()</a></code> to be explicit. The two
-are not interchangeable — ggtext renders HTML/CSS, this renders LaTeX
-math.</p>
+change the label.</p>
 <div class="section level3">
 <h3 id="annotating-with-markdown">Annotating with markdown<a class="anchor" aria-label="anchor" href="#annotating-with-markdown"></a>
 </h3>
@@ -213,8 +209,7 @@ new line, one annotation can hold several:</p>
 <p><img src="ggplot2-integration_files/figure-html/markdown-annotation-1.png" class="r-plt" alt="" width="70%"></p>
 <p>The LaTeX version of the same annotation would need
 <code>\text{}</code> around every word and could not set the heading in
-bold on its own line. As with <code>annotate("latex", ...)</code>, no
-data frame is needed and the legend is suppressed automatically.</p>
+bold on its own line.</p>
 </div>
 <div class="section level3">
 <h3 id="styling-labels">Styling labels<a class="anchor" aria-label="anchor" href="#styling-labels"></a>
