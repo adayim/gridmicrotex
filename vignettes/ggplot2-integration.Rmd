@@ -126,10 +126,7 @@ ggplot(df, aes(x, y, label = lab)) +
 
 Unlike `element_latex()`, `element_markdown()` never strips `$`
 delimiters --- in markdown a `$...$` pair *is* the math, so removing it
-would change the label. Note that the [ggtext](https://wilkelab.org/ggtext/)
-package also exports an `element_markdown()`; if both are attached, call
-`gridmicrotex::element_markdown()` to be explicit. The two are not
-interchangeable --- ggtext renders HTML/CSS, this renders LaTeX math.
+would change the label. 
 
 ### Annotating with markdown
 
@@ -157,9 +154,8 @@ ggplot(mtcars, aes(wt, mpg)) +
 ```
 
 The LaTeX version of the same annotation would need `\text{}` around
-every word and could not set the heading in bold on its own line. As
-with `annotate("latex", ...)`, no data frame is needed and the legend is
-suppressed automatically.
+every word and could not set the heading in bold on its own line. 
+
 
 ### Styling labels
 

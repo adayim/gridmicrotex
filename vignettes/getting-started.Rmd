@@ -41,7 +41,7 @@ independent on every R device.
 
 `latex_grob()` returns a grob; `grid.latex()` builds and draws one.
 
-```{r basic, fig.height=0.9, fig.width=2.4, out.width="45%"}
+```{r basic, fig.height=1, fig.width=2.4, out.width="45%"}
 library(gridmicrotex)
 library(grid)
 

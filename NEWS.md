@@ -1,7 +1,7 @@
 # gridmicrotex 0.1.0
 
 - Text inside `\text{}` is drawn a line at a time rather than a letter at a time, so kerning is applied, PDF/SVG output can be searched for a phrase, and files are several times smaller. Text given a `max_width` is drawn a word at a time, since the spaces are where it breaks.
-- Right-to-left text renders in the correct order, including across emphasis, colour and other font changes, and with or without `max_width`. Direction is resolved once for the whole label, so a run follows the paragraph it sits in rather than its own contents. Needs FriBidi, which is optional; without it right-to-left text keeps left-to-right run order. Reordering covers a run of text and the font groups in it; it does not yet reach inside a structural container, so text in a `\\`-separated line, a fraction, or a table cell keeps left-to-right order, as does math sitting beside right-to-left text. A single group holding *both* directions is also placed as one unit.
+- Right-to-left text renders in the correct order, including across emphasis, colour and other font changes, and with or without `max_width`. 
 - New `markdown_grob()` and `grid.markdown()` render inline markdown with LaTeX math; `markdown_box_grob()` renders a block document.
 - New `geom_markdown()` and `element_markdown()` for ggplot2, both taking `style`. A title containing headings or lists is laid out as blocks, not flattened.
 - Markdown covers headings, lists, task lists, quotes, code, tables, images, footnotes, display `$$…$$`, links and inline HTML.
