@@ -85,8 +85,36 @@ test_that("a named font family travels from LaTeX to the layout", {
   f <- tempfile(fileext = ".png")
   ragg::agg_png(f, width = 400, height = 120)
   on.exit({ dev.off(); unlink(f) }, add = TRUE)
+  # Measured large on purpose. Layout widths are whole big points, so at a
+  # normal size that quantum is several percent of a three-letter word: two
+  # genuinely different faces whose "Wig" differs by less than one point land
+  # on the same number, and the families look identical although nothing is
+  # wrong. That is what failed on a CRAN Debian box. It reproduces here at
+  # fontsize 10, where stock DejaVu mono and sans both measure 18; at 200 the
+  # same pair differs by 14.
   w <- function(tex) as.numeric(latex_dims(tex, input_mode = "math",
-                                           gp = grid::gpar(fontsize = 20))$width)
+                                           gp = grid::gpar(fontsize = 200))$width)
+  # A font set with no distinct monospace face resolves both names to one
+  # file, which no font size can separate. Probe with \texttt, which takes its
+  # family from the FontStyle bit rather than the \gmfontfamily registry, so
+  # this cannot mask a regression in the code under test: that would leave
+  # \texttt working and fail the assertions below.
+  #
+  # The message carries what the layout recorded, so a machine we cannot reach
+  # reports itself. Built lazily: skip_if() only forces it when it skips.
+  tt <- w("\\texttt{Wig}")
+  body <- w("\\text{Wig}")
+  skip_if(isTRUE(all.equal(tt, body)), {
+    d <- latex_grob("\\texttt{Wig}", input_mode = "math",
+                    gp = grid::gpar(fontsize = 20))$layout_df
+    d <- d[d$type == "text", ]
+    paste0("text measurement does not distinguish font families: ",
+           "texttt=", tt, " text=", body,
+           " font_style=", paste(d$font_style, collapse = "/"),
+           " font_family=", paste(d$font_family, collapse = "/"),
+           " mono=", basename(systemfonts::match_fonts("mono")$path),
+           " sans=", basename(systemfonts::match_fonts("sans")$path))
+  })
   mono <- w("\\gmfontfamily{mono}{Wig}")
   sans <- w("\\gmfontfamily{sans}{Wig}")
   expect_false(isTRUE(all.equal(mono, sans)))

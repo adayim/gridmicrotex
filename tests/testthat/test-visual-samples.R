@@ -160,8 +160,8 @@ test_that("visual: text direction", {
                       hjust = 0, vjust = 1,
                       gp = grid::gpar(fontsize = 8, col = "grey45"))
     }
-    colhead(24, "ours")
-    colhead(380, "grid.text() reference")
+    colhead(24, "gridmicrotex::grid.latex()")
+    colhead(380, "grid::grid.text() reference")
 
     rows <- list(
       list(24,  "left-to-right (control)", "Hello world"),

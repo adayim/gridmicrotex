@@ -18,8 +18,8 @@
   </clipPath>
 </defs>
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw1NzYuMDA=)'>
-<text x='23.91' y='13.48' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='15.57px' lengthAdjust='spacingAndGlyphs'>ours</text>
-<text x='378.58' y='13.48' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='69.81px' lengthAdjust='spacingAndGlyphs'>grid.text() reference</text>
+<text x='23.91' y='13.48' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='85.81px' lengthAdjust='spacingAndGlyphs'>gridmicrotex::grid.latex()</text>
+<text x='378.58' y='13.48' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='87.60px' lengthAdjust='spacingAndGlyphs'>grid::grid.text() reference</text>
 <text x='23.91' y='29.42' style='font-size: 8.00px; fill: #737373; font-family: sans;' textLength='69.80px' lengthAdjust='spacingAndGlyphs'>left-to-right (control)</text>
 <text x='23.91' y='48.46' style='font-size: 16.00px; font-family: sans;' textLength='79.14px' lengthAdjust='spacingAndGlyphs'>Hello world</text>
 <text x='378.58' y='47.87' style='font-size: 16.00px; font-family: sans;' textLength='79.14px' lengthAdjust='spacingAndGlyphs'>Hello world</text>
