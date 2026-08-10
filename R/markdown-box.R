@@ -50,7 +50,9 @@
   if (length(m) != 2L) return(list(kind = "other"))
   list(kind = "open",
        class = .md_html_classes(m[2]),
-       style = .md_parse_css(.md_html_attr(m[2], "style")))
+       # Hand-written markup, so an unsupported property is worth a word
+       # -- see the note on .md_parse_css().
+       style = .md_parse_css(.md_html_attr(m[2], "style"), warn = TRUE))
 }
 
 # Parse markdown into a list of block descriptors. Recurses through
@@ -711,10 +713,24 @@
       y <- y + m$h
 
     } else if (identical(blk$type, "image")) {
-      img <- .md_image_raster(blk$path)
-      if (is.null(img)) {
-        # Missing file, unsupported format, or png/jpeg not installed:
-        # show the alt text so the reader still learns what belongs here.
+      # Shares the inline path's loader and grob builder, so a block image
+      # gains SVG-as-vector for free. The sizing arithmetic below is
+      # deliberately unchanged: .image_dims() reports the same
+      # `w_px * 72/96` this used to compute inline, so a bitmap lays out
+      # exactly as before.
+      dims <- .image_dims(blk$path)
+      g <- if (is.null(dims)) NULL else {
+        # Scaled down to fit the column, never blown up past natural size.
+        iw <- min(dims$w, avail)
+        ih <- iw * dims$h / dims$w
+        gg <- .image_grob(blk$path, iw, ih,
+                          x = grid::unit(indent_blk, "bigpts"),
+                          y = grid::unit(1, "npc") - grid::unit(y, "bigpts"))
+        if (is.null(gg)) NULL else list(g = gg, w = iw, h = ih)
+      }
+      if (is.null(g)) {
+        # Missing file, unsupported format, or no reader installed: show
+        # the alt text so the reader still learns what belongs here.
         if (nzchar(blk$alt)) {
           tex <- wrap(blk$alt)
           m <- .md_measure(tex, avail, gp_blk)
@@ -723,24 +739,8 @@
           y <- y + m$h
         }
       } else {
-        # Pixels are read at 96 dpi, the usual screen assumption, and the
-        # image is scaled down to fit the column but never blown up past
-        # its natural size.
-        nat_w <- img$w_px * 72 / 96
-        iw <- min(nat_w, avail)
-        ih <- iw * img$h_px / img$w_px
-        add(.md_item(
-          grid::rasterGrob(
-            img$raster,
-            x = grid::unit(indent_blk, "bigpts"),
-            y = grid::unit(1, "npc") - grid::unit(y, "bigpts"),
-            width = grid::unit(iw, "bigpts"),
-            height = grid::unit(ih, "bigpts"),
-            hjust = 0, vjust = 1, interpolate = TRUE
-          ),
-          indent_blk, y, iw, ih, align
-        ))
-        y <- y + ih
+        add(.md_item(g$g, indent_blk, y, g$w, g$h, align))
+        y <- y + g$h
       }
 
     } else if (identical(blk$type, "thematic_break")) {

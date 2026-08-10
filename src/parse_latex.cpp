@@ -166,6 +166,11 @@ Rcpp::List parse_latex_cpp(std::string tex,
     IntegerVector codepoint_col(n);
     CharacterVector font_file_col(n);
     CharacterVector font_family_col(n, NA_STRING);
+    // Deliberately its own column rather than reusing font_file: that is
+    // documented output of latex_tree() described as an OTF path, and a hex
+    // blob reaching grDevices::glyphFont(file =) would be near-impossible to
+    // trace back. font_family set the precedent for a per-record-type column.
+    CharacterVector image_ref_col(n, NA_STRING);
 
     // Path data stored separately as a list
     Rcpp::List path_list(n);
@@ -176,7 +181,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
         // rx/ry are only meaningful for round-rect records; default NA.
         rx_col[i] = NA_REAL;
         ry_col[i] = NA_REAL;
-        // rotation is only populated for TEXT records today; default 0 (deg).
+        // rotation is populated for TEXT and IMAGE records; default 0 (deg).
         rotation_col[i] = 0;
 
         switch (rec.type) {
@@ -320,6 +325,28 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 font_file_col[i] = NA_STRING;
                 break;
             }
+            case DrawRecord::IMAGE:
+                type_col[i] = "image";
+                x_col[i] = rec.x;
+                y_col[i] = rec.y;
+                glyph_col[i] = NA_INTEGER;
+                font_size_col[i] = NA_REAL;
+                color_col[i] = color_to_hex(rec.col);
+                x2_col[i] = NA_REAL;
+                y2_col[i] = NA_REAL;
+                w_col[i] = rec.width;
+                h_col[i] = rec.height;
+                lwd_col[i] = NA_REAL;
+                text_col[i] = NA_STRING;
+                font_style_col[i] = NA_INTEGER;
+                codepoint_col[i] = NA_INTEGER;
+                font_file_col[i] = NA_STRING;
+                image_ref_col[i] = rec.image_ref;
+                // Non-zero under \rotatebox, and then x/y is the box's
+                // CENTRE rather than its top-left corner -- see recordImage.
+                rotation_col[i] = rec.rotation * (180.0 / 3.14159265358979323846);
+                path_list[i] = R_NilValue;
+                break;
             case DrawRecord::ROUND_RECT:
             case DrawRecord::FILL_ROUND_RECT:
                 type_col[i] = (rec.type == DrawRecord::FILL_ROUND_RECT)
@@ -385,7 +412,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Named("path") = path_list,
         Named("codepoint") = codepoint_col,
         Named("font_file") = font_file_col,
-        Named("font_family") = font_family_col
+        Named("font_family") = font_family_col,
+        Named("image_ref") = image_ref_col
     );
     result.attr("class") = "data.frame";
     if (n > 0) {

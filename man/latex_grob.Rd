@@ -229,11 +229,38 @@ are mapped to \verb{\\hline}. The optional column-range and trim
 arguments of \verb{\\cmidrule} are discarded (MicroTeX has no concept of
 partial-column rules).
 \item \verb{\\caption[short]\{X\}} is extracted as \verb{\\text\{X\}\\\\} at its source
-position. The caption renders where it appears in the input
-(typically below the \code{tabular} for \code{xtable}, above for
-\code{kable}); expect a slight visual difference from full LaTeX,
-which positions the caption above or below the float regardless of
-source order.
+position, so a caption written after \verb{\\includegraphics} renders below
+the figure and one written before a \code{tabular} renders above the table.
+Full LaTeX instead positions the caption by float type regardless of
+source order, and numbers it from a counter; there is no counter here.
+Wrap the figure and its caption in \verb{\\begin\{array\}\{c\}...\\end\{array\}} to
+centre them on each other (\verb{\\centering} is dropped --- a grob has no
+page to centre against).
+\item \verb{\\graphicspath\{\{dir/\}\}} and \verb{\\DeclareGraphicsExtensions\{...\}} are
+consumed rather than typeset; the former's directories are searched.
+}
+
+\strong{Images:}
+\itemize{
+\item \verb{\\includegraphics[opts]\{file\}} draws a PNG, JPEG or SVG inline. The
+starred form is accepted and behaves identically. \code{width}, \code{height}
+and \code{scale} take any LaTeX length (\verb{\\textwidth} resolves against
+\code{max_width}, and without one falls back to the file's own size with a
+warning); \code{scale} multiplies whatever \code{width}/\code{height} settled on, and
+\code{keepaspectratio} fits inside them instead of stretching to fill.
+\code{angle} rotates the figure and grows the surrounding box to the rotated
+bounds, as \verb{\\rotatebox} does. \code{origin}, \code{trim}, \code{clip} and \code{viewport}
+are parsed but not applied, and warn once so the difference is not
+silent; so does a length that cannot be read, or one that sizes the
+figure to nothing.
+\item The extension may be omitted, as in LaTeX: \code{{plots/fig}} finds
+\code{plots/fig.svg}, then \code{.png}, \code{.jpg}, \code{.jpeg}.
+\item An SVG is drawn as real vector and stays sharp at any output
+resolution; a bitmap does not, and warns when it would be shown below
+150 dpi. PDF and EPS are not supported --- save the figure as SVG
+instead. A file that cannot be read --- missing, unsupported, or an
+SVG with no \code{rsvg} installed --- warns and draws its name rather than
+disappearing.
 }
 
 Anything not in this list is passed to MicroTeX unchanged. An unknown

@@ -24,7 +24,9 @@ public:
 
 // One recorded draw operation
 struct DrawRecord {
-    enum Type { GLYPH, LINE, RECT, FILL_RECT, ROUND_RECT, FILL_ROUND_RECT, PATH, TEXT, MARK };
+    enum Type {
+        GLYPH, LINE, RECT, FILL_RECT, ROUND_RECT, FILL_ROUND_RECT, PATH, TEXT, MARK, IMAGE
+    };
     Type type = GLYPH;
 
     // For GLYPH
@@ -46,6 +48,11 @@ struct DrawRecord {
     // For MARK (\mark{name}) — a named anchor inside the formula. Position
     // is in the same world coordinates as glyph records; carries no ink.
     std::string mark_name;
+
+    // For IMAGE — the hex-encoded file reference R put in \gmgraphics. The
+    // engine never decodes it; `width`/`height` below carry the box, and
+    // `x`/`y` its top-left corner, exactly as for FILL_RECT.
+    std::string image_ref;
 
     // For LINE / RECT / FILL_RECT / ROUND_RECT / FILL_ROUND_RECT
     float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
@@ -117,6 +124,11 @@ public:
     // --- Mark (called by MarkBox::draw via dynamic_cast) ---
     // Emits a MARK record at the transformed (x, y) carrying a user name.
     void recordMark(const std::string& name, float x, float y);
+
+    // --- Image (called by ImageBox::draw via dynamic_cast) ---
+    // Emits an IMAGE record for the rectangle whose top-left is (x, y).
+    // Refuses a rotated transform rather than placing the image wrongly.
+    void recordImage(const std::string& ref, float x, float y, float w, float h);
 
     // --- Extraction ---
     const std::vector<DrawRecord>& records() const { return _records; }

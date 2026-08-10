@@ -5,6 +5,7 @@
 #include "font_family_atom.h"
 #include "macro/macro.h"
 #include "mark_atom.h"
+#include "image_atom.h"
 #include "bidi.h"
 #include "utils/utf.h"
 #include "unimath/font_src.h"
@@ -282,6 +283,7 @@ void microtex_init(std::string clm_path, std::string otf_path) {
 
     register_mark_macro();
     register_font_family_macro();
+    register_image_macros();
     s_initialized = true;
 }
 
@@ -312,6 +314,7 @@ void microtex_init_from_otf(std::string otf_path, int index = 0) {
 
     register_mark_macro();
     register_font_family_macro();
+    register_image_macros();
     s_initialized = true;
 }
 

@@ -85,6 +85,10 @@ latex_cache_clear <- function() {
   .latex_cache$order <- character(0)
   .latex_cache$hits <- 0L
   .latex_cache$misses <- 0L
+  # Decoded rasters and parsed pictures are held per file, and each one is
+  # far larger than a layout. They have no size limit of their own, so this
+  # is the only way to give that memory back.
+  .image_cache_clear()
   invisible(NULL)
 }
 

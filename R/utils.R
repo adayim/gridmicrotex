@@ -587,6 +587,13 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   # 5. Cross-reference metadata.
   tex <- .replace_command_braced(tex, "label")
 
+  # 5a. Graphics declarations. `\graphicspath` is normally consumed by
+  # .resolve_graphics(), which needs the directories; this catches one that
+  # survived (no \includegraphics in the string, or a macro produced it),
+  # so its argument is not typeset as visible text.
+  tex <- .replace_command_braced(tex, "graphicspath")
+  tex <- .replace_command_braced(tex, "DeclareGraphicsExtensions")
+
   # 6. Layout / alignment scope declarations + content-free declarations
   # that have no analog in a fixed-size grob.
   tex <- gsub("\\\\centering\\b", "", tex, perl = TRUE)

@@ -467,12 +467,15 @@ test_that("every supported tag renders what HTML prescribes for it", {
   expect_true(all(c("b", "strong", "i", "em", "sub", "sup") %in%
                     names(.MD_HTML_TAGS)))
 
-  # Tags with no default rendering are absent on purpose: <a>, <abbr>, a
-  # bare <span> and friends change nothing visually in a browser either,
-  # so dropping the markup and keeping the text *is* the rendering.
+  # Tags with no default rendering are absent on purpose: <abbr>, a bare
+  # <span> and friends change nothing visually in a browser either, so
+  # dropping the markup and keeping the text *is* the rendering.
   # <ruby> is not in this list any more: it annotates its content with
-  # \overset, so it does have a rendering. A raw <a> tag still is --
-  # only a markdown link ([x](u), a `link` node) picks up the `a` rule.
+  # \overset, so it does have a rendering.
+  #
+  # A bare <a> belongs here too -- the standard styles `a:link`, so an
+  # anchor with no href is ordinary text. An <a href> is the opposite
+  # case and is checked below.
   for (tag in c("a", "abbr", "span", "bdi", "bdo", "data", "time", "wbr",
                 "output", "nobr")) {
     expect_equal(.md_to_tex(sprintf("<%s>Hg</%s>", tag, tag)), "\\text{Hg}",
@@ -790,6 +793,19 @@ test_that("markdown_box_grob() applies gp$cex exactly once", {
                sizes(grid::gpar(fontsize = 20)))
 })
 
+# The x of a block item, whichever way the grob carries it. A rasterGrob
+# is positioned by its own `x`; the wrapper around a vector picture is
+# positioned by its viewport, because grImport2's pictureGrob brings a
+# vpStack whose `x` is NULL. Reading only `$x` would pass on PNG and error
+# on SVG, which is exactly the gap this helper exists to close.
+block_xs <- function(g) {
+  kids <- grid::makeContent(g)$children[[1]]$children
+  vapply(kids, function(k) {
+    u <- if (!is.null(k$x)) k$x else if (!is.null(k$vp)) k$vp$x else NULL
+    if (is.null(u)) NA_real_ else grid::convertX(u, "bigpts", valueOnly = TRUE)
+  }, numeric(1))
+}
+
 test_that("halign moves an image that has room, and leaves a full-width rule", {
   skip_if_not_installed("png")
   f <- tempfile(fileext = ".png")
@@ -798,17 +814,50 @@ test_that("halign moves an image that has room, and leaves a full-width rule", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
 
   xs <- function(ha) {
-    g <- markdown_box_grob(paste0("---\n\n![a](", f, ")"),
-                           width = grid::unit(4, "in"), halign = ha,
-                           gp = grid::gpar(fontsize = 12))
-    kids <- grid::makeContent(g)$children[[1]]$children
-    vapply(kids, function(k) grid::convertX(k$x, "bigpts", valueOnly = TRUE),
-           numeric(1))
+    block_xs(markdown_box_grob(paste0("---\n\n![a](", f, ")"),
+                               width = grid::unit(4, "in"), halign = ha,
+                               gp = grid::gpar(fontsize = 12)))
   }
   left <- xs(0)
   right <- xs(1)
   expect_equal(left[[1]], right[[1]])   # the rule spans the column
   expect_gt(right[[2]], left[[2]])      # the image has slack and uses it
+})
+
+test_that("a block image aligns the same whether it is raster or vector", {
+  skip_if_not_installed("png")
+  skip_if_not_installed("svglite")
+  skip_if_not_installed("rsvg")
+  skip_if_not_installed("grImport2")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+
+  p <- tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(20, 40, 3)), p)
+  s <- tempfile(fileext = ".svg")
+  svglite::svglite(s, width = 40 / 72, height = 20 / 72)
+  grid::grid.rect(gp = grid::gpar(fill = "grey50", col = NA))
+  grDevices::dev.off()
+  on.exit(unlink(c(p, s)), add = TRUE)
+
+  at <- function(f, ha) {
+    block_xs(markdown_box_grob(sprintf("![a](%s)", f),
+                               width = grid::unit(4, "in"), halign = ha,
+                               gp = grid::gpar(fontsize = 12)))[[1]]
+  }
+  # A vector picture is positioned through its viewport rather than its
+  # own x, so this is the guard that both routes still move together.
+  for (f in c(p, s)) {
+    expect_equal(at(f, 0), 0, info = f)
+    expect_gt(at(f, 1), at(f, 0.5))
+    expect_gt(at(f, 0.5), at(f, 0))
+  }
+
+  # And the cascade reaches an image block as well as the argument does.
+  centred <- block_xs(markdown_box_grob(
+    sprintf("![a](%s)", p), width = grid::unit(4, "in"),
+    style = markdown_style(img = md_style(text_align = "center")),
+    gp = grid::gpar(fontsize = 12)))[[1]]
+  expect_gt(centred, 0)
 })
 
 test_that("private-use characters in the input cannot forge a math span", {
@@ -955,4 +1004,67 @@ test_that("a natural-width box still draws, and honours hjust", {
     expect_s3_class(ct, "markdownbox")
     expect_equal(ct$children[[1]]$vp$justification[1], hj)
   }
+})
+
+test_that("an inline <a> is styled by the same rule as [text](url)", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Both spellings mean "a link", so both resolve the `a` selector rather
+  # than one of them carrying a hard-coded colour. The inline tag used to
+  # fall through to plain body text.
+  col <- function(md, ...) {
+    d <- markdown_grob(md, gp = grid::gpar(fontsize = 14), ...)$layout_df
+    d <- d[d$type == "text" & !is.na(d$text) & d$text == "LINK", ]
+    d$color[1]
+  }
+  expect_equal(col("a <a href='http://x'>LINK</a> c"),
+               col("a [LINK](http://x) c"))
+  expect_equal(col("a [LINK](http://x) c"), .MD_LINK_COLOR)
+
+  # Only `a:link` is styled: an anchor with no href is ordinary text, as
+  # it is in a browser.
+  expect_equal(.md_to_tex("<a>LINK</a>"), "\\text{LINK}")
+  expect_false(col("a <a name='x'>LINK</a> c") == .MD_LINK_COLOR)
+
+  # Restyling the rule reaches both, which is the point of routing the
+  # tag through the cascade instead of giving it its own colour.
+  green <- markdown_style(a = md_style(color = "green"))
+  expect_equal(col("a <a href='http://x'>LINK</a> c", style = green),
+               col("a [LINK](http://x) c", style = green))
+  expect_false(col("a <a href='http://x'>LINK</a> c", style = green) ==
+                 .MD_LINK_COLOR)
+})
+
+test_that("an <img> keeps its alt text, as markdown's own image does", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Neither form can draw a raster into a text run, so both fall back to
+  # the alt text. `<img>` used to contribute nothing at all, losing the
+  # one part of itself that could be rendered.
+  txt <- function(md) {
+    d <- markdown_grob(md, gp = grid::gpar(fontsize = 14))$layout_df
+    d$text[d$type == "text" & !is.na(d$text)]
+  }
+  expect_equal(txt("a <img src='x.png' alt='ALT'> c"),
+               txt("a ![ALT](x.png) c"))
+  expect_true("ALT" %in% txt("a <img src='x.png' alt='ALT'> c"))
+
+  # Inside a text command the alt text must be emitted bare, or the
+  # emphasis around it is thrown away.
+  expect_true("ALT" %in% txt("a <b><img src='x.png' alt='ALT'></b> c"))
+
+  # No alt is the HTML spelling of "decorative": nothing to say.
+  expect_false("ALT" %in% txt("a <img src='x.png'> c"))
+
+  # The alt text is prose, so its LaTeX specials must be escaped rather
+  # than reaching the parser: a bare `_` would open a subscript and `%`
+  # would comment out the rest of the line.
+  #
+  # Written inline on purpose. An <img> alone on its line is an *html
+  # block* to cmark, not an inline node, and raw HTML blocks are dropped
+  # -- a separate rule, older than this one.
+  expect_equal(.md_to_tex("a <img src='x.png' alt='a_b'> c"),
+               .md_to_tex("a ![a_b](x.png) c"))
+  expect_match(.md_to_tex("a <img src='x.png' alt='a_b'> c"),
+               "a\\\\_b", fixed = FALSE)
+  expect_match(.md_to_tex("a <img src='x.png' alt='100% sure'> c"),
+               "100\\\\%", fixed = FALSE)
 })
