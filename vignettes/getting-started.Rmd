@@ -307,7 +307,7 @@ moves it. A paragraph holding only an image is a **block**, flush left
 unless `halign` or a `text-align` rule on `img` says otherwise.
 
 ```{r img-raise, fig.height = 1.2, fig.width = 4.5, out.width = "70%"}
-icon <- sprintf(r"(\includegraphics[width=0.5\textwidth]{%s})", fig)
+icon <- sprintf(r"(\includegraphics[width=14bp]{%s})", fig)
 grid.newpage()
 grid.latex(sprintf(r"(\text{baseline }%s\text{, raised }\raisebox{4bp}{%s})",
                    icon, icon),
