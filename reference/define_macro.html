@@ -87,6 +87,26 @@ Useful for domain-specific notation (e.g. <code>\RR</code> for
 macro names to their expansions. Empty if no macros are defined.</p></li>
 </ul></div>
     <div class="section level2">
+    <h2 id="choosing-between-this-and-newcommand">Choosing between this and <code>\newcommand</code><a class="anchor" aria-label="anchor" href="#choosing-between-this-and-newcommand"></a></h2>
+
+
+<p>MicroTeX also accepts <code>\newcommand</code> and plain-TeX <code>\def</code>
+written inside the expression itself, and those are the more capable
+form: they take up to nine arguments, which <code>define_macro()</code> does
+not — it substitutes text and nothing else.</p>
+<div class="sourceCode"><pre><code><span></span>
+<span>  <span class="co"># parameterised, but local to this one expression</span></span>
+<span>  <span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\def\norm#1{\left\lVert #1 \right\rVert}</span></span>
+<span><span class="st">                \norm{\vec{v}})"</span><span class="op">)</span></span></code></pre></div>
+
+<p>What they cannot do is persist: the user-macro table is cleared at the
+start of every parse, so a <code>\newcommand</code> written in one call is
+gone by the next. That is the one thing <code>define_macro()</code> is for.
+Use <code>\newcommand</code> / <code>\def</code> for an abbreviation local to a
+single label, and <code>define_macro()</code> for notation you want available
+to every label in a script.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="latex_grob.html">latex_grob</a></code>, <code><a href="latex_options.html">latex_options</a></code></p></div>
     </div>

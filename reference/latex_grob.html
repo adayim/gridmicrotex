@@ -310,11 +310,34 @@ are mapped to <code>\hline</code>. The optional column-range and trim
 arguments of <code>\cmidrule</code> are discarded (MicroTeX has no concept of
 partial-column rules).</p></li>
 <li><p><code>\caption[short]{X}</code> is extracted as <code>\text{X}\\</code> at its source
-position. The caption renders where it appears in the input
-(typically below the <code>tabular</code> for <code>xtable</code>, above for
-<code>kable</code>); expect a slight visual difference from full LaTeX,
-which positions the caption above or below the float regardless of
-source order.</p></li>
+position, so a caption written after <code>\includegraphics</code> renders below
+the figure and one written before a <code>tabular</code> renders above the table.
+Full LaTeX instead positions the caption by float type regardless of
+source order, and numbers it from a counter; there is no counter here.
+Wrap the figure and its caption in <code>\begin{array}{c}...\end{array}</code> to
+centre them on each other (<code>\centering</code> is dropped — a grob has no
+page to centre against).</p></li>
+<li><p><code>\graphicspath{{dir/}}</code> and <code>\DeclareGraphicsExtensions{...}</code> are
+consumed rather than typeset; the former's directories are searched.</p></li>
+</ul><p><strong>Images:</strong></p><ul><li><p><code>\includegraphics[opts]{file}</code> draws a PNG, JPEG or SVG inline. The
+starred form is accepted and behaves identically. <code>width</code>, <code>height</code>
+and <code>scale</code> take any LaTeX length (<code>\textwidth</code> resolves against
+<code>max_width</code>, and without one falls back to the file's own size with a
+warning); <code>scale</code> multiplies whatever <code>width</code>/<code>height</code> settled on, and
+<code>keepaspectratio</code> fits inside them instead of stretching to fill.
+<code>angle</code> rotates the figure and grows the surrounding box to the rotated
+bounds, as <code>\rotatebox</code> does. <code>origin</code>, <code>trim</code>, <code>clip</code> and <code>viewport</code>
+are parsed but not applied, and warn once so the difference is not
+silent; so does a length that cannot be read, or one that sizes the
+figure to nothing.</p></li>
+<li><p>The extension may be omitted, as in LaTeX: <code>{plots/fig}</code> finds
+<code>plots/fig.svg</code>, then <code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>.</p></li>
+<li><p>An SVG is drawn as real vector and stays sharp at any output
+resolution; a bitmap does not, and warns when it would be shown below
+150 dpi. PDF and EPS are not supported — save the figure as SVG
+instead. A file that cannot be read — missing, unsupported, or an
+SVG with no <code>rsvg</code> installed — warns and draws its name rather than
+disappearing.</p></li>
 </ul><p>Anything not in this list is passed to MicroTeX unchanged. An unknown
 command is not an error: MicroTeX typesets its name in red, which
 makes unsupported markup easy to spot in the output.</p>

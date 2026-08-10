@@ -38,6 +38,11 @@
   breaking.
 - New `\gmfontfamily{family}{content}` sets the font for one run of
   text.
+- `\includegraphics[width=,height=,scale=,keepaspectratio]{file}` draws
+  PNG, JPEG and SVG images inline in a formula; it previously parsed and
+  drew nothing. The extension may be omitted and `\graphicspath{}` is
+  searched, as in LaTeX. An SVG is drawn as real vector, so it stays
+  sharp at any output resolution.
 - New `p{len}` column type gives `tabular` fixed-width, wrapping cells.
 - `\url{}` and `\href{}{}` render as styled text instead of literally.
 - [`load_font()`](https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.md)
@@ -48,6 +53,8 @@
   is renamed
   [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md);
   the old name is deprecated.
+- Bug fix: `\rotatebox` past a quarter turn drew text and glyphs 180
+  degrees out, so a `\rotatebox{90}` label came out upside down.
 - Bug fix: `\textrm{}` now returns text to `gp$fontfamily`; it
   previously did nothing.
 - Bug fix: `\texttt{}` drew in the body font instead of a monospace one.
@@ -66,9 +73,6 @@
 - Bug fix: an `&` in text was read as an alignment tab and everything
   after it was dropped, so `"Treatment & Control"` rendered as
   `"Treatment "`.
-- Bug fix: a line break inside `\textbf{}`, `\textcolor{}{}` or any
-  other text command lost that styling from the second line on, and
-  could push following text outside the `\text{}` block.
 - Bug fix: `tabular*` failed to parse, reporting an invalid alignment;
   its width argument is now dropped along with the star.
 - Bug fix: a layout measured on one graphics device could be reused on

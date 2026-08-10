@@ -274,10 +274,40 @@ the input reaches MicroTeX:
   rules).
 
 - `\caption[short]{X}` is extracted as `\text{X}\\` at its source
-  position. The caption renders where it appears in the input (typically
-  below the `tabular` for `xtable`, above for `kable`); expect a slight
-  visual difference from full LaTeX, which positions the caption above
-  or below the float regardless of source order.
+  position, so a caption written after `\includegraphics` renders below
+  the figure and one written before a `tabular` renders above the table.
+  Full LaTeX instead positions the caption by float type regardless of
+  source order, and numbers it from a counter; there is no counter here.
+  Wrap the figure and its caption in `\begin{array}{c}...\end{array}` to
+  centre them on each other (`\centering` is dropped — a grob has no
+  page to centre against).
+
+- `\graphicspath{{dir/}}` and `\DeclareGraphicsExtensions{...}` are
+  consumed rather than typeset; the former's directories are searched.
+
+**Images:**
+
+- `\includegraphics[opts]{file}` draws a PNG, JPEG or SVG inline. The
+  starred form is accepted and behaves identically. `width`, `height`
+  and `scale` take any LaTeX length (`\textwidth` resolves against
+  `max_width`, and without one falls back to the file's own size with a
+  warning); `scale` multiplies whatever `width`/`height` settled on, and
+  `keepaspectratio` fits inside them instead of stretching to fill.
+  `angle` rotates the figure and grows the surrounding box to the
+  rotated bounds, as `\rotatebox` does. `origin`, `trim`, `clip` and
+  `viewport` are parsed but not applied, and warn once so the difference
+  is not silent; so does a length that cannot be read, or one that sizes
+  the figure to nothing.
+
+- The extension may be omitted, as in LaTeX: `{plots/fig}` finds
+  `plots/fig.svg`, then `.png`, `.jpg`, `.jpeg`.
+
+- An SVG is drawn as real vector and stays sharp at any output
+  resolution; a bitmap does not, and warns when it would be shown below
+  150 dpi. PDF and EPS are not supported — save the figure as SVG
+  instead. A file that cannot be read — missing, unsupported, or an SVG
+  with no `rsvg` installed — warns and draws its name rather than
+  disappearing.
 
 Anything not in this list is passed to MicroTeX unchanged. An unknown
 command is not an error: MicroTeX typesets its name in red, which makes

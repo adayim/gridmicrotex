@@ -55,6 +55,8 @@
 <code>&lt;div class=&gt;</code> and <code>&lt;div style=&gt;</code> style a chunk of markdown; <code>&lt;span class=&gt;</code> styles an inline run.</li>
 <li>New <code>justify</code> and <code>line_break</code> arguments control paragraph line breaking.</li>
 <li>New <code>\gmfontfamily{family}{content}</code> sets the font for one run of text.</li>
+<li>
+<code>\includegraphics[width=,height=,scale=,keepaspectratio]{file}</code> draws PNG, JPEG and SVG images inline in a formula; it previously parsed and drew nothing. The extension may be omitted and <code>\graphicspath{}</code> is searched, as in LaTeX. An SVG is drawn as real vector, so it stays sharp at any output resolution.</li>
 <li>New <code>p{len}</code> column type gives <code>tabular</code> fixed-width, wrapping cells.</li>
 <li>
 <code>\url{}</code> and <code>\href{}{}</code> render as styled text instead of literally.</li>
@@ -62,6 +64,7 @@
 <code><a href="../reference/gridmicrotex-deprecated.html">load_font()</a></code> is renamed <code><a href="../reference/load_math_font.html">load_math_font()</a></code>; the old name is deprecated.</li>
 <li>
 <code><a href="../reference/gridmicrotex-deprecated.html">check_fonts()</a></code> is renamed <code><a href="../reference/check_math_fonts.html">check_math_fonts()</a></code>; the old name is deprecated.</li>
+<li>Bug fix: <code>\rotatebox</code> past a quarter turn drew text and glyphs 180 degrees out, so a <code>\rotatebox{90}</code> label came out upside down.</li>
 <li>Bug fix: <code>\textrm{}</code> now returns text to <code>gp$fontfamily</code>; it previously did nothing.</li>
 <li>Bug fix: <code>\texttt{}</code> drew in the body font instead of a monospace one.</li>
 <li>Bug fix: <code>max_width</code> is now honoured by content containing <code>\\</code> line breaks.</li>
@@ -70,7 +73,6 @@
 <li>Bug fix: reloading the package corrupted MicroTeX’s macro registry, so a later large formula could crash R.</li>
 <li>Bug fix: <code>\-</code> offered a line break but drew no hyphen at it.</li>
 <li>Bug fix: an <code>&amp;</code> in text was read as an alignment tab and everything after it was dropped, so <code>"Treatment &amp; Control"</code> rendered as <code>"Treatment "</code>.</li>
-<li>Bug fix: a line break inside <code>\textbf{}</code>, <code>\textcolor{}{}</code> or any other text command lost that styling from the second line on, and could push following text outside the <code>\text{}</code> block.</li>
 <li>Bug fix: <code>tabular*</code> failed to parse, reporting an invalid alignment; its width argument is now dropped along with the star.</li>
 <li>Bug fix: a layout measured on one graphics device could be reused on another, placing text at the wrong widths — the layout cache now keys on the device.</li>
 </ul></div>

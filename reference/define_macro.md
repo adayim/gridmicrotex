@@ -35,6 +35,25 @@ list_macros()
 - `list_macros`: A named character vector mapping macro names to their
   expansions. Empty if no macros are defined.
 
+## Choosing between this and `\newcommand`
+
+MicroTeX also accepts `\newcommand` and plain-TeX `\def` written inside
+the expression itself, and those are the more capable form: they take up
+to nine arguments, which `define_macro()` does not — it substitutes text
+and nothing else.
+
+
+      # parameterised, but local to this one expression
+      grid.latex(r"(\def\norm#1{\left\lVert #1 \right\rVert}
+                    \norm{\vec{v}})")
+
+What they cannot do is persist: the user-macro table is cleared at the
+start of every parse, so a `\newcommand` written in one call is gone by
+the next. That is the one thing `define_macro()` is for. Use
+`\newcommand` / `\def` for an abbreviation local to a single label, and
+`define_macro()` for notation you want available to every label in a
+script.
+
 ## See also
 
 [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),

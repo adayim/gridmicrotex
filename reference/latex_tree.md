@@ -137,9 +137,9 @@ A list with class `"latex_tree"` containing:
 #> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf
 #> 2                                                                       <NA>
 #> 3 /home/runner/work/_temp/Library/gridmicrotex/fonts/STIXTwoMath-Regular.otf
-#>   font_family
-#> 1        <NA>
-#> 2        <NA>
-#> 3        <NA>
+#>   font_family image_ref
+#> 1        <NA>      <NA>
+#> 2        <NA>      <NA>
+#> 3        <NA>      <NA>
 # }
 ```
