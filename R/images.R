@@ -206,6 +206,11 @@
 
 .image_cache <- new.env(parent = emptyenv())
 
+.image_cache_clear <- function() {
+  rm(list = ls(.image_cache, all.names = TRUE), envir = .image_cache)
+  invisible(NULL)
+}
+
 .image_stamp <- function(path) {
   i <- file.info(path)
   paste(path, as.numeric(i$mtime), i$size, sep = "\x1f")
@@ -278,10 +283,27 @@
 # NULL when nothing can read it; the resolver has already drawn the name.
 .image_grob <- function(path, w_bp, h_bp,
                         x = grid::unit(0, "bigpts"),
-                        y = grid::unit(0, "bigpts"), name = NULL) {
+                        y = grid::unit(0, "bigpts"), name = NULL,
+                        angle = 0) {
   # `x`/`y` are the top-left corner as grid units, so a caller can pass an
   # expression -- the block-markdown layout positions from the top with
   # `unit(1,"npc") - unit(y,"bigpts")`, which a bare number cannot express.
+  #
+  # Under `angle` they are the box's CENTRE instead, because that is the only
+  # anchor a rotation leaves put. The unrotated shapes below are deliberately
+  # untouched by this branch: a rotated image is rare, and wrapping every
+  # image in a viewport would change what `.md_shift_grob()` and the block
+  # layout see.
+  if (!isTRUE(all.equal(angle %||% 0, 0))) {
+    inner <- .image_grob(path, w_bp, h_bp,
+                         x = grid::unit(0, "npc"), y = grid::unit(1, "npc"),
+                         name = name)
+    if (is.null(inner)) return(NULL)
+    return(grid::grobTree(inner, vp = grid::viewport(
+      x = x, y = y,
+      width = grid::unit(w_bp, "bigpts"), height = grid::unit(h_bp, "bigpts"),
+      just = "centre", angle = angle), name = name %||% "image"))
+  }
   place <- list(x = x, y = y,
                 width = grid::unit(w_bp, "bigpts"),
                 height = grid::unit(h_bp, "bigpts"))
@@ -480,10 +502,12 @@
   out
 }
 
-# graphicx keys that change what is drawn but that a fixed, unrotated box
-# cannot honour. Ignoring them silently would draw a figure that is wrong
-# in a way nothing in the output hints at.
-.IMAGE_IGNORED_OPTS <- c("angle", "origin", "trim", "clip", "viewport", "bb")
+# graphicx keys that change what is drawn but that a fixed box cannot
+# honour. Ignoring them silently would draw a figure that is wrong in a way
+# nothing in the output hints at. `angle` is NOT among them: it is turned
+# into a \rotatebox below, which the recorder and the grid builder carry
+# through to a rotated viewport.
+.IMAGE_IGNORED_OPTS <- c("origin", "trim", "clip", "viewport", "bb")
 
 .resolve_one_graphic <- function(path, opt, fontsize, max_width,
                                  dirs = character(0)) {
@@ -495,11 +519,23 @@
     ext <- .image_ext(path)
     why <- if (!file.exists(path)) {
       "file not found"
+    } else if (dir.exists(path)) {
+      "it is a directory, not a file"
     } else if (ext %in% c("pdf", "eps", "ps")) {
       paste0("'", ext, "' is not supported; save the figure as SVG instead")
     } else if (ext %in% c("png", "jpg", "jpeg")) {
-      paste0("the '", if (ext == "png") "png" else "jpeg",
-             "' package is needed to read it")
+      # "no dimensions" has two causes and they need different answers:
+      # the reader is absent, or the reader is present and the bytes are
+      # not what the extension claims.
+      pkg <- if (ext == "png") "png" else "jpeg"
+      if (!requireNamespace(pkg, quietly = TRUE)) {
+        paste0("the '", pkg, "' package is needed to read it")
+      } else {
+        paste0("the '", pkg, "' package could not read it -- the file may be ",
+               "empty, truncated, or not really ", toupper(ext))
+      }
+    } else if (!nzchar(ext)) {
+      "it has no extension, and no .svg, .png, .jpg or .jpeg of that name exists"
     } else if (ext == "svg") {
       if (!requireNamespace("rsvg", quietly = TRUE)) {
         "drawing an SVG needs the 'rsvg' package"
@@ -524,8 +560,33 @@
       paste0("Ignoring \\includegraphics option",
              if (length(ignored) > 1L) "s " else " ",
              paste0("`", ignored, "`", collapse = ", "),
-             " for '", basename(named), "': the image is drawn unrotated ",
-             "and uncropped."))
+             " for '", basename(named), "': the image is drawn whole, ",
+             "uncropped, and about its own centre."))
+  }
+
+  # A length that cannot be read is silently ignored by the arithmetic
+  # below, so `[width=3 inches]` or a typo would come out at the file's own
+  # size with nothing to say why. `\textwidth` without a max_width is the
+  # one unreadable case with its own message, just below.
+  for (k in c("width", "height")) {
+    v <- opts[[k]]
+    if (is.null(v) || !nzchar(trimws(v))) next
+    if (grepl(.REL_LEN, v, perl = TRUE)) next
+    if (is.na(.tex_len_bp(v, fontsize, max_width))) {
+      .image_warn_once(
+        paste0("len\x1f", .image_stamp(path), "\x1f", k, "\x1f", v),
+        paste0("Cannot read `", k, "=", v, "` for '", basename(named),
+               "'; drawing it at its own size."))
+    }
+  }
+  if (!is.null(opts[["scale"]])) {
+    sc <- suppressWarnings(as.numeric(opts[["scale"]]))
+    if (!is.finite(sc) || sc <= 0) {
+      .image_warn_once(
+        paste0("scl\x1f", .image_stamp(path), "\x1f", opts[["scale"]]),
+        paste0("Ignoring `scale=", opts[["scale"]], "` for '", basename(named),
+               "': a scale must be a positive number."))
+    }
   }
 
   # `\textwidth` has no page to measure in a grob. Falling back to the
@@ -543,8 +604,18 @@
                    error = function(e) { .image_warn_once(
                      paste0("size\x1f", .image_stamp(path), "\x1f", opt),
                      paste0("Cannot size '", named, "': ", conditionMessage(e))); NULL })
+  # The floor is where `sprintf("%.4f")` below stops being able to say a
+  # number: anything smaller writes "0.0000" and reserves a box of nothing,
+  # which draws as an invisible gap rather than as a very small picture.
   if (is.null(size) || !is.finite(size$w) || !is.finite(size$h) ||
-      size$w <= 0 || size$h <= 0) {
+      size$w < 5e-4 || size$h < 5e-4) {
+    if (!is.null(size) && is.finite(size$w) && is.finite(size$h)) {
+      .image_warn_once(
+        paste0("zero\x1f", .image_stamp(path), "\x1f", opt),
+        sprintf(paste0("`%s` sizes '%s' to %.4g x %.4g bp, which is nothing ",
+                       "to draw. Drawing the file name instead."),
+                opt, basename(named), size$w, size$h))
+    }
     return(fallback())
   }
 
@@ -564,12 +635,15 @@
   if (sized && !is.null(dims$px)) {
     dpi <- dims$px$w * 72 / size$w
     if (is.finite(dpi) && dpi < 150) {
+      # %.0f, not %d: a preposterous width -- `[width=1e7in]` -- makes a
+      # pixel count no integer can hold, and sprintf("%d") errors on it
+      # rather than degrading.
       want <- ceiling(size$w / 72 * 300)
       want_h <- ceiling(size$h / 72 * 300)
       .image_warn_once(
         paste0("dpi\x1f", .image_stamp(path), "\x1f", round(size$w)),
         sprintf(paste0("Image '%s' is %.0f dpi at this size; save it at ",
-                       "%d x %d px for 300 dpi, or use SVG."),
+                       "%.0f x %.0f px for 300 dpi, or use SVG."),
                 basename(path), dpi, want, want_h))
     }
   }
@@ -577,6 +651,18 @@
   # sprintf, never as.character: Units::getUnit() falls back to "pixel" for
   # an unrecognised suffix with no error path, so "1e-05bp" would silently
   # parse as 1 pixel.
-  sprintf("\\gmgraphics{%s}{%.4f}{%.4f}",
-          .image_ref_encode(path), size$w, size$h)
+  out <- sprintf("\\gmgraphics{%s}{%.4f}{%.4f}",
+                 .image_ref_encode(path), size$w, size$h)
+
+  # `angle` becomes a real rotation by handing it to \rotatebox, which the
+  # engine already knows: it rotates the transform, the recorder reads the
+  # angle off it, and the grid builder places the grob in a rotated
+  # viewport. \rotatebox also grows the surrounding box to the rotated
+  # bounds, which is what LaTeX does and what a fixed-size record could not
+  # have expressed on its own.
+  ang <- suppressWarnings(as.numeric(opts[["angle"]] %||% NA))
+  if (is.finite(ang) && ang %% 360 != 0) {
+    out <- sprintf("\\rotatebox{%.4f}{%s}", ang, out)
+  }
+  out
 }

@@ -248,8 +248,11 @@ and \code{scale} take any LaTeX length (\verb{\\textwidth} resolves against
 \code{max_width}, and without one falls back to the file's own size with a
 warning); \code{scale} multiplies whatever \code{width}/\code{height} settled on, and
 \code{keepaspectratio} fits inside them instead of stretching to fill.
-\code{angle}, \code{origin}, \code{trim}, \code{clip} and \code{viewport} are parsed but not
-applied, and warn once so the difference is not silent.
+\code{angle} rotates the figure and grows the surrounding box to the rotated
+bounds, as \verb{\\rotatebox} does. \code{origin}, \code{trim}, \code{clip} and \code{viewport}
+are parsed but not applied, and warn once so the difference is not
+silent; so does a length that cannot be read, or one that sizes the
+figure to nothing.
 \item The extension may be omitted, as in LaTeX: \code{{plots/fig}} finds
 \code{plots/fig.svg}, then \code{.png}, \code{.jpg}, \code{.jpeg}.
 \item An SVG is drawn as real vector and stays sharp at any output

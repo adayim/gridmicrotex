@@ -388,11 +388,12 @@ test_that("an option that changes the picture warns rather than being dropped", 
       ws <<- c(ws, conditionMessage(w)); invokeRestart("muffleWarning") })
     ws
   }
-  # A rotated or cropped figure drawn square and whole is wrong in a way
-  # nothing in the output hints at, so it has to say so.
-  w <- warns(latex_dims(sprintf("\\includegraphics[angle=90,width=1in]{%s}",
+  # A cropped figure drawn whole is wrong in a way nothing in the output
+  # hints at, so it has to say so. (`angle` is not in this set: it is a real
+  # rotation now -- see the rotation test above.)
+  w <- warns(latex_dims(sprintf("\\includegraphics[origin=c,width=1in]{%s}",
                                 mk_png(300, 200)), input_mode = "math"))
-  expect_match(paste(w, collapse = " "), "angle")
+  expect_match(paste(w, collapse = " "), "origin")
   w <- warns(latex_dims(sprintf("\\includegraphics[trim=1 2 3 4,clip,width=1in]{%s}",
                                 mk_png(300, 200)), input_mode = "math"))
   expect_match(paste(w, collapse = " "), "trim")
@@ -439,6 +440,106 @@ test_that("an SVG no reader can draw is refused at parse time, not at draw time"
 
   # Markdown keeps its alt text for the same reason.
   expect_match(gridmicrotex:::.md_to_tex(sprintf("a ![ALT](%s) b", f)), "ALT")
+})
+
+test_that("a rotated image is drawn rotated, not dropped", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  f <- mk_png(300, 200)
+  rec <- function(tex) {
+    d <- suppressWarnings(latex_tree(tex, input_mode = "math")$records)
+    d[d$type == "image", ]
+  }
+  # \rotatebox used to delete the figure outright: no record, no warning,
+  # nothing on the page. Everything else survives a rotation -- rects become
+  # paths, rules become lines -- so the image was the sole exception.
+  r <- rec(sprintf("\\rotatebox{30}{\\includegraphics[width=1in]{%s}}", f))
+  expect_equal(nrow(r), 1L)
+  expect_equal(r$rotation, -30, tolerance = 1e-3)   # y-down, so negated
+
+  # `angle=` is the same thing spelled the graphicx way, and is routed to
+  # \rotatebox rather than warned about.
+  expect_equal(rec(sprintf("\\includegraphics[angle=30,width=1in]{%s}", f))$rotation,
+               -30, tolerance = 1e-3)
+  expect_equal(rec(sprintf("\\includegraphics[width=1in]{%s}", f))$rotation, 0)
+  expect_match(gridmicrotex:::.resolve_graphics(
+    sprintf("\\includegraphics[angle=45]{%s}", f), 20, 0), "rotatebox", fixed = TRUE)
+  # A whole turn is not a rotation.
+  expect_false(grepl("rotatebox", gridmicrotex:::.resolve_graphics(
+    sprintf("\\includegraphics[angle=360]{%s}", f), 20, 0), fixed = TRUE))
+
+  # The surrounding box grows to the rotated bounds, as in LaTeX.
+  flat <- suppressWarnings(latex_dims(sprintf("\\includegraphics[width=1in]{%s}", f),
+                                      input_mode = "math"))
+  turned <- suppressWarnings(latex_dims(sprintf("\\includegraphics[angle=30,width=1in]{%s}", f),
+                                        input_mode = "math"))
+  expect_gt(as.numeric(turned$height), as.numeric(flat$height))
+
+  # And it reaches the page as a grob in a rotated viewport.
+  g <- suppressWarnings(latex_grob(sprintf("\\includegraphics[angle=30,width=1in]{%s}", f),
+                                   input_mode = "math"))
+  kid <- grid::makeContent(g)$children[[1]]
+  expect_equal(kid$vp$angle, 30, tolerance = 1e-3)
+})
+
+test_that("a size that cannot be drawn says why instead of vanishing quietly", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  warns <- function(tex) {
+    ws <- character(0)
+    withCallingHandlers(latex_dims(tex, input_mode = "math"),
+      warning = function(w) { ws <<- c(ws, conditionMessage(w)); invokeRestart("muffleWarning") })
+    paste(ws, collapse = " ")
+  }
+  G <- function(o) sprintf("\\includegraphics%s{%s}", o, mk_png(300, 200))
+  # An unreadable length was the dangerous one: the arithmetic ignores it,
+  # so a typo came out at the file's own size with nothing said.
+  expect_match(warns(G("[width=abc]")), "Cannot read")
+  expect_match(warns(G("[width=3 inches]")), "Cannot read")
+  expect_match(warns(G("[width=0]")), "nothing to draw")
+  expect_match(warns(G("[width=-1in]")), "nothing to draw")
+  # 1e-5bp is positive but writes as "0.0000" at the four decimal places the
+  # reference carries, so it reserved a box of nothing.
+  expect_match(warns(G("[width=0.00001bp]")), "nothing to draw")
+  expect_match(warns(G("[scale=-2]")), "positive number")
+
+  # A width no pixel count can express must degrade, not error: the dpi
+  # advice used sprintf("%d") on it.
+  expect_no_error(suppressWarnings(latex_dims(G("[width=1e7in]"), input_mode = "math")))
+})
+
+test_that("an unreadable file says which of the two things went wrong", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  skip_if_not_installed("png")
+  why <- function(path) {
+    ws <- character(0)
+    withCallingHandlers(
+      gridmicrotex:::.resolve_graphics(sprintf("\\includegraphics{%s}", path), 20, 0),
+      warning = function(w) { ws <<- c(ws, conditionMessage(w)); invokeRestart("muffleWarning") })
+    paste(ws, collapse = " ")
+  }
+  dir <- tempfile("gfx"); dir.create(dir)
+  # "no dimensions" has two causes and they need different answers. Blaming
+  # a missing package for a truncated file sends the reader to install
+  # something they already have.
+  empty <- file.path(dir, "empty.png"); file.create(empty)
+  expect_match(why(empty), "could not read it")
+  expect_false(grepl("is needed", why(empty)))
+  expect_match(why(dir), "directory")
+  noext <- file.path(dir, "noext"); writeLines("x", noext)
+  expect_match(why(noext), "no extension")
+})
+
+test_that("latex_cache_clear() gives back the decoded images too", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  suppressWarnings(latex_dims(sprintf("\\includegraphics{%s}", mk_png(300, 200)),
+                              input_mode = "math"))
+  expect_gt(length(ls(gridmicrotex:::.image_cache)), 0L)
+  # Rasters and pictures are far larger than a layout and have no size
+  # limit of their own, so this is the only way to release them.
+  latex_cache_clear()
+  expect_equal(length(ls(gridmicrotex:::.image_cache)), 0L)
 })
 
 test_that("a file that stops being readable after measuring is reported", {

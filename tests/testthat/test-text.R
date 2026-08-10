@@ -42,6 +42,25 @@ test_that("reflectbox leaves rotation at 0", {
   expect_true(all(abs(txt$rotation) < 1e-3))
 })
 
+test_that("rotation past a quarter turn is not read as a reflection", {
+  # The mirror test used to be `a < 0`, and `a` is cos(theta): true of a
+  # \reflectbox, but equally true of every rotation past 90 degrees. Those
+  # angles came out 180 degrees away from what was asked -- a vertical
+  # label upside down -- and took a reflection's x-shift with them. The
+  # sign of the determinant is the test that separates the two.
+  for (deg in c(30, 89, 90, 91, 135, 180, 270, -90)) {
+    layout <- parse_latex_cpp(sprintf("\\rotatebox{%d}{\\mbox{Ab}}", deg),
+                              text_size = 20)
+    txt <- layout[layout$type == "text", ]
+    expect_gt(nrow(txt), 0L)
+    # Stored CCW in a y-down canvas, i.e. negated, and only up to a turn --
+    # so compare in [0, 360), where -180 and 180 are the same rotation.
+    wrapped <- function(a) a %% 360
+    expect_equal(wrapped(txt$rotation[1]), wrapped(-deg),
+                 tolerance = 1e-3, info = as.character(deg))
+  }
+})
+
 test_that("plain mbox leaves rotation at 0", {
   layout <- parse_latex_cpp("\\mbox{Ab}", text_size = 20)
   txt <- layout[layout$type == "text", ]

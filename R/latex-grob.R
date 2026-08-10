@@ -185,8 +185,11 @@
 #'   `max_width`, and without one falls back to the file's own size with a
 #'   warning); `scale` multiplies whatever `width`/`height` settled on, and
 #'   `keepaspectratio` fits inside them instead of stretching to fill.
-#'   `angle`, `origin`, `trim`, `clip` and `viewport` are parsed but not
-#'   applied, and warn once so the difference is not silent.
+#'   `angle` rotates the figure and grows the surrounding box to the rotated
+#'   bounds, as `\rotatebox` does. `origin`, `trim`, `clip` and `viewport`
+#'   are parsed but not applied, and warn once so the difference is not
+#'   silent; so does a length that cannot be read, or one that sizes the
+#'   figure to nothing.
 #' * The extension may be omitted, as in LaTeX: `{plots/fig}` finds
 #'   `plots/fig.svg`, then `.png`, `.jpg`, `.jpeg`.
 #' * An SVG is drawn as real vector and stays sharp at any output

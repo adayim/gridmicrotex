@@ -6,6 +6,24 @@ namespace microtex {
 
 Graphics2D_Recorder::Graphics2D_Recorder() = default;
 
+// Is the transform mirrored? Only a reflection reverses orientation, and
+// orientation is the sign of the determinant.
+//
+// This used to be tested as `a < 0`, which is true of a reflection but also
+// of every rotation past a quarter turn, since a is cos(theta). The result
+// was that \rotatebox{90} and beyond had their angle read 180 degrees out
+// -- a vertical label came out upside down -- and picked up a reflection's
+// x-shift on top.
+static bool transform_is_mirrored(float a, float b, float c, float d) {
+    return a * d - b * c < 0;
+}
+
+// The rotation grid should apply, in radians ccw. A mirrored transform has
+// its flipped column cancelled first, so a pure \reflectbox reads as 0.
+static float transform_rotation(float a, float b, float c, float d) {
+    return transform_is_mirrored(a, b, c, d) ? std::atan2(-b, -a) : std::atan2(b, a);
+}
+
 void Graphics2D_Recorder::setColor(color c) { _currentColor = c; }
 color Graphics2D_Recorder::getColor() const { return _currentColor; }
 void Graphics2D_Recorder::setStroke(const Stroke& s) { _currentStroke = s; }
@@ -84,7 +102,8 @@ void Graphics2D_Recorder::drawGlyph(u16 glyph, float x, float y) {
     // transformPoint lands on the visible LEFT edge of the glyph box. Without
     // this the anchor is at the post-transform RIGHT edge and glyphGrob
     // (which draws to the right of its anchor) produces overlap.
-    if (_transform.a < 0 && fr && !fr->fontFile.empty()) {
+    if (transform_is_mirrored(_transform.a, _transform.b, _transform.c, _transform.d)
+        && fr && !fr->fontFile.empty()) {
         x += measure_glyph_advance(fr->fontFile, glyph, _currentFontSize);
     }
     DrawRecord rec;
@@ -263,20 +282,34 @@ void Graphics2D_Recorder::recordImage(
     const std::string& ref, float x, float y, float w, float h
 ) {
     // Modelled on fillRect: same rectangle, same top-left convention, same
-    // scaling. A rotated transform is the one case that has to be refused
-    // rather than approximated -- grid::rasterGrob has no rot=, so a
-    // rotated image would be recorded as an unrotated one at a transformed
-    // corner, i.e. silently in the wrong place and the wrong shape. Drop it
-    // and let R report the file, which is at least visible.
-    if (transform_has_rotation(_transform.b, _transform.c)) return;
+    // scaling. Rotation is the one place the two part company. A rect can
+    // be re-expressed as a tilted quadrilateral, so fillRect emits a PATH;
+    // an image cannot, so the angle rides along on the record and R puts
+    // the grob in a rotated viewport (rasterGrob and pictureGrob both honour
+    // one). Dropping it, which is what this used to do, made \rotatebox
+    // delete the figure with nothing on the page to show for it.
     float sx = this->sx(), sy = this->sy();
-    transformPoint(x, y);
+    // Read the same way as a text run, so a \reflectbox gives 0 rather than
+    // a half turn.
+    const float rot = transform_rotation(_transform.a, _transform.b, _transform.c, _transform.d);
     DrawRecord rec;
     rec.type = DrawRecord::IMAGE;
-    rec.x = x;
-    rec.y = y;
+    if (transform_has_rotation(_transform.b, _transform.c)) {
+        // The top-left corner of a tilted rectangle is not a corner grid can
+        // place from, so record the centre instead: it is the one point that
+        // is invariant under the viewport rotation R applies.
+        float cx = x + w * 0.5f, cy = y + h * 0.5f;
+        transformPoint(cx, cy);
+        rec.x = cx;
+        rec.y = cy;
+    } else {
+        transformPoint(x, y);
+        rec.x = x;
+        rec.y = y;
+    }
     rec.width = w * sx;
     rec.height = h * sy;
+    rec.rotation = rot;
     rec.image_ref = ref;
     _records.push_back(std::move(rec));
 }
@@ -330,16 +363,13 @@ void Graphics2D_Recorder::drawTextRun(const std::string& text, float x, float y,
     // rightward from that right edge, overlapping adjacent glyphs. Shift to
     // the local RIGHT edge before transforming so the recorded x is the
     // visible LEFT edge, i.e. where drawing should actually start.
-    if (_transform.a < 0) {
+    if (transform_is_mirrored(_transform.a, _transform.b, _transform.c, _transform.d)) {
         x += measure_cached_text_width(text, fontStyle, fontSize);
     }
-    // Extract rotation separately from any horizontal flip: pure reflect
-    // gives 0 (the flip is already handled by the x shift above), pure
-    // rotate gives atan2(b, a). When a<0 we flip the x column before
-    // atan2 to cancel the reflect component.
-    float rot = (_transform.a < 0)
-        ? std::atan2(-_transform.b, -_transform.a)
-        : std::atan2(_transform.b, _transform.a);
+    // Rotation, separately from any horizontal flip: a pure reflect gives 0
+    // (the flip is already handled by the x shift above), a pure rotate
+    // gives the angle itself.
+    float rot = transform_rotation(_transform.a, _transform.b, _transform.c, _transform.d);
     transformPoint(x, y);
     float s = this->sx();
     DrawRecord rec;

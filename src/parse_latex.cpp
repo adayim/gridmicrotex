@@ -181,7 +181,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
         // rx/ry are only meaningful for round-rect records; default NA.
         rx_col[i] = NA_REAL;
         ry_col[i] = NA_REAL;
-        // rotation is only populated for TEXT records today; default 0 (deg).
+        // rotation is populated for TEXT and IMAGE records; default 0 (deg).
         rotation_col[i] = 0;
 
         switch (rec.type) {
@@ -342,6 +342,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 codepoint_col[i] = NA_INTEGER;
                 font_file_col[i] = NA_STRING;
                 image_ref_col[i] = rec.image_ref;
+                // Non-zero under \rotatebox, and then x/y is the box's
+                // CENTRE rather than its top-left corner -- see recordImage.
+                rotation_col[i] = rec.rotation * (180.0 / 3.14159265358979323846);
                 path_list[i] = R_NilValue;
                 break;
             case DrawRecord::ROUND_RECT:

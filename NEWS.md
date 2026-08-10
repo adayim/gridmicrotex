@@ -16,6 +16,7 @@
 - `\url{}` and `\href{}{}` render as styled text instead of literally.
 - `load_font()` is renamed `load_math_font()`; the old name is deprecated.
 - `check_fonts()` is renamed `check_math_fonts()`; the old name is deprecated.
+- Bug fix: `\rotatebox` past a quarter turn drew text and glyphs 180 degrees out, so a `\rotatebox{90}` label came out upside down.
 - Bug fix: `\textrm{}` now returns text to `gp$fontfamily`; it previously did nothing.
 - Bug fix: `\texttt{}` drew in the body font instead of a monospace one.
 - Bug fix: `max_width` is now honoured by content containing `\\` line breaks.

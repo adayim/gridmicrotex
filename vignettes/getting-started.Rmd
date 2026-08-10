@@ -287,8 +287,9 @@ are supported, sized with `width`, `height` or `scale` in any LaTeX
 length; give one of width/height and the aspect ratio is kept, or both
 plus `keepaspectratio` to fit inside them. As in LaTeX the extension may
 be omitted (`{plots/fig}` finds `plots/fig.svg` or `plots/fig.png`), and
-`\graphicspath{{figs/}}` adds a directory to search. `angle`, `trim` and
-`clip` are recognised but not applied, and say so.
+`\graphicspath{{figs/}}` adds a directory to search. `angle` rotates the
+figure, like `\rotatebox`; `trim` and `clip` are recognised but not
+applied, and say so.
 
 ```{r img-basic, fig.height = 1.6, fig.width = 4, out.width = "60%"}
 fig <- tempfile(fileext = ".svg")
@@ -347,26 +348,6 @@ rule is `pixels = display_inches * output_dpi`.
 PDF and EPS are **not** supported. Save the figure as SVG instead: it needs
 no external tool and, unlike a rasterised PDF, its text stays text.
 
-### Embedding an R plot
-
-Save the plot yourself, then reference the file:
-
-```{r img-plot, eval = FALSE}
-f <- tempfile(fileext = ".svg")
-svglite::svglite(f, width = 3, height = 2)
-print(p)          # whatever render call this object needs
-dev.off()
-
-grid.latex(sprintf(r"(\text{Trend }\includegraphics[width=2in]{%s})", f),
-           input_mode = "math")
-```
-
-The package deliberately does not do this step for you. The correct render
-call differs by object: a `ggsurvfit` assembles its risk table in its own
-print method, so drawing it with `grid.draw()` would silently lose the
-table; `ComplexHeatmap` needs `draw()`; a base plot needs replaying. Get
-that wrong and the figure looks fine but is missing part of itself. You
-also know the final output resolution, and the package does not.
 
 ## Fonts
 

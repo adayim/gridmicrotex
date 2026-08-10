@@ -145,11 +145,16 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
         # true-vector pictureGrob for an SVG, a raster otherwise. The
         # record carries its top-left corner, so it flips like fill_rect.
         p <- .image_ref_decode(layout_df$image_ref[i])
+        # y is flipped to grid's y-up, so the rotation sign flips with it,
+        # exactly as for text. A rotated record carries its centre rather
+        # than its top-left corner; .image_grob() reads x/y that way when
+        # angle is non-zero.
         g <- if (is.null(p)) NULL
         else .image_grob(p, width[i], height[i],
                          x = grid::unit(x[i], "bigpts"),
                          y = grid::unit(total_h - y[i], "bigpts"),
-                         name = paste0("image.", i))
+                         name = paste0("image.", i),
+                         angle = -layout_df$rotation[i])
         # The box was reserved at parse time, when the file did read. If it
         # no longer does -- deleted since, or a reader that parsed the header
         # and then choked on the body -- say so rather than leaving a gap
