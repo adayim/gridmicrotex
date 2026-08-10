@@ -35,6 +35,23 @@
   "bullet", "marker-gap"
 )
 
+# CSS spellings accepted for a property stored under a different name.
+#
+# `background` is the shorthand; `background-color` is the real property,
+# and it is what anyone writing a stylesheet reaches for. Storing one and
+# accepting both keeps the layout reading a single name while the input
+# stays valid CSS. Applied everywhere a declaration arrives -- md_style(),
+# a stylesheet, and a `style` attribute -- so the two spellings can never
+# behave differently.
+.MD_STYLE_ALIASES <- c("background-color" = "background")
+
+.md_canonical_props <- function(nm) {
+  hit <- match(nm, names(.MD_STYLE_ALIASES))
+  ok <- !is.na(hit)
+  nm[ok] <- unname(.MD_STYLE_ALIASES[hit[ok]])
+  nm
+}
+
 # The properties CSS says are inherited. Box properties are absent on
 # purpose: a margin on a blockquote must not become a margin on every
 # paragraph inside it.
@@ -213,8 +230,10 @@ md_style <- function(...) {
   if (is.null(nm) || any(!nzchar(nm))) {
     stop("All arguments to `md_style()` must be named.", call. = FALSE)
   }
-  # R spells them with underscores; CSS with hyphens. Accept either.
-  nm <- gsub("_", "-", tolower(nm), fixed = TRUE)
+  # R spells them with underscores; CSS with hyphens. Accept either, then
+  # fold the accepted aliases (background_color -> background) so the
+  # stored name is the one the layout reads.
+  nm <- .md_canonical_props(gsub("_", "-", tolower(nm), fixed = TRUE))
   bad <- setdiff(nm, .MD_STYLE_PROPS)
   if (length(bad)) {
     stop("Unsupported ", if (length(bad) > 1L) "properties: " else "property: ",

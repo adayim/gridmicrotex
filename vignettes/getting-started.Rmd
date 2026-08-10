@@ -235,6 +235,139 @@ so they go straight into any grid drawing function with no offset
 arithmetic. A mark is a single point, not a span: to centre a callout over
 a multi-glyph term, use a pair (`\mark{l}…\mark{r}`) and take the midpoint.
 
+## Display and inline style
+
+TeX sets the same expression two ways. In *display* style a `\sum` is
+drawn at full size with its limits above and below; in *text* (inline)
+style it shrinks and the limits become scripts beside it. This is a
+choice about spacing and layout, not about size --- size is always
+`gp$fontsize`.
+
+By default the delimiters decide, exactly as in a LaTeX document: `$…$`
+gives text style and `$$…$$` gives display style. A label written without
+delimiters --- a plot title, an axis title, an `element_latex()` --- has
+nothing for the parser to go on, so it gets text style. `tex_style`
+overrides that for the whole expression, and takes all four of TeX's
+styles:
+
+```{r style-options, fig.height=1.9, fig.width=6.5, out.width="100%"}
+sum_expr <- r"(\sum_{i=1}^{n} \frac{x_i}{n})"
+styles <- c("display", "text", "script", "scriptscript")
+labels <- c('"display"  ($$...$$)', '"text"  ($...$)',
+            '"script"', '"scriptscript"')
+
+grid.newpage()
+for (i in seq_along(styles)) {
+  pushViewport(viewport(x = (i - 0.5) / 4, width = 1 / 4))
+  grid.text(labels[i], y = 0.88, gp = gpar(cex = 0.75, fontface = "bold"))
+  grid.latex(sum_expr, y = 0.42, input_mode = "math",
+             tex_style = styles[i], gp = gpar(fontsize = 20))
+  grid.rect(gp = gpar(col = "grey85", fill = NA))
+  popViewport()
+}
+```
+
+Every panel is `gp = gpar(fontsize = 20)`. The display version is taller
+and narrower because the limits moved above and below the operator
+instead of sitting beside it --- worth knowing when you are budgeting
+space for a label, and `latex_dims()` reports the difference if you need
+the numbers. `"script"` and `"scriptscript"` are the sizes TeX uses for
+first- and second-level scripts; they are occasionally handy for a
+compact sub-label, and rarely needed otherwise.
+
+To change style for part of an expression rather than all of it, use the
+inline commands `\displaystyle`, `\textstyle`, `\scriptstyle` and
+`\scriptscriptstyle` instead. `latex_options(tex_style = )` sets a
+session default.
+
+## Including a figure
+
+`\includegraphics` draws an image inside the formula. PNG, JPEG and SVG
+are supported, sized with `width`, `height` or `scale` in any LaTeX
+length; give one of width/height and the aspect ratio is kept, or both
+plus `keepaspectratio` to fit inside them. As in LaTeX the extension may
+be omitted (`{plots/fig}` finds `plots/fig.svg` or `plots/fig.png`), and
+`\graphicspath{{figs/}}` adds a directory to search. `angle`, `trim` and
+`clip` are recognised but not applied, and say so.
+
+```{r img-basic, fig.height = 1.6, fig.width = 4, out.width = "60%"}
+fig <- tempfile(fileext = ".svg")
+svglite::svglite(fig, width = 2, height = 1.2)
+grid.newpage()
+grid.circle(r = 0.35, gp = gpar(fill = "steelblue", col = NA))
+dev.off()
+
+grid.newpage()
+grid.latex(sprintf(r"(\text{before }\includegraphics[width=1in]{%s}\text{ after})", fig),
+           input_mode = "math", gp = gpar(fontsize = 16))
+```
+
+Inline, the image sits **on the baseline**, as in LaTeX --- `\raisebox`
+moves it. A paragraph holding only an image is a **block**, flush left
+unless `halign` or a `text-align` rule on `img` says otherwise.
+
+```{r img-raise, fig.height = 1.2, fig.width = 4.5, out.width = "70%"}
+icon <- sprintf(r"(\includegraphics[width=0.5\textwidth]{%s})", fig)
+grid.newpage()
+grid.latex(sprintf(r"(\text{baseline }%s\text{, raised }\raisebox{4bp}{%s})",
+                   icon, icon),
+           input_mode = "math", gp = gpar(fontsize = 18))
+```
+
+### A caption
+
+`\caption` renders where it is written. A caption after `\includegraphics`
+therefore sits below the figure, and one written before a `tabular` sits
+above the table --- which is what makes raw `xtable` and `kable` output
+come out the right way round without any float logic.
+
+`\centering` is dropped, because a grob has no page to centre against. A
+one-column `array` does the job instead: it centres the figure and its
+caption on each other.
+
+```{r img-caption, fig.height = 1.4, fig.width = 3, out.width = "45%"}
+logo <- system.file("img", "Rlogo.png", package = "png")
+grid.newpage()
+grid.latex(sprintf(r"(\begin{array}{c}
+  \includegraphics[width=0.6in]{%s}\\
+  \caption{Figure 1: the R logo}
+\end{array})", logo), gp = gpar(fontsize = 11))
+```
+
+Remove the `array` and the same two lines come out flush left. LaTeX
+numbers captions from a counter; here the number is yours to write.
+
+**Prefer SVG.** An SVG is drawn as real grid primitives, so it stays sharp
+at any output resolution — there is no dpi to choose. A PNG or JPEG is a
+fixed grid of pixels, so if you display one much larger than it was saved
+you get a blurry result; the package warns when the effective resolution
+falls below 150 dpi and tells you what pixel size would reach 300. The
+rule is `pixels = display_inches * output_dpi`.
+
+PDF and EPS are **not** supported. Save the figure as SVG instead: it needs
+no external tool and, unlike a rasterised PDF, its text stays text.
+
+### Embedding an R plot
+
+Save the plot yourself, then reference the file:
+
+```{r img-plot, eval = FALSE}
+f <- tempfile(fileext = ".svg")
+svglite::svglite(f, width = 3, height = 2)
+print(p)          # whatever render call this object needs
+dev.off()
+
+grid.latex(sprintf(r"(\text{Trend }\includegraphics[width=2in]{%s})", f),
+           input_mode = "math")
+```
+
+The package deliberately does not do this step for you. The correct render
+call differs by object: a `ggsurvfit` assembles its risk table in its own
+print method, so drawing it with `grid.draw()` would silently lose the
+table; `ComplexHeatmap` needs `draw()`; a base plot needs replaying. Get
+that wrong and the figure looks fine but is missing part of itself. You
+also know the final output resolution, and the package does not.
+
 ## Fonts
 
 Two layers are in play. **MicroTeX** chooses the math glyphs and their
@@ -563,7 +696,7 @@ These need a real document compiler and are outside a formula renderer's
 scope: document structure (`\section`, page layout, `\tableofcontents`);
 automatic hyphenation (`\-` marks a break point yourself, and
 `max_width` / `justify` do handle line breaking); TikZ/PGF;
-`\includegraphics`; cross-references and bibliographies; theorem
+cross-references and bibliographies; theorem
 environments; the `description` list environment (`itemize` and
 `enumerate` *are* supported); and `\tag` / equation numbering.
 `\usepackage{…}` is accepted but loads nothing --- every supported command

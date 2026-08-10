@@ -168,11 +168,33 @@
 #'   arguments of `\cmidrule` are discarded (MicroTeX has no concept of
 #'   partial-column rules).
 #' * `\caption[short]{X}` is extracted as `\text{X}\\` at its source
-#'   position. The caption renders where it appears in the input
-#'   (typically below the `tabular` for \code{xtable}, above for
-#'   \code{kable}); expect a slight visual difference from full LaTeX,
-#'   which positions the caption above or below the float regardless of
-#'   source order.
+#'   position, so a caption written after `\includegraphics` renders below
+#'   the figure and one written before a `tabular` renders above the table.
+#'   Full LaTeX instead positions the caption by float type regardless of
+#'   source order, and numbers it from a counter; there is no counter here.
+#'   Wrap the figure and its caption in `\begin{array}{c}...\end{array}` to
+#'   centre them on each other (`\centering` is dropped --- a grob has no
+#'   page to centre against).
+#' * `\graphicspath{{dir/}}` and `\DeclareGraphicsExtensions{...}` are
+#'   consumed rather than typeset; the former's directories are searched.
+#'
+#' **Images:**
+#' * `\includegraphics[opts]{file}` draws a PNG, JPEG or SVG inline. The
+#'   starred form is accepted and behaves identically. `width`, `height`
+#'   and `scale` take any LaTeX length (`\textwidth` resolves against
+#'   `max_width`, and without one falls back to the file's own size with a
+#'   warning); `scale` multiplies whatever `width`/`height` settled on, and
+#'   `keepaspectratio` fits inside them instead of stretching to fill.
+#'   `angle`, `origin`, `trim`, `clip` and `viewport` are parsed but not
+#'   applied, and warn once so the difference is not silent.
+#' * The extension may be omitted, as in LaTeX: `{plots/fig}` finds
+#'   `plots/fig.svg`, then `.png`, `.jpg`, `.jpeg`.
+#' * An SVG is drawn as real vector and stays sharp at any output
+#'   resolution; a bitmap does not, and warns when it would be shown below
+#'   150 dpi. PDF and EPS are not supported --- save the figure as SVG
+#'   instead. A file that cannot be read --- missing, unsupported, or an
+#'   SVG with no `rsvg` installed --- warns and draws its name rather than
+#'   disappearing.
 #'
 #' Anything not in this list is passed to MicroTeX unchanged. An unknown
 #' command is not an error: MicroTeX typesets its name in red, which
@@ -453,8 +475,21 @@ grobMark <- function(grob, name) {
   input_mode <- match.arg(input_mode, c("math", "mixed"))
   if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
 
+  # Font size is needed before anything else now, because `em`/`ex` in an
+  # \includegraphics option resolve against it.
+  fontsize <- gp$fontsize %||% 20
+  if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
+
+  # Images are resolved first, before any other rewriting, because both of
+  # the steps below would corrupt a file path: .strip_document_wrappers()
+  # eats `%`-to-end-of-line, and .expand_macros() would rewrite `\Users` or
+  # `\Temp` mid-path for anyone who had defined a macro by that name. The
+  # second pass catches an \includegraphics that a macro produced; it is a
+  # no-op when the first pass already consumed them all.
+  tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
   tex <- .strip_document_wrappers(tex)
   tex <- .expand_macros(tex)
+  tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
   # The user-facing `tex` stays as the macro-expanded source so that
   # editDetails() can re-parse without doubling up the \text{} wrap.
   # `parse_input` is the actual string handed to the MicroTeX parser.
@@ -480,9 +515,8 @@ grobMark <- function(grob, name) {
   # Grid semantics: gp$fontsize is in points, gp$cex multiplies it,
   # gp$lineheight is total-line-height multiplier. Bake these into the
   # parse call (layout depends on them), then strip from gp so they
-  # don't re-apply at draw time.
-  fontsize <- gp$fontsize %||% 20
-  if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
+  # don't re-apply at draw time. `fontsize` itself is resolved at the top
+  # of this function, since the image resolver needs it.
   line_space <- .line_space_from_lineheight(gp$lineheight, fontsize)
   gp$fontsize <- NULL
   gp$cex <- NULL

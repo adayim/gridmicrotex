@@ -139,6 +139,29 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
           )
         }
       },
+      "image" = {
+        # The reference is opaque to the engine; decode it here and let
+        # .image_grob() decide what kind of grob the file deserves -- a
+        # true-vector pictureGrob for an SVG, a raster otherwise. The
+        # record carries its top-left corner, so it flips like fill_rect.
+        p <- .image_ref_decode(layout_df$image_ref[i])
+        g <- if (is.null(p)) NULL
+        else .image_grob(p, width[i], height[i],
+                         x = grid::unit(x[i], "bigpts"),
+                         y = grid::unit(total_h - y[i], "bigpts"),
+                         name = paste0("image.", i))
+        # The box was reserved at parse time, when the file did read. If it
+        # no longer does -- deleted since, or a reader that parsed the header
+        # and then choked on the body -- say so rather than leaving a gap
+        # nothing in the output accounts for.
+        if (is.null(g) && !is.null(p)) {
+          .image_warn_once(paste0("draw\x1f", .image_stamp(p)),
+                           paste0("Cannot draw '", p,
+                                  "' now, though it was readable when the ",
+                                  "layout was measured; leaving it blank."))
+        }
+        g
+      },
       NULL  # glyph rows handled in bulk below; everything else → NULL
     )
   }
@@ -168,6 +191,12 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
     }
   }
 
+  # Images go behind everything else. Glyphs are batched into the final
+  # slot, so leaving images in record order would put them *under* the text
+  # in typeface mode and *over* it in path mode -- the same input would
+  # z-order differently in the two render modes.
+  img <- which(type == "image")
+  if (length(img)) parts <- c(parts[img], parts[-img])
   do.call(grid::gList, Filter(Negate(is.null), parts))
 }
 

@@ -827,3 +827,53 @@ test_that("the padding/margin shorthand expands to the longhands", {
   expect_equal(md_style(padding = "4px")[["padding-top"]], "4px")
   expect_equal(.md_parse_css("padding: 4px")[["padding-top"]], "4px")
 })
+
+test_that("background-color is accepted as a spelling of background", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # `background` is the shorthand this package stores; `background-color`
+  # is the real CSS property and what anyone writing a stylesheet types.
+  # It used to be dropped in silence, so the fill simply never appeared.
+  fills <- function(...) {
+    d <- markdown_grob(..., gp = grid::gpar(fontsize = 14))$layout_df
+    sum(d$type %in% c("fill_rect", "fill_roundrect"))
+  }
+  expect_equal(fills("a <span style='background:yellow'>S</span> c"), 1L)
+  expect_equal(fills("a <span style='background-color:yellow'>S</span> c"), 1L)
+  expect_equal(
+    fills("a <span class='hi'>S</span> c",
+          style = markdown_style(.hi = md_style(background_color = "yellow"))),
+    1L)
+  expect_equal(
+    fills("a <span class='hi'>S</span> c",
+          style = ".hi { background-color: yellow; }"),
+    1L)
+
+  # Both spellings land on one stored name, so nothing downstream has to
+  # know there were two.
+  expect_equal(names(.md_parse_css("background-color: red")), "background")
+  expect_equal(names(md_style(background_color = "red")), "background")
+})
+
+test_that("an unsupported property in a hand-written style= warns", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # md_style() errors on a misspelt property; a `style` attribute used to
+  # swallow it, so `colour: red` did nothing with no way to notice.
+  expect_warning(
+    markdown_grob("a <span style='colour:red'>S</span> c"),
+    "colour")
+  expect_warning(
+    markdown_box_grob("<div style='nonsense:1'>\n\ntext\n\n</div>",
+                      width = grid::unit(2, "in")),
+    "nonsense")
+
+  # A property that is supported must stay quiet.
+  expect_no_warning(markdown_grob("a <span style='color:red'>S</span> c"))
+  expect_no_warning(markdown_grob("a <span style='background-color:red'>S</span> c"))
+
+  # A pasted stylesheet is deliberately exempt: it is expected to carry
+  # properties this package cannot honour, and warning about those would
+  # punish exactly the leniency that makes pasting one safe.
+  expect_no_warning(
+    markdown_grob("a <span class='x'>S</span> c",
+                  style = ".x { float: left; display: block; color: red; }"))
+})

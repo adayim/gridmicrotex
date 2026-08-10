@@ -259,6 +259,28 @@ void Graphics2D_Recorder::fillRect(float x, float y, float w, float h) {
     _records.push_back(std::move(rec));
 }
 
+void Graphics2D_Recorder::recordImage(
+    const std::string& ref, float x, float y, float w, float h
+) {
+    // Modelled on fillRect: same rectangle, same top-left convention, same
+    // scaling. A rotated transform is the one case that has to be refused
+    // rather than approximated -- grid::rasterGrob has no rot=, so a
+    // rotated image would be recorded as an unrotated one at a transformed
+    // corner, i.e. silently in the wrong place and the wrong shape. Drop it
+    // and let R report the file, which is at least visible.
+    if (transform_has_rotation(_transform.b, _transform.c)) return;
+    float sx = this->sx(), sy = this->sy();
+    transformPoint(x, y);
+    DrawRecord rec;
+    rec.type = DrawRecord::IMAGE;
+    rec.x = x;
+    rec.y = y;
+    rec.width = w * sx;
+    rec.height = h * sy;
+    rec.image_ref = ref;
+    _records.push_back(std::move(rec));
+}
+
 void Graphics2D_Recorder::drawRoundRect(float x, float y, float w, float h, float rx, float ry) {
     if (transform_has_rotation(_transform.b, _transform.c)) {
         // Under rotation, drop the rounding and emit a stroked quadrilateral.

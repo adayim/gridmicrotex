@@ -297,14 +297,31 @@
 # Shared by every route into the style system -- the `style` attribute of
 # a span or a div, a rule in a stylesheet, and md_style() -- so they can
 # never disagree about what a declaration means.
-.md_parse_css <- function(style) {
+# `warn = TRUE` reports declarations that will be ignored. Only the
+# callers reading a hand-written `style` attribute pass it: a pasted
+# stylesheet is *expected* to carry properties this package cannot
+# honour (`display`, `float`, ...), and warning about those would punish
+# the thing the parser is deliberately lenient for. A `style=` a user
+# typed into their own markdown is different -- there, `colour: red` or
+# `font-wieght: bold` silently doing nothing is a typo they want told
+# about, and md_style() already errors on the same mistake.
+.md_parse_css <- function(style, warn = FALSE) {
   out <- list()
   for (decl in strsplit(style %||% "", ";", fixed = TRUE)[[1]]) {
     kv <- strsplit(decl, ":", fixed = TRUE)[[1]]
     if (length(kv) < 2L) next
-    prop <- trimws(tolower(kv[1]))
+    prop <- .md_canonical_props(trimws(tolower(kv[1])))
     # A value can legitimately contain a colon, so rejoin what was split.
     if (nzchar(prop)) out[[prop]] <- trimws(paste(kv[-1], collapse = ":"))
+  }
+  if (warn && length(out)) {
+    bad <- setdiff(names(out), .MD_STYLE_PROPS)
+    if (length(bad)) {
+      warning("Ignoring unsupported CSS ",
+              if (length(bad) > 1L) "properties: " else "property: ",
+              paste(sQuote(bad), collapse = ", "),
+              ". See ?md_style for the supported set.", call. = FALSE)
+    }
   }
   .md_expand_shorthand(out)
 }
@@ -558,6 +575,12 @@
   tolower(Filter(nzchar, strsplit(trimws(v), "[[:space:]]+")[[1]]))
 }
 
+# Tags whose styling comes from the cascade rather than a fixed command,
+# so they honour a stylesheet, a class, and a `style` attribute. `span` is
+# the generic one; `a` is here so an inline link is styled by the same `a`
+# rule as markdown's own `[text](url)`.
+.MD_CASCADE_TAGS <- c("span", "a")
+
 # Classify one html_inline node. `bare` is the mode the tag appears in,
 # which <q> needs: its quotation marks are glyphs, not a command, so they
 # have to be wrapped or not like any other text.
@@ -566,6 +589,7 @@
 #   "open"  -- emit `open`, push `close` and `bare`
 #   "close" -- pop the matching tag, emit its close
 #   "break" -- <br>, a line break; nothing to push
+#   "text"  -- emit `text` as-is; a void element, so nothing to push
 #   "drop"  -- emit nothing (unrecognised markup)
 .md_html_tag <- function(txt, bare = FALSE, base = 20, style = NULL) {
   m <- regmatches(txt, regexec("^<\\s*(/?)\\s*([A-Za-z][A-Za-z0-9]*)([^>]*)>$",
@@ -576,24 +600,63 @@
   attrs <- m[4]
 
   if (closing) {
-    if (tag %in% c("span", "q") || !is.null(.MD_HTML_TAGS[[tag]])) {
+    if (tag %in% .MD_CASCADE_TAGS || tag == "q" ||
+        !is.null(.MD_HTML_TAGS[[tag]])) {
       return(list(kind = "close", tag = tag))
     }
     return(list(kind = "drop"))
   }
   if (tag == "br") return(list(kind = "break"))
-  if (tag == "span") {
+  # An image cannot be drawn by a text grob, so keep its alt text -- which
+  # is what markdown's own `![alt](src)` already does. Dropping the tag
+  # whole meant the two spellings of one thing disagreed, and `<img>` lost
+  # the only part of itself that could be rendered.
+  if (tag == "img") {
+    src <- .md_html_attr(attrs, "src")
+    if (.image_drawable(src)) {
+      # HTML sizes an <img> in pixels, which is exactly what `px` means to
+      # the resolver. A command, so it is emitted bare either way.
+      opt <- character(0)
+      for (a in c("width", "height")) {
+        v <- .md_html_attr(attrs, a)
+        if (!is.null(v) && grepl("^[0-9.]+$", trimws(v))) {
+          opt <- c(opt, paste0(a, "=", trimws(v), "px"))
+        }
+      }
+      return(list(kind = "text", text = paste0(
+        "\\includegraphics",
+        if (length(opt)) paste0("[", paste(opt, collapse = ","), "]") else "",
+        "{", src, "}")))
+    }
+    alt <- .md_html_attr(attrs, "alt")
+    if (is.null(alt) || !nzchar(trimws(alt))) return(list(kind = "drop"))
+    alt <- .md_escape_tex(alt)
+    return(list(kind = "text",
+                text = if (bare) alt else paste0("\\text{", alt, "}")))
+  }
+  if (tag %in% .MD_CASCADE_TAGS) {
+    # Only a *link* gets the link rendering. The HTML standard styles
+    # `a:link`, which is an <a> carrying an href; a bare <a> is an anchor
+    # and renders as ordinary text, exactly like <span>.
+    if (tag == "a" && is.null(.md_html_attr(attrs, "href"))) {
+      return(list(kind = "drop"))
+    }
     # A class names rules in the stylesheet; the style attribute is the
     # highest-priority origin. .md_cascade() settles the two, so a span
     # and a div read their attributes exactly the same way.
-    props <- .md_cascade(style %||% markdown_style(), "span",
+    #
+    # `<a href>` resolves through the same cascade, under its own `a`
+    # selector, so it lands on the rule markdown's `[text](url)` already
+    # uses -- and so a user restyling `a` restyles both spellings at once.
+    props <- .md_cascade(style %||% markdown_style(), tag,
                          classes = .md_html_classes(attrs),
-                         inline = .md_parse_css(.md_html_attr(attrs, "style")))
+                         inline = .md_parse_css(.md_html_attr(attrs, "style"),
+                                                warn = TRUE))
     st <- .md_css_inline_latex(props, base)
     # A span with no usable style still pushes, so </span> pairs cleanly.
     # font-family opens a text-mode command, so the span then behaves like
     # <code> and its content must be emitted bare.
-    return(c(list(kind = "open", tag = "span", style = st$style),
+    return(c(list(kind = "open", tag = tag, style = st$style),
              .md_tag(st$open, st$close,
                      bare = if (length(st$style)) TRUE else NA)))
   }
@@ -721,8 +784,14 @@
                  strrep("}", length(sty)), ln$close)
         }
       },
-      # Images cannot be drawn by a text grob; keep the alt text.
-      image         = .md_inline_to_tex(k, spans, bare, sty, base, style),
+      # A drawable file becomes a real inline image; anything else -- a web
+      # URL, a missing file, an unsupported format -- keeps its alt text,
+      # silently, as it always has.
+      image         = {
+        dest <- xml2::xml_attr(k, "destination")
+        if (.image_drawable(dest)) paste0("\\includegraphics{", dest, "}")
+        else .md_inline_to_tex(k, spans, bare, sty, base, style)
+      },
       # A footnote reference. CommonMark gives the target's id, not a
       # number, so the number is the position of the matching <fn> in the
       # document -- computed once in .md_parse_doc() and carried on
@@ -836,6 +905,11 @@
       # An unmatched closing tag is just stray markup: drop it.
     } else if (identical(tg$kind, "break")) {
       out <- c(out, emit_break())
+    } else if (identical(tg$kind, "text")) {
+      # A void element that renders as characters -- <img>'s alt text.
+      # Nothing to push: there is no closing tag to pair with.
+      out <- c(out, tg$text)
+      row_empty <- FALSE
     }
     # "drop": unrecognised markup contributes nothing.
   }
