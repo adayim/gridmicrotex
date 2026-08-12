@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  YAML syntax definition for gridmicrotex.
+  Written for this package, not derived from any third-party grammar.
+  Scalars follow the YAML 1.2 core schema.
+-->
+<language name="YAML" alternativeNames="yml" section="Markup"
+          extensions="*.yaml;*.yml" version="1" kateversion="5.0"
+          casesensitive="1" license="MIT">
+  <highlighting>
+    <list name="constants">
+      <item>true</item>
+      <item>false</item>
+      <item>null</item>
+      <item>yes</item>
+      <item>no</item>
+      <item>on</item>
+      <item>off</item>
+      <item>True</item>
+      <item>False</item>
+      <item>Null</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Comment" String="(?:^|(?&lt;=\s))#.*$"/>
+        <RegExpr attribute="Document" String="^(?:---|\.\.\.)\s*$"/>
+        <RegExpr attribute="Key" String="^\s*(?:-\s+)?[A-Za-z_&quot;'][\w .&quot;'-]*(?=\s*:(?:\s|$))"/>
+        <RegExpr attribute="String" String="&quot;(?:[^&quot;\\]|\\.)*&quot;"/>
+        <RegExpr attribute="String" String="'(?:[^']|'')*'"/>
+        <RegExpr attribute="Anchor" String="[&amp;*][A-Za-z0-9_-]+"/>
+        <keyword attribute="Constant" String="constants"/>
+        <RegExpr attribute="Float" String="\b[0-9]*\.[0-9]+(?:[eE][-+]?[0-9]+)?\b"/>
+        <RegExpr attribute="Decimal" String="\b[0-9]+\b"/>
+        <!-- Last, so keywords and calls win. Consuming a whole
+             identifier in one match keeps the scan off the
+             per-character path. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text" defStyleNum="dsNormal"/>
+      <itemData name="Comment"     defStyleNum="dsComment"/>
+      <itemData name="Key"         defStyleNum="dsAttribute"/>
+      <itemData name="String"      defStyleNum="dsString"/>
+      <itemData name="Constant"    defStyleNum="dsConstant"/>
+      <itemData name="Anchor"      defStyleNum="dsVariable"/>
+      <itemData name="Document"    defStyleNum="dsOthers"/>
+      <itemData name="Decimal"     defStyleNum="dsDecVal"/>
+      <itemData name="Float"       defStyleNum="dsFloat"/>
+    </itemDatas>
+  </highlighting>
+</language>

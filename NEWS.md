@@ -4,7 +4,8 @@
 - Right-to-left text renders in the correct order, including across emphasis, colour and other font changes, and with or without `max_width`. 
 - New `markdown_grob()` and `grid.markdown()` render inline markdown with LaTeX math; `markdown_box_grob()` renders a block document.
 - New `geom_markdown()` and `element_markdown()` for ggplot2, both taking `style`. A title containing headings or lists is laid out as blocks, not flattened.
-- Markdown covers headings, lists, task lists, quotes, code, tables, images, footnotes, display `$$…$$`, links and inline HTML.
+- Markdown covers headings, lists, task lists, quotes, code, tables, images, footnotes, display `$$…$$`, links and inline HTML. A fenced code block keeps its indentation and is syntax-highlighted when it names a language.
+- New `register_highlighter()` and `available_highlighters()`. R, Python, SQL, shell, C++, YAML, JSON, Stan, Julia and LaTeX are built in, along with the usual GitHub aliases; token colours are CSS classes (`.kw`, `.co`, `.st`, …), the names knitr already writes into HTML output. Grammars are KDE syntax XML files.
 - New `markdown_style()` and `md_style()` style markdown through a CSS cascade of HTML tag names; the `body` rule styles the box itself.
 - New `latex_options(markdown_style = )` sets a document-wide default.
 - New `"github"` style preset, shipped as a CSS file.

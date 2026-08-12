@@ -118,8 +118,19 @@
   s <- gsub("\\", .MD_ESC_BS, s, fixed = TRUE)
   # A leading backslash is all these need.
   s <- gsub("([{}$&#_%])", "\\\\\\1", s)
-  # These two are accents, so they also need an empty group to bind to.
-  s <- gsub("([~^])", "\\\\\\1{}", s)
+  # `~` and `^` are NOT escaped to \~{} and \^{}: those are the tilde and
+  # circumflex *accents*, which float above the line the way a diacritic
+  # does -- so `lm(y ~ x)` in a code block drew its tilde up at cap
+  # height, and prose `~5` did the same.
+  #
+  # `^` needs nothing at all: inside \text{}, and inside a text command
+  # such as \textbf{}, MicroTeX already draws it flat on the baseline.
+  # `~` cannot be left bare, because LaTeX reads it as a non-breaking
+  # space and MicroTeX duly draws a space, losing the character. Neither
+  # \textasciitilde nor \textasciicircum exists -- like \textbackslash
+  # they typeset their own letters. \char126 is the spelling that works,
+  # and the empty group is required: \char126b swallows the `b`.
+  s <- gsub("~", "\\\\char126{}", s)
   # MicroTeX has no \textbackslash -- it would typeset those 13 letters
   # literally. \backslash is the spelling that works; the empty group
   # stops it gluing onto a following letter (\backslashx).
@@ -1029,6 +1040,14 @@
 #' spans are therefore hidden from the markdown parser before it runs and
 #' restored afterwards, so constructs like
 #' \code{$\\begin{matrix}a\\\\b\\end{matrix}$} survive intact.
+#'
+#' That hiding uses three private-use codepoints (\code{U+E000},
+#' \code{U+E001}, \code{U+E002}) as markers, so those three characters
+#' are \emph{removed} from the input. They are unassigned in Unicode, but
+#' icon fonts such as Nerd Fonts do put real glyphs there: if your text
+#' contains one it will be dropped rather than drawn. The alternative is
+#' worse --- a pasted marker would be spliced together with a math span
+#' on the way back out and silently duplicate a formula.
 #'
 #' GFM has no markdown syntax for colour, underline, super/subscript,
 #' highlight or size, so --- as in CommonMark, and as \pkg{ggtext} does

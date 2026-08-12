@@ -104,6 +104,18 @@
     d[[paste0("h", i)]] <- list("margin-top" = 0.95, "font-size" = h[i],
                                 "font-weight" = "bold")
   }
+  # Syntax highlighting. The selectors are the short class names
+  # skylighting emits, which is what knitr already writes into an R
+  # user's HTML output -- so a Pandoc syntax theme can be pasted in as
+  # ordinary CSS. The colours are GitHub's light palette; names and
+  # values are independent, and either can be replaced on its own.
+  #
+  # Only the classes the bundled grammars use are given a default. Every
+  # other skylighting class still resolves through the cascade, it just
+  # inherits the block's colour until a stylesheet says otherwise.
+  for (nm in names(.MD_CODE_COLORS)) {
+    d[[paste0(".", nm)]] <- list(color = unname(.MD_CODE_COLORS[nm]))
+  }
   unname(mapply(.md_rule, names(d), d, SIMPLIFY = FALSE))
 }
 

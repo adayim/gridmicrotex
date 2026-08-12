@@ -43,6 +43,12 @@ reference:
       - markdown_style
       - md_style
 
+  - title: Syntax highlighting
+    desc: Languages recognised in fenced code blocks, and how to add one
+    contents:
+      - available_highlighters
+      - register_highlighter
+
   - title: Options, macros, and cache
     desc: Project-wide defaults and advanced tooling
     contents:

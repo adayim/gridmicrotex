@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  JSON syntax definition for gridmicrotex.
+  Written for this package, not derived from any third-party grammar.
+
+  The key rule is listed before the string rule on purpose: both match a
+  quoted run, and whichever starts first at a given position wins, so the
+  key rule must come first to claim the name half of `"a": "b"`.
+-->
+<language name="JSON" section="Markup" extensions="*.json"
+          version="1" kateversion="5.0" casesensitive="1" license="MIT">
+  <highlighting>
+    <list name="constants">
+      <item>true</item>
+      <item>false</item>
+      <item>null</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Key" String="&quot;(?:[^&quot;\\]|\\.)*&quot;(?=\s*:)"/>
+        <RegExpr attribute="String" String="&quot;(?:[^&quot;\\]|\\.)*&quot;"/>
+        <keyword attribute="Constant" String="constants"/>
+        <RegExpr attribute="Float" String="-?\b[0-9]*\.[0-9]+(?:[eE][-+]?[0-9]+)?\b"/>
+        <RegExpr attribute="Decimal" String="-?\b[0-9]+\b"/>
+        <!-- Last, so keywords and calls win. Consuming a whole
+             identifier in one match keeps the scan off the
+             per-character path. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text" defStyleNum="dsNormal"/>
+      <itemData name="Key"         defStyleNum="dsAttribute"/>
+      <itemData name="String"      defStyleNum="dsString"/>
+      <itemData name="Constant"    defStyleNum="dsConstant"/>
+      <itemData name="Decimal"     defStyleNum="dsDecVal"/>
+      <itemData name="Float"       defStyleNum="dsFloat"/>
+    </itemDatas>
+  </highlighting>
+</language>

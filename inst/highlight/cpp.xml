@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  C / C++ syntax definition for gridmicrotex.
+  Written for this package, not derived from any third-party grammar.
+  Keywords follow the C++ standard's reserved-identifier list.
+
+  Block comments are matched only when they open and close on the same
+  line: the engine works one line at a time.
+-->
+<language name="C++" alternativeNames="c;cc;cxx;hpp" section="Sources"
+          extensions="*.c;*.h;*.cpp;*.hpp;*.cc" version="1"
+          kateversion="5.0" casesensitive="1" license="MIT">
+  <highlighting>
+    <list name="controlflow">
+      <item>if</item>
+      <item>else</item>
+      <item>for</item>
+      <item>while</item>
+      <item>do</item>
+      <item>switch</item>
+      <item>case</item>
+      <item>default</item>
+      <item>break</item>
+      <item>continue</item>
+      <item>return</item>
+      <item>goto</item>
+      <item>try</item>
+      <item>catch</item>
+      <item>throw</item>
+    </list>
+    <list name="keywords">
+      <item>class</item>
+      <item>struct</item>
+      <item>union</item>
+      <item>enum</item>
+      <item>namespace</item>
+      <item>template</item>
+      <item>typename</item>
+      <item>using</item>
+      <item>public</item>
+      <item>private</item>
+      <item>protected</item>
+      <item>virtual</item>
+      <item>override</item>
+      <item>final</item>
+      <item>static</item>
+      <item>const</item>
+      <item>constexpr</item>
+      <item>inline</item>
+      <item>explicit</item>
+      <item>friend</item>
+      <item>operator</item>
+      <item>new</item>
+      <item>delete</item>
+      <item>this</item>
+      <item>sizeof</item>
+      <item>typedef</item>
+      <item>extern</item>
+      <item>mutable</item>
+      <item>noexcept</item>
+      <item>static_cast</item>
+      <item>dynamic_cast</item>
+      <item>const_cast</item>
+      <item>reinterpret_cast</item>
+    </list>
+    <list name="types">
+      <item>void</item>
+      <item>bool</item>
+      <item>char</item>
+      <item>short</item>
+      <item>int</item>
+      <item>long</item>
+      <item>float</item>
+      <item>double</item>
+      <item>signed</item>
+      <item>unsigned</item>
+      <item>auto</item>
+      <item>size_t</item>
+      <item>wchar_t</item>
+      <item>int8_t</item>
+      <item>int16_t</item>
+      <item>int32_t</item>
+      <item>int64_t</item>
+      <item>uint8_t</item>
+      <item>uint16_t</item>
+      <item>uint32_t</item>
+      <item>uint64_t</item>
+      <item>std</item>
+      <item>string</item>
+      <item>vector</item>
+      <item>map</item>
+      <item>set</item>
+      <item>pair</item>
+      <item>shared_ptr</item>
+      <item>unique_ptr</item>
+    </list>
+    <list name="constants">
+      <item>true</item>
+      <item>false</item>
+      <item>nullptr</item>
+      <item>NULL</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Comment" String="//.*$"/>
+        <RegExpr attribute="Comment" String="/\*.*?\*/"/>
+        <RegExpr attribute="Preprocessor" String="^\s*#\s*[a-z]+"/>
+        <RegExpr attribute="String" String="&quot;(?:[^&quot;\\]|\\.)*&quot;"/>
+        <RegExpr attribute="Char" String="'(?:[^'\\]|\\.)'"/>
+        <keyword attribute="Control Flow" String="controlflow"/>
+        <keyword attribute="Keyword" String="keywords"/>
+        <keyword attribute="Data Type" String="types"/>
+        <keyword attribute="Constant" String="constants"/>
+        <HlCHex attribute="BaseN"/>
+        <RegExpr attribute="Float" String="\b[0-9]*\.[0-9]+(?:[eE][-+]?[0-9]+)?[fFlL]?\b"/>
+        <RegExpr attribute="Decimal" String="\b[0-9]+[uUlL]*\b"/>
+        <RegExpr attribute="Function" String="\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()"/>
+        <!-- Last, so keywords and calls win. Consuming a whole
+             identifier in one match keeps the scan off the
+             per-character path. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text"  defStyleNum="dsNormal"/>
+      <itemData name="Comment"      defStyleNum="dsComment"/>
+      <itemData name="String"       defStyleNum="dsString"/>
+      <itemData name="Char"         defStyleNum="dsChar"/>
+      <itemData name="Keyword"      defStyleNum="dsKeyword"/>
+      <itemData name="Control Flow" defStyleNum="dsControlFlow"/>
+      <itemData name="Data Type"    defStyleNum="dsDataType"/>
+      <itemData name="Constant"     defStyleNum="dsConstant"/>
+      <itemData name="Preprocessor" defStyleNum="dsPreprocessor"/>
+      <itemData name="Decimal"      defStyleNum="dsDecVal"/>
+      <itemData name="BaseN"        defStyleNum="dsBaseN"/>
+      <itemData name="Float"        defStyleNum="dsFloat"/>
+      <itemData name="Function"     defStyleNum="dsFunction"/>
+    </itemDatas>
+  </highlighting>
+</language>

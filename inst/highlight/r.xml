@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  R syntax definition for gridmicrotex.
+
+  Written for this package, not derived from any third-party grammar.
+  Format is KDE/Kate syntax XML, restricted to the single-context subset
+  this package's engine implements.
+
+  Note: parseable R never reaches this file. utils::getParseData() is
+  used instead, because R's own parser is exact and sees the whole block
+  at once. This grammar is the fallback for a fragment that does not
+  parse on its own, which a fenced snippet very often is.
+-->
+<language name="R" alternativeNames="rscript" section="Scientific"
+          extensions="*.R;*.r" version="1" kateversion="5.0"
+          casesensitive="1" license="MIT">
+  <highlighting>
+    <list name="controlflow">
+      <item>if</item>
+      <item>else</item>
+      <item>for</item>
+      <item>while</item>
+      <item>repeat</item>
+      <item>break</item>
+      <item>next</item>
+    </list>
+    <list name="keywords">
+      <item>function</item>
+      <item>in</item>
+    </list>
+    <list name="constants">
+      <item>TRUE</item>
+      <item>FALSE</item>
+      <item>NULL</item>
+      <item>NA</item>
+      <item>NA_integer_</item>
+      <item>NA_real_</item>
+      <item>NA_character_</item>
+      <item>Inf</item>
+      <item>NaN</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Comment" String="#.*$"/>
+        <RegExpr attribute="String" String="&quot;(?:[^&quot;\\]|\\.)*&quot;"/>
+        <RegExpr attribute="String" String="'(?:[^'\\]|\\.)*'"/>
+        <keyword attribute="Control Flow" String="controlflow"/>
+        <keyword attribute="Keyword" String="keywords"/>
+        <keyword attribute="Constant" String="constants"/>
+        <RegExpr attribute="Float" String="\b[0-9]*\.[0-9]+(?:[eE][-+]?[0-9]+)?\b"/>
+        <RegExpr attribute="Float" String="\b[0-9]+[eE][-+]?[0-9]+\b"/>
+        <RegExpr attribute="Decimal" String="\b[0-9]+[Li]?\b"/>
+        <RegExpr attribute="Function" String="\b[A-Za-z._][A-Za-z0-9._]*(?=\s*\()"/>
+        <!-- Last, so keywords and calls win. Consuming a whole
+             identifier in one match keeps the scan off the
+             per-character path. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text"  defStyleNum="dsNormal"/>
+      <itemData name="Comment"      defStyleNum="dsComment"/>
+      <itemData name="String"       defStyleNum="dsString"/>
+      <itemData name="Keyword"      defStyleNum="dsKeyword"/>
+      <itemData name="Control Flow" defStyleNum="dsControlFlow"/>
+      <itemData name="Constant"     defStyleNum="dsConstant"/>
+      <itemData name="Decimal"      defStyleNum="dsDecVal"/>
+      <itemData name="Float"        defStyleNum="dsFloat"/>
+      <itemData name="Function"     defStyleNum="dsFunction"/>
+    </itemDatas>
+  </highlighting>
+</language>

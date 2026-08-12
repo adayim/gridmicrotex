@@ -32,6 +32,7 @@ Imports:
     Rcpp,
     systemfonts,
     tools,
+    utils,
     xml2
 Suggests:
     ggplot2 (>= 4.0.0),

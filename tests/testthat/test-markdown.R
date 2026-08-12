@@ -57,7 +57,13 @@ test_that("TeX special characters in prose are escaped", {
   expect_match(.md_to_tex("a_b"),       "a\\_b",       fixed = TRUE)
   expect_match(.md_to_tex("x & y"),     "x \\& y",     fixed = TRUE)
   expect_match(.md_to_tex("no #1"),     "no \\#1",     fixed = TRUE)
-  expect_match(.md_to_tex("2 ^ 3"),     "\\^{}",       fixed = TRUE)
+  # `^` is deliberately NOT escaped. \^{} is the circumflex *accent*,
+  # which floats above the line; inside \text{} MicroTeX already draws a
+  # bare `^` flat on the baseline. Likewise `~` becomes \char126{}, not
+  # the \~{} accent -- see test-markdown-highlight.R.
+  expect_match(.md_to_tex("2 ^ 3"),     "2 ^ 3",       fixed = TRUE)
+  expect_false(grepl("\\^{}", .md_to_tex("2 ^ 3"), fixed = TRUE))
+  expect_match(.md_to_tex("a ~ b"),     "\\char126{}", fixed = TRUE)
   # MicroTeX has no \textbackslash -- it would typeset the letters.
   expect_match(.md_to_tex("a \\ b"), "\\backslash{}", fixed = TRUE)
   expect_false(grepl("textbackslash", .md_to_tex("a \\ b"), fixed = TRUE))
