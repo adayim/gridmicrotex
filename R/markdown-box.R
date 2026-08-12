@@ -145,7 +145,10 @@
                                              base, style,
                                              child_ctx("blockquote"))),
       code_block = list(type = "code_block",
-                        lines = .md_code_lines(nd)),
+                        lines = .md_code_lines(nd, spans),
+                        # The fence's info string, e.g. "python". NA when
+                        # the fence names no language.
+                        lang = xml2::xml_attr(nd, "info")),
       list = .md_list_block(nd, spans, base, style, cur_ctx()),
       # Built content-sized here, which is what every caller sees. The
       # node is kept as well so .md_layout() can rebuild the table when
@@ -191,16 +194,57 @@
 
 # Code blocks are literal. MicroTeX has no verbatim environment, so each
 # source line becomes its own \texttt{} block and the stacker puts them
-# on separate rows; that also keeps indentation from being collapsed.
-.md_code_lines <- function(nd) {
-  txt <- xml2::xml_text(nd)
+# on separate rows.
+#
+# Indentation is *not* preserved by that split -- MicroTeX collapses a
+# run of spaces inside one \text{} run, so the leading whitespace of a
+# line used to measure one space wide however deep it was. See
+# .hl_segments(), which breaks a line apart wherever spaces run two or
+# more deep.
+#
+# Tabs are expanded here rather than at emit time, because the classifier
+# works in character positions and would be thrown off by a later
+# substitution that changes the length of a line.
+.md_code_lines <- function(nd, spans = NULL) {
+  # Math is masked out of the *whole* document before CommonMark parses
+  # it, which cannot know about fences -- so a `$...$` written inside a
+  # code block arrives here as a sentinel. Restore the original bytes:
+  # in code a dollar is literal, and .md_escape_tex() neutralises it.
+  # Without this the span's content is lost outright and the sentinel's
+  # index is drawn in its place, turning `# see $E = mc^2$ here` into
+  # `# see 1 here`. Inline code spans already do this; blocks did not.
+  txt <- .md_unmask_math(xml2::xml_text(nd), spans)
   lines <- strsplit(txt, "\n", fixed = TRUE)[[1]]
   if (length(lines) == 0L) return(character(0))
   # A trailing newline yields a spurious empty final line.
   if (length(lines) > 1L && !nzchar(lines[length(lines)])) {
     lines <- lines[-length(lines)]
   }
-  lines
+  vapply(lines, .md_expand_tabs, character(1), USE.NAMES = FALSE)
+}
+
+# A tab advances to the next multiple-of-4 column, which is what every
+# editor and terminal does -- not a fixed four spaces. The difference
+# shows the moment a tab follows anything: `abc<tab>x` puts x at column
+# 5, not 9, so tab-indented code (a Makefile has no choice) lines up.
+# Column counting restarts on each line, so this cannot be a gsub over
+# the whole block.
+.md_expand_tabs <- function(s, width = 4L) {
+  if (!grepl("\t", s, fixed = TRUE)) return(s)
+  chars <- strsplit(s, "", fixed = TRUE)[[1]]
+  out <- character(length(chars))
+  col <- 0L
+  for (i in seq_along(chars)) {
+    if (identical(chars[i], "\t")) {
+      pad <- width - (col %% width)
+      out[i] <- strrep(" ", pad)
+      col <- col + pad
+    } else {
+      out[i] <- chars[i]
+      col <- col + 1L
+    }
+  }
+  paste0(out, collapse = "")
 }
 
 .md_list_block <- function(nd, spans, base = 20, style = NULL, ctx = list()) {
@@ -684,11 +728,28 @@
       # height: a line with no descender measures shorter, and stacking
       # on that would let the next line's ascenders collide with it.
       code_lh <- (gp_blk$lineheight %||% 1.15) * sty$size
-      for (ln in blk$lines) {
-        tex <- paste0("\\texttt{\\text{", .md_escape_tex(ln), "}}")
-        # An empty source line still occupies a row.
-        if (!nzchar(ln)) tex <- "\\texttt{\\text{ }}"
-        tex <- wrap(tex)
+      # NULL when the fence names no language, or one we have no grammar
+      # for; every line then renders plain, exactly as it used to.
+      cls <- .hl_classes(blk$lines, blk$lang)
+      if (is.null(cls)) cls <- vector("list", length(blk$lines))
+      # A token is wrapped in \textcolor only when its class resolves to
+      # a colour *different* from the block's own. An unstyled class
+      # therefore emits no markup at all, which is what keeps an
+      # unhighlighted block byte-identical to the old output.
+      base_col <- .md_resolve_color(res$color)
+      seen <- list()
+      colour <- function(k) {
+        if (!is.null(seen[[k]])) return(seen[[k]]$v)
+        r <- .md_cascade(style, "pre",
+                         classes = c(blk$class %||% character(0), k),
+                         inline = blk$style, inherited = inherited)
+        v <- .md_resolve_color(r$color)
+        if (!is.null(v) && identical(v, base_col)) v <- NULL
+        seen[[k]] <<- list(v = v)
+        v
+      }
+      for (li in seq_along(blk$lines)) {
+        tex <- wrap(.hl_code_tex(blk$lines[[li]], cls[[li]], colour))
         m <- .md_measure(tex, 0, gp_blk)
         add(.md_item(.md_run_grob(tex, indent_blk, y, 0, gp_blk),
                      indent_blk, y, m$w, code_lh, align))

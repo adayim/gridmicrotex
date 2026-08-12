@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Python syntax definition for gridmicrotex.
+  Written for this package, not derived from any third-party grammar.
+  Keyword lists follow Python's own `keyword.kwlist` and `builtins`.
+
+  Triple-quoted strings are matched only when they open and close on the
+  same line: the engine works one line at a time.
+-->
+<language name="Python" alternativeNames="py;python3" section="Scripts"
+          extensions="*.py" version="1" kateversion="5.0"
+          casesensitive="1" license="MIT">
+  <highlighting>
+    <list name="controlflow">
+      <item>if</item>
+      <item>elif</item>
+      <item>else</item>
+      <item>for</item>
+      <item>while</item>
+      <item>break</item>
+      <item>continue</item>
+      <item>return</item>
+      <item>yield</item>
+      <item>pass</item>
+      <item>raise</item>
+      <item>try</item>
+      <item>except</item>
+      <item>finally</item>
+      <item>with</item>
+      <item>assert</item>
+      <item>match</item>
+      <item>case</item>
+    </list>
+    <list name="keywords">
+      <item>def</item>
+      <item>class</item>
+      <item>lambda</item>
+      <item>import</item>
+      <item>from</item>
+      <item>as</item>
+      <item>global</item>
+      <item>nonlocal</item>
+      <item>del</item>
+      <item>async</item>
+      <item>await</item>
+      <item>in</item>
+      <item>is</item>
+      <item>not</item>
+      <item>and</item>
+      <item>or</item>
+    </list>
+    <list name="constants">
+      <item>None</item>
+      <item>True</item>
+      <item>False</item>
+      <item>self</item>
+      <item>cls</item>
+    </list>
+    <list name="builtins">
+      <item>abs</item>
+      <item>all</item>
+      <item>any</item>
+      <item>bool</item>
+      <item>dict</item>
+      <item>enumerate</item>
+      <item>filter</item>
+      <item>float</item>
+      <item>format</item>
+      <item>int</item>
+      <item>isinstance</item>
+      <item>len</item>
+      <item>list</item>
+      <item>map</item>
+      <item>max</item>
+      <item>min</item>
+      <item>open</item>
+      <item>print</item>
+      <item>range</item>
+      <item>repr</item>
+      <item>reversed</item>
+      <item>set</item>
+      <item>sorted</item>
+      <item>str</item>
+      <item>sum</item>
+      <item>super</item>
+      <item>tuple</item>
+      <item>type</item>
+      <item>zip</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Comment" String="#.*$"/>
+        <RegExpr attribute="String" String="[rRbBfFuU]{0,2}&quot;&quot;&quot;.*?&quot;&quot;&quot;"/>
+        <RegExpr attribute="String" String="[rRbBfFuU]{0,2}'''.*?'''"/>
+        <RegExpr attribute="String" String="[rRbBfFuU]{0,2}&quot;(?:[^&quot;\\]|\\.)*&quot;"/>
+        <RegExpr attribute="String" String="[rRbBfFuU]{0,2}'(?:[^'\\]|\\.)*'"/>
+        <RegExpr attribute="Decorator" String="^\s*@[A-Za-z_][A-Za-z0-9_.]*"/>
+        <keyword attribute="Control Flow" String="controlflow"/>
+        <keyword attribute="Keyword" String="keywords"/>
+        <keyword attribute="Constant" String="constants"/>
+        <keyword attribute="Built-in" String="builtins"/>
+        <RegExpr attribute="Float" String="\b[0-9]*\.[0-9]+(?:[eE][-+]?[0-9]+)?\b"/>
+        <HlCHex attribute="BaseN"/>
+        <RegExpr attribute="Decimal" String="\b[0-9][0-9_]*\b"/>
+        <RegExpr attribute="Function" String="\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()"/>
+        <!-- Last, so keywords and calls win. Consuming a whole identifier
+             in one match is what keeps the scan off the per-character
+             path: without it every letter costs a failed try of every
+             rule above. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text"  defStyleNum="dsNormal"/>
+      <itemData name="Comment"      defStyleNum="dsComment"/>
+      <itemData name="String"       defStyleNum="dsString"/>
+      <itemData name="Keyword"      defStyleNum="dsKeyword"/>
+      <itemData name="Control Flow" defStyleNum="dsControlFlow"/>
+      <itemData name="Constant"     defStyleNum="dsConstant"/>
+      <itemData name="Built-in"     defStyleNum="dsBuiltIn"/>
+      <itemData name="Decorator"    defStyleNum="dsAttribute"/>
+      <itemData name="Decimal"      defStyleNum="dsDecVal"/>
+      <itemData name="BaseN"        defStyleNum="dsBaseN"/>
+      <itemData name="Float"        defStyleNum="dsFloat"/>
+      <itemData name="Function"     defStyleNum="dsFunction"/>
+    </itemDatas>
+  </highlighting>
+</language>

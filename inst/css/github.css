@@ -42,6 +42,32 @@ pre {
   padding-bottom: 0.5rem;
 }
 
+/* Syntax highlighting inside a fenced code block naming a language.
+ *
+ * The selectors are the short class names skylighting emits, which is
+ * what knitr already writes into HTML output -- so any Pandoc syntax
+ * theme can be pasted in here in place of these rules. Only `color` is
+ * read; a class with no rule keeps the block's own colour.
+ *
+ * available_highlighters() lists the languages that reach these. */
+.co { color: #59636E }  /* comment      */
+.ot { color: #59636E }  /* other        */
+.st { color: #0A3069 }  /* string       */
+.ch { color: #0A3069 }  /* character    */
+.kw { color: #CF222E }  /* keyword      */
+.cf { color: #CF222E }  /* control flow */
+.pp { color: #CF222E }  /* preprocessor */
+.cn { color: #0550AE }  /* constant     */
+.dv { color: #0550AE }  /* decimal      */
+.bn { color: #0550AE }  /* base-N       */
+.fl { color: #0550AE }  /* float        */
+.at { color: #0550AE }  /* attribute    */
+.sc { color: #0550AE }  /* special char */
+.fu { color: #8250DF }  /* function     */
+.bu { color: #8250DF }  /* built-in     */
+.dt { color: #953800 }  /* data type    */
+.va { color: #953800 }  /* variable     */
+
 /* A link cannot be clicked in a grob, only styled to look like one. */
 a { color: #0969DA; text-decoration: underline }
 

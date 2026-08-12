@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  LaTeX syntax definition for gridmicrotex.
+  Written for this package, not derived from any third-party grammar.
+
+  \begin and \end are listed before the general control-sequence rule so
+  that they win the tie at a shared starting position.
+-->
+<language name="LaTeX" alternativeNames="tex" section="Markup"
+          extensions="*.tex;*.sty;*.cls" version="1" kateversion="5.0"
+          casesensitive="1" license="MIT">
+  <highlighting>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Comment" String="(?&lt;!\\)%.*$"/>
+        <RegExpr attribute="Escape" String="\\[^A-Za-z@]"/>
+        <RegExpr attribute="Environment" String="\\(?:begin|end)\b"/>
+        <RegExpr attribute="Control Sequence" String="\\[A-Za-z@]+"/>
+        <RegExpr attribute="Argument" String="(?&lt;=\\begin\{)[^}]*"/>
+        <RegExpr attribute="Argument" String="(?&lt;=\\end\{)[^}]*"/>
+        <RegExpr attribute="Math" String="\$[^$]*\$"/>
+        <RegExpr attribute="Special" String="[&amp;~^_]"/>
+        <RegExpr attribute="Decimal" String="\b[0-9]*\.?[0-9]+(?:pt|mm|cm|in|em|ex|bp)?\b"/>
+        <!-- Last, so keywords and calls win. Consuming a whole
+             identifier in one match keeps the scan off the
+             per-character path. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text"      defStyleNum="dsNormal"/>
+      <itemData name="Comment"          defStyleNum="dsComment"/>
+      <itemData name="Control Sequence" defStyleNum="dsKeyword"/>
+      <itemData name="Environment"      defStyleNum="dsFunction"/>
+      <itemData name="Argument"         defStyleNum="dsAttribute"/>
+      <itemData name="Math"             defStyleNum="dsString"/>
+      <itemData name="Escape"           defStyleNum="dsSpecialChar"/>
+      <itemData name="Special"          defStyleNum="dsSpecialChar"/>
+      <itemData name="Decimal"          defStyleNum="dsDecVal"/>
+    </itemDatas>
+  </highlighting>
+</language>

@@ -173,7 +173,12 @@ test_that("an SVG falls back to a raster when there is no picture reader", {
   # other SVG test skips without grImport2, so with it installed the
   # fallback would never execute and would rot unnoticed -- mock the
   # picture reader away to force it.
-  testthat::local_mocked_bindings(.image_picture = function(...) NULL)
+  # `.package` is given explicitly: without it testthat infers the target
+  # from a pkgload context, so this block errored with "No packages
+  # loaded with pkgload" under a plain test_dir() / test_file() run --
+  # green under devtools::test() and R CMD check, which both supply one.
+  testthat::local_mocked_bindings(.image_picture = function(...) NULL,
+                                  .package = "gridmicrotex")
   g <- .image_grob(f, 144, 72)
   expect_s3_class(g, "rastergrob")
   # Rasterised at the device's resolution rather than a size baked in when
@@ -183,7 +188,8 @@ test_that("an SVG falls back to a raster when there is no picture reader", {
 
   # And with neither reader there is nothing to draw, so the resolver's
   # fallback text is what the user sees.
-  testthat::local_mocked_bindings(.image_raster = function(...) NULL)
+  testthat::local_mocked_bindings(.image_raster = function(...) NULL,
+                                  .package = "gridmicrotex")
   expect_null(.image_grob(tempfile(fileext = ".png"), 72, 72))
 })
 

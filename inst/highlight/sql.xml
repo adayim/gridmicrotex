@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SQL syntax definition for gridmicrotex.
+  Written for this package, not derived from any third-party grammar.
+  Keywords follow the ISO SQL reserved-word list, trimmed to what turns
+  up in practice. casesensitive="0", so SELECT and select both match.
+-->
+<language name="SQL" alternativeNames="postgresql;mysql;sqlite"
+          section="Database" extensions="*.sql" version="1"
+          kateversion="5.0" casesensitive="0" license="MIT">
+  <highlighting>
+    <list name="keywords">
+      <item>SELECT</item>
+      <item>FROM</item>
+      <item>WHERE</item>
+      <item>INSERT</item>
+      <item>INTO</item>
+      <item>VALUES</item>
+      <item>UPDATE</item>
+      <item>SET</item>
+      <item>DELETE</item>
+      <item>CREATE</item>
+      <item>DROP</item>
+      <item>ALTER</item>
+      <item>TABLE</item>
+      <item>VIEW</item>
+      <item>INDEX</item>
+      <item>JOIN</item>
+      <item>INNER</item>
+      <item>LEFT</item>
+      <item>RIGHT</item>
+      <item>FULL</item>
+      <item>OUTER</item>
+      <item>CROSS</item>
+      <item>ON</item>
+      <item>USING</item>
+      <item>GROUP</item>
+      <item>ORDER</item>
+      <item>BY</item>
+      <item>HAVING</item>
+      <item>UNION</item>
+      <item>ALL</item>
+      <item>DISTINCT</item>
+      <item>AS</item>
+      <item>LIMIT</item>
+      <item>OFFSET</item>
+      <item>WITH</item>
+      <item>AND</item>
+      <item>OR</item>
+      <item>NOT</item>
+      <item>IN</item>
+      <item>LIKE</item>
+      <item>BETWEEN</item>
+      <item>IS</item>
+      <item>PRIMARY</item>
+      <item>FOREIGN</item>
+      <item>KEY</item>
+      <item>REFERENCES</item>
+      <item>DEFAULT</item>
+      <item>CONSTRAINT</item>
+      <item>UNIQUE</item>
+      <item>GRANT</item>
+      <item>REVOKE</item>
+      <item>COMMIT</item>
+      <item>ROLLBACK</item>
+    </list>
+    <list name="controlflow">
+      <item>CASE</item>
+      <item>WHEN</item>
+      <item>THEN</item>
+      <item>ELSE</item>
+      <item>END</item>
+      <item>IF</item>
+      <item>EXISTS</item>
+    </list>
+    <list name="types">
+      <item>INT</item>
+      <item>INTEGER</item>
+      <item>BIGINT</item>
+      <item>SMALLINT</item>
+      <item>SERIAL</item>
+      <item>VARCHAR</item>
+      <item>CHAR</item>
+      <item>TEXT</item>
+      <item>DATE</item>
+      <item>TIME</item>
+      <item>TIMESTAMP</item>
+      <item>BOOLEAN</item>
+      <item>NUMERIC</item>
+      <item>DECIMAL</item>
+      <item>REAL</item>
+      <item>FLOAT</item>
+      <item>DOUBLE</item>
+      <item>BLOB</item>
+      <item>JSON</item>
+    </list>
+    <list name="constants">
+      <item>NULL</item>
+      <item>TRUE</item>
+      <item>FALSE</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Comment" String="--.*$"/>
+        <RegExpr attribute="Comment" String="/\*.*?\*/"/>
+        <RegExpr attribute="String" String="'(?:[^']|'')*'"/>
+        <RegExpr attribute="String" String="&quot;(?:[^&quot;]|&quot;&quot;)*&quot;"/>
+        <keyword attribute="Control Flow" String="controlflow"/>
+        <keyword attribute="Keyword" String="keywords"/>
+        <keyword attribute="Data Type" String="types"/>
+        <keyword attribute="Constant" String="constants"/>
+        <RegExpr attribute="Float" String="\b[0-9]*\.[0-9]+\b"/>
+        <RegExpr attribute="Decimal" String="\b[0-9]+\b"/>
+        <RegExpr attribute="Function" String="\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()"/>
+        <!-- Last, so keywords and calls win. Consuming a whole
+             identifier in one match keeps the scan off the
+             per-character path. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text"  defStyleNum="dsNormal"/>
+      <itemData name="Comment"      defStyleNum="dsComment"/>
+      <itemData name="String"       defStyleNum="dsString"/>
+      <itemData name="Keyword"      defStyleNum="dsKeyword"/>
+      <itemData name="Control Flow" defStyleNum="dsControlFlow"/>
+      <itemData name="Data Type"    defStyleNum="dsDataType"/>
+      <itemData name="Constant"     defStyleNum="dsConstant"/>
+      <itemData name="Decimal"      defStyleNum="dsDecVal"/>
+      <itemData name="Float"        defStyleNum="dsFloat"/>
+      <itemData name="Function"     defStyleNum="dsFunction"/>
+    </itemDatas>
+  </highlighting>
+</language>

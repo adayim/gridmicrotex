@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  POSIX shell / Bash syntax definition for gridmicrotex.
+  Written for this package, not derived from any third-party grammar.
+  Reserved words follow the Bash manual's SHELL GRAMMAR section.
+-->
+<language name="Bash" alternativeNames="sh;shell;zsh" section="Scripts"
+          extensions="*.sh;*.bash;*.zsh" version="1" kateversion="5.0"
+          casesensitive="1" license="MIT">
+  <highlighting>
+    <list name="controlflow">
+      <item>if</item>
+      <item>then</item>
+      <item>else</item>
+      <item>elif</item>
+      <item>fi</item>
+      <item>for</item>
+      <item>while</item>
+      <item>until</item>
+      <item>do</item>
+      <item>done</item>
+      <item>case</item>
+      <item>esac</item>
+      <item>in</item>
+      <item>select</item>
+      <item>return</item>
+      <item>break</item>
+      <item>continue</item>
+    </list>
+    <list name="keywords">
+      <item>function</item>
+      <item>local</item>
+      <item>export</item>
+      <item>readonly</item>
+      <item>declare</item>
+      <item>typeset</item>
+      <item>source</item>
+      <item>alias</item>
+      <item>unalias</item>
+      <item>unset</item>
+      <item>shift</item>
+      <item>trap</item>
+      <item>set</item>
+      <item>exit</item>
+      <item>eval</item>
+      <item>exec</item>
+    </list>
+    <list name="builtins">
+      <item>echo</item>
+      <item>printf</item>
+      <item>read</item>
+      <item>cd</item>
+      <item>pwd</item>
+      <item>test</item>
+      <item>ls</item>
+      <item>cat</item>
+      <item>grep</item>
+      <item>sed</item>
+      <item>awk</item>
+      <item>find</item>
+      <item>sort</item>
+      <item>head</item>
+      <item>tail</item>
+      <item>wc</item>
+      <item>mkdir</item>
+      <item>rmdir</item>
+      <item>rm</item>
+      <item>cp</item>
+      <item>mv</item>
+      <item>ln</item>
+      <item>touch</item>
+      <item>chmod</item>
+      <item>chown</item>
+      <item>curl</item>
+      <item>wget</item>
+      <item>git</item>
+      <item>make</item>
+    </list>
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces attribute="Normal Text"/>
+        <RegExpr attribute="Comment" String="(?:^|(?&lt;=\s))#.*$"/>
+        <RegExpr attribute="String" String="&quot;(?:[^&quot;\\]|\\.)*&quot;"/>
+        <RegExpr attribute="String" String="'[^']*'"/>
+        <RegExpr attribute="Variable" String="\$\{[^}]*\}"/>
+        <RegExpr attribute="Variable" String="\$[A-Za-z_][A-Za-z0-9_]*"/>
+        <RegExpr attribute="Variable" String="\$[0-9@*#?$!-]"/>
+        <keyword attribute="Control Flow" String="controlflow"/>
+        <keyword attribute="Keyword" String="keywords"/>
+        <keyword attribute="Built-in" String="builtins"/>
+        <RegExpr attribute="Option" String="(?&lt;=\s)--?[A-Za-z][A-Za-z0-9-]*"/>
+        <RegExpr attribute="Decimal" String="\b[0-9]+\b"/>
+        <!-- Last, so keywords and calls win. Consuming a whole
+             identifier in one match keeps the scan off the
+             per-character path. -->
+        <DetectIdentifier attribute="Normal Text"/>
+      </context>
+    </contexts>
+    <itemDatas>
+      <itemData name="Normal Text"  defStyleNum="dsNormal"/>
+      <itemData name="Comment"      defStyleNum="dsComment"/>
+      <itemData name="String"       defStyleNum="dsString"/>
+      <itemData name="Keyword"      defStyleNum="dsKeyword"/>
+      <itemData name="Control Flow" defStyleNum="dsControlFlow"/>
+      <itemData name="Built-in"     defStyleNum="dsBuiltIn"/>
+      <itemData name="Variable"     defStyleNum="dsVariable"/>
+      <itemData name="Option"       defStyleNum="dsAttribute"/>
+      <itemData name="Decimal"      defStyleNum="dsDecVal"/>
+    </itemDatas>
+  </highlighting>
+</language>
