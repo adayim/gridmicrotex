@@ -50,6 +50,14 @@ Markdown and LaTeX disagree about several characters — most importantly
 hidden from the markdown parser before it runs and restored afterwards,
 so constructs like `$\begin{matrix}a\\b\end{matrix}$` survive intact.
 
+That hiding uses three private-use codepoints (`U+E000`, `U+E001`,
+`U+E002`) as markers, so those three characters are *removed* from the
+input. They are unassigned in Unicode, but icon fonts such as Nerd Fonts
+do put real glyphs there: if your text contains one it will be dropped
+rather than drawn. The alternative is worse — a pasted marker would be
+spliced together with a math span on the way back out and silently
+duplicate a formula.
+
 GFM has no markdown syntax for colour, underline, super/subscript,
 highlight or size, so — as in CommonMark, and as ggtext does — these
 come from inline HTML. Each tag renders as HTML's own default rendering

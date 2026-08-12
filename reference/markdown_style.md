@@ -76,7 +76,7 @@ still take effect.
 
 ``` r
 markdown_style()
-#> <markdown_style> 19 rules, 19 selectors
+#> <markdown_style> 36 rules, 36 selectors
 #>   p            margin-top: 0.55
 #>   math         margin-top: 0.55; text-align: center
 #>   a            color: #0969DA; text-decoration: underline
@@ -96,8 +96,25 @@ markdown_style()
 #>   h4           margin-top: 0.95; font-size: 1.416667; font-weight: bold
 #>   h5           margin-top: 0.95; font-size: 1.166667; font-weight: bold
 #>   h6           margin-top: 0.95; font-size: 1; font-weight: bold
+#>   .co          color: #59636E
+#>   .ot          color: #59636E
+#>   .st          color: #0A3069
+#>   .ch          color: #0A3069
+#>   .kw          color: #CF222E
+#>   .cf          color: #CF222E
+#>   .pp          color: #CF222E
+#>   .cn          color: #0550AE
+#>   .dv          color: #0550AE
+#>   .bn          color: #0550AE
+#>   .fl          color: #0550AE
+#>   .at          color: #0550AE
+#>   .sc          color: #0550AE
+#>   .fu          color: #8250DF
+#>   .bu          color: #8250DF
+#>   .dt          color: #953800
+#>   .va          color: #953800
 markdown_style("github", h1 = md_style(color = "firebrick"))
-#> <markdown_style> 46 rules, 21 selectors
+#> <markdown_style> 80 rules, 38 selectors
 #>   p            margin-top: 0.8rem
 #>   math         margin-top: 1rem; text-align: center
 #>   a            color: #0969DA; text-decoration: underline
@@ -117,10 +134,27 @@ markdown_style("github", h1 = md_style(color = "firebrick"))
 #>   h4           margin-top: 1.2rem; font-size: 1rem; font-weight: bold
 #>   h5           margin-top: 1.2rem; font-size: 0.875rem; font-weight: bold
 #>   h6           margin-top: 1.2rem; font-size: 0.85rem; font-weight: bold; color: #59636E
+#>   .co          color: #59636E
+#>   .ot          color: #59636E
+#>   .st          color: #0A3069
+#>   .ch          color: #0A3069
+#>   .kw          color: #CF222E
+#>   .cf          color: #CF222E
+#>   .pp          color: #CF222E
+#>   .cn          color: #0550AE
+#>   .dv          color: #0550AE
+#>   .bn          color: #0550AE
+#>   .fl          color: #0550AE
+#>   .at          color: #0550AE
+#>   .sc          color: #0550AE
+#>   .fu          color: #8250DF
+#>   .bu          color: #8250DF
+#>   .dt          color: #953800
+#>   .va          color: #953800
 #>   tr           border-bottom: 1px solid #D1D9E0
 #>   td           padding-left: 0.6rem
 markdown_style(css = "h1 { color: steelblue } .note { padding-left: 2em }")
-#> <markdown_style> 21 rules, 20 selectors
+#> <markdown_style> 38 rules, 37 selectors
 #>   p            margin-top: 0.55
 #>   math         margin-top: 0.55; text-align: center
 #>   a            color: #0969DA; text-decoration: underline
@@ -140,5 +174,22 @@ markdown_style(css = "h1 { color: steelblue } .note { padding-left: 2em }")
 #>   h4           margin-top: 0.95; font-size: 1.416667; font-weight: bold
 #>   h5           margin-top: 0.95; font-size: 1.166667; font-weight: bold
 #>   h6           margin-top: 0.95; font-size: 1; font-weight: bold
+#>   .co          color: #59636E
+#>   .ot          color: #59636E
+#>   .st          color: #0A3069
+#>   .ch          color: #0A3069
+#>   .kw          color: #CF222E
+#>   .cf          color: #CF222E
+#>   .pp          color: #CF222E
+#>   .cn          color: #0550AE
+#>   .dv          color: #0550AE
+#>   .bn          color: #0550AE
+#>   .fl          color: #0550AE
+#>   .at          color: #0550AE
+#>   .sc          color: #0550AE
+#>   .fu          color: #8250DF
+#>   .bu          color: #8250DF
+#>   .dt          color: #953800
+#>   .va          color: #953800
 #>   .note        padding-left: 2em
 ```

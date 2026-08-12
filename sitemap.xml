@@ -9,6 +9,7 @@
 <url><loc>https://adayim.github.io/gridmicrotex/authors.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/index.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/news/index.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/available_highlighters.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/available_math_fonts.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/check_math_fonts.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/define_macro.html</loc></url>
@@ -31,5 +32,6 @@
 <url><loc>https://adayim.github.io/gridmicrotex/reference/markdown_grob.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/markdown_style.html</loc></url>
 <url><loc>https://adayim.github.io/gridmicrotex/reference/md_style.html</loc></url>
+<url><loc>https://adayim.github.io/gridmicrotex/reference/register_highlighter.html</loc></url>
 </urlset>
 

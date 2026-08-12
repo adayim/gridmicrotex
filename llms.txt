@@ -293,6 +293,15 @@ A small CSS cascade over the markdown tags
 - [`md_style()`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
   : Declarations for one markdown tag
 
+## Syntax highlighting
+
+Languages recognised in fenced code blocks, and how to add one
+
+- [`available_highlighters()`](https://adayim.github.io/gridmicrotex/reference/available_highlighters.md)
+  : Syntax highlighting languages available
+- [`register_highlighter()`](https://adayim.github.io/gridmicrotex/reference/register_highlighter.md)
+  : Add a syntax highlighting grammar
+
 ## Options, macros, and cache
 
 Project-wide defaults and advanced tooling

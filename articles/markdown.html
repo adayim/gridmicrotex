@@ -332,6 +332,13 @@ box width; prose wraps to fit it.</p>
 <span><span class="st">- $R^2 = 0.87$</span></span>
 <span><span class="st">- no influential points</span></span>
 <span><span class="st"></span></span>
+<span><span class="st">~~~r</span></span>
+<span><span class="st">fit &lt;- lm(y ~ x, data = d)  # refit</span></span>
+<span><span class="st">if (anyNA(d)) {</span></span>
+<span><span class="st">    stop("missing values")</span></span>
+<span><span class="st">}</span></span>
+<span><span class="st">~~~</span></span>
+<span><span class="st"></span></span>
 <span><span class="st">&gt; Assumptions were checked and hold.</span></span>
 <span><span class="st">)"</span></span>
 <span></span>
@@ -344,6 +351,35 @@ box width; prose wraps to fit it.</p>
 <span>  gp      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">13</span><span class="op">)</span></span>
 <span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="markdown_files/figure-html/block-1.png" class="r-plt" alt="" width="80%"></p>
+<p>A fenced block that names a language is syntax-highlighted, and its
+indentation is kept. (The example above fences with <code>~~~r</code>
+rather than three backticks only because it lives inside an R chunk in
+this vignette, where a backtick fence would end the chunk; both
+spellings are standard CommonMark.)
+<code><a href="../reference/available_highlighters.html">available_highlighters()</a></code> lists what is built in — R,
+Python, SQL, shell, C++, YAML, JSON, Stan, Julia and LaTeX — and the
+usual GitHub aliases (<code>py</code>, <code>sh</code>,
+<code>c++</code>, <code>yml</code>, <code>jl</code>, <code>tex</code>)
+work too. A fence naming anything else is set as plain monospace.</p>
+<p>Colours are ordinary CSS, using the same class names knitr writes
+into HTML output, so a Pandoc syntax theme can be pasted straight
+in:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/markdown_style.html">markdown_style</a></span><span class="op">(</span>css <span class="op">=</span> <span class="st">".co { color: #59636E } .kw { color: #CF222E }"</span><span class="op">)</span></span></code></pre></div>
+<p>Those are ordinary class selectors, and they are global: seventeen
+two-letter names (<code>co</code>, <code>st</code>, <code>kw</code>,
+<code>cf</code>, <code>dv</code>, <code>fl</code>, <code>cn</code>,
+<code>fu</code>, <code>dt</code>, <code>bu</code> and friends) carry a
+default colour. If you use one of them as your own class in prose —
+<code>&lt;div class="dt"&gt;</code> — it picks up the syntax colour, and
+a tag rule cannot override it, because a class beats a tag in CSS just
+as it does in a browser. Pick another name for your own classes, or
+restyle the one you want.</p>
+<p><code><a href="../reference/register_highlighter.html">register_highlighter()</a></code> adds a language from a KDE syntax
+XML file — either one of your own (copy a bundled grammar from
+<code>system.file("highlight", package = "gridmicrotex")</code> as a
+template) or one downloaded from <a href="https://kate-editor.org/syntax/" class="external-link uri">https://kate-editor.org/syntax/</a>, most of which work as
+they are.</p>
 <p>Set <code>box_gp = NULL</code> to draw no box, or give the
 <code>r</code> argument a value such as <code>unit(6, "pt")</code> for
 rounded corners. <code>padding</code> and <code>margin</code> accept a
@@ -355,7 +391,7 @@ single unit or a length-4 unit giving top, right, bottom, left.</p>
 Markdown tables become real typeset tables, with column alignment taken
 from the <code>|:---:|</code> markers — something a text renderer cannot
 do.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">md</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
 <span><span class="st">### Checklist</span></span>
 <span><span class="st"></span></span>
@@ -386,7 +422,7 @@ do.</p>
 width. <code>png</code> and <code>jpeg</code> are optional — if neither
 is installed, or the file is missing, the image degrades to its alt
 text.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Make a small PNG to embed (any .png / .jpeg path works).</span></span>
 <span><span class="va">img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".png"</span><span class="op">)</span></span>
 <span><span class="fu">ragg</span><span class="fu">::</span><span class="fu"><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">agg_png</a></span><span class="op">(</span><span class="va">img</span>, width <span class="op">=</span> <span class="fl">300</span>, height <span class="op">=</span> <span class="fl">90</span>, res <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
@@ -417,7 +453,7 @@ text.</p>
 <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code> a <code>style</code>. It is a small CSS
 cascade over the markdown tags, and it takes CSS directly — as text, or
 as the path to a <code>.css</code> file:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
 <span><span class="st"># Results</span></span>
 <span><span class="st"></span></span>
@@ -439,7 +475,7 @@ as the path to a <code>.css</code> file:</p>
 <p><img src="markdown_files/figure-html/style-css-1.png" class="r-plt" alt="" width="85%"></p>
 <p>The same thing written in R, which validates property names and
 autocompletes:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/markdown_style.html">markdown_style</a></span><span class="op">(</span></span>
 <span>  h1         <span class="op">=</span> <span class="fu"><a href="../reference/md_style.html">md_style</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"steelblue"</span>, font_size <span class="op">=</span> <span class="fl">1.8</span><span class="op">)</span>,</span>
 <span>  blockquote <span class="op">=</span> <span class="fu"><a href="../reference/md_style.html">md_style</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"grey40"</span>,</span>
@@ -469,7 +505,7 @@ that apply still work.</p>
 </h3>
 <p><code>markdown_style("github")</code> is a GitHub-like look, shipped
 as a CSS file you can read and copy:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/markdown_style.html">markdown_style</a></span><span class="op">(</span><span class="st">"github"</span>, h1 <span class="op">=</span> <span class="fu"><a href="../reference/md_style.html">md_style</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"firebrick"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/file.show.html" class="external-link">file.show</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"css"</span>, <span class="st">"github.css"</span>, package <span class="op">=</span> <span class="st">"gridmicrotex"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Pass an existing style as the first argument to extend it, and use
@@ -485,7 +521,7 @@ particular chunk, wrap it in a <code>&lt;div&gt;</code> with a
 around the tags</strong> — that is what makes CommonMark parse the
 markdown between them rather than treating the whole block as raw
 HTML:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">'</span></span>
 <span><span class="st">Ordinary text.</span></span>
 <span><span class="st"></span></span>
@@ -565,7 +601,7 @@ instead.</p>
 <p>By default a table sizes to its content, so a wide one overflows the
 box. <code>table-layout: fixed</code> divides the available width
 between the columns and lets the cells wrap:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
 <span><span class="st">| Term | Meaning |</span></span>
 <span><span class="st">|:-----|:--------|</span></span>
@@ -598,7 +634,7 @@ markdown document, not just the parts markdown has a spelling for.</p>
 syntax has no spanning cells and no per-cell colour — a cmark table cell
 carries no attributes at all — but LaTeX’s <code>array</code> has
 both:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="st">r"($$\begin{array}{|l|c|c|}\hline</span></span>
 <span><span class="st">\rowcolor{#F6F8FA}\multicolumn{3}{|c|}{\textbf{Model comparison}}\\\hline</span></span>
 <span><span class="st">\textbf{Model}&amp;\textbf{AIC}&amp;\textbf{R}^2\\\hline</span></span>
@@ -657,7 +693,7 @@ break inside a word. Mark the words that should be allowed to break with
 TeX’s discretionary hyphen, <code>\-</code>:
 <code>in\-ter\-na\-tion\-al</code> breaks at any of those points and
 draws a hyphen where it does.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prose</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span></span>
 <span>  <span class="st">"The quick brown fox jumps over the lazy dog."</span>, <span class="fl">3</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">" "</span><span class="op">)</span></span>
 <span></span>
@@ -691,7 +727,7 @@ friends — so parsing is never the limitation.</p>
 <p>Nothing errors: anything that cannot be drawn degrades to its text.
 This one document contains every degradation at once, so it is easier to
 see what “unsupported” actually looks like than to read about it:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">r"(A [link](https://example.org) keeps its text, an</span></span>
 <span><span class="st">![inline diagram](missing.png) becomes its alt text, and an</span></span>
 <span><span class="st">&lt;unknown&gt;unknown tag&lt;/unknown&gt; keeps its content.</span></span>
@@ -762,8 +798,12 @@ and <code>\multirow</code> are not reachable from markdown table syntax.
 Write the table as LaTeX in a math span instead; see <em>Dropping down
 to LaTeX</em>.</li>
 <li>
-<strong>Syntax highlighting</strong> of code blocks is not applied —
-code is set in a monospace font, unhighlighted.</li>
+<strong>Syntax highlighting</strong> does not implement KDE’s
+<em>dynamic</em> rules, which substitute part of one match into a later
+pattern; a grammar using them is refused rather than approximated. Of
+twenty definitions sampled from the upstream catalogue, thirteen loaded.
+Cross-language includes (<code>##Alerts</code> and friends) are skipped,
+which costs the TODO/FIXME marks inside comments and nothing else.</li>
 <li>
 <strong>Monospace spacing</strong> depends on the device.
 <code>ragg</code>, <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> and <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf()</a></code>

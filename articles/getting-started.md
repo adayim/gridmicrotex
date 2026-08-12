@@ -163,21 +163,6 @@ Both are ordinary LaTeX, pasted unchanged. The rest of this vignette is
 about placing such things, choosing fonts, and knowing where the
 supported set ends.
 
-## Placing formulas
-
-`x`, `y`, `hjust` and `vjust` work as they do anywhere in grid.
-
-``` r
-
-grid.newpage()
-grid.latex(r"($E = mc^2$)", x = 0.05, y = 0.7, hjust = 0,
-           gp = gpar(fontsize = 22))
-grid.latex(r"($F = ma$)", x = 0.95, y = 0.3, hjust = 1,
-           gp = gpar(fontsize = 22))
-```
-
-![](getting-started_files/figure-html/positioning-1.png)
-
 ### Aligning to the math baseline
 
 `hjust` and `vjust` also take names. The useful one is

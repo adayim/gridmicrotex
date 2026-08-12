@@ -179,6 +179,13 @@ enough that it wraps inside the column.
 - $R^2 = 0.87$
 - no influential points
 
+~~~r
+fit <- lm(y ~ x, data = d)  # refit
+if (anyNA(d)) {
+    stop("missing values")
+}
+~~~
+
 > Assumptions were checked and hold.
 )"
 
@@ -193,6 +200,40 @@ grid.draw(markdown_box_grob(
 ```
 
 ![](markdown_files/figure-html/block-1.png)
+
+A fenced block that names a language is syntax-highlighted, and its
+indentation is kept. (The example above fences with `~~~r` rather than
+three backticks only because it lives inside an R chunk in this
+vignette, where a backtick fence would end the chunk; both spellings are
+standard CommonMark.)
+[`available_highlighters()`](https://adayim.github.io/gridmicrotex/reference/available_highlighters.md)
+lists what is built in — R, Python, SQL, shell, C++, YAML, JSON, Stan,
+Julia and LaTeX — and the usual GitHub aliases (`py`, `sh`, `c++`,
+`yml`, `jl`, `tex`) work too. A fence naming anything else is set as
+plain monospace.
+
+Colours are ordinary CSS, using the same class names knitr writes into
+HTML output, so a Pandoc syntax theme can be pasted straight in:
+
+``` r
+
+markdown_style(css = ".co { color: #59636E } .kw { color: #CF222E }")
+```
+
+Those are ordinary class selectors, and they are global: seventeen
+two-letter names (`co`, `st`, `kw`, `cf`, `dv`, `fl`, `cn`, `fu`, `dt`,
+`bu` and friends) carry a default colour. If you use one of them as your
+own class in prose — `<div class="dt">` — it picks up the syntax colour,
+and a tag rule cannot override it, because a class beats a tag in CSS
+just as it does in a browser. Pick another name for your own classes, or
+restyle the one you want.
+
+[`register_highlighter()`](https://adayim.github.io/gridmicrotex/reference/register_highlighter.md)
+adds a language from a KDE syntax XML file — either one of your own
+(copy a bundled grammar from
+`system.file("highlight", package = "gridmicrotex")` as a template) or
+one downloaded from <https://kate-editor.org/syntax/>, most of which
+work as they are.
 
 Set `box_gp = NULL` to draw no box, or give the `r` argument a value
 such as `unit(6, "pt")` for rounded corners. `padding` and `margin`
@@ -599,8 +640,12 @@ placeholder. In detail:
   colspan attribute to read — so `\multicolumn` and `\multirow` are not
   reachable from markdown table syntax. Write the table as LaTeX in a
   math span instead; see *Dropping down to LaTeX*.
-- **Syntax highlighting** of code blocks is not applied — code is set in
-  a monospace font, unhighlighted.
+- **Syntax highlighting** does not implement KDE’s *dynamic* rules,
+  which substitute part of one match into a later pattern; a grammar
+  using them is refused rather than approximated. Of twenty definitions
+  sampled from the upstream catalogue, thirteen loaded. Cross-language
+  includes (`##Alerts` and friends) are skipped, which costs the
+  TODO/FIXME marks inside comments and nothing else.
 - **Monospace spacing** depends on the device. `ragg`,
   [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) and
   [`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) report correct

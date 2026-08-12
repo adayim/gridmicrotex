@@ -23,7 +23,17 @@
   for ggplot2, both taking `style`. A title containing headings or lists
   is laid out as blocks, not flattened.
 - Markdown covers headings, lists, task lists, quotes, code, tables,
-  images, footnotes, display `$$…$$`, links and inline HTML.
+  images, footnotes, display `$$…$$`, links and inline HTML. A fenced
+  code block keeps its indentation and is syntax-highlighted when it
+  names a language.
+- New
+  [`register_highlighter()`](https://adayim.github.io/gridmicrotex/reference/register_highlighter.md)
+  and
+  [`available_highlighters()`](https://adayim.github.io/gridmicrotex/reference/available_highlighters.md).
+  R, Python, SQL, shell, C++, YAML, JSON, Stan, Julia and LaTeX are
+  built in, along with the usual GitHub aliases; token colours are CSS
+  classes (`.kw`, `.co`, `.st`, …), the names knitr already writes into
+  HTML output. Grammars are KDE syntax XML files.
 - New
   [`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
   and
