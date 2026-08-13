@@ -192,7 +192,8 @@ grid.draw(markdown_box_grob(
   width   = unit(4.6, "in"),
   padding = unit(10, "pt"),
   box_gp  = gpar(fill = "grey97", col = "grey40"),
-  gp      = gpar(fontsize = 13)
+  gp      = gpar(fontsize = 13)，
+  style = markdown_style(css = "pre { background: #ece2f0 }") # Code background
 ))
 ```
 
