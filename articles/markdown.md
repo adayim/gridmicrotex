@@ -6,12 +6,15 @@ contain an equation. `gridmicrotex` renders
 [CommonMark](https://commonmark.org) markdown *and* LaTeX math together,
 in one grob, with no external LaTeX installation.
 
-It does this by translating the markdown to LaTeX and handing that to
-MicroTeX — the same engine
+**These functions are a wrapper around
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)**
+— your markdown is turned into LaTeX and drawn by the same engine. So
+everything
 [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-uses. The `$...$` math in your markdown is passed straight through
-untouched, so anything MicroTeX can typeset works inside a markdown
-label.
+renders works here too, with the same fonts, the same options and the
+same limits (see
+[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)),
+and this vignette covers only what markdown adds on top.
 
 There are two entry points:
 
@@ -28,13 +31,7 @@ There are two entry points:
 
 [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
 handles the inline part of markdown — `**bold**`, `*italic*`,
-`` `code` ``, `~~strikethrough~~` — and any `$math$`. Because the math
-is real MicroTeX, the whole engine is available inside a markdown
-string: fractions, sums, matrices, Greek, accents.
-
-Write the string with `r"(...)"`, R’s raw-string syntax. LaTeX is full
-of backslashes, and a raw string passes them through untouched instead
-of making you double every one.
+`` `code` ``, `~~strikethrough~~` — and any `$math$`.
 
 ``` r
 
@@ -47,31 +44,10 @@ grid.markdown(
 
 ![](markdown_files/figure-html/inline-1.png)
 
-### Wrapping long labels
-
-Set `max_width` (in big points) to wrap a long label over several lines.
-
-``` r
-
-grid.newpage()
-grid.markdown(
-  r"(This is a **long caption** with some $x^2$ math that is wide enough
-      to wrap across several lines when a maximum width is set.)",
-  x = 0.02, y = 0.95, hjust = 0, vjust = 1,
-  max_width = 4 * 72,          # 4 inches, in big points
-  gp = gpar(fontsize = 14)
-)
-```
-
-![](markdown_files/figure-html/wrap-1.png)
-
 ### Colour and inline HTML
 
 Markdown has no syntax for colour, underline, super/subscript, highlight
-or size — CommonMark and GFM simply do not define one. The conformant
-way to ask for them is the inline HTML that CommonMark already includes,
-so that is what `gridmicrotex` reads. Each tag does what HTML’s own
-default rendering says it should:
+or size. Use inline HTML; each tag does what it does in a browser:
 
 | tag | effect |
 |----|----|
@@ -129,34 +105,6 @@ Tags nest, and markdown and `$math$` keep working inside them, so
 `<u>**bold underlined**</u>` and `**<u>the same thing</u>**` render
 alike. Any other tag is dropped and its text kept — as a browser does
 with `<a>` or a bare `<span>`, which have no rendering of their own.
-
-### Which fonts are available
-
-A family name goes straight to `gp$fontfamily`, so **the device resolves
-it**, exactly as for any other grid text:
-
-| device | sees |
-|----|----|
-| `ragg`, `svglite` | any installed family, plus [`systemfonts::register_font()`](https://systemfonts.r-lib.org/reference/register_font.html) |
-| cairo (`png(type = "cairo")`, [`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html)) | installed families |
-| `windows()`, [`quartz()`](https://rdrr.io/r/grDevices/quartz.html) | the OS font list |
-| base [`pdf()`](https://rdrr.io/r/grDevices/pdf.html), [`postscript()`](https://rdrr.io/r/grDevices/postscript.html) | **only** what [`pdfFonts()`](https://rdrr.io/r/grDevices/postscriptFonts.html) declares — a named family will not resolve |
-
-An unavailable font falls back silently. Register a file that is not
-installed system-wide first —
-[`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-is *not* the function for this, as it registers *math* fonts with
-MicroTeX:
-
-``` r
-
-systemfonts::register_font(name = "MyFont", plain = "path/to/MyFont.otf")
-grid.markdown('<span style="font-family:MyFont">x</span>')
-```
-
-A span’s own family wins over `gp$fontfamily`, except for the width of
-the spaces *between* its words. Set both to the same family if that
-shows.
 
 ## Block documents
 
@@ -356,9 +304,8 @@ absolute.
 Tags are named as in HTML — `body`, `p`, `h1`–`h6`, `ul`, `ol`, `li`,
 `blockquote`, `pre`, `code`, `strong`, `em`, `a`, `table`, `tr`, `td`,
 `th`, `hr`, `img`, `math`, `footnote`, `div`, `span`. The properties are
-the ones MicroTeX and grid can honour — colour, the font family, size,
-weight and slant, decorations, line height, margins, left padding,
-alignment and the two borders.
+colour, the font family, size, weight and slant, decorations, line
+height, margins, left padding, alignment and the two borders.
 [`?md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
 has the full table, including which of them work on an inline `<span>`
 as well as on a block. Anything outside it parses and is then ignored,
@@ -418,10 +365,9 @@ run.
 
 ### Styling tables
 
-Because a markdown table is compiled to a real MicroTeX `tabular`, it
-can be styled with the primitives LaTeX already has for tables — row and
-cell fills, rule colour and weight, and column spacing. The tags nest as
-in HTML: `tr`, `td` and `th` inherit through `table`.
+Tables take row and cell fills, rule colour and weight, and column
+spacing. The tags nest as in HTML: `tr`, `td` and `th` inherit through
+`table`.
 
 | CSS                             | effect                         |
 |---------------------------------|--------------------------------|
@@ -468,14 +414,10 @@ grid.draw(markdown_box_grob(
 
 ## Dropping down to LaTeX
 
-Markdown only has syntax for so much. Anything it cannot express can be
-written as LaTeX inside a math span, which is passed through to MicroTeX
-byte-for-byte — so the whole engine is available from inside a markdown
-document, not just the parts markdown has a spelling for.
+Anything markdown cannot express, write as LaTeX inside a math span.
 
-The clearest case is a table that GFM cannot describe. Markdown table
-syntax has no spanning cells and no per-cell colour — a cmark table cell
-carries no attributes at all — but LaTeX’s `array` has both:
+The clearest case is a table: markdown tables have no spanning cells and
+no per-cell colour, and a LaTeX `array` has both.
 
 ``` r
 
@@ -514,69 +456,24 @@ dollar sign.
 **Styling reaches the block, not inside it**, and that figure shows both
 halves at once. The `math` rule sets the colour and size of the table’s
 text but leaves the prose either side black, because those properties
-travel on the block’s `gp`. The cell fills ignore it completely: they
-are `\rowcolor{}` and `\cellcolor{}`, drawn by MicroTeX.
+travel on the block’s `gp`. The cell fills ignore it completely.
 
 So the cascade cannot see *through* a math span. That `array` is math,
 not a markdown table, and `table`, `tr` and `td` rules leave it
 untouched — which is why its colours had to be written in LaTeX rather
 than CSS. That is the trade: a GFM table is styled by the cascade but
-cannot span cells; a LaTeX `array` does anything MicroTeX does but is
-styled in LaTeX.
-
-## Line breaking and justification
-
-Two optional refinements apply once text wraps (both need `max_width`,
-and both are off by default so the output matches R’s usual ragged-right
-text).
-
-`justify = TRUE` stretches the interword spaces so every line but the
-last fills the width exactly. `line_break = "optimal"` chooses the line
-breaks by total fit rather than greedily, so the paragraph reads more
-evenly.
-
-Justifying a narrow column opens wide word gaps, since nothing may break
-inside a word. Mark the words that should be allowed to break with TeX’s
-discretionary hyphen, `\-`: `in\-ter\-na\-tion\-al` breaks at any of
-those points and draws a hyphen where it does.
-
-``` r
-
-prose <- paste(rep(
-  "The quick brown fox jumps over the lazy dog.", 3), collapse = " ")
-
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(2, 1)))
-
-pushViewport(viewport(layout.pos.row = 1))
-grid.text("ragged (default)", x = 0.02, y = 0.95, hjust = 0, vjust = 1,
-          gp = gpar(fontsize = 8, col = "grey40"))
-grid.markdown(prose, x = 0.02, y = 0.75, hjust = 0, vjust = 1,
-              max_width = 3.6 * 72, gp = gpar(fontsize = 12))
-popViewport()
-
-pushViewport(viewport(layout.pos.row = 2))
-grid.text("justified + optimal", x = 0.02, y = 0.95, hjust = 0, vjust = 1,
-          gp = gpar(fontsize = 8, col = "grey40"))
-grid.markdown(prose, x = 0.02, y = 0.75, hjust = 0, vjust = 1,
-              max_width = 3.6 * 72, justify = TRUE, line_break = "optimal",
-              gp = gpar(fontsize = 12))
-popViewport()
-popViewport()
-```
-
-![](markdown_files/figure-html/justify-1.png)
+cannot span cells; a LaTeX `array` spans anything but is styled in
+LaTeX.
 
 ## What is and isn’t supported
 
-The parser is the full CommonMark specification plus all five GitHub
-extensions — tables, strikethrough, autolinks, task lists and the
-`tagfilter` that strips `<script>` and friends — so parsing is never the
+Full CommonMark plus the GitHub extensions — tables, strikethrough,
+autolinks and task lists — is parsed, so parsing is never the
 limitation.
 
 Nothing errors: anything that cannot be drawn degrades to its text. This
-one document contains every degradation at once, so it is easier to see
-what “unsupported” actually looks like than to read about it:
+document contains every degradation at once, which is easier to look at
+than to read about:
 
 ``` r
 
@@ -605,54 +502,29 @@ unknown tag is stripped and its words kept, the footnote is numbered and
 moved to the foot, and the HTML table is gone entirely — no error, no
 placeholder. In detail:
 
-- **Inline images** keep their alt text only. A block-level image (alone
-  on its line) is drawn; one in the middle of a sentence is not, because
-  a single MicroTeX line has no raster.
-- **Links** keep their text; the destination is dropped, since a grob
-  cannot be a hyperlink. They are styled like links — blue and
-  underlined — through the `a` tag, so a stylesheet can change or remove
-  that.
-- **Footnotes** (`[^1]` with a `[^1]:` definition) render a superscript
-  marker where they are referenced, and the notes themselves in smaller
-  type at the foot of the document, after a rule. They need somewhere to
-  sit, so this applies to
+- **Inline images** keep their alt text only. A block-level image, alone
+  on its line, is drawn.
+- **Links** keep their text; the destination is dropped. They are styled
+  blue and underlined through the `a` tag, which a stylesheet can
+  change.
+- **Footnotes** (`[^1]` with a `[^1]:` definition) put a superscript
+  marker in place and the note at the foot, after a rule. Only in
   [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md);
   [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
   shows the marker and drops the note.
 - **Display math** — a paragraph that is nothing but `$$…$$` — gets its
   own centred line, styleable as the `math` tag. Inline `$…$` is
   unaffected.
-- **Right-to-left text** is supported. A label that does not wrap is
-  handed to the device as one run, so the device applies the
-  bidirectional algorithm — mixed Arabic and Latin included. Text that
-  *wraps* is broken into lines in logical order and each line is then
-  put into visual order, as the Unicode algorithm prescribes. The second
-  half needs [FriBidi](https://github.com/fribidi/fribidi), which is
-  optional: built without it, a wrapped right-to-left paragraph keeps
-  left-to-right word order and everything else is unaffected.
-- **Small caps** and `font-variant-numeric` have no MicroTeX command.
-- **Block-level HTML** other than `<div>` is dropped rather than
-  typeset. A `<div>` with blank lines around its tags is read as a
-  styled chunk — see *Styling* above. Inline HTML is rendered; see
-  *Colour and inline HTML*. **HTML tables** are part of this: CommonMark
-  treats `<table>` as a raw HTML block, so it is dropped — GFM’s own
-  table syntax is the one that renders.
-- **Spanning cells** have no GFM syntax — a cmark table cell carries no
-  colspan attribute to read — so `\multicolumn` and `\multirow` are not
-  reachable from markdown table syntax. Write the table as LaTeX in a
-  math span instead; see *Dropping down to LaTeX*.
-- **Syntax highlighting** does not implement KDE’s *dynamic* rules,
-  which substitute part of one match into a later pattern; a grammar
-  using them is refused rather than approximated. Of twenty definitions
-  sampled from the upstream catalogue, thirteen loaded. Cross-language
-  includes (`##Alerts` and friends) are skipped, which costs the
-  TODO/FIXME marks inside comments and nothing else.
-- **Monospace spacing** depends on the device. `ragg`,
-  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) and
-  [`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) report correct
-  metrics for the `"mono"` family; the base `png(type = "cairo")` and
-  `svglite` report the *sans* widths for it, so code set with them comes
-  out slightly tight. Use
+- **Small caps** and `font-variant-numeric` are not rendered.
+- **Block-level HTML** other than `<div>` is dropped, `<table>` included
+  — use GFM’s table syntax.
+- **Spanning cells** are not reachable from markdown table syntax. Write
+  the table as LaTeX instead; see *Dropping down to LaTeX*.
+- **Syntax highlighting** refuses a downloaded grammar that uses KDE’s
+  *dynamic* rules rather than colouring it approximately; thirteen of
+  twenty sampled definitions loaded.
+- **Code comes out slightly tight** on `png(type = "cairo")` and
+  `svglite`, which report sans widths for the `"mono"` family. Use
   [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) if
   that matters.
 

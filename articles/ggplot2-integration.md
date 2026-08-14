@@ -57,11 +57,7 @@ ggplot(df, aes(x, y,
 
 ![](ggplot2-integration_files/figure-html/geom-basic-1.png)
 
-Labels are written with `r"(...)"`, R’s raw-string syntax, so
-backslashes pass through untouched rather than needing to be doubled —
-as in
-[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md).
-Dollar-sign delimiters (`$...$`) are stripped automatically, so
+Dollar-sign delimiters are stripped automatically here, so
 `r"(\frac{a}{b})"` and `r"($\frac{a}{b}$)"` produce the same output.
 
 ### Adding equation annotations to a scatter plot
