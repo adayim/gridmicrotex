@@ -32,7 +32,7 @@ independent on every R device.
   delimiters, and colour via `\textcolor{}`
 - Two bundled math fonts, plus any OpenType math font through
   `load_math_font()`
-- CJK and multilingual text inside `\text{}`
+- CJK, RTL and multilingual text inside `\text{}`
 - ggplot2 integration --- `geom_latex()` and `element_latex()`, see
   `vignette("ggplot2-integration")`
 - Markdown with inline math --- see `vignette("markdown")`
@@ -269,6 +269,38 @@ inline commands `\displaystyle`, `\textstyle`, `\scriptstyle` and
 `\scriptscriptstyle` instead. `latex_options(tex_style = )` sets a
 session default.
 
+## Wrapping and justification
+
+`max_width`, in big points, wraps a label over as many lines as it needs.
+
+```{r wrap, fig.height = 1.5, fig.width = 4, out.width = "65%"}
+prose <- paste(rep(
+  r"(The quick brown fox jumps over the lazy dog, and $x^2$ too.)", 3),
+  collapse = " ")
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(2, 1)))
+pushViewport(viewport(layout.pos.row = 1))
+grid.text("ragged (default)", x = 0.02, y = 0.98, hjust = 0, vjust = 1,
+          gp = gpar(fontsize = 8, col = "grey40"))
+grid.latex(prose, x = 0.02, y = 0.78, hjust = 0, vjust = 1,
+           max_width = 3.6 * 72, gp = gpar(fontsize = 11))
+popViewport()
+pushViewport(viewport(layout.pos.row = 2))
+grid.text("justified + optimal", x = 0.02, y = 0.98, hjust = 0, vjust = 1,
+          gp = gpar(fontsize = 8, col = "grey40"))
+grid.latex(prose, x = 0.02, y = 0.78, hjust = 0, vjust = 1,
+           max_width = 3.6 * 72, justify = TRUE, line_break = "optimal",
+           gp = gpar(fontsize = 11))
+popViewport(2)
+```
+
+Both refinements are off by default. `justify = TRUE` fills every line but
+the last; `line_break = "optimal"` chooses the breaks by total fit rather
+than one line at a time. Justifying a narrow column opens wide word gaps,
+since nothing may break inside a word --- mark the words that may with
+`\-`, as in `in\-ter\-na\-tion\-al`.
+
 ## Including a figure
 
 `\includegraphics` draws an image inside the formula. PNG, JPEG and SVG
@@ -383,6 +415,12 @@ grid.newpage()
 grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)",
            gp = gpar(fontsize = 24, fontfamily = "sans"))
 ```
+
+Right-to-left scripts work the same way, mixed with Latin included. Two
+things do not: wrapping a right-to-left paragraph across lines needs the
+optional [FriBidi](https://github.com/fribidi/fribidi) library, and a
+math atom between two right-to-left runs --- `\text{…}$x^2$\text{…}` ---
+falls back to left-to-right order.
 
 ### Naming a font for one run
 

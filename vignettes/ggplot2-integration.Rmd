@@ -64,11 +64,8 @@ ggplot(df, aes(x, y,
   )
 ```
 
-Labels are written with `r"(...)"`, R's raw-string syntax, so backslashes
-pass through untouched rather than needing to be doubled --- as in
-`vignette("getting-started")`. Dollar-sign delimiters (`$...$`) are
-stripped automatically, so `r"(\frac{a}{b})"` and `r"($\frac{a}{b}$)"`
-produce the same output.
+Dollar-sign delimiters are stripped automatically here, so
+`r"(\frac{a}{b})"` and `r"($\frac{a}{b}$)"` produce the same output.
 
 
 ### Adding equation annotations to a scatter plot
