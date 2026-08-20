@@ -28,6 +28,7 @@
 - Bug fix: an `&` in text was read as an alignment tab and everything after it was dropped, so `"Treatment & Control"` rendered as `"Treatment "`.
 - Bug fix: `tabular*` failed to parse, reporting an invalid alignment; its width argument is now dropped along with the star.
 - Bug fix: a layout measured on one graphics device could be reused on another, placing text at the wrong widths — the layout cache now keys on the device.
+- Bug fix: the package failed to compile on compilers that no longer declare `strtod()` and `strtol()` through other headers, such as clang 23.
 
 
 # gridmicrotex 0.0.5

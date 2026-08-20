@@ -273,7 +273,7 @@ session default.
 
 `max_width`, in big points, wraps a label over as many lines as it needs.
 
-```{r wrap, fig.height = 1.5, fig.width = 4, out.width = "65%"}
+```{r wrap, fig.height = 2, fig.width = 4, out.width = "65%"}
 prose <- paste(rep(
   r"(The quick brown fox jumps over the lazy dog, and $x^2$ too.)", 3),
   collapse = " ")
