@@ -88,6 +88,9 @@
 - Bug fix: a layout measured on one graphics device could be reused on
   another, placing text at the wrong widths — the layout cache now keys
   on the device.
+- Bug fix: the package failed to compile on compilers that no longer
+  declare `strtod()` and `strtol()` through other headers, such as clang
+  23.
 
 ## gridmicrotex 0.0.5
 
