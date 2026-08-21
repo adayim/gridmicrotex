@@ -38,11 +38,11 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.0" id="gridmicrotex-010">gridmicrotex 0.1.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-010"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.0" id="gridmicrotex-010">gridmicrotex 0.1.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-010"></a></h2><p class="text-muted">CRAN release: 2026-08-21</p>
 <ul><li>Text inside <code>\text{}</code> is drawn a line at a time rather than a letter at a time, so kerning is applied, PDF/SVG output can be searched for a phrase, and files are several times smaller. Text given a <code>max_width</code> is drawn a word at a time, since the spaces are where it breaks.</li>
 <li>Right-to-left text renders in the correct order, including across emphasis, colour and other font changes, and with or without <code>max_width</code>.</li>
 <li>New <code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> and <code><a href="../reference/markdown_grob.html">grid.markdown()</a></code> render inline markdown with LaTeX math; <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code> renders a block document.</li>
@@ -76,7 +76,6 @@
 <li>Bug fix: an <code>&amp;</code> in text was read as an alignment tab and everything after it was dropped, so <code>"Treatment &amp; Control"</code> rendered as <code>"Treatment "</code>.</li>
 <li>Bug fix: <code>tabular*</code> failed to parse, reporting an invalid alignment; its width argument is now dropped along with the star.</li>
 <li>Bug fix: a layout measured on one graphics device could be reused on another, placing text at the wrong widths — the layout cache now keys on the device.</li>
-<li>Bug fix: the package failed to compile on compilers that no longer declare <code>strtod()</code> and <code>strtol()</code> through other headers, such as clang 23.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.5" id="gridmicrotex-005">gridmicrotex 0.0.5<a class="anchor" aria-label="anchor" href="#gridmicrotex-005"></a></h2><p class="text-muted">CRAN release: 2026-07-21</p>
