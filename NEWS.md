@@ -1,3 +1,8 @@
+# gridmicrotex 0.1.1
+
+- The typeface fallback is now a message rather than a warning, is raised only when `render_mode = "typeface"` was actually asked for, and at most once per device. A figure holding many math labels no longer repeats it.
+
+
 # gridmicrotex 0.1.0
 
 - Text inside `\text{}` is drawn a line at a time rather than a letter at a time, so kerning is applied, PDF/SVG output can be searched for a phrase, and files are several times smaller. Text given a `max_width` is drawn a word at a time, since the spaces are where it breaks.

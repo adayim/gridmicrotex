@@ -65,9 +65,10 @@ test_that("device support detection and typeface fallback work", {
   # Postscript: falls back with warning
   tf_ps <- tempfile(fileext = ".ps")
   grDevices::postscript(tf_ps)
+  gridmicrotex:::.clear_typeface_noted()
   on.exit({ grDevices::dev.off(); unlink(tf_ps) }, add = TRUE)
   expect_false(gridmicrotex:::.device_supports_typeface_glyphs())
-  expect_warning({
+  expect_message({
     g <- latex_grob("\\frac{a}{b}", render_mode = "typeface",
                     gp = grid::gpar(fontsize = 20))
     grid::grid.newpage()
@@ -75,7 +76,7 @@ test_that("device support detection and typeface fallback work", {
   }, "falling back to path mode")
   # The fallback has to substitute the path layout, not merely warn: the
   # children it draws must be outlines, not glyphs the device cannot set.
-  kids <- suppressWarnings(grid::makeContent(g))$children
+  kids <- suppressMessages(grid::makeContent(g))$children
   expect_true("pathgrob" %in% vapply(kids, function(k) class(k)[1], ""))
 })
 
@@ -231,4 +232,75 @@ test_that("\\def rejects non-sequential or malformed parameter patterns", {
   expect_error(
     parse_latex_cpp("\\def\\noarg#x{x}", text_size = 20)
   )
+})
+
+test_that("the typeface fallback warns once per device, not once per grob", {
+  # The condition belongs to the device, but makeContent() runs per grob and
+  # on every redraw, so a figure with several labels used to raise the same
+  # warning once per label.
+  tf <- tempfile(fileext = ".ps")
+  grDevices::postscript(tf)
+  on.exit({ grDevices::dev.off(); unlink(tf) }, add = TRUE)
+  gridmicrotex:::.clear_typeface_noted()
+
+  draw <- function() {
+    g <- latex_grob("\frac{a}{b}", render_mode = "typeface",
+                    gp = grid::gpar(fontsize = 20))
+    grid::grid.newpage()
+    grid::grid.draw(g)
+  }
+  w <- character(0)
+  withCallingHandlers(
+    for (i in 1:5) draw(),
+    message = function(cond) {
+      w <<- c(w, conditionMessage(cond))
+      invokeRestart("muffleMessage")
+    }
+  )
+  fallback <- grep("falling back to path mode", w, value = TRUE)
+  expect_length(fallback, 1L)
+
+  # A different device is a different answer, so it is told too.
+  tf2 <- tempfile(fileext = ".ps")
+  grDevices::postscript(tf2)
+  w2 <- character(0)
+  withCallingHandlers(draw(), message = function(cond) {
+    w2 <<- c(w2, conditionMessage(cond)); invokeRestart("muffleMessage")
+  })
+  grDevices::dev.off(); unlink(tf2)
+  expect_length(grep("falling back to path mode", w2, value = TRUE), 1L)
+})
+
+test_that("the fallback is reported only when typeface was asked for", {
+  # render_mode defaults to "typeface", so everyone lands in the fallback on
+  # a device without glyphs. Reporting that would reach users who never
+  # expressed a preference; only an unmet *explicit* request is worth a word.
+  msgs <- function(expr) {
+    got <- character(0)
+    withCallingHandlers(expr, message = function(cond) {
+      got <<- c(got, conditionMessage(cond)); invokeRestart("muffleMessage")
+    })
+    grep("falling back to path mode", got, value = TRUE)
+  }
+  on_ps <- function(expr) {
+    f <- tempfile(fileext = ".ps")
+    grDevices::postscript(f)
+    on.exit({ grDevices::dev.off(); unlink(f) }, add = TRUE)
+    gridmicrotex:::.clear_typeface_noted()
+    msgs({ grid::grid.newpage(); expr() })
+  }
+
+  # asked for it explicitly -> told once
+  expect_length(on_ps(function()
+    grid.latex("x^2", render_mode = "typeface", gp = grid::gpar(fontsize = 20))), 1L)
+
+  # inherited the default -> silent
+  expect_length(on_ps(function()
+    grid.latex("x^2", gp = grid::gpar(fontsize = 20))), 0L)
+
+  # set globally via latex_options() counts as asking
+  old <- latex_options(render_mode = "typeface")
+  on.exit(reset_latex_options(), add = TRUE)
+  expect_length(on_ps(function()
+    grid.latex("x^2", gp = grid::gpar(fontsize = 20))), 1L)
 })
