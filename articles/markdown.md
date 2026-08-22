@@ -38,7 +38,7 @@ handles the inline part of markdown — `**bold**`, `*italic*`,
 grid.newpage()
 grid.markdown(
   r"(The **fitted** $\hat{\beta} = (X^\top X)^{-1} X^\top y$ has ~~no~~ `se` = *0.42*.)",
-  x = 0.02, hjust = 0, gp = gpar(fontsize = 18)
+  x = 0.02, hjust = 0, gp = gpar(fontsize = 13)
 )
 ```
 
@@ -95,7 +95,7 @@ grid.markdown(
      <span style="font-family:monospace">mono</span>.<br><br>
      The <span style="color:#B22222">**residual**</span> for H<sub>0</sub>
      is <u>within</u> <mark>$2\sigma$</mark>.)",
-  x = 0.02, y = 0.9, hjust = 0, vjust = 1, gp = gpar(fontsize = 16)
+  x = 0.02, y = 0.9, hjust = 0, vjust = 1, gp = gpar(fontsize = 13)
 )
 ```
 
@@ -229,17 +229,13 @@ file is missing, the image degrades to its alt text.
 
 ``` r
 
-# Make a small PNG to embed (any .png / .jpeg path works).
-img <- tempfile(fileext = ".png")
-ragg::agg_png(img, width = 300, height = 90, res = 100)
-grid.rect(gp = gpar(fill = "steelblue", col = NA))
-grid.text("a figure", gp = gpar(col = "white", fontsize = 18))
-invisible(dev.off())
+# Any .png / .jpeg path works; this one ships with the png package.
+img <- system.file("img", "Rlogo.png", package = "png")
 
 md <- sprintf("
 A figure with a caption below it.
 
-![a blue box](%s)
+![the R logo](%s)
 
 The caption explains the figure.
 ", img)
@@ -406,7 +402,7 @@ grid.draw(markdown_box_grob(
     th    { background: #F6F8FA }
     tr    { border-bottom: 1px solid #D1D9E0 }
   ",
-  gp = gpar(fontsize = 12)
+  gp = gpar(fontsize = 13)
 ))
 ```
 
@@ -433,7 +429,7 @@ grid.draw(markdown_box_grob(
   paste0("Compare the two fits.\n\n", tbl, "\n\nThe quadratic wins."),
   width = unit(4.6, "in"), padding = unit(10, "pt"),
   style = "math { color: #1F3864; font-size: 1.1rem }",
-  gp = gpar(fontsize = 12)
+  gp = gpar(fontsize = 13)
 ))
 ```
 
@@ -491,7 +487,7 @@ grid.newpage()
 grid.draw(markdown_box_grob(
   doc,
   width = unit(4.4, "in"), padding = unit(8, "pt"),
-  gp = gpar(fontsize = 11)
+  gp = gpar(fontsize = 13)
 ))
 ```
 

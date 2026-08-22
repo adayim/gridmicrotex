@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,7 +64,7 @@
       <h1>Introduction to gridmicrotex</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.0/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
       <div class="d-none name"><code>getting-started.Rmd</code></div>
     </div>
 
@@ -110,8 +110,7 @@ builds and draws one.</p>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">grid</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($\frac{\textcolor{red}{-b} \pm \sqrt{b^2 - 4ac}}{2a}$)"</span>,</span>
-<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($\frac{\textcolor{red}{-b} \pm \sqrt{b^2 - 4ac}}{2a}$)"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/basic-1.png" class="r-plt" alt="" width="45%"></p>
 <p><strong>Write LaTeX in a raw string.</strong> <code>r"(...)"</code>
 passes backslashes through untouched, so what you paste is what renders.
@@ -131,9 +130,9 @@ pasted LaTeX. These two render identically:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(Famous: $E = mc^2$)"</span>,</span>
-<span>           x <span class="op">=</span> <span class="fl">0.05</span>, y <span class="op">=</span> <span class="fl">0.7</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span><span class="op">)</span></span>
+<span>           x <span class="op">=</span> <span class="fl">0.05</span>, y <span class="op">=</span> <span class="fl">0.7</span>, hjust <span class="op">=</span> <span class="fl">0</span>, <span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\text{Famous: } E = mc^2)"</span>, input_mode <span class="op">=</span> <span class="st">"math"</span>,</span>
-<span>           x <span class="op">=</span> <span class="fl">0.05</span>, y <span class="op">=</span> <span class="fl">0.3</span>, hjust <span class="op">=</span> <span class="fl">0</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>           x <span class="op">=</span> <span class="fl">0.05</span>, y <span class="op">=</span> <span class="fl">0.3</span>, hjust <span class="op">=</span> <span class="fl">0</span>, <span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/modes-1.png" class="r-plt" alt="" width="45%"></p>
 <p>Set the mode for a whole session with
 <code>latex_options(input_mode = )</code>.</p>
@@ -167,7 +166,7 @@ than to describe. A coloured <code>array</code> with
 <span><span class="st">  \multicolumn{4}{|c|}{\text{Table Foot}}\\</span></span>
 <span><span class="st">  \hline</span></span>
 <span><span class="st">\end{array}</span></span>
-<span><span class="st">)"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="st">)"</span>, <span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/showcase-table-1.png" class="r-plt" alt="" width="70%"></p>
 <p>And a page of assorted notation — <code>split</code> alignment,
 fraktur, stacked delimiters, <code>\sideset</code>, extensible arrows,
@@ -217,7 +216,7 @@ result:</p>
 <span><span class="st">  \end{split}\\</span></span>
 <span><span class="st">  \rotatebox{30}{\sum_{n=1}^{+\infty}}\quad\mbox{Mirror rorriM}\reflectbox{\mbox{Mirror rorriM}}</span></span>
 <span><span class="st">\end{array}</span></span>
-<span><span class="st">)"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">22</span><span class="op">)</span>, render_mode <span class="op">=</span> <span class="st">"path"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="st">)"</span>, render_mode <span class="op">=</span> <span class="st">"path"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/showcase-equation-1.png" class="r-plt" alt="" width="70%"></p>
 <p>Both are ordinary LaTeX, pasted unchanged. The rest of this vignette
 is about placing such things, choosing fonts, and knowing where the
@@ -235,13 +234,13 @@ document.</p>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fl">0.5</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.segments.html" class="external-link">grid.segments</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0</span>, <span class="st">"npc"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="va">y</span>, <span class="st">"npc"</span><span class="op">)</span>,</span>
 <span>              <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1</span>, <span class="st">"npc"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="va">y</span>, <span class="st">"npc"</span><span class="op">)</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"grey80"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.text.html" class="external-link">grid.text</a></span><span class="op">(</span><span class="st">"if "</span>, x <span class="op">=</span> <span class="fl">0.10</span>, y <span class="op">=</span> <span class="va">y</span>, just <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.text.html" class="external-link">grid.text</a></span><span class="op">(</span><span class="st">"if "</span>, x <span class="op">=</span> <span class="fl">0.10</span>, y <span class="op">=</span> <span class="va">y</span>, just <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($x \geq \sqrt{2\pi}$)"</span>,</span>
 <span>           x <span class="op">=</span> <span class="fl">0.22</span>, y <span class="op">=</span> <span class="va">y</span>, hjust <span class="op">=</span> <span class="st">"left"</span>, vjust <span class="op">=</span> <span class="st">"baseline"</span>,</span>
-<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span>
+<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.text.html" class="external-link">grid.text</a></span><span class="op">(</span><span class="st">", then proceed."</span>, x <span class="op">=</span> <span class="fl">0.62</span>, y <span class="op">=</span> <span class="va">y</span>, just <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
-<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="getting-started_files/figure-html/baseline-align-1.png" class="r-plt" alt="" width="60%"></p>
+<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/baseline-align-1.png" class="r-plt" alt="" width="70%"></p>
 <p><code>hjust</code> accepts <code>"left"</code>/<code>"bbleft"</code>,
 <code>"center"</code>/<code>"centre"</code>/<code>"middle"</code>/
 <code>"bbcentre"</code>, and
@@ -261,7 +260,7 @@ transform (font shrink, scaling, rotation), so the anchor lands on the
 rendered glyph.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/latex_grob.html">latex_grob</a></span><span class="op">(</span><span class="st">r"($a^2 + b\mark{term}^2 \mark{equals}= c^2$)"</span>,</span>
-<span>                x <span class="op">=</span> <span class="fl">0.5</span>, y <span class="op">=</span> <span class="fl">0.4</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">28</span><span class="op">)</span><span class="op">)</span></span>
+<span>                x <span class="op">=</span> <span class="fl">0.5</span>, y <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.draw.html" class="external-link">grid.draw</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span>
 <span></span>
@@ -272,7 +271,7 @@ rendered glyph.</p>
 <span>              arrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/arrow.html" class="external-link">arrow</a></span><span class="op">(</span>length <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">2</span>, <span class="st">"mm"</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"closed"</span><span class="op">)</span>,</span>
 <span>              gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.text.html" class="external-link">grid.text</a></span><span class="op">(</span><span class="st">"equals"</span>, x <span class="op">=</span> <span class="va">mk_eq</span><span class="op">$</span><span class="va">x</span>, y <span class="op">=</span> <span class="va">mk_eq</span><span class="op">$</span><span class="va">y</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">18</span>, <span class="st">"mm"</span><span class="op">)</span>,</span>
-<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span>, fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
+<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># The b^2 term, from below -- the mark sits at the end of the term,</span></span>
 <span><span class="co"># including the superscript's smaller scale.</span></span>
@@ -283,7 +282,7 @@ rendered glyph.</p>
 <span>              gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"blue"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.text.html" class="external-link">grid.text</a></span><span class="op">(</span><span class="st">"b² term"</span>, x <span class="op">=</span> <span class="va">mk_bsq</span><span class="op">$</span><span class="va">x</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">7</span>, <span class="st">"mm"</span><span class="op">)</span>,</span>
 <span>          y <span class="op">=</span> <span class="va">mk_bsq</span><span class="op">$</span><span class="va">y</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">18</span>, <span class="st">"mm"</span><span class="op">)</span>, just <span class="op">=</span> <span class="st">"right"</span>,</span>
-<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"blue"</span>, fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"blue"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/mark-1.png" class="r-plt" alt="" width="70%"></p>
 <p>The returned units carry the grob’s viewport position and
 <code>hjust</code>/<code>vjust</code>, so they go straight into any grid
@@ -349,13 +348,13 @@ lines as it needs.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/grid.layout.html" class="external-link">grid.layout</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.text.html" class="external-link">grid.text</a></span><span class="op">(</span><span class="st">"ragged (default)"</span>, x <span class="op">=</span> <span class="fl">0.02</span>, y <span class="op">=</span> <span class="fl">0.98</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">8</span>, col <span class="op">=</span> <span class="st">"grey40"</span><span class="op">)</span><span class="op">)</span></span>
+<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"grey40"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">prose</span>, x <span class="op">=</span> <span class="fl">0.02</span>, y <span class="op">=</span> <span class="fl">0.78</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>           max_width <span class="op">=</span> <span class="fl">3.6</span> <span class="op">*</span> <span class="fl">72</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">popViewport</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.text.html" class="external-link">grid.text</a></span><span class="op">(</span><span class="st">"justified + optimal"</span>, x <span class="op">=</span> <span class="fl">0.02</span>, y <span class="op">=</span> <span class="fl">0.98</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">8</span>, col <span class="op">=</span> <span class="st">"grey40"</span><span class="op">)</span><span class="op">)</span></span>
+<span>          gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>col <span class="op">=</span> <span class="st">"grey40"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">prose</span>, x <span class="op">=</span> <span class="fl">0.02</span>, y <span class="op">=</span> <span class="fl">0.78</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>           max_width <span class="op">=</span> <span class="fl">3.6</span> <span class="op">*</span> <span class="fl">72</span>, justify <span class="op">=</span> <span class="cn">TRUE</span>, line_break <span class="op">=</span> <span class="st">"optimal"</span>,</span>
 <span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
@@ -393,7 +392,7 @@ and say so.</p>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">r"(\text{before }\includegraphics[width=1in]{%s}\text{ after})"</span>, <span class="va">fig</span><span class="op">)</span>,</span>
-<span>           input_mode <span class="op">=</span> <span class="st">"math"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>           input_mode <span class="op">=</span> <span class="st">"math"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/img-basic-1.png" class="r-plt" alt="" width="60%"></p>
 <p>Inline, the image sits <strong>on the baseline</strong>, as in LaTeX
 — <code>\raisebox</code> moves it. A paragraph holding only an image is
@@ -404,7 +403,7 @@ a <strong>block</strong>, flush left unless <code>halign</code> or a
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">r"(\text{baseline }%s\text{, raised }\raisebox{4bp}{%s})"</span>,</span>
 <span>                   <span class="va">icon</span>, <span class="va">icon</span><span class="op">)</span>,</span>
-<span>           input_mode <span class="op">=</span> <span class="st">"math"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">18</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>           input_mode <span class="op">=</span> <span class="st">"math"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/img-raise-1.png" class="r-plt" alt="" width="70%"></p>
 <div class="section level3">
 <h3 id="a-caption">A caption<a class="anchor" aria-label="anchor" href="#a-caption"></a>
@@ -490,11 +489,11 @@ formula — only the math font and its paired text family differ:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/grid.layout.html" class="external-link">grid.layout</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">formula</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">15</span>, fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">formula</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">pushViewport</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/viewport.html" class="external-link">viewport</a></span><span class="op">(</span>layout.pos.row <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">formula</span>, math_font <span class="op">=</span> <span class="st">"stix"</span>,</span>
-<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">15</span>, fontfamily <span class="op">=</span> <span class="st">"serif"</span><span class="op">)</span><span class="op">)</span></span>
+<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"serif"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/viewports.html" class="external-link">upViewport</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/fonts-1.png" class="r-plt" alt="" width="60%"></p>
 <p><code><a href="../reference/check_math_fonts.html">check_math_fonts()</a></code> gives a diagnostic report. Any font
@@ -504,7 +503,7 @@ anything registered through <strong>systemfonts</strong>:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(如果 $x &gt; 0$ 则 $y = x^2$)"</span>,</span>
-<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span>, fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/cjk-1.png" class="r-plt" alt="" width="55%"></p>
 <p>Right-to-left scripts work the same way, mixed with Latin included.
 Two things do not: wrapping a right-to-left paragraph across lines needs
@@ -526,7 +525,7 @@ italic:</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">r"(\textsf{sans \textrm{body} sans} \quad \gmfontfamily{mono}{mono})"</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">16</span>, fontfamily <span class="op">=</span> <span class="st">"serif"</span><span class="op">)</span></span>
+<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"serif"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/gmfontfamily-1.png" class="r-plt" alt="" width="85%"></p>
 <p><code>family</code> is anything <code>gp$fontfamily</code> accepts: a
@@ -579,7 +578,7 @@ vector path. Works on every device; the text is not selectable, and
 files are larger.</li>
 </ul>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($E = mc^2$)"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span>                        <span class="co"># typeface</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($E = mc^2$)"</span><span class="op">)</span>                        <span class="co"># typeface</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($E = mc^2$)"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span>, render_mode <span class="op">=</span> <span class="st">"path"</span><span class="op">)</span>  <span class="co"># path</span></span></code></pre></div>
 <p>Prefer <code><a href="https://ragg.r-lib.org/reference/agg_png.html" class="external-link">ragg::agg_png()</a></code>, <code><a href="https://svglite.r-lib.org/reference/svglite.html" class="external-link">svglite::svglite()</a></code>
 or <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">grDevices::cairo_pdf()</a></code>. The default devices on Windows
@@ -644,7 +643,7 @@ MicroTeX:</p>
 <span><span class="fu"><a href="../reference/define_macro.html">define_macro</a></span><span class="op">(</span><span class="st">"eps"</span>, <span class="st">r"(\varepsilon)"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\forall \eps &gt; 0, \eps \in \RR)"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\forall \eps &gt; 0, \eps \in \RR)"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/macros-1.png" class="r-plt" alt="" width="50%"></p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
@@ -660,8 +659,7 @@ appear in, so use them for an abbreviation local to one label and
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">r"(\def\norm#1{\left\lVert #1 \right\rVert}</span></span>
-<span><span class="st">      \norm{\vec{v}} = \sqrt{\langle \vec{v}, \vec{v} \rangle})"</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">24</span><span class="op">)</span></span>
+<span><span class="st">      \norm{\vec{v}} = \sqrt{\langle \vec{v}, \vec{v} \rangle})"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/def-inline-1.png" class="r-plt" alt="" width="60%"></p>
 </div>
@@ -680,7 +678,7 @@ metadata, and <code>debug = TRUE</code> overlays the bounding box,
 baseline and record origins — both useful when checking alignment:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($x^{2} + y_{i}$)"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">30</span><span class="op">)</span>, debug <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($x^{2} + y_{i}$)"</span>, debug <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/debug-1.png" class="r-plt" alt="" width="60%"></p>
 </div>
 </div>

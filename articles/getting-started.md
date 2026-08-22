@@ -39,8 +39,7 @@ library(gridmicrotex)
 library(grid)
 
 grid.newpage()
-grid.latex(r"($\frac{\textcolor{red}{-b} \pm \sqrt{b^2 - 4ac}}{2a}$)",
-           gp = gpar(fontsize = 24))
+grid.latex(r"($\frac{\textcolor{red}{-b} \pm \sqrt{b^2 - 4ac}}{2a}$)")
 ```
 
 ![](getting-started_files/figure-html/basic-1.png)
@@ -63,9 +62,9 @@ LaTeX. These two render identically:
 
 grid.newpage()
 grid.latex(r"(Famous: $E = mc^2$)",
-           x = 0.05, y = 0.7, hjust = 0, gp = gpar(fontsize = 22))
+           x = 0.05, y = 0.7, hjust = 0, )
 grid.latex(r"(\text{Famous: } E = mc^2)", input_mode = "math",
-           x = 0.05, y = 0.3, hjust = 0, gp = gpar(fontsize = 22))
+           x = 0.05, y = 0.3, hjust = 0, )
 ```
 
 ![](getting-started_files/figure-html/modes-1.png)
@@ -100,7 +99,7 @@ grid.latex(r"(
   \multicolumn{4}{|c|}{\text{Table Foot}}\\
   \hline
 \end{array}
-)", gp = gpar(fontsize = 22))
+)", )
 ```
 
 ![](getting-started_files/figure-html/showcase-table-1.png)
@@ -154,7 +153,7 @@ grid.latex(r"(
   \end{split}\\
   \rotatebox{30}{\sum_{n=1}^{+\infty}}\quad\mbox{Mirror rorriM}\reflectbox{\mbox{Mirror rorriM}}
 \end{array}
-)", gp = gpar(fontsize = 22), render_mode = "path")
+)", render_mode = "path")
 ```
 
 ![](getting-started_files/figure-html/showcase-equation-1.png)
@@ -176,12 +175,12 @@ grid.newpage()
 y <- 0.5
 grid.segments(unit(0, "npc"), unit(y, "npc"),
               unit(1, "npc"), unit(y, "npc"), gp = gpar(col = "grey80"))
-grid.text("if ", x = 0.10, y = y, just = c(0, 0.5), gp = gpar(fontsize = 16))
+grid.text("if ", x = 0.10, y = y, just = c(0, 0.5), gp = gpar(fontsize = 20))
 grid.latex(r"($x \geq \sqrt{2\pi}$)",
            x = 0.22, y = y, hjust = "left", vjust = "baseline",
-           gp = gpar(fontsize = 16))
+           gp = gpar(fontsize = 20))
 grid.text(", then proceed.", x = 0.62, y = y, just = c(0, 0.5),
-          gp = gpar(fontsize = 16))
+          gp = gpar(fontsize = 20))
 ```
 
 ![](getting-started_files/figure-html/baseline-align-1.png)
@@ -202,7 +201,7 @@ scaling, rotation), so the anchor lands on the rendered glyph.
 ``` r
 
 g <- latex_grob(r"($a^2 + b\mark{term}^2 \mark{equals}= c^2$)",
-                x = 0.5, y = 0.4, gp = gpar(fontsize = 28))
+                x = 0.5, y = 0.4)
 grid.newpage()
 grid.draw(g)
 
@@ -213,7 +212,7 @@ grid.segments(mk_eq$x, mk_eq$y + unit(15, "mm"),
               arrow = arrow(length = unit(2, "mm"), type = "closed"),
               gp = gpar(col = "red"))
 grid.text("equals", x = mk_eq$x, y = mk_eq$y + unit(18, "mm"),
-          gp = gpar(col = "red", fontsize = 11))
+          gp = gpar(col = "red"))
 
 # The b^2 term, from below -- the mark sits at the end of the term,
 # including the superscript's smaller scale.
@@ -224,7 +223,7 @@ grid.segments(mk_bsq$x - unit(6, "mm"), mk_bsq$y - unit(15, "mm"),
               gp = gpar(col = "blue"))
 grid.text("b² term", x = mk_bsq$x - unit(7, "mm"),
           y = mk_bsq$y - unit(18, "mm"), just = "right",
-          gp = gpar(col = "blue", fontsize = 11))
+          gp = gpar(col = "blue"))
 ```
 
 ![](getting-started_files/figure-html/mark-1.png)
@@ -301,13 +300,13 @@ grid.newpage()
 pushViewport(viewport(layout = grid.layout(2, 1)))
 pushViewport(viewport(layout.pos.row = 1))
 grid.text("ragged (default)", x = 0.02, y = 0.98, hjust = 0, vjust = 1,
-          gp = gpar(fontsize = 8, col = "grey40"))
+          gp = gpar(col = "grey40"))
 grid.latex(prose, x = 0.02, y = 0.78, hjust = 0, vjust = 1,
            max_width = 3.6 * 72, gp = gpar(fontsize = 11))
 popViewport()
 pushViewport(viewport(layout.pos.row = 2))
 grid.text("justified + optimal", x = 0.02, y = 0.98, hjust = 0, vjust = 1,
-          gp = gpar(fontsize = 8, col = "grey40"))
+          gp = gpar(col = "grey40"))
 grid.latex(prose, x = 0.02, y = 0.78, hjust = 0, vjust = 1,
            max_width = 3.6 * 72, justify = TRUE, line_break = "optimal",
            gp = gpar(fontsize = 11))
@@ -345,7 +344,7 @@ dev.off()
 
 grid.newpage()
 grid.latex(sprintf(r"(\text{before }\includegraphics[width=1in]{%s}\text{ after})", fig),
-           input_mode = "math", gp = gpar(fontsize = 16))
+           input_mode = "math", gp = gpar(fontsize = 20))
 ```
 
 ![](getting-started_files/figure-html/img-basic-1.png)
@@ -360,7 +359,7 @@ icon <- sprintf(r"(\includegraphics[width=14bp]{%s})", fig)
 grid.newpage()
 grid.latex(sprintf(r"(\text{baseline }%s\text{, raised }\raisebox{4bp}{%s})",
                    icon, icon),
-           input_mode = "math", gp = gpar(fontsize = 18))
+           input_mode = "math", gp = gpar(fontsize = 20))
 ```
 
 ![](getting-started_files/figure-html/img-raise-1.png)
@@ -434,11 +433,11 @@ formula <- r"(Theorem: $\int_0^1 f(x)\,dx \geq 0$)"
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(2, 1)))
 pushViewport(viewport(layout.pos.row = 1))
-grid.latex(formula, gp = gpar(fontsize = 15, fontfamily = "sans"))
+grid.latex(formula, gp = gpar(fontfamily = "sans"))
 upViewport()
 pushViewport(viewport(layout.pos.row = 2))
 grid.latex(formula, math_font = "stix",
-           gp = gpar(fontsize = 15, fontfamily = "serif"))
+           gp = gpar(fontfamily = "serif"))
 upViewport(2)
 ```
 
@@ -453,7 +452,7 @@ registered through **systemfonts**:
 
 grid.newpage()
 grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)",
-           gp = gpar(fontsize = 24, fontfamily = "sans"))
+           gp = gpar(fontfamily = "sans"))
 ```
 
 ![](getting-started_files/figure-html/cjk-1.png)
@@ -477,7 +476,7 @@ standard LaTeX. `\textrm{…}` goes the other way, returning content to
 grid.newpage()
 grid.latex(
   r"(\textsf{sans \textrm{body} sans} \quad \gmfontfamily{mono}{mono})",
-  gp = gpar(fontsize = 16, fontfamily = "serif")
+  gp = gpar(fontfamily = "serif")
 )
 ```
 
@@ -530,7 +529,7 @@ This is only for **math** fonts. Text fonts need no loading at all — set
 
 ``` r
 
-grid.latex(r"($E = mc^2$)", gp = gpar(fontsize = 24))                        # typeface
+grid.latex(r"($E = mc^2$)")                        # typeface
 grid.latex(r"($E = mc^2$)", gp = gpar(fontsize = 24), render_mode = "path")  # path
 ```
 
@@ -601,7 +600,7 @@ define_macro("RR", r"(\mathbb{R})")
 define_macro("eps", r"(\varepsilon)")
 
 grid.newpage()
-grid.latex(r"(\forall \eps > 0, \eps \in \RR)", gp = gpar(fontsize = 24))
+grid.latex(r"(\forall \eps > 0, \eps \in \RR)")
 ```
 
 ![](getting-started_files/figure-html/macros-1.png)
@@ -630,8 +629,7 @@ for one that should persist:
 grid.newpage()
 grid.latex(
   r"(\def\norm#1{\left\lVert #1 \right\rVert}
-      \norm{\vec{v}} = \sqrt{\langle \vec{v}, \vec{v} \rangle})",
-  gp = gpar(fontsize = 24)
+      \norm{\vec{v}} = \sqrt{\langle \vec{v}, \vec{v} \rangle})"
 )
 ```
 
@@ -658,7 +656,7 @@ when checking alignment:
 ``` r
 
 grid.newpage()
-grid.latex(r"($x^{2} + y_{i}$)", gp = gpar(fontsize = 30), debug = TRUE)
+grid.latex(r"($x^{2} + y_{i}$)", debug = TRUE)
 ```
 
 ![](getting-started_files/figure-html/debug-1.png)

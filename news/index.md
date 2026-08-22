@@ -1,5 +1,12 @@
 # Changelog
 
+## gridmicrotex 0.1.1
+
+- The typeface fallback is now a message rather than a warning, is
+  raised only when `render_mode = "typeface"` was actually asked for,
+  and at most once per device. A figure holding many math labels no
+  longer repeats it.
+
 ## gridmicrotex 0.1.0
 
 CRAN release: 2026-08-21
@@ -90,6 +97,9 @@ CRAN release: 2026-08-21
 - Bug fix: a layout measured on one graphics device could be reused on
   another, placing text at the wrong widths — the layout cache now keys
   on the device.
+- Bug fix: the package failed to compile on compilers that no longer
+  declare `strtod()` and `strtol()` through other headers, such as clang
+  23.
 
 ## gridmicrotex 0.0.5
 
