@@ -34,6 +34,13 @@ public:
 
   Atom() = default;
 
+  // Once a destructor is user-declared the implicit copy operations are
+  // deprecated (-Wdeprecated-copy-with-dtor), and subclasses do copy the
+  // base -- CharSymbol in atom_char.h is one. Spell them out so the
+  // behaviour is the same but no longer rests on a deprecated definition.
+  Atom(const Atom&) = default;
+  Atom& operator=(const Atom&) = default;
+
   /**
    * Get the type of the leftmost child atom. Most atoms have no child
    * atoms, so the "left type" and the "right type" are the same: the atom's

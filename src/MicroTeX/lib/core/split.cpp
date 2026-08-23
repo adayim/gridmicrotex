@@ -1,6 +1,6 @@
 #include "core/split.h"
 
-#include "bidi.h"
+#include "utils/bidi.h"
 #include "box/box_group.h"
 // glue.h only forward-declares GlueBox; justifyLine() needs the
 // definition to reach _stretch and _width.
@@ -337,7 +337,7 @@ void BoxSplitter::reorderLine(const sptr<Box>& line) {
   auto h = std::dynamic_pointer_cast<HBox>(line);
   if (h == nullptr) return;
   if (!h->_childLevels.empty()) {
-    gridmicrotex::bidi_reorder(h->_children, h->_childLevels);
+    microtex::bidi_reorder(h->_children, h->_childLevels);
     // Reordering is a permutation, not a normalisation: applying it twice
     // would put the line back the wrong way round. Dropping the levels once
     // they have been used makes a second call a no-op rather than a bug.
@@ -365,7 +365,10 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
     return {false, hb};
   }
 
-  auto* vbox = new VBox();
+  // RAII: everything between here and the return below can throw, and a
+  // raw owner leaked the VBox when it did (valgrind: 6 blocks from
+  // BoxSplitter::split over one test run).
+  auto vbox = sptrOf<VBox>();
   sptr<HBox> first, second;
   sptr<HBox> hbox = hb;
   bool splitted = false;
@@ -472,7 +475,7 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
     // The last line, left ragged but still ordered.
     reorderLine(second);
     vbox->add(second, lineSpace);
-    return {splitted, sptr<Box>(vbox)};
+    return {splitted, vbox};
   }
 
   return {splitted, hbox};

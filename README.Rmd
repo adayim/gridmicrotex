@@ -169,16 +169,16 @@ See `vignette("ggplot2-integration")` for more examples.
 
 ## Comparison
 
-| Approach       | LaTeX required? | Device independent? | Vector? | Math coverage | Markdown |
-|:---------------|:---------------:|:-------------------:|:-------:|:-------------:|:--------:|
-| `tikzDevice`   | Yes             | No                  | Yes     | Full          | No       |
-| `xdvir`        | Yes             | No                  | Yes     | Full          | No       |
-| `latexpdf`     | Yes             | No                  | Yes     | Full (tables) | No       |
-| `latex2exp`    | No              | Yes                 | Yes     | Limited       | No       |
-| `plotmath`     | No              | Yes                 | Yes     | Limited       | No       |
-| `gridtext`     | No              | Yes                 | Yes     | None          | Yes      |
-| `marquee`      | No              | Yes                 | Yes     | None          | Yes      |
-| **gridmicrotex** | **No**       | **Yes**             | **Yes** | **Broad**     | **Yes**  |
+| Approach       | LaTeX required? | Device independent? | Math coverage | Markdown |
+|:---------------|:---------------:|:-------------------:|:-------------:|:--------:|
+| `tikzDevice`   | Yes             | No                  | Full          | No       |
+| `xdvir`        | Yes             | No                  | Full          | No       |
+| `latexpdf`     | Yes             | No                  | Full (tables) | No       |
+| `latex2exp`    | No              | Yes                 | Limited       | No       |
+| `plotmath`     | No              | Yes                 | Limited       | No       |
+| `gridtext`     | No              | Yes                 | None          | Yes      |
+| `marquee`      | No              | Yes                 | None          | Yes      |
+| **gridmicrotex** | **No**       | **Yes**             | **Broad**     | **Yes**  |
 
 
 ## How it works

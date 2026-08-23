@@ -1,12 +1,12 @@
 #include <Rcpp.h>
 #include "microtex.h"
 #include "graphic/graphic.h"
-#include "graphic_recorder.h"
-#include "font_family_atom.h"
+#include "graphic/graphic_recorder.h"
+#include "atom/font_family_atom.h"
 #include "macro/macro.h"
-#include "mark_atom.h"
-#include "image_atom.h"
-#include "bidi.h"
+#include "atom/mark_atom.h"
+#include "atom/image_atom.h"
+#include "utils/bidi.h"
 #include "utils/utf.h"
 #include "unimath/font_src.h"
 #include "unimath/uni_font.h"
@@ -19,9 +19,8 @@
 #include <unordered_map>
 #include <vector>
 
-// Defined in otf_math_reader.cpp — synthesises a CLM v6 byte blob from
-// a font file using FreeType + our OT MATH parser.
-std::vector<std::uint8_t> a3_build_clm_bytes(const std::string& path, int index);
+// CLM v6 synthesis from a font file, in the layout engine.
+#include "otf/otf_math_reader.h"
 
 using namespace microtex;
 
@@ -250,7 +249,7 @@ private:
 class PlatformFactory_R : public PlatformFactory {
 public:
     sptr<Font> createFont(const std::string& file) override {
-        return sptrOf<Font_R>(file);
+        return sptrOf<RecordedFont>(file);
     }
 
     sptr<TextLayout> createTextLayout(const std::string& src, FontStyle style, float size) override {
@@ -296,7 +295,7 @@ void microtex_init_from_otf(std::string otf_path, int index = 0) {
 
     std::vector<std::uint8_t> clm;
     try {
-        clm = a3_build_clm_bytes(otf_path, index);
+        clm = microtex::otfToClmBytes(otf_path, index);
     } catch (const std::exception& e) {
         Rcpp::stop(std::string("Failed to read font '") + otf_path + "': " + e.what());
     }
@@ -354,28 +353,45 @@ bool microtex_set_default_math_font(std::string name) {
 // unaffected. Exposed so tests can skip the wrapped right-to-left case.
 // [[Rcpp::export]]
 bool microtex_bidi_available() {
-    return gridmicrotex::bidi_available();
+    return microtex::bidi_available();
+}
+
+// Run by R when the shared object is unloaded. It only fires because
+// .onUnload() calls library.dynam.unload() -- without that R keeps the
+// DLL mapped and this never runs at all.
+//
+// Releasing the preserved text-measurer callback is the whole job. It
+// deliberately does NOT call MicroTeX::release(): the macro registries
+// are torn down by the static object at the end of macro_def.cpp, which
+// covers both exits. If dlclose really unmaps us, that destructor runs
+// here and the statics -- registries and the s_registered guards in
+// font_family_atom.cpp / mark_atom.cpp / image_atom.cpp alike -- are
+// gone together, so a later reload re-registers from scratch. If it does
+// not unmap (glibc keeps libraries exporting STB_GNU_UNIQUE symbols, and
+// C++ templates emit those), nothing is destroyed and nothing is
+// cleared, so the guards still match a populated table. Clearing the
+// registries from here would break exactly that second case: the guards
+// would still read "registered" over an empty table and \gmfontfamily,
+// \textrm, \mark and \includegraphics would vanish after a reload.
+extern "C" void R_unload_gridmicrotex(DllInfo*) {
+    clear_text_measurer();
 }
 
 // [[Rcpp::export]]
 void microtex_release() {
     if (!s_initialized) return;
-    // Deliberately NOT MicroTeX::release(). Its whole body is
-    // MacroInfo::_free_() + NewCommandMacro::_free_(), which are
-    // process-teardown deallocation: _free_() deletes every value in the
-    // static _commands map but never erases, so afterwards every built-in
-    // macro is a dangling pointer -- and MacroInfo::add() then does
-    // `delete it->second` on one, i.e. a double free, every time we
-    // re-register \mark / \gmfontfamily / \textrm on the next init. That
-    // corrupted the heap on every release/re-init cycle; with enough
-    // macros registered it segfaults outright on the next large parse.
-    // _commands is static-lifetime data that is only ever populated once,
-    // so the right move is to leave it alone and just drop what is
-    // genuinely per-session.
+    // Deliberately NOT MicroTeX::release(). That is final teardown, and
+    // the registries it empties are only ever repopulated from inside
+    // MicroTeX::init(). An in-process release is not paired with a
+    // re-init -- the next parse goes straight through -- so clearing them
+    // here would leave the parser without \frac, \mark, \gmfontfamily and
+    // the rest until the shared object itself was reloaded. Drop only
+    // what is genuinely per-session; R_unload_gridmicrotex above does the
+    // real teardown, where losing the registries costs nothing.
     NewCommandMacro::clearUserMacros();
     microtex::g_font_id_cache.clear();
-    // The built-in registry now survives, so our macros are still there
-    // and their registration guards must stay set.
+    // The built-in registry survives, so our macros are still there and
+    // their registration guards must stay set.
     s_initialized = false;
 }
 

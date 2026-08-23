@@ -8,7 +8,7 @@
 #include "box/box_single.h"
 #include "core/glue.h"
 #include "env/env.h"
-#include "bidi.h"
+#include "utils/bidi.h"
 #include "utils/utf.h"
 
 using namespace std;

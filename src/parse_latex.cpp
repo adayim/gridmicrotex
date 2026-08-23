@@ -2,8 +2,8 @@
 #include <memory>
 #include "microtex.h"
 #include "graphic/graphic.h"
-#include "graphic_recorder.h"
-#include "font_family_atom.h"
+#include "graphic/graphic_recorder.h"
+#include "atom/font_family_atom.h"
 #include "macro/macro.h"
 #include "core/split.h"
 #include "atom/atom_row.h"

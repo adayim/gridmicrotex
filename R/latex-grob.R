@@ -259,6 +259,11 @@ latex_grob <- function(tex,
                        name = NULL,
                        gp = grid::gpar()) {
 
+  # Whether typeface was actually asked for, rather than inherited as the
+  # default. Captured before .apply_opts(), which assigns the option value
+  # into `render_mode` and would make missing() FALSE from then on.
+  render_mode_explicit <- !missing(render_mode) || !is.null(.opt("render_mode"))
+
   .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
               "justify", "line_break")
   render_mode <- match.arg(render_mode)
@@ -314,6 +319,7 @@ latex_grob <- function(tex,
     line_break = line_break,
     text_gp = parsed$text_gp,
     render_mode = parsed$render_mode,
+    render_mode_explicit = render_mode_explicit,
     path_layout_df = parsed$path_layout,
     debug = isTRUE(debug),
     cl = "latexgrob",
@@ -583,6 +589,40 @@ grobMark <- function(grob, name) {
   isTRUE(caps[["glyphs"]])
 }
 
+# Devices already told about the typeface fallback, keyed by device number
+# and name. Whether glyphs can be set is a property of the *device*, not of
+# the grob, but makeContent() runs per grob and on every redraw -- warning
+# there flooded a figure holding several labels with the same message.
+.typeface_noted <- new.env(parent = emptyenv())
+
+.clear_typeface_noted <- function() {
+  rm(list = ls(.typeface_noted), envir = .typeface_noted)
+  invisible(NULL)
+}
+
+# Tell the user at most once per device. Returns TRUE if it did.
+.note_typeface_fallback_once <- function(explicit) {
+  # Only tell someone who asked for typeface and did not get it. Reporting
+  # the default would reach every user on every unsupported device, and
+  # they never expressed a preference. This also needs no list of which
+  # devices are vector -- there is no capability to test for that.
+  if (!isTRUE(explicit)) return(invisible(FALSE))
+  cur <- grDevices::dev.cur()
+  key <- paste0(cur, ":", names(cur))
+  if (!is.null(.typeface_noted[[key]])) return(invisible(FALSE))
+  .typeface_noted[[key]] <- TRUE
+  # A message, not a warning: nothing is wrong and the package has already
+  # done the sensible thing. A warning would also be escalated to an error
+  # under options(warn = 2), which some CI setups use.
+  message(
+    "Current graphics device does not support glyph rendering; falling ",
+    "back to path mode, so math is drawn as outlines rather than text. ",
+    "On a vector device -- svglite::svglite() or grDevices::cairo_pdf() ",
+    "-- it stays selectable."
+  )
+  invisible(TRUE)
+}
+
 #' @method makeContent latexgrob
 #' @export
 makeContent.latexgrob <- function(x) {
@@ -593,14 +633,7 @@ makeContent.latexgrob <- function(x) {
     if (!is.null(x$path_layout_df)) {
       layout_df <- x$path_layout_df
       render_mode <- "path"
-      warning(
-        paste0(
-          "Current graphics device does not support typeface glyph rendering; ",
-          "falling back to path mode. Use ragg::agg_png(), svglite::svglite(), ",
-          "or grDevices::cairo_pdf() for selectable math text."
-        ),
-        call. = FALSE
-      )
+      .note_typeface_fallback_once(isTRUE(x$render_mode_explicit))
     }
   }
 

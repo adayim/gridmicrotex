@@ -14,7 +14,7 @@
 #     \includegraphics[width=2cm]{fig.png}
 # into the private, fully-resolved
 #     \gmgraphics{<hex>}{<width_bp>}{<height_bp>}
-# which src/image_atom.cpp turns into a box and an IMAGE draw record.
+# which src/MicroTeX/lib/atom/image_atom.cpp turns into a box and an IMAGE draw record.
 
 # --- reference encoding ------------------------------------------------
 #
@@ -450,7 +450,7 @@
 # once after macro expansion to catch an \includegraphics a user macro
 # produced. A third case, \newcommand expanded inside MicroTeX's own
 # parser, is out of reach of both and is handled by the C++ override in
-# src/image_atom.cpp, which draws the file's name.
+# src/MicroTeX/lib/atom/image_atom.cpp, which draws the file's name.
 .resolve_graphics <- function(tex, fontsize = 20, max_width = 0) {
   gp <- .extract_graphicspath(tex)
   out <- gp$tex

@@ -1,8 +1,8 @@
-#include "image_atom.h"
+#include "atom/image_atom.h"
 
 #include "atom/atom_text.h"
 #include "env/units.h"
-#include "graphic_recorder.h"
+#include "graphic/graphic_recorder.h"
 #include "macro/macro.h"
 #include "utils/utf.h"
 

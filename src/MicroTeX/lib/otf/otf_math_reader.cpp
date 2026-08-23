@@ -1,10 +1,7 @@
-#ifndef R_NO_REMAP
-#define R_NO_REMAP
-#endif
+#include "otf/otf_math_reader.h"
 
-#include <Rcpp.h>
-#include <systemfonts-ft.h>
-
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #include <freetype/tttables.h>
 #include <freetype/tttags.h>
 #include <freetype/ftsnames.h>
@@ -730,12 +727,6 @@ void write_glyph_path(BeWriter& w, const PathBuilder& pb) {
 std::vector<u8> build_clm_bytes_impl(const std::string& path, int index);
 
 }  // namespace
-
-// Public C++ hook used by init.cpp.
-std::vector<std::uint8_t> a3_build_clm_bytes(const std::string& path, int index) {
-    return build_clm_bytes_impl(path, index);
-}
-
 namespace {
 
 std::vector<u8> build_clm_bytes_impl(const std::string& path, int index) {
@@ -837,58 +828,22 @@ std::vector<u8> build_clm_bytes_impl(const std::string& path, int index) {
 }  // namespace
 
 // =============================================================================
-// Rcpp exports
+// Public entry points
 // =============================================================================
 
-// [[Rcpp::export]]
-SEXP ot_math_table_bytes(std::string path, int index = 0) {
-    FT_Face face = nullptr;
-    try {
-        face = open_face(path, index);
-    } catch (const std::exception& e) {
-        Rcpp::stop(e.what());
-    }
-    // RAII so the face is freed even if a later step throws, matching
-    // build_clm_bytes_impl's FaceGuard pattern.
+namespace microtex {
+
+std::vector<u8> otfMathTableBytes(const std::string& path, int index) {
+    FT_Face face = open_face(path, index);
     struct FaceGuard {
         FT_Face f;
         ~FaceGuard() { if (f) FT_Done_Face(f); }
     } guard{face};
-    auto buf = read_sfnt_table(face, TTAG_MATH);
-    if (buf.empty()) return R_NilValue;
-    Rcpp::RawVector out(buf.size());
-    std::memcpy(&out[0], buf.data(), buf.size());
-    return out;
+    return read_sfnt_table(face, TTAG_MATH);
 }
 
-// [[Rcpp::export]]
-Rcpp::RawVector otf_to_clm_bytes(std::string path, int index = 0) {
-    std::vector<u8> bytes;
-    try {
-        bytes = build_clm_bytes_impl(path, index);
-    } catch (const std::exception& e) {
-        Rcpp::stop(e.what());
-    }
-    Rcpp::RawVector out(bytes.size());
-    if (!bytes.empty()) std::memcpy(&out[0], bytes.data(), bytes.size());
-    return out;
+std::vector<u8> otfToClmBytes(const std::string& path, int index) {
+    return build_clm_bytes_impl(path, index);
 }
 
-// [[Rcpp::export]]
-std::string microtex_add_font_from_otf(std::string otf_path, int index = 0) {
-    std::vector<u8> clm;
-    try {
-        clm = build_clm_bytes_impl(otf_path, index);
-    } catch (const std::exception& e) {
-        Rcpp::stop(e.what());
-    }
-    microtex::FontSrcData src(clm.size(), clm.data(), otf_path);
-    try {
-        auto meta = microtex::MicroTeX::addFont(src);
-        if (!meta.isValid()) return std::string();
-        return meta.family;
-    } catch (const std::exception& e) {
-        Rcpp::warning(std::string("addFont failed: ") + e.what());
-        return std::string();
-    }
-}
+}  // namespace microtex

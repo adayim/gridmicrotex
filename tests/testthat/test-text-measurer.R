@@ -126,7 +126,7 @@ test_that("\\textrm returns to the caller's font", {
   # MicroTeX's own \textrm only ORs in FontStyle::rm -- the same bit a plain
   # \text{} run already carries -- so it could never express "reset the
   # family", and did nothing at all. The override names a reserved family
-  # instead; see src/font_family_atom.h.
+  # instead; see src/MicroTeX/lib/atom/font_family_atom.h.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   fam <- function(tex) {
     df <- latex_grob(tex, input_mode = "math",

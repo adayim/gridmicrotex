@@ -142,19 +142,39 @@ test_that("an SVG is drawn as real vector, not a raster", {
   expect_equal(wid(sprintf("\\includegraphics{%s}", f)), 216)
   expect_equal(hei(sprintf("\\includegraphics{%s}", f)), 144)
 
+  # Installed is not the same as working: a container can carry rsvg and
+  # grImport2 while librsvg cannot actually turn the file into a Picture,
+  # and the loader then correctly falls back to a raster. Probe the real
+  # conversion before asserting a vector came out of it, or this fails on
+  # the environment rather than on the package. Seen on R-hub's nold
+  # container, where all three packages are installed.
+  # A Picture object is not enough: it has to carry drawable content.
+  # librsvg on R-hub's nold container returns an empty one, and the
+  # loader then correctly falls back to a raster.
+  can_vector <- tryCatch(suppressWarnings({
+    cairo <- tempfile(fileext = ".svg")
+    rsvg::rsvg_svg(f, cairo)
+    pic <- grImport2::readPicture(cairo)
+    inherits(pic, "Picture") && length(pic@content) > 0
+  }), error = function(e) FALSE)
+  skip_if(!isTRUE(can_vector),
+          "rsvg/grImport2 cannot turn an SVG into a drawable Picture here")
+
   kids <- grid::makeContent(
     latex_grob(sprintf("\\includegraphics[width=1in]{%s}", f),
                input_mode = "math"))$children
   expect_length(kids, 1L)
   # grImport2 turns the file into grid drawing primitives; a raster would
-  # be a rastergrob, and would not scale with the device. The picture sits
-  # one level down, inside the viewport wrapper added below.
+  # be a rastergrob, and would not scale with the device. How deep the
+  # primitives sit depends on the SVG, so walk the whole subtree rather
+  # than assuming a fixed nesting, and report the tree when it is absent.
   expect_false(inherits(kids[[1]], "rastergrob"))
-  prims <- unlist(lapply(kids[[1]]$children, function(p) {
-    if (is.null(p$children)) class(p)[1]
-    else vapply(p$children, function(z) class(z)[1], character(1))
-  }), use.names = FALSE)
-  expect_true(any(grepl("^pic", prims)))
+  grob_classes <- function(g) {
+    c(class(g)[1], unlist(lapply(g$children, grob_classes), use.names = FALSE))
+  }
+  prims <- grob_classes(kids[[1]])
+  expect_true(any(grepl("^pic", prims)),
+              info = paste("grob tree:", paste(prims, collapse = " / ")))
 
   # The wrapper must carry a plain viewport, or .md_shift_grob() -- which
   # realigns a block by nudging vp$x -- would hit pictureGrob's vpStack,

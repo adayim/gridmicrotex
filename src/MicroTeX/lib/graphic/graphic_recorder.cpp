@@ -1,6 +1,6 @@
-#include "graphic_recorder.h"
+#include "graphic/graphic_recorder.h"
 
-#include "font_family_atom.h"
+#include "atom/font_family_atom.h"
 
 namespace microtex {
 
@@ -96,7 +96,7 @@ void Graphics2D_Recorder::recordMark(const std::string& name, float x, float y) 
 }
 
 void Graphics2D_Recorder::drawGlyph(u16 glyph, float x, float y) {
-    auto* fr = dynamic_cast<Font_R*>(_currentFont.get());
+    auto* fr = dynamic_cast<RecordedFont*>(_currentFont.get());
     // Under a horizontal flip (\reflectbox), mirror the same fix as for
     // drawTextRun: shift the local x by the glyph's advance width so that
     // transformPoint lands on the visible LEFT edge of the glyph box. Without

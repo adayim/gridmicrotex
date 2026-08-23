@@ -8,7 +8,7 @@
 #include "box/box.h"
 #include "utils/types.h"
 
-namespace gridmicrotex {
+namespace microtex {
 
 /**
  * The ordering half of the Unicode bidirectional algorithm.
@@ -76,6 +76,6 @@ void bidi_reorder(
  */
 bool bidi_assign_levels(const microtex::sptr<microtex::Atom>& root);
 
-}  // namespace gridmicrotex
+}  // namespace microtex
 
 #endif  // GRIDMICROTEX_BIDI_H

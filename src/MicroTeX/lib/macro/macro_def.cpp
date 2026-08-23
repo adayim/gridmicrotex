@@ -373,6 +373,9 @@ inline static void cmd(int argc, const string& name, const string& code) {
 }
 
 void NewCommandMacro::_init_() {
+  // _free_() nulls the singleton, so a release/re-init cycle must be able
+  // to rebuild it. Static init still creates the first one.
+  if (_instance == nullptr) _instance = new NewCommandMacro();
   // region Predefined environments
   env(1, "array", "\\array@@env{#1}{", "}");
   env(1, "tabular", "\\array@@env{#1}{", "}");
@@ -442,3 +445,29 @@ void NewCommandMacro::_init_() {
   // drop user-defined macros without touching these.
   snapshotBuiltins();
 }
+
+namespace {
+
+// The registries above are static-duration containers holding raw `new`ed
+// pointers, so at process exit the containers are destroyed but their
+// values are not: valgrind reports ~1600 "definitely lost" records
+// pointing at defMac() static initialisation. Nothing frees them, because
+// R never unloads a package DLL of its own accord and MicroTeX::release()
+// is therefore not reached on the way out.
+//
+// This object is defined last in this translation unit, so it is
+// constructed last and destroyed *first* -- ahead of _commands, _codes,
+// _replacements, _builtin_names and _instance above. That is the only
+// point at which _free_() can still run against live containers. _free_()
+// clears them as it goes, so a second run (DLL unload calls
+// R_unload_gridmicrotex before dlclose) is a no-op, not a double free.
+struct MacroRegistryCleanup {
+  ~MacroRegistryCleanup() {
+    MacroInfo::_free_();
+    NewCommandMacro::_free_();
+  }
+};
+
+const MacroRegistryCleanup _macro_registry_cleanup;
+
+}  // namespace
