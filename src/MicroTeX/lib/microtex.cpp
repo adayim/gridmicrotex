@@ -7,7 +7,7 @@
 #include "utils/string_utils.h"
 #include "render/builder.h"
 #include "atom/atom_row.h"
-#include "bidi.h"
+#include "utils/bidi.h"
 
 #include <clocale>
 
@@ -193,7 +193,7 @@ Render* MicroTeX::parse(
   // (any emphasis, colour or font change). The merged run is still handed
   // to the backend whole and still ordered internally by it; this orders
   // the runs around it.
-  RowAtom::_levelled = gridmicrotex::bidi_assign_levels(formula._root);
+  RowAtom::_levelled = microtex::bidi_assign_levels(formula._root);
   const auto isInline = !startsWith(latex, "$$") && !startsWith(latex, "\\[");
   const auto align = isInline ? Alignment::left : Alignment::center;
   TexStyle style = isInline ? TexStyle::text : TexStyle::display;

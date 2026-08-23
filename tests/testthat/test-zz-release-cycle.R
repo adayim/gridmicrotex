@@ -84,7 +84,15 @@ test_that("unloading the namespace unloads the DLL, and a reload still parses", 
     'library(gridmicrotex)',
     'gridmicrotex::latex_cache_clear()',
     'after <- nrow(gridmicrotex:::latex_grob(tex, input_mode = "math")$layout_df)',
-    'cat("GM-ROWS:", before, after, "\\n")'
+    'cat("GM-ROWS:", before, after, "\\n")',
+    # Our own macros are registered behind s_registered guards in
+    # atom/font_family_atom.cpp / atom/mark_atom.cpp, while the built-ins come back
+    # via MicroTeX::init(). If a teardown ever clears the macro table
+    # without also resetting those guards, these are what break.
+    'ff <- nrow(gridmicrotex:::latex_grob("\\\\gmfontfamily{mono}{x}",',
+    '                                     input_mode = "math")$layout_df)',
+    'mk <- gridmicrotex:::latex_grob("a\\\\mark{m}b", input_mode = "math")',
+    'cat("GM-OURS:", ff, if (is.null(mk$marks)) "NA" else mk$marks$name, "\\n")'
   ), probe)
   on.exit(unlink(probe), add = TRUE)
 
@@ -115,4 +123,12 @@ test_that("unloading the namespace unloads the DLL, and a reload still parses", 
   n <- as.integer(strsplit(trimws(sub("^GM-ROWS:", "", rows)), " +")[[1]])
   expect_gt(n[1], 0L)
   expect_equal(n[2], n[1], info = info)
+
+  # ...and so do ours: \gmfontfamily lays out its one glyph, and \mark
+  # still records its anchor rather than being parsed as literal text.
+  ours <- grep("^GM-OURS:", out, value = TRUE)
+  expect_length(ours, 1L)
+  parts <- strsplit(trimws(sub("^GM-OURS:", "", ours)), " +")[[1]]
+  expect_equal(as.integer(parts[1]), 1L, info = info)
+  expect_equal(parts[2], "m", info = info)
 })

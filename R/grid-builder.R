@@ -352,7 +352,7 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 # \text{} both report bit 1, so mapping it would restyle every ordinary
 # run. font-family: serif goes through `family` instead -- and so does
 # \textrm, which names the reserved family below rather than relying on
-# its (indistinguishable) style bit. See src/font_family_atom.h.
+# its (indistinguishable) style bit. See src/MicroTeX/lib/atom/font_family_atom.h.
 .GM_DEFAULT_FAMILY <- "gridmicrotex.default"
 
 .resolve_text_family <- function(style, default = NULL, family = NULL) {

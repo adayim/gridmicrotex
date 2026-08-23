@@ -67,7 +67,13 @@ MICROTEX_SOURCES = \
 	$(MICROTEX_DIR)/graphic/graphic.cpp \
 	$(MICROTEX_DIR)/render/render.cpp \
 	$(MICROTEX_DIR)/render/builder.cpp \
-	$(MICROTEX_DIR)/microtex.cpp
+	$(MICROTEX_DIR)/microtex.cpp \
+	$(MICROTEX_DIR)/graphic/graphic_recorder.cpp \
+	$(MICROTEX_DIR)/atom/font_family_atom.cpp \
+	$(MICROTEX_DIR)/atom/mark_atom.cpp \
+	$(MICROTEX_DIR)/atom/image_atom.cpp \
+	$(MICROTEX_DIR)/utils/bidi.cpp \
+	$(MICROTEX_DIR)/otf/otf_math_reader.cpp
 
 MICROTEX_OBJECTS = $(MICROTEX_SOURCES:.cpp=.o)
 
@@ -94,4 +100,4 @@ PKG_CXXFLAGS = $(PKG_CXXFLAGS_EXTRA)
 
 PKG_LIBS = $(FT_LIBS) $(BIDI_LIBS)
 
-OBJECTS = RcppExports.o init.o parse_latex.o graphic_recorder.o mark_atom.o image_atom.o font_family_atom.o otf_math_reader.o bidi.o $(MICROTEX_OBJECTS)
+OBJECTS = RcppExports.o init.o parse_latex.o otf_math_bindings.o $(MICROTEX_OBJECTS)

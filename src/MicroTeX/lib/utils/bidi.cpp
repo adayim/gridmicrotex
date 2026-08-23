@@ -1,4 +1,4 @@
-#include "bidi.h"
+#include "utils/bidi.h"
 
 #include <algorithm>
 
@@ -6,7 +6,7 @@
 #include <fribidi.h>
 #endif
 
-namespace gridmicrotex {
+namespace microtex {
 
 bool bidi_available() {
 #ifdef HAVE_FRIBIDI
@@ -133,4 +133,4 @@ void bidi_reorder(
   }
 }
 
-}  // namespace gridmicrotex
+}  // namespace microtex

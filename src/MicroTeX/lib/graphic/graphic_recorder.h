@@ -11,13 +11,13 @@
 namespace microtex {
 
 // Platform Font that carries the font file path for typeface rendering
-class Font_R : public Font {
+class RecordedFont : public Font {
 public:
     std::string fontFile;
-    Font_R() = default;
-    explicit Font_R(const std::string& file) : fontFile(file) {}
+    RecordedFont() = default;
+    explicit RecordedFont(const std::string& file) : fontFile(file) {}
     bool operator==(const Font& f) const override {
-        auto* other = dynamic_cast<const Font_R*>(&f);
+        auto* other = dynamic_cast<const RecordedFont*>(&f);
         return other && other->fontFile == fontFile;
     }
 };
@@ -159,15 +159,25 @@ private:
     void transformPoint(float& x, float& y) const;
 };
 
-// Defined in init.cpp. Returns the pre-transform width (in local coords, at
-// the given fontSize) of a text run, using the measurement cache populated
-// by TextLayout_R::getBounds; falls back to a codepoint-based heuristic.
+// ---------------------------------------------------------------------------
+// Embedder contract
+// ---------------------------------------------------------------------------
+// The recorder needs two measurements that only the host can answer, because
+// only the host knows how its device shapes text. They are declared here and
+// *must be defined by the embedder* -- there is no definition in this
+// library, so leaving them out is a link error, not a silent fallback.
+//
+// In gridmicrotex both live in src/init.cpp, where the first can consult a
+// measurement callback into R.
+
+// Pre-transform width (in local coords, at the given fontSize) of a text run.
+// Used to shift the draw anchor under a horizontal flip. An implementation
+// that cannot measure should return a codepoint-based estimate rather than 0.
 float measure_cached_text_width(const std::string& text, int fontStyle, float fontSize);
 
-// Defined in init.cpp. Returns the advance width (in world units at the given
-// fontSize) of a single glyph in the font identified by fontFile. Used to
-// shift the draw anchor under a horizontal flip. Returns 0 when the font or
-// glyph is not found.
+// Advance width (in world units at the given fontSize) of a single glyph in
+// the font identified by fontFile. Used to shift the draw anchor under a
+// horizontal flip. Return 0 when the font or glyph is not found.
 float measure_glyph_advance(const std::string& fontFile, u16 glyphId, float fontSize);
 
 }  // namespace microtex

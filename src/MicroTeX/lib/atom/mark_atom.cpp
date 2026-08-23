@@ -1,6 +1,6 @@
-#include "mark_atom.h"
+#include "atom/mark_atom.h"
 
-#include "graphic_recorder.h"
+#include "graphic/graphic_recorder.h"
 #include "macro/macro.h"
 
 namespace microtex {

@@ -12,7 +12,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   dpi = 300,
-  dev = "ragg_png"
+  dev = "png",
+  dev.args = list(type = "cairo-png")
 )
 library(gridmicrotex)
 library(grid)
@@ -92,7 +93,7 @@ One figure with most of the table in it --- a sized and coloured span,
 two font families, a subscript, an underline, a highlight, and the blank
 line that two `<br>` leave behind:
 
-```{r html-css, fig.height = 1.3, fig.width = 6, out.width = "90%"}
+```{r html-css, fig.height = 1.3, fig.width = 6, out.width = "90%", dev = "ragg_png", dev.args = list()}
 grid.newpage()
 grid.markdown(
   r"(<span style="font-size:22pt;color:#2E5E8E">Model fit</span>,
