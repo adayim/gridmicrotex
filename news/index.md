@@ -6,6 +6,10 @@
   raised only when `render_mode = "typeface"` was actually asked for,
   and at most once per device. A figure holding many math labels no
   longer repeats it.
+- Bug fix: unloading the package left its shared object mapped and the
+  layout engine’s macro registries allocated.
+  [`unloadNamespace()`](https://rdrr.io/r/base/ns-load.html) now
+  releases both.
 
 ## gridmicrotex 0.1.0
 
