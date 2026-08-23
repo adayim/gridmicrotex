@@ -410,7 +410,7 @@ upViewport(2)
 works for the text half --- base families like `"sans"`, `"serif"` and
 `"mono"`, or anything registered through **systemfonts**:
 
-```{r cjk, fig.height=1, fig.width=5, out.width="55%", dev = "ragg_png", dev.args = list()}
+```{r cjk, fig.height=1, fig.width=5, out.width="55%", dev = "ragg_png", dev.args = list(), purl = FALSE}
 grid.newpage()
 grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)",
            gp = gpar(fontfamily = "sans"))
