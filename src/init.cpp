@@ -357,25 +357,39 @@ bool microtex_bidi_available() {
     return gridmicrotex::bidi_available();
 }
 
+// Final teardown, run by R when the shared object is unloaded. It only
+// fires because .onUnload() calls library.dynam.unload() -- without that
+// R keeps the DLL mapped and this never runs at all.
+//
+// This is the one place where emptying the macro registries is right:
+// nothing will parse through this mapping again. MicroTeX::release() is
+// MacroInfo::_free_() + NewCommandMacro::_free_(), and both now clear
+// their containers instead of leaving deleted pointers behind, so even
+// where the OS keeps the library mapped and the statics survive into a
+// reload, the next MicroTeX::init() rebuilds from empty rather than
+// double-freeing its way through the built-ins.
+extern "C" void R_unload_gridmicrotex(DllInfo*) {
+    clear_text_measurer();
+    microtex::g_font_id_cache.clear();
+    MicroTeX::release();
+    s_initialized = false;
+}
+
 // [[Rcpp::export]]
 void microtex_release() {
     if (!s_initialized) return;
-    // Deliberately NOT MicroTeX::release(). Its whole body is
-    // MacroInfo::_free_() + NewCommandMacro::_free_(), which are
-    // process-teardown deallocation: _free_() deletes every value in the
-    // static _commands map but never erases, so afterwards every built-in
-    // macro is a dangling pointer -- and MacroInfo::add() then does
-    // `delete it->second` on one, i.e. a double free, every time we
-    // re-register \mark / \gmfontfamily / \textrm on the next init. That
-    // corrupted the heap on every release/re-init cycle; with enough
-    // macros registered it segfaults outright on the next large parse.
-    // _commands is static-lifetime data that is only ever populated once,
-    // so the right move is to leave it alone and just drop what is
-    // genuinely per-session.
+    // Deliberately NOT MicroTeX::release(). That is final teardown, and
+    // the registries it empties are only ever repopulated from inside
+    // MicroTeX::init(). An in-process release is not paired with a
+    // re-init -- the next parse goes straight through -- so clearing them
+    // here would leave the parser without \frac, \mark, \gmfontfamily and
+    // the rest until the shared object itself was reloaded. Drop only
+    // what is genuinely per-session; R_unload_gridmicrotex above does the
+    // real teardown, where losing the registries costs nothing.
     NewCommandMacro::clearUserMacros();
     microtex::g_font_id_cache.clear();
-    // The built-in registry now survives, so our macros are still there
-    // and their registration guards must stay set.
+    // The built-in registry survives, so our macros are still there and
+    // their registration guards must stay set.
     s_initialized = false;
 }
 

@@ -142,6 +142,20 @@ test_that("an SVG is drawn as real vector, not a raster", {
   expect_equal(wid(sprintf("\\includegraphics{%s}", f)), 216)
   expect_equal(hei(sprintf("\\includegraphics{%s}", f)), 144)
 
+  # Installed is not the same as working: a container can carry rsvg and
+  # grImport2 while librsvg cannot actually turn the file into a Picture,
+  # and the loader then correctly falls back to a raster. Probe the real
+  # conversion before asserting a vector came out of it, or this fails on
+  # the environment rather than on the package. Seen on R-hub's nold
+  # container, where all three packages are installed.
+  can_vector <- tryCatch(suppressWarnings({
+    cairo <- tempfile(fileext = ".svg")
+    rsvg::rsvg_svg(f, cairo)
+    inherits(grImport2::readPicture(cairo), "Picture")
+  }), error = function(e) FALSE)
+  skip_if(!isTRUE(can_vector),
+          "rsvg/grImport2 cannot turn an SVG into a Picture here")
+
   kids <- grid::makeContent(
     latex_grob(sprintf("\\includegraphics[width=1in]{%s}", f),
                input_mode = "math"))$children

@@ -43,4 +43,9 @@
 
 .onUnload <- function(libpath) {
   microtex_release()
+  # Hand the shared object back as well. R does not do this for us, and
+  # R_unload_gridmicrotex() (src/init.cpp) -- which frees the macro
+  # registries and releases the preserved text-measurer callback -- runs
+  # from nowhere else.
+  library.dynam.unload("gridmicrotex", libpath)
 }

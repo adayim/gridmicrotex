@@ -373,6 +373,9 @@ inline static void cmd(int argc, const string& name, const string& code) {
 }
 
 void NewCommandMacro::_init_() {
+  // _free_() nulls the singleton, so a release/re-init cycle must be able
+  // to rebuild it. Static init still creates the first one.
+  if (_instance == nullptr) _instance = new NewCommandMacro();
   // region Predefined environments
   env(1, "array", "\\array@@env{#1}{", "}");
   env(1, "tabular", "\\array@@env{#1}{", "}");
