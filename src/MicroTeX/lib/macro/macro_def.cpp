@@ -373,6 +373,7 @@ inline static void cmd(int argc, const string& name, const string& code) {
 }
 
 void NewCommandMacro::_init_() {
+  if (_instance == nullptr) _instance = new NewCommandMacro();
   // region Predefined environments
   env(1, "array", "\\array@@env{#1}{", "}");
   env(1, "tabular", "\\array@@env{#1}{", "}");

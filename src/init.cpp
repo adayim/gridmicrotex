@@ -357,6 +357,11 @@ bool microtex_bidi_available() {
     return gridmicrotex::bidi_available();
 }
 
+extern "C" void R_unload_gridmicrotex(DllInfo*) {
+    clear_text_measurer();
+    MicroTeX::release();
+}
+
 // [[Rcpp::export]]
 void microtex_release() {
     if (!s_initialized) return;

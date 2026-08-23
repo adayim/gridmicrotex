@@ -133,6 +133,10 @@ void NewCommandMacro::snapshotBuiltins() {
 
 void NewCommandMacro::_free_() {
   delete _instance;
+  _instance = nullptr;
+  _codes.clear();
+  _replacements.clear();
+  _builtin_names.clear();
 }
 
 void MacroInfo::remove(const string& name) {
@@ -156,6 +160,7 @@ MacroInfo* MacroInfo::get(const std::string& name) {
 
 void MacroInfo::_free_() {
   for (const auto& i : _commands) delete i.second;
+  _commands.clear();
 }
 
 sptr<Atom> PreDefMacro::invoke(Parser& tp, vector<string>& args) {
