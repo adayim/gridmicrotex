@@ -339,8 +339,8 @@ svglite::svglite(fig, width = 2, height = 1.2)
 grid.newpage()
 grid.circle(r = 0.35, gp = gpar(fill = "steelblue", col = NA))
 dev.off()
-#> agg_png 
-#>       2
+#> png 
+#>   2
 
 grid.newpage()
 grid.latex(sprintf(r"(\text{before }\includegraphics[width=1in]{%s}\text{ after})", fig),

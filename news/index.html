@@ -44,7 +44,7 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.1" id="gridmicrotex-011">gridmicrotex 0.1.1<a class="anchor" aria-label="anchor" href="#gridmicrotex-011"></a></h2>
 <ul><li>The typeface fallback is now a message rather than a warning, is raised only when <code>render_mode = "typeface"</code> was actually asked for, and at most once per device. A figure holding many math labels no longer repeats it.</li>
-<li>Bug fix: unloading the package left its shared object mapped and the layout engine’s macro registries allocated. <code><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">unloadNamespace()</a></code> now releases both.</li>
+<li>Bug fix: the layout engine’s macro tables were never freed. They leaked at process exit, and <code><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">unloadNamespace()</a></code> left both them and the shared object in place. All are now released.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="gridmicrotex-010">gridmicrotex 0.1.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-010"></a></h2><p class="text-muted">CRAN release: 2026-08-21</p>
