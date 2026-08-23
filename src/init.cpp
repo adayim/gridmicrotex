@@ -365,18 +365,14 @@ extern "C" void R_unload_gridmicrotex(DllInfo*) {
 // [[Rcpp::export]]
 void microtex_release() {
     if (!s_initialized) return;
-    // Deliberately NOT MicroTeX::release(). Its whole body is
-    // MacroInfo::_free_() + NewCommandMacro::_free_(), which are
-    // process-teardown deallocation: _free_() deletes every value in the
-    // static _commands map but never erases, so afterwards every built-in
-    // macro is a dangling pointer -- and MacroInfo::add() then does
-    // `delete it->second` on one, i.e. a double free, every time we
-    // re-register \mark / \gmfontfamily / \textrm on the next init. That
-    // corrupted the heap on every release/re-init cycle; with enough
-    // macros registered it segfaults outright on the next large parse.
-    // _commands is static-lifetime data that is only ever populated once,
-    // so the right move is to leave it alone and just drop what is
-    // genuinely per-session.
+    // Deliberately NOT MicroTeX::release() here. That is now true teardown:
+    // it frees the dynamic macro registries and singleton state, which is
+    // correct at DLL unload (see R_unload_gridmicrotex above) but not for an
+    // in-process release/re-init cycle. The vendored built-in MacroInfo table
+    // is populated at library load time, so tearing it down mid-session would
+    // leave the parser without those entries until the shared object itself is
+    // reloaded. For an ordinary session reset we therefore drop only the
+    // genuinely per-session state and keep the process-lifetime registries.
     NewCommandMacro::clearUserMacros();
     microtex::g_font_id_cache.clear();
     // The built-in registry now survives, so our macros are still there

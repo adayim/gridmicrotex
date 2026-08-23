@@ -3,13 +3,12 @@
 # halfway through.
 
 test_that("a release / re-init cycle leaves the macro registry usable", {
-  # MicroTeX::release() is MacroInfo::_free_() + NewCommandMacro::_free_().
-  # _free_() deletes every value in the static _commands map but never
-  # erases it, so afterwards every built-in macro is a dangling pointer and
-  # the next MacroInfo::add() double-frees one. That corrupted the heap on
-  # every unload/reload, and a later large formula then failed with
-  # "vector::_M_default_append" or took the process down outright.
-  # microtex_release() no longer calls it -- see src/init.cpp.
+  # MicroTeX::release() is now true final teardown for DLL unload: it frees
+  # the dynamic macro registries and singleton state. That is correct at
+  # process teardown, but not for an in-process release/re-init cycle because
+  # the vendored built-in MacroInfo table is populated at library load time.
+  # microtex_release() therefore keeps the process-lifetime registries intact
+  # and only drops per-session state -- see src/init.cpp.
   pdf(NULL)
   on.exit(dev.off(), add = TRUE)
 
