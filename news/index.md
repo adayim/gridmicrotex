@@ -2,6 +2,8 @@
 
 ## gridmicrotex 0.1.1
 
+CRAN release: 2026-08-24
+
 - The typeface fallback is now a message rather than a warning, is
   raised only when `render_mode = "typeface"` was actually asked for,
   and at most once per device. A figure holding many math labels no
