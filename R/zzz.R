@@ -42,6 +42,10 @@
 }
 
 .onUnload <- function(libpath) {
+  # Must come before library.dynam.unload(): an armed device holds
+  # function pointers into this DLL, and unmapping it under them turns
+  # the next plot or window resize into a jump to freed memory.
+  gm_base_teardown()
   microtex_release()
   # Hand the shared object back as well. R does not do this for us, and
   # R_unload_gridmicrotex() (src/init.cpp) -- which frees the macro

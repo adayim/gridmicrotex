@@ -100,4 +100,4 @@ PKG_CXXFLAGS = $(PKG_CXXFLAGS_EXTRA)
 
 PKG_LIBS = $(FT_LIBS) $(BIDI_LIBS)
 
-OBJECTS = RcppExports.o init.o parse_latex.o otf_math_bindings.o $(MICROTEX_OBJECTS)
+OBJECTS = RcppExports.o init.o parse_latex.o otf_math_bindings.o device_hook.o device_emit.o $(MICROTEX_OBJECTS)

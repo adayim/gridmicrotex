@@ -16,7 +16,7 @@ rendering: the MicroTeX version, the loaded math fonts, and whether the
 bundled font files are present.
 }
 \details{
-Text fonts are not covered, because they are not registered here ---
+Text fonts are not covered, because they are not registered here:
 they are resolved on demand by \pkg{systemfonts} from
 \code{gp$fontfamily}. Use \code{systemfonts::match_fonts()} to see
 what a text family resolves to.

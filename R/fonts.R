@@ -94,8 +94,8 @@ available_math_fonts <- function() {
 
 #' Load a math font from an OTF file
 #'
-#' Loads an OTF/TTF \strong{math} font --- one carrying an OpenType MATH
-#' table --- into MicroTeX's internal font registry. The MATH table is
+#' Loads an OTF/TTF \strong{math} font (one carrying an OpenType MATH
+#' table) into MicroTeX's internal font registry. The MATH table is
 #' parsed directly in C++ and the required metrics are synthesised on the
 #' fly. You can download a free math font such as Latin Modern Math
 #' (the LaTeX default) and load it for math rendering.
@@ -105,8 +105,8 @@ available_math_fonts <- function() {
 #' \code{gp = gpar(fontfamily = "...")} without being installed
 #' system-wide.
 #'
-#' Plain \strong{text} fonts --- those used inside \code{\\text\{\}} blocks
-#' --- need no loading at all. They are resolved automatically by
+#' Plain \strong{text} fonts, those used inside \code{\\text\{\}} blocks,
+#' need no loading at all. They are resolved automatically by
 #' \pkg{systemfonts} from \code{gp$fontfamily}, or per run with
 #' \code{\\gmfontfamily\{\}\{\}}.
 #'
@@ -210,7 +210,7 @@ load_math_font <- function(otf_path) {
 #' rendering: the MicroTeX version, the loaded math fonts, and whether the
 #' bundled font files are present.
 #'
-#' Text fonts are not covered, because they are not registered here ---
+#' Text fonts are not covered, because they are not registered here:
 #' they are resolved on demand by \pkg{systemfonts} from
 #' \code{gp$fontfamily}. Use \code{systemfonts::match_fonts()} to see
 #' what a text family resolves to.

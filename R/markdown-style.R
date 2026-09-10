@@ -191,14 +191,14 @@
 #'   \code{marker_gap} \tab \code{ul}, \code{ol} \tab marker to text \cr
 #' }
 #'
-#' \code{font_size} also accepts CSS's keywords --- \code{xx-small} through
-#' \code{xx-large}, plus \code{smaller} and \code{larger} --- taken from the
+#' \code{font_size} also accepts CSS's keywords (\code{xx-small} through
+#' \code{xx-large}, plus \code{smaller} and \code{larger}), taken from the
 #' \code{\\tiny}..\code{\\Huge} ladder MicroTeX implements.
 #'
 #' \strong{The \code{body} rule styles the box itself.} On any other tag,
 #' \code{background}, \code{border}, \code{border_radius}, \code{padding}
 #' and \code{margin} apply to that block. On \code{body} they apply to the
-#' whole \code{\link{markdown_box_grob}} --- its fill, its frame, its
+#' whole \code{\link{markdown_box_grob}}: its fill, its frame, its
 #' corner radius, and the space inside and outside it. That is the only
 #' way to give a \code{\link{element_markdown}} title a background, since
 #' the theme element takes no box arguments of its own:
@@ -210,11 +210,11 @@
 #' argument to \code{markdown_box_grob()} wins over the rule, the way an
 #' inline style wins in CSS.
 #'
-#' Anything else is an error --- unlike a pasted stylesheet, where an
+#' Anything else is an error: unlike a pasted stylesheet, where an
 #' unknown property is ignored the way a browser ignores it.
 #'
 #' \strong{One limitation worth knowing.} \code{font_weight} and
-#' \code{font_style} apply to blocks whose content is prose --- paragraphs,
+#' \code{font_style} apply to blocks whose content is prose: paragraphs,
 #' headings, list items, block quotes, table cells and \code{<div>}s. They
 #' do \emph{not} apply to \code{pre} or an image's alt text, which build
 #' their own LaTeX and impose their own font handling. This is a MicroTeX
@@ -225,7 +225,7 @@
 #' \strong{What cannot be styled at all.} There is no small-caps
 #' (\code{\\textsc} is not a MicroTeX command), no
 #' \code{font-variant-numeric}, no right-to-left or bidirectional text,
-#' and no padding inside an inline \code{border} --- MicroTeX has no
+#' and no padding inside an inline \code{border}: MicroTeX has no
 #' \code{\\fboxsep}, so that inset is fixed.
 #'
 #' @param ... Named declarations.
@@ -331,7 +331,7 @@ print.gridmicrotex_md_style <- function(x, ...) {
 #' @details
 #' Tags are named as in HTML, so a stylesheet reads the way a CSS author
 #' expects: \code{body} (the document root, which every other tag
-#' inherits from --- and which also styles the box itself, see
+#' inherits from, and which also styles the box itself; see
 #' \code{\link{md_style}}), \code{p}, \code{h1} ... \code{h6}, \code{ul},
 #' \code{ol}, \code{li}, \code{blockquote}, \code{pre} (a code block),
 #' \code{code} (an inline code span), \code{strong} and \code{em} (what

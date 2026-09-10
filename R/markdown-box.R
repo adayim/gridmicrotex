@@ -1191,9 +1191,9 @@ heightDetails.markdownbox <- function(x) {
 #' Render a markdown document as a boxed grid grob
 #'
 #' @description
-#' Lays markdown out as a block document --- headings, paragraphs, lists
+#' Lays markdown out as a block document (headings, paragraphs, lists
 #' (including GFM task lists), block quotes, code blocks, tables,
-#' horizontal rules and images --- inside an optional padded, filled and
+#' horizontal rules and images) inside an optional padded, filled and
 #' bordered box. Prose wraps to the requested width, and \code{$...$}
 #' math is typeset by MicroTeX as usual. All the inline formatting
 #' \code{\link{markdown_grob}} understands, including the inline HTML
@@ -1219,7 +1219,7 @@ heightDetails.markdownbox <- function(x) {
 #' text. An image \emph{within} a sentence stays inline, where only its
 #' alt text survives.
 #'
-#' The layout is computed at draw time, so an open device is required ---
+#' The layout is computed at draw time, so an open device is required,
 #' which is what lets a relative \code{width} and the measured height of
 #' the text resolve against the viewport the box is actually drawn in.
 #'
@@ -1242,7 +1242,7 @@ heightDetails.markdownbox <- function(x) {
 #'
 #' To style one chunk rather than every block of a kind, wrap it in a
 #' \code{<div>} carrying a \code{class} or a \code{style}. \strong{Leave
-#' blank lines around the tags} --- that is what makes CommonMark parse
+#' blank lines around the tags}: that is what makes CommonMark parse
 #' the markdown between them instead of treating the whole thing as raw
 #' HTML:
 #'
@@ -1259,7 +1259,7 @@ heightDetails.markdownbox <- function(x) {
 #' @param md Character string of markdown.
 #' @param x,y Position of the box in the parent viewport.
 #' @param width Width of the box, including \code{margin}. \code{NULL}
-#'   sizes the box to its content, so nothing wraps --- useful where the
+#'   sizes the box to its content, so nothing wraps: useful where the
 #'   available width is not known, as in a ggplot2 theme element.
 #' @param height Fixed height, or \code{NULL} (default) to take whatever
 #'   height the content needs.

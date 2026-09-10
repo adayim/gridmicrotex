@@ -18,21 +18,36 @@ knitr::opts_chunk$set(
 
 ## What is gridmicrotex?
 
-**gridmicrotex** renders LaTeX math as native R `grid` graphics objects.
-It embeds the [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++
-engine: MicroTeX parses the LaTeX, builds the TeX box model and computes
-exact glyph coordinates, and the package maps that layout onto grid
-primitives (`pathGrob`, `segmentsGrob`, `rectGrob`, `textGrob`),
-returning a `gTree`.
+**gridmicrotex** renders LaTeX math as native R `grid` graphics objects,
+embedding the [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++
+engine. The pipeline is:
 
-No LaTeX installation is required, and the result is resolution
-independent on every R device.
+1. MicroTeX parses the LaTeX into a TeX box model
+2. A custom `Graphics2D` recorder captures every draw operation --- glyph
+   paths, lines, rectangles --- with exact coordinates
+3. That layout crosses the C++/R boundary as a data frame
+4. R converts each record into a grid primitive (`pathGrob`,
+   `segmentsGrob`, `rectGrob`, `textGrob`)
+5. The result is a `gTree` that draws on any device at any resolution
+
+No LaTeX installation is required, and because nothing is rasterised the
+output is resolution independent on every R device.
+
+**Base graphics** reuses steps 1--3 and diverges at step 4: with
+`latex_options(device_math = TRUE)` the same layout is emitted straight
+through the graphics device's own drawing callbacks instead of being
+turned into grobs, which is how `plot()` titles and axis labels get real
+LaTeX without any change to your code. Because that interception sits at
+the device, it is not limited to base graphics: text drawn by grid,
+ggplot2 and lattice passes through it too. See
+[Base graphics](#base-graphics) below.
 
 - Full math: fractions, roots, integrals, matrices, Greek, accents,
   delimiters, and colour via `\textcolor{}`
 - Two bundled math fonts, plus any OpenType math font through
   `load_math_font()`
 - CJK, RTL and multilingual text inside `\text{}`
+- Base graphics --- `latex_options(device_math = TRUE)`
 - ggplot2 integration --- `geom_latex()` and `element_latex()`, see
   `vignette("ggplot2-integration")`
 - Markdown with inline math --- see `vignette("markdown")`
@@ -484,16 +499,178 @@ grid.latex(r"($E = mc^2$)")                        # typeface
 grid.latex(r"($E = mc^2$)", gp = gpar(fontsize = 24), render_mode = "path")  # path
 ```
 
-Prefer `ragg::agg_png()`, `svglite::svglite()` or `grDevices::cairo_pdf()`.
 The default devices on Windows and macOS may not find the bundled math
-fonts and will warn `font family not found in Windows font database`; the
-README covers the setup, and compares the package with `tikzDevice`,
-`xdvir`, `latex2exp` and `plotmath`.
+fonts, and warn `font family not found in Windows font database`. The
+README lists the backends to prefer with the one-line setup for each,
+and compares the package with `tikzDevice`, `xdvir`, `latex2exp` and
+`plotmath`.
 
 > **Do not use `showtext::showtext_auto()` with typeface mode.** showtext
 > intercepts all text rendering and converts it to paths, silently
 > defeating typeface mode even on `svglite` and `ragg`. Call
 > `showtext::showtext_auto(FALSE)` before drawing formulas.
+
+## Base graphics
+
+Everything above builds grid grobs. Base graphics can render math too:
+`latex_options(device_math = TRUE)` makes labels containing `$...$`
+(or `\(...\)`, `\[...\]`, the same convention `latex_wrap()` uses
+everywhere else) render through MicroTeX, with no other change to your plotting
+code. It applies to `main`, `xlab`, `ylab`, `text()`, `mtext()`,
+`legend()` and axis labels, and because the interception happens at the
+device it also covers `hist()`, `boxplot()` and other packages' `plot`
+methods.
+
+### It is not limited to base graphics
+
+The interception sits on the device, and every graphics system in R draws
+its text through the same callback. So while `device_math` is on:
+
+- `grid.text("$x^2$")` renders math.
+- ggplot2 picks it up everywhere text is drawn from a string: axis
+  titles, `geom_text()` and `geom_label()` labels, facet strip text,
+  legend keys.
+- lattice does the same for its `main`, `xlab` and panel text.
+
+That may be exactly what you want, and it is the quickest way to get math
+into a ggplot without touching the theme. Two things to weigh against it.
+It is a **session-wide** switch, so a `$` in someone else's plot inside
+the same script is subject to the same rule; the gate below is what
+keeps that safe. And grid sizes many of its boxes from text *height*,
+which is the one measurement that cannot be corrected (see
+[Reserving room for a tall formula](#reserving-room-for-a-tall-formula)),
+so a tall formula in a `geom_label()` or a bordered grid box can overflow
+its border even though the width is right.
+
+For ggplot2 work, `element_latex()` and `geom_latex()` remain the better
+tools: they do the same rendering, scoped to the layer or theme element
+you name, with no global state. Use `device_math` when you want math in
+plots you are not rewriting: base plots, lattice, or a package's own
+`plot()` method.
+
+This is the whole LaTeX engine, not a translation layer, so a base plot
+can carry things plotmath has no syntax for at all: a ruled table with a
+coloured header row, display-style operators, calligraphic and blackboard
+alphabets, automatic delimiter sizing. The coefficient table below is a
+`\begin{array}` with `\hline` rules and `\rowcolor`, drawn by an ordinary
+`text()` call.
+
+```{r base-math, fig.height=4.6, fig.width=6.5}
+latex_options(device_math = TRUE)
+
+set.seed(42)
+x   <- seq(0, 3, length.out = 60)
+y   <- 2 + 1.4 * x^2 + rnorm(60, sd = 1.1)
+fit <- lm(y ~ poly(x, 2, raw = TRUE))
+cf  <- signif(coef(summary(fit)), 3)
+
+title_eq <- r"($$\hat{y} = \beta_0 + \beta_1 x + \beta_2 x^2$$)"
+
+# A display-style title is taller than one text line, so take the top
+# margin from the measured height instead of guessing at it.
+h   <- latex_dims(title_eq, gp = gpar(fontsize = par("ps")))$height
+top <- ceiling(convertHeight(h, "bigpts", TRUE) /
+               (par("cin")[2] * 72 * par("mex"))) + 2
+
+par(mar = c(4.5, 5.5, top, 2))
+plot(x, y, pch = 19, col = "grey45", cex = 0.7, ylim = c(0, 22),
+     main = title_eq, xlab = r"($x$)",
+     ylab = r"($y = f(x) + \varepsilon$)")
+lines(x, predict(fit), col = "#B22222", lwd = 2)
+
+# Keep a formula on one physical line: R hands the device a multi-line
+# label one line at a time, so a table split across source lines would
+# never reach it whole.
+tab <- sprintf(paste0(
+  r"(\begin{array}{|l|r|r|}\hline)",
+  r"(\rowcolor{#E8F0FE}\text{Term} & \hat{\beta} & \text{SE}\\\hline)",
+  r"(\beta_0 & %s & %s\\)",
+  r"(\beta_1 & %s & %s\\)",
+  r"(\beta_2 & %s & %s\\\hline\end{array})"),
+  cf[1, 1], cf[1, 2], cf[2, 1], cf[2, 2], cf[3, 1], cf[3, 2])
+
+text(0.05, 18, tab, adj = c(0, 0.5), cex = 0.75)
+text(2.95, 1.2, r"($\varepsilon \sim \mathcal{N}(0, \sigma^2)$)",
+     adj = c(1, 0), cex = 0.95, col = "#B22222")
+```
+
+Two placement notes, both consequences of heights being uncorrectable.
+The table is anchored with `adj = c(0, 0.5)` and given headroom through
+`ylim`, because R positions a top-anchored label using the *font* ascent:
+a four-row table anchored at the very top of the panel would have its
+header clipped away. And a formula written across several source lines
+arrives at the device one line at a time and so is never recognised, which
+is why `tab` is assembled with `paste0()` into a single line.
+
+```{r base-math-off, include=FALSE}
+latex_options(device_math = FALSE)
+```
+
+In an R Markdown document, set the option once in your setup chunk.
+knitr captures a chunk's plots *after* its last line has run, so
+switching it off at the end of the chunk that draws will leave the
+figure unrendered, with the labels coming out as literal `$...$`.
+
+### When is a label treated as math?
+
+A dollar sign is far too common in a real axis label to treat as a
+delimiter on sight: `"Cost $5-$10 per unit"` has to survive as plain
+text. So a label is intercepted only when **every**
+delimiter in it is closed *and* **every** `$...$` pair wraps something
+that actually looks like math (a command, a script, or a lone
+variable):
+
+| Label | Rendered as | Why |
+|:--|:--|:--|
+| `"Revenue ($)"` | text | one unclosed `$` |
+| `"Price is $5 today"` | text | one unclosed `$` |
+| `"Cost $5-$10"` | text | closed, but `5-` is not math |
+| `"Budget $1,000 to $5,000 with $x$ shown"` | text | `1,000 to ` is not math |
+| `"$x$"` | math | a lone variable |
+| `"$x^2$"` | math | a script |
+| `"Slope $\\hat{\\beta}_1$"` | math | a command |
+| `"\\(\\alpha\\)"` | math | explicit delimiters |
+
+Every pair has to qualify, not merely one of them: `latex_wrap()` cannot
+be told to treat one span as math and leave another alone, so a single
+good `$x$` would otherwise drag the currency in with it.
+
+Everything that fails the test is handed to the device untouched, byte
+for byte. Turning the option on cannot change how an existing plot
+looks unless the label really does contain math. Write `\$` for a
+literal dollar next to real math in the same label.
+
+### Reserving room for a tall formula
+
+Widths are exact while the option is on: `strwidth()` reports the
+formula's real width, so labels centre correctly. **Heights are not, and
+cannot be.** R computes text height from the font, never from the
+string: `strheight()` returns the same value for `"abc"` and for
+`$\sum_{i=1}^{n}\frac{x_i}{2}$`, and a graphics device has no
+string-height entry point to intercept. A tall formula can therefore
+overflow a `legend()` box or the margin `par("mar")` set aside for it.
+
+Measure it with `latex_dims()` and reserve the room yourself:
+
+```{r base-margin}
+h  <- latex_dims(r"($\frac{a}{b}$)", gp = gpar(fontsize = par("ps")))$height
+bp <- convertHeight(h, "bigpts", TRUE)
+
+# par(mar) counts lines of par("cin"), so convert in those units rather
+# than grid's "lines" -- the two agree only while gpar$fontsize happens
+# to equal par("ps").
+bp / (par("cin")[2] * 72 * par("mex"))
+```
+
+Round that up and add it to the relevant side of `par(mar = )`.
+
+The other differences from the grid path: math is drawn as vector
+outlines, so unlike `latex_grob()` it is not selectable in a PDF; prose
+in a bold label is not bolded, since face comes from `\textbf` rather
+than from the device; `\includegraphics` is left out and rounded box
+corners are squared. And `expression()` labels are not affected at all: R lays
+plotmath out inside the graphics engine, where a device never sees it.
+`?latex_options` lists the rest.
 
 ## Utilities
 

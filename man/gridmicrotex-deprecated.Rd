@@ -20,7 +20,7 @@ As the replacement function.
 These functions still work but will be removed in a future release.
 Both were renamed to say what they actually operate on: only
 \strong{math} fonts (those carrying an OpenType MATH table) are ever
-registered with MicroTeX. Text fonts need no loading --- they are
+registered with MicroTeX. Text fonts need no loading: they are
 resolved on demand by \pkg{systemfonts} from \code{gp$fontfamily}.
 }
 \details{

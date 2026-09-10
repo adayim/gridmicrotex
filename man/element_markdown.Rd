@@ -35,7 +35,7 @@ wrapping (default: 0, no wrapping).}
 
 \item{style}{A \code{\link{markdown_style}} object, CSS text, or the
 path to a \code{.css} file, applied to labels drawn through this
-theme element. \code{NA}, the default, means unset --- the global
+theme element. \code{NA}, the default, means unset: the global
 \code{\link{latex_options}(markdown_style = )} applies instead. Only
 the properties that compile to LaTeX have an effect, unless the label
 is laid out as blocks (see \emph{Block labels}). See
@@ -56,8 +56,8 @@ An S7 object of class \code{element_markdown}, inheriting from
 }
 \description{
 Use as a theme element for axis titles, axis labels, plot titles or any
-other text element. The label is parsed as markdown --- including
-\code{$...$} math --- and rendered via MicroTeX.
+other text element. The label is parsed as markdown (including
+\code{$...$} math), and rendered via MicroTeX.
 }
 \details{
 This is an S7 subclass of \code{ggplot2::element_text}, so it inherits
@@ -66,8 +66,8 @@ and merges correctly with inherited theme entries.
 }
 \section{Block labels}{
 
-A label with real block structure --- a heading, a list, a table, a
-rule, or more than one paragraph --- is laid out by
+A label with real block structure (a heading, a list, a table, a
+rule, or more than one paragraph) is laid out by
 \code{\link{markdown_box_grob}} rather than flattened into one run, so
 list markers, indents and block spacing survive. That makes a title
 like this work:
@@ -75,8 +75,8 @@ like this work:
 \preformatted{labs(title = "## Findings\\n\\n- slope $\\\\beta_1$\\n- *p* < 0.001")}
 
 The box's own background, border, padding and corner radius come from
-the stylesheet's \code{body} rule --- \code{style = "body \{ background:
-grey95; padding: 8px \}"} --- not from arguments here. See
+the stylesheet's \code{body} rule (\code{style = "body \{ background:
+grey95; padding: 8px \}"}), not from arguments here. See
 \code{\link{markdown_style}}.
 
 Three details follow from how ggplot2 measures theme elements:
@@ -102,7 +102,7 @@ forwarded to the box; a block label takes those from
 Note that \pkg{ggtext} also exports a function called
 \code{element_markdown()}. If both packages are attached, the one loaded
 later wins; call \code{gridmicrotex::element_markdown()} explicitly to
-be unambiguous. The two are not interchangeable --- ggtext renders
+be unambiguous. The two are not interchangeable: ggtext renders
 HTML/CSS and images, this renders LaTeX math.
 }
 
