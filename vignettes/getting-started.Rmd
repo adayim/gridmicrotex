@@ -12,8 +12,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   dpi = 300,
-  dev = "png",
-  dev.args = list(type = "cairo-png")
+  dev = "png"
 )
 ```
 

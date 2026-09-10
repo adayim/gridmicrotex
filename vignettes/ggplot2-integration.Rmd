@@ -14,8 +14,7 @@ knitr::opts_chunk$set(
   fig.width = 6,
   fig.height = 4,
   dpi = 300,
-  dev = "png",
-  dev.args = list(type = "cairo-png")
+  dev = "png"
 )
 library(gridmicrotex)
 library(ggplot2)
