@@ -13,8 +13,8 @@ load_math_font(otf_path)
 Invisibly returns \code{NULL}.
 }
 \description{
-Loads an OTF/TTF \strong{math} font --- one carrying an OpenType MATH
-table --- into MicroTeX's internal font registry. The MATH table is
+Loads an OTF/TTF \strong{math} font (one carrying an OpenType MATH
+table) into MicroTeX's internal font registry. The MATH table is
 parsed directly in C++ and the required metrics are synthesised on the
 fly. You can download a free math font such as Latin Modern Math
 (the LaTeX default) and load it for math rendering.
@@ -25,8 +25,8 @@ can be selected for surrounding plot text via
 \code{gp = gpar(fontfamily = "...")} without being installed
 system-wide.
 
-Plain \strong{text} fonts --- those used inside \code{\\text\{\}} blocks
---- need no loading at all. They are resolved automatically by
+Plain \strong{text} fonts, those used inside \code{\\text\{\}} blocks,
+need no loading at all. They are resolved automatically by
 \pkg{systemfonts} from \code{gp$fontfamily}, or per run with
 \code{\\gmfontfamily\{\}\{\}}.
 }

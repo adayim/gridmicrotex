@@ -36,7 +36,7 @@ string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
 opens math mode, matching document-level LaTeX semantics. Useful for
 labels that arrive from external sources mixing prose and math without
 explicit \code{\\text{}} markers. \code{"math"} is the classic
-MicroTeX behaviour --- the whole string is treated as math, so unwrapped
+MicroTeX behaviour: the whole string is treated as math, so unwrapped
 prose renders as spaced math italics. The default can be changed globally via
 \code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
 for details on the wrapping process.}
@@ -45,7 +45,7 @@ for details on the wrapping process.}
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
 Bundled math fonts and any registered via \code{\link{load_math_font}}
-are read directly from their OTF files --- no system-wide font
+are read directly from their OTF files: no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
 R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).

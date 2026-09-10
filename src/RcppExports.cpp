@@ -10,6 +10,36 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// gm_base_set_enabled
+void gm_base_set_enabled(bool on, SEXP layout_fn);
+RcppExport SEXP _gridmicrotex_gm_base_set_enabled(SEXP onSEXP, SEXP layout_fnSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< bool >::type on(onSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type layout_fn(layout_fnSEXP);
+    gm_base_set_enabled(on, layout_fn);
+    return R_NilValue;
+END_RCPP
+}
+// gm_base_teardown
+void gm_base_teardown();
+RcppExport SEXP _gridmicrotex_gm_base_teardown() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    gm_base_teardown();
+    return R_NilValue;
+END_RCPP
+}
+// gm_base_armed_count
+int gm_base_armed_count();
+RcppExport SEXP _gridmicrotex_gm_base_armed_count() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(gm_base_armed_count());
+    return rcpp_result_gen;
+END_RCPP
+}
 // register_text_measurer
 void register_text_measurer(SEXP fn);
 RcppExport SEXP _gridmicrotex_register_text_measurer(SEXP fnSEXP) {
@@ -202,6 +232,9 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_gridmicrotex_gm_base_set_enabled", (DL_FUNC) &_gridmicrotex_gm_base_set_enabled, 2},
+    {"_gridmicrotex_gm_base_teardown", (DL_FUNC) &_gridmicrotex_gm_base_teardown, 0},
+    {"_gridmicrotex_gm_base_armed_count", (DL_FUNC) &_gridmicrotex_gm_base_armed_count, 0},
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
     {"_gridmicrotex_microtex_init", (DL_FUNC) &_gridmicrotex_microtex_init, 2},
