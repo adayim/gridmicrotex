@@ -346,8 +346,6 @@ bool microtex_set_default_math_font(std::string name) {
     return MicroTeX::setDefaultMathFont(name);
 }
 
-// --- Hyphenation patterns ---
-//
 // Whether the package was built against FriBidi. Without it, text that
 // wraps keeps its logical (left-to-right) word order; everything else is
 // unaffected. Exposed so tests can skip the wrapped right-to-left case.
