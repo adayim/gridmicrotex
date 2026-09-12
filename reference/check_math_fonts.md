@@ -16,7 +16,7 @@ Invisibly returns the character vector of available math font names.
 
 ## Details
 
-Text fonts are not covered, because they are not registered here — they
+Text fonts are not covered, because they are not registered here: they
 are resolved on demand by systemfonts from `gp$fontfamily`. Use
 [`systemfonts::match_fonts()`](https://systemfonts.r-lib.org/reference/match_fonts.html)
 to see what a text family resolves to.

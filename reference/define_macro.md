@@ -39,7 +39,7 @@ list_macros()
 
 MicroTeX also accepts `\newcommand` and plain-TeX `\def` written inside
 the expression itself, and those are the more capable form: they take up
-to nine arguments, which `define_macro()` does not — it substitutes text
+to nine arguments, which `define_macro()` does not: it substitutes text
 and nothing else.
 
 

@@ -21,7 +21,7 @@ evicted."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,6 +34,8 @@ evicted."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
+    <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
@@ -52,7 +54,7 @@ evicted."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Set the maximum number of entries kept in the LaTeX layout cache</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.1/R/cache.R" class="external-link"><code>R/cache.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/cache.R" class="external-link"><code>R/cache.R</code></a></small>
       <div class="d-none name"><code>latex_cache_limit.Rd</code></div>
     </div>
 
@@ -103,7 +105,7 @@ to <code>0</code> to disable caching.</p></dd>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span>  <span class="fu">latex_cache_limit</span><span class="op">(</span><span class="fl">256</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"e^{i\\pi} + 1 = 0"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"$e^{i\\pi} + 1 = 0$"</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="latex_cache_limit-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span>  <span class="fu">latex_cache_info</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $size</span>

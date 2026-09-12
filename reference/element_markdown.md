@@ -1,8 +1,8 @@
 # A ggplot2 theme element for markdown text
 
 Use as a theme element for axis titles, axis labels, plot titles or any
-other text element. The label is parsed as markdown — including `$...$`
-math — and rendered via MicroTeX.
+other text element. The label is parsed as markdown (including `$...$`
+math), and rendered via MicroTeX.
 
 ## Usage
 
@@ -55,7 +55,7 @@ element_markdown(
   A
   [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
   object, CSS text, or the path to a `.css` file, applied to labels
-  drawn through this theme element. `NA`, the default, means unset — the
+  drawn through this theme element. `NA`, the default, means unset: the
   global
   [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(markdown_style = )`
   applies instead. Only the properties that compile to LaTeX have an
@@ -91,8 +91,8 @@ from the theme and merges correctly with inherited theme entries.
 
 ## Block labels
 
-A label with real block structure — a heading, a list, a table, a rule,
-or more than one paragraph — is laid out by
+A label with real block structure (a heading, a list, a table, a rule,
+or more than one paragraph) is laid out by
 [`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
 rather than flattened into one run, so list markers, indents and block
 spacing survive. That makes a title like this work:
@@ -100,8 +100,8 @@ spacing survive. That makes a title like this work:
     labs(title = "## Findings\n\n- slope $\\beta_1$\n- *p* < 0.001")
 
 The box's own background, border, padding and corner radius come from
-the stylesheet's `body` rule —
-`style = "body \{ background: grey95; padding: 8px \}"` — not from
+the stylesheet's `body` rule
+(`style = "body \{ background: grey95; padding: 8px \}"`), not from
 arguments here. See
 [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md).
 
@@ -127,7 +127,7 @@ block label takes those from
 Note that ggtext also exports a function called `element_markdown()`. If
 both packages are attached, the one loaded later wins; call
 `gridmicrotex::element_markdown()` explicitly to be unambiguous. The two
-are not interchangeable — ggtext renders HTML/CSS and images, this
+are not interchangeable: ggtext renders HTML/CSS and images, this
 renders LaTeX math.
 
 ## See also

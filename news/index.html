@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -20,6 +20,8 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
+    <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
@@ -38,9 +40,13 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.1/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.0" id="gridmicrotex-020">gridmicrotex 0.2.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-020"></a></h2>
+<ul><li>New <code>latex_options(device_math = TRUE)</code> renders <code>$…$</code> math in labels drawn to the graphics device, so <strong>base</strong> graphics gets real LaTeX — <code>main</code>, <code>xlab</code>, <code>ylab</code>, <code><a href="https://rdrr.io/r/graphics/text.html" class="external-link">text()</a></code>, <code><a href="https://rdrr.io/r/graphics/mtext.html" class="external-link">mtext()</a></code>, <code><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend()</a></code> — with no other change to your code. It intercepts the device, so grid, ggplot2 and lattice text is covered too.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.1" id="gridmicrotex-011">gridmicrotex 0.1.1<a class="anchor" aria-label="anchor" href="#gridmicrotex-011"></a></h2><p class="text-muted">CRAN release: 2026-08-24</p>
 <ul><li>The typeface fallback is now a message rather than a warning, is raised only when <code>render_mode = "typeface"</code> was actually asked for, and at most once per device. A figure holding many math labels no longer repeats it.</li>

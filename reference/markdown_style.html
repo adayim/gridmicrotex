@@ -15,7 +15,7 @@ which are honoured where, see md_style."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -28,6 +28,8 @@ which are honoured where, see md_style."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
+    <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
@@ -46,7 +48,7 @@ which are honoured where, see md_style."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>A style for markdown rendering</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.1/R/markdown-style.R" class="external-link"><code>R/markdown-style.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/markdown-style.R" class="external-link"><code>R/markdown-style.R</code></a></small>
       <div class="d-none name"><code>markdown_style.Rd</code></div>
     </div>
 
@@ -91,7 +93,7 @@ leading dot for a class, e.g. <code>.note = md_style(...)</code>.</p></dd>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Tags are named as in HTML, so a stylesheet reads the way a CSS author
 expects: <code>body</code> (the document root, which every other tag
-inherits from — and which also styles the box itself, see
+inherits from, and which also styles the box itself; see
 <code><a href="md_style.html">md_style</a></code>), <code>p</code>, <code>h1</code> ... <code>h6</code>, <code>ul</code>,
 <code>ol</code>, <code>li</code>, <code>blockquote</code>, <code>pre</code> (a code block),
 <code>code</code> (an inline code span), <code>strong</code> and <code>em</code> (what

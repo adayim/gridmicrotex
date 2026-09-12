@@ -40,8 +40,8 @@ An object of class `gridmicrotex_markdown_style`.
 ## Details
 
 Tags are named as in HTML, so a stylesheet reads the way a CSS author
-expects: `body` (the document root, which every other tag inherits from
-— and which also styles the box itself, see
+expects: `body` (the document root, which every other tag inherits from,
+and which also styles the box itself; see
 [`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md)),
 `p`, `h1` ... `h6`, `ul`, `ol`, `li`, `blockquote`, `pre` (a code
 block), `code` (an inline code span), `strong` and `em` (what markdown's

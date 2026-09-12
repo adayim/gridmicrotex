@@ -67,16 +67,16 @@ which has no block layout; *block* means it needs
 | `bullet` | `ul` | raw LaTeX for the marker glyph |
 | `marker_gap` | `ul`, `ol` | marker to text |
 
-`font_size` also accepts CSS's keywords — `xx-small` through `xx-large`,
-plus `smaller` and `larger` — taken from the `\tiny`..`\Huge` ladder
+`font_size` also accepts CSS's keywords (`xx-small` through `xx-large`,
+plus `smaller` and `larger`), taken from the `\tiny`..`\Huge` ladder
 MicroTeX implements.
 
 **The `body` rule styles the box itself.** On any other tag,
 `background`, `border`, `border_radius`, `padding` and `margin` apply to
 that block. On `body` they apply to the whole
-[`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-— its fill, its frame, its corner radius, and the space inside and
-outside it. That is the only way to give a
+[`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md):
+its fill, its frame, its corner radius, and the space inside and outside
+it. That is the only way to give a
 [`element_markdown`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
 title a background, since the theme element takes no box arguments of
 its own:
@@ -88,11 +88,11 @@ An explicit `box_gp`, `padding`, `margin` or `r` argument to
 [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
 wins over the rule, the way an inline style wins in CSS.
 
-Anything else is an error — unlike a pasted stylesheet, where an unknown
+Anything else is an error: unlike a pasted stylesheet, where an unknown
 property is ignored the way a browser ignores it.
 
 **One limitation worth knowing.** `font_weight` and `font_style` apply
-to blocks whose content is prose — paragraphs, headings, list items,
+to blocks whose content is prose: paragraphs, headings, list items,
 block quotes, table cells and `<div>`s. They do *not* apply to `pre` or
 an image's alt text, which build their own LaTeX and impose their own
 font handling. This is a MicroTeX constraint rather than a choice:
@@ -101,7 +101,7 @@ content is generated, not wrapped around it afterwards.
 
 **What cannot be styled at all.** There is no small-caps (`\textsc` is
 not a MicroTeX command), no `font-variant-numeric`, no right-to-left or
-bidirectional text, and no padding inside an inline `border` — MicroTeX
+bidirectional text, and no padding inside an inline `border`: MicroTeX
 has no `\fboxsep`, so that inset is fixed.
 
 ## See also

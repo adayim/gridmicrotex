@@ -44,7 +44,7 @@ latex_cache_info()
 ``` r
 # \donttest{
   latex_cache_limit(256)
-  grid.latex("e^{i\\pi} + 1 = 0")
+  grid.latex("$e^{i\\pi} + 1 = 0$")
 
   latex_cache_info()
 #> $size

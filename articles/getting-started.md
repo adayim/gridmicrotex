@@ -2,28 +2,36 @@
 
 ## What is gridmicrotex?
 
-**gridmicrotex** renders LaTeX math as native R `grid` graphics objects.
-It embeds the [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++
-engine: MicroTeX parses the LaTeX, builds the TeX box model and computes
-exact glyph coordinates, and the package maps that layout onto grid
-primitives (`pathGrob`, `segmentsGrob`, `rectGrob`, `textGrob`),
-returning a `gTree`.
+**gridmicrotex** renders LaTeX math in [base R plots](#base-graphics)
+and as native R `grid` graphics objects, embedding the
+[MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ engine. For a
+grob, the pipeline is:
 
-No LaTeX installation is required, and the result is resolution
-independent on every R device.
+1.  MicroTeX parses the LaTeX into a TeX box model
+2.  A custom `Graphics2D` recorder captures every draw operation — glyph
+    paths, lines, rectangles — with exact coordinates
+3.  That layout crosses the C++/R boundary as a data frame
+4.  R converts each record into a grid primitive (`pathGrob`,
+    `segmentsGrob`, `rectGrob`, `textGrob`)
+5.  The result is a `gTree` that draws on any device at any resolution
 
+No LaTeX installation is required, and because nothing is rasterised the
+output is resolution independent on every R device.
+
+- Base R graphics: `latex_options(device_math = TRUE)`, see
+  [`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
 - Full math: fractions, roots, integrals, matrices, Greek, accents,
   delimiters, and colour via `\textcolor{}`
 - Two bundled math fonts, plus any OpenType math font through
   [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
 - CJK, RTL and multilingual text inside `\text{}`
-- ggplot2 integration —
+- ggplot2 integration:
   [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
   and
   [`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md),
   see
   [`vignette("ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md)
-- Markdown with inline math — see
+- Markdown with inline math: see
   [`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md)
 
 ## Quick start
@@ -70,6 +78,32 @@ grid.latex(r"(\text{Famous: } E = mc^2)", input_mode = "math",
 ![](getting-started_files/figure-html/modes-1.png)
 
 Set the mode for a whole session with `latex_options(input_mode = )`.
+
+## Base graphics
+
+The quick start builds a grid grob. Base graphics, the plotting system R
+starts with, can typeset math too: turn on
+`latex_options(device_math = TRUE)` and write `$...$` in any label, with
+no other change to your code.
+
+``` r
+
+latex_options(device_math = TRUE)
+
+plot(1:10, (1:10)^2,
+     main = r"(Slope $\hat{\beta}_1 = \sum_{i=1}^{n} x_i^2$)",
+     xlab = r"($x$)", ylab = r"($\frac{y}{2}$)")
+text(3, 80, r"($\int_0^\infty e^{-x^2}\,dx$)", col = "steelblue")
+```
+
+![](getting-started_files/figure-html/base-quick-1.png)
+
+The switch works at the graphics device, so it also reaches lattice,
+grid, ggplot2 and other packages’ plot methods. It is session-wide and
+has side effects worth knowing before you rely on it.
+[`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
+covers when a label counts as math, a table drawn inside a base plot,
+how to make room for a tall formula, and the full list of side effects.
 
 ## What it can render
 
@@ -533,14 +567,11 @@ grid.latex(r"($E = mc^2$)")                        # typeface
 grid.latex(r"($E = mc^2$)", gp = gpar(fontsize = 24), render_mode = "path")  # path
 ```
 
-Prefer
-[`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html),
-[`svglite::svglite()`](https://svglite.r-lib.org/reference/svglite.html)
-or [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html).
 The default devices on Windows and macOS may not find the bundled math
-fonts and will warn `font family not found in Windows font database`;
-the README covers the setup, and compares the package with `tikzDevice`,
-`xdvir`, `latex2exp` and `plotmath`.
+fonts, and warn `font family not found in Windows font database`. The
+README lists the backends to prefer with the one-line setup for each,
+and compares the package with `tikzDevice`, `xdvir`, `latex2exp` and
+`plotmath`.
 
 > **Do not use `showtext::showtext_auto()` with typeface mode.**
 > showtext intercepts all text rendering and converts it to paths,

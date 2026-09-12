@@ -1,7 +1,7 @@
 # A ggplot2 geom for markdown labels
 
-Renders markdown labels – `**bold**`, `*italic*`, `` `code` ``,
-`~~strike~~` and `$math$` – as native grid grobs inside a plot. The
+Renders markdown labels (`**bold**`, `*italic*`, `` `code` ``,
+`~~strike~~` and `$math$`) as native grid grobs inside a plot. The
 markdown is converted to LaTeX and laid out by MicroTeX, so the output
 is resolution-independent vector graphics.
 
@@ -136,7 +136,7 @@ geom_markdown(
   object, CSS text, or the path to a `.css` file, applied to every label
   this layer draws. `NULL` falls back to
   [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(markdown_style = )`.
-  Only the properties that compile to LaTeX apply here — a label has no
+  Only the properties that compile to LaTeX apply here: a label has no
   block layout, so margins and padding are ignored. See
   [`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md).
 
@@ -175,19 +175,19 @@ aesthetics are in bold):
 
 - **`y`**
 
-- **`label`** — markdown string
+- **`label`**: markdown string
 
-- `size` — font size in points (default: 11)
+- `size`: font size in points (default: 11)
 
-- `colour` — text colour (default: `"black"`)
+- `colour`: text colour (default: `"black"`)
 
-- `angle` — rotation angle in degrees (default: 0)
+- `angle`: rotation angle in degrees (default: 0)
 
-- `hjust` — horizontal justification, 0-1 (default: 0.5)
+- `hjust`: horizontal justification, 0-1 (default: 0.5)
 
-- `vjust` — vertical justification, 0-1 (default: 0.5)
+- `vjust`: vertical justification, 0-1 (default: 0.5)
 
-- `alpha` — transparency (default: 1)
+- `alpha`: transparency (default: 1)
 
 ## See also
 

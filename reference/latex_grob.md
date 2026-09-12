@@ -93,7 +93,7 @@ grid.latex(tex, ...)
   and `$...$` (or `\(...\)`) opens math mode, matching document-level
   LaTeX semantics. Useful for labels that arrive from external sources
   mixing prose and math without explicit `\text{}` markers. `"math"` is
-  the classic MicroTeX behaviour — the whole string is treated as math,
+  the classic MicroTeX behaviour: the whole string is treated as math,
   so unwrapped prose renders as spaced math italics. The default can be
   changed globally via
   [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "math")`.
@@ -107,9 +107,9 @@ grid.latex(tex, ...)
   using the math font, producing selectable/accessible text in PDF and
   SVG output. Bundled math fonts and any registered via
   [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-  are read directly from their OTF files — no system-wide font install
-  is required. Falls back to path mode automatically on devices that
-  lack the R \\\geq\\ 4.3 glyph engine (e.g., the base
+  are read directly from their OTF files: no system-wide font install is
+  required. Falls back to path mode automatically on devices that lack
+  the R \\\geq\\ 4.3 glyph engine (e.g., the base
   [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) device). For
   selectable PDF output, prefer
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`
@@ -136,7 +136,7 @@ grid.latex(tex, ...)
 
 - debug:
 
-  Logical; if `TRUE`, draws diagnostic overlays on the grob — the full
+  Logical; if `TRUE`, draws diagnostic overlays on the grob: the full
   bounding box (dashed gray), the baseline (solid red), the depth line
   (dashed gray), and a small dot at each MicroTeX draw record's origin.
   Useful for checking positioning and diagnosing vertical alignment.
@@ -169,7 +169,7 @@ Invisibly returns the grob.
 
 `tex_style` selects the size-and-spacing regime MicroTeX applies to the
 whole expression. It changes the *style* (display vs. text), not the
-font size — size is always set via `gp$fontsize` / `gp$cex`;
+font size: size is always set via `gp$fontsize` / `gp$cex`;
 style-dependent shrinking (for `"script"` and `"scriptscript"`) is
 applied on top of that size.
 
@@ -191,12 +191,12 @@ applied on top of that size.
   inline size and limits attach as scripts. The right choice for
   formulas embedded in a line of prose.
 
-- `"script"`: force script style — the size normally used for
-  first-level subscripts and superscripts. Produces a smaller, tighter
-  layout; mainly useful for callouts or sub-labels where a compact
-  equation is wanted.
+- `"script"`: force script style, the size normally used for first-level
+  subscripts and superscripts. Produces a smaller, tighter layout;
+  mainly useful for callouts or sub-labels where a compact equation is
+  wanted.
 
-- `"scriptscript"`: force scriptscript style — the smallest style, used
+- `"scriptscript"`: force scriptscript style, the smallest style, used
   by TeX for doubly-nested scripts. Rarely needed on its own; primarily
   for very dense annotations.
 
@@ -213,12 +213,12 @@ sub-expression from within `tex`, use the inline TeX commands
 - `fontfamily`: controls the font of text inside `\text` and `\mbox`
   blocks. For example, `gpar(fontfamily = "serif")` renders `\text`
   content in R's serif family. Any font available to R's graphics system
-  works — base families (`"sans"`, `"serif"`, `"mono"`) as well as fonts
+  works: base families (`"sans"`, `"serif"`, `"mono"`) as well as fonts
   registered via showtext or systemfonts. Math symbols always use the
   selected math font (see `math_font`). Bold/italic text is controlled
   from within the LaTeX source (`\textbf{}`, `\textit{}`, `\bf`, ...),
-  not via `gp$fontface` — MicroTeX needs the style at layout time to
-  size each run correctly, so a
+  not via `gp$fontface`: MicroTeX needs the style at layout time to size
+  each run correctly, so a
   [`gpar()`](https://rdrr.io/r/grid/gpar.html)-level face is not
   consulted.
 
@@ -279,8 +279,8 @@ the input reaches MicroTeX:
   Full LaTeX instead positions the caption by float type regardless of
   source order, and numbers it from a counter; there is no counter here.
   Wrap the figure and its caption in `\begin{array}{c}...\end{array}` to
-  centre them on each other (`\centering` is dropped — a grob has no
-  page to centre against).
+  centre them on each other (`\centering` is dropped: a grob has no page
+  to centre against).
 
 - `\graphicspath{{dir/}}` and `\DeclareGraphicsExtensions{...}` are
   consumed rather than typeset; the former's directories are searched.
@@ -304,9 +304,9 @@ the input reaches MicroTeX:
 
 - An SVG is drawn as real vector and stays sharp at any output
   resolution; a bitmap does not, and warns when it would be shown below
-  150 dpi. PDF and EPS are not supported — save the figure as SVG
-  instead. A file that cannot be read — missing, unsupported, or an SVG
-  with no `rsvg` installed — warns and draws its name rather than
+  150 dpi. PDF and EPS are not supported: save the figure as SVG
+  instead. A file that cannot be read (missing, unsupported, or an SVG
+  with no `rsvg` installed) warns and draws its name rather than
   disappearing.
 
 Anything not in this list is passed to MicroTeX unchanged. An unknown

@@ -50,7 +50,7 @@ latex_dims(
   and `$...$` (or `\(...\)`) opens math mode, matching document-level
   LaTeX semantics. Useful for labels that arrive from external sources
   mixing prose and math without explicit `\text{}` markers. `"math"` is
-  the classic MicroTeX behaviour — the whole string is treated as math,
+  the classic MicroTeX behaviour: the whole string is treated as math,
   so unwrapped prose renders as spaced math italics. The default can be
   changed globally via
   [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "math")`.
@@ -64,9 +64,9 @@ latex_dims(
   using the math font, producing selectable/accessible text in PDF and
   SVG output. Bundled math fonts and any registered via
   [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-  are read directly from their OTF files — no system-wide font install
-  is required. Falls back to path mode automatically on devices that
-  lack the R \\\geq\\ 4.3 glyph engine (e.g., the base
+  are read directly from their OTF files: no system-wide font install is
+  required. Falls back to path mode automatically on devices that lack
+  the R \\\geq\\ 4.3 glyph engine (e.g., the base
   [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) device). For
   selectable PDF output, prefer
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`

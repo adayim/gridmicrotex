@@ -26,17 +26,17 @@ grid.markdown(md, ...)
   [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
   object, CSS text, or a path to a `.css` file. `NULL` (default) uses
   `latex_options("markdown_style")` if set, and the built-in defaults
-  otherwise. Only the properties `md_style` marks as *inline* apply here
-  — there is no block layout in a single run for a margin, an indent or
-  an alignment to act on, so those are ignored.
+  otherwise. Only the properties `md_style` marks as *inline* apply
+  here: there is no block layout in a single run for a margin, an indent
+  or an alignment to act on, so those are ignored.
   [`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
   honours them all.
 
 - ...:
 
   Passed to
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-  — e.g. `x`, `y`, `hjust`, `vjust`, `rot`, `max_width`, `gp`.
+  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md):
+  e.g. `x`, `y`, `hjust`, `vjust`, `rot`, `max_width`, `gp`.
 
 ## Value
 
@@ -45,7 +45,7 @@ A `latexgrob`, as returned by
 
 ## Details
 
-Markdown and LaTeX disagree about several characters — most importantly
+Markdown and LaTeX disagree about several characters: most importantly
 `\`, which CommonMark treats as an escape. Math spans are therefore
 hidden from the markdown parser before it runs and restored afterwards,
 so constructs like `$\begin{matrix}a\\b\end{matrix}$` survive intact.
@@ -54,13 +54,13 @@ That hiding uses three private-use codepoints (`U+E000`, `U+E001`,
 `U+E002`) as markers, so those three characters are *removed* from the
 input. They are unassigned in Unicode, but icon fonts such as Nerd Fonts
 do put real glyphs there: if your text contains one it will be dropped
-rather than drawn. The alternative is worse — a pasted marker would be
+rather than drawn. The alternative is worse: a pasted marker would be
 spliced together with a math span on the way back out and silently
 duplicate a formula.
 
 GFM has no markdown syntax for colour, underline, super/subscript,
-highlight or size, so — as in CommonMark, and as ggtext does — these
-come from inline HTML. Each tag renders as HTML's own default rendering
+highlight or size, so these come from inline HTML, as in CommonMark and
+as ggtext does. Each tag renders as HTML's own default rendering
 prescribes:
 
 |  |  |
@@ -79,7 +79,7 @@ prescribes:
 | `<span style="...">` | see below |
 
 A `style` attribute is read for `color` (any R colour name, the nine CSS
-names R lacks — `crimson`, `teal`, `rebeccapurple` and friends — `#rgb`,
+names R lacks (`crimson`, `teal`, `rebeccapurple` and friends), `#rgb`,
 `#rrggbb` or [`rgb()`](https://rdrr.io/r/grDevices/rgb.html); note that
 `green`, `gray`, `grey`, `maroon` and `purple` keep their R values, not
 their CSS ones), `text-decoration` (`underline`, `line-through`),
@@ -94,22 +94,22 @@ and svglite see any installed family plus anything registered with
 cairo devices see installed families, and base
 [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) sees only what
 [`pdfFonts()`](https://rdrr.io/r/grDevices/postscriptFonts.html)
-declares — a named family will not resolve there. An unavailable font
+declares: a named family will not resolve there. An unavailable font
 falls back silently, as it does for `gpar(fontfamily=)`. A font file
 that is not installed system-wide is used by registering it first:
 
     systemfonts::register_font(name = "MyFont", plain = "MyFont.otf")
 
 [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-is *not* the function for this — it registers *math* fonts with
-MicroTeX, which is a different mechanism.
+is *not* the function for this: it registers *math* fonts with MicroTeX,
+which is a different mechanism.
 
 A span's own family wins over `gp$fontfamily`, but the width of the
 spaces *between* its words still comes from `gp$fontfamily`; set both to
 the same family if that shows.
 
-Tags nest and combine freely with markdown. Any other tag — and all
-block-level HTML — is dropped, keeping the text inside it, which is also
+Tags nest and combine freely with markdown. Any other tag (and all
+block-level HTML) is dropped, keeping the text inside it, which is also
 what a browser shows for the ones (`<a>`, `<abbr>`, `<span>` without a
 style) that have no default rendering.
 

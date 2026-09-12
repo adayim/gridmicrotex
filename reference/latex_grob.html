@@ -19,7 +19,7 @@ grid.draw."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,8 @@ grid.draw."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
+    <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
@@ -50,7 +52,7 @@ grid.draw."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Create a grid grob from a LaTeX expression</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.1/R/latex-grob.R" class="external-link"><code>R/latex-grob.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/latex-grob.R" class="external-link"><code>R/latex-grob.R</code></a></small>
       <div class="d-none name"><code>latex_grob.Rd</code></div>
     </div>
 
@@ -146,7 +148,7 @@ string reads as ordinary text and <code>$...$</code> (or <code>\(...\)</code>)
 opens math mode, matching document-level LaTeX semantics. Useful for
 labels that arrive from external sources mixing prose and math without
 explicit <code>\text{}</code> markers. <code>"math"</code> is the classic
-MicroTeX behaviour — the whole string is treated as math, so unwrapped
+MicroTeX behaviour: the whole string is treated as math, so unwrapped
 prose renders as spaced math italics. The default can be changed globally via
 <code><a href="latex_options.html">latex_options</a>(input_mode = "math")</code>. See <code><a href="latex_wrap.html">latex_wrap</a></code>
 for details on the wrapping process.</p></dd>
@@ -157,7 +159,7 @@ for details on the wrapping process.</p></dd>
 glyphs as native text using the math font, producing
 selectable/accessible text in PDF and SVG output.
 Bundled math fonts and any registered via <code><a href="load_math_font.html">load_math_font</a></code>
-are read directly from their OTF files — no system-wide font
+are read directly from their OTF files: no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
 R \(\geq\) 4.3 glyph engine (e.g., the base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> device).
@@ -188,7 +190,7 @@ little more layout time.</p></dd>
 
 <dt id="arg-debug">debug<a class="anchor" aria-label="anchor" href="#arg-debug"></a></dt>
 <dd><p>Logical; if <code>TRUE</code>, draws diagnostic overlays on the
-grob — the full bounding box (dashed gray), the baseline (solid
+grob: the full bounding box (dashed gray), the baseline (solid
 red), the depth line (dashed gray), and a small dot at each
 MicroTeX draw record's origin. Useful for checking positioning and
 diagnosing vertical alignment.</p></dd>
@@ -225,7 +227,7 @@ MicroTeX.</p></dd>
 
 <p><code>tex_style</code> selects the size-and-spacing regime MicroTeX applies to
 the whole expression. It changes the <em>style</em> (display vs. text), not
-the font size — size is always set via <code>gp$fontsize</code> / <code>gp$cex</code>;
+the font size: size is always set via <code>gp$fontsize</code> / <code>gp$cex</code>;
 style-dependent shrinking (for <code>"script"</code> and <code>"scriptscript"</code>) is
 applied on top of that size.</p><ul><li><p><code>""</code> (default): let the parser choose based on the delimiters in
 <code>tex</code>. Inline delimiters (single <code>$</code>, or <code>\(...\)</code>) produce
@@ -241,11 +243,11 @@ display-style equation inline in a label, legend, or
 <li><p><code>"text"</code>: force text (inline) style. Big operators shrink to their
 inline size and limits attach as scripts. The right choice for
 formulas embedded in a line of prose.</p></li>
-<li><p><code>"script"</code>: force script style — the size normally used for
+<li><p><code>"script"</code>: force script style, the size normally used for
 first-level subscripts and superscripts. Produces a smaller,
 tighter layout; mainly useful for callouts or sub-labels where a
 compact equation is wanted.</p></li>
-<li><p><code>"scriptscript"</code>: force scriptscript style — the smallest style,
+<li><p><code>"scriptscript"</code>: force scriptscript style, the smallest style,
 used by TeX for doubly-nested scripts. Rarely needed on its own;
 primarily for very dense annotations.</p></li>
 </ul><p><code>tex_style</code> applies to the entire expression. To override the style
@@ -263,11 +265,11 @@ command in the LaTeX string.</p></li>
 <li><p><code>fontfamily</code>: controls the font of text inside <code>\text</code> and <code>\mbox</code>
 blocks. For example, <code>gpar(fontfamily = "serif")</code> renders <code>\text</code>
 content in R's serif family. Any font available to R's graphics
-system works — base families (<code>"sans"</code>, <code>"serif"</code>, <code>"mono"</code>) as
+system works: base families (<code>"sans"</code>, <code>"serif"</code>, <code>"mono"</code>) as
 well as fonts registered via <span class="pkg">showtext</span> or <span class="pkg">systemfonts</span>.
 Math symbols always use the selected math font (see <code>math_font</code>).
 Bold/italic text is controlled from within the LaTeX source
-(<code>\textbf{}</code>, <code>\textit{}</code>, <code>\bf</code>, ...), not via <code>gp$fontface</code> —
+(<code>\textbf{}</code>, <code>\textit{}</code>, <code>\bf</code>, ...), not via <code>gp$fontface</code>:
 MicroTeX needs the style at layout time to size each run correctly,
 so a <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code>-level face is not consulted.</p>
 <p><code>fontfamily</code> <em>also</em> drives MicroTeX's layout metrics for non-math
@@ -315,7 +317,7 @@ the figure and one written before a <code>tabular</code> renders above the table
 Full LaTeX instead positions the caption by float type regardless of
 source order, and numbers it from a counter; there is no counter here.
 Wrap the figure and its caption in <code>\begin{array}{c}...\end{array}</code> to
-centre them on each other (<code>\centering</code> is dropped — a grob has no
+centre them on each other (<code>\centering</code> is dropped: a grob has no
 page to centre against).</p></li>
 <li><p><code>\graphicspath{{dir/}}</code> and <code>\DeclareGraphicsExtensions{...}</code> are
 consumed rather than typeset; the former's directories are searched.</p></li>
@@ -334,9 +336,9 @@ figure to nothing.</p></li>
 <code>plots/fig.svg</code>, then <code>.png</code>, <code>.jpg</code>, <code>.jpeg</code>.</p></li>
 <li><p>An SVG is drawn as real vector and stays sharp at any output
 resolution; a bitmap does not, and warns when it would be shown below
-150 dpi. PDF and EPS are not supported — save the figure as SVG
-instead. A file that cannot be read — missing, unsupported, or an
-SVG with no <code>rsvg</code> installed — warns and draws its name rather than
+150 dpi. PDF and EPS are not supported: save the figure as SVG
+instead. A file that cannot be read (missing, unsupported, or an
+SVG with no <code>rsvg</code> installed) warns and draws its name rather than
 disappearing.</p></li>
 </ul><p>Anything not in this list is passed to MicroTeX unchanged. An unknown
 command is not an error: MicroTeX typesets its name in red, which

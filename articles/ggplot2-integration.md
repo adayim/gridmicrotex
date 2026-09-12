@@ -1,13 +1,20 @@
 # Using LaTeX Math in ggplot2
 
-gridmicrotex provides ggplot2 extensions for rendering LaTeX math in
-plots:
+gridmicrotex offers two ways to put LaTeX math in a ggplot:
 
 - **[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)**
-  — a geom layer for placing LaTeX labels at data coordinates.
-- **[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)**
-  — a theme element for rendering axis titles, plot titles, and other
-  text elements as LaTeX.
+  and
+  **[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)**:
+  a geom layer for placing LaTeX labels at data coordinates, and a theme
+  element for rendering axis titles, plot titles and other text elements
+  as LaTeX.
+- **`latex_options(device_math = TRUE)`**: no new functions at all.
+  Ordinary
+  [`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
+  and [`labs()`](https://ggplot2.tidyverse.org/reference/labs.html)
+  labels written with `$...$` are typeset as they are drawn; see [The
+  same plot with no gridmicrotex
+  functions](#the-same-plot-with-no-gridmicrotex-functions).
 
 There are matching
 [`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
@@ -59,6 +66,57 @@ ggplot(df, aes(x, y,
 
 Dollar-sign delimiters are stripped automatically here, so
 `r"(\frac{a}{b})"` and `r"($\frac{a}{b}$)"` produce the same output.
+
+### The same plot with no gridmicrotex functions
+
+`latex_options(device_math = TRUE)` takes a different route to the same
+place. It works at the graphics device, so ordinary
+[`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
+and [`labs()`](https://ggplot2.tidyverse.org/reference/labs.html) pick
+up math on their own, and a plot you already have needs no new geoms or
+theme elements. Here is the example above with every gridmicrotex
+function taken out:
+
+``` r
+
+latex_options(device_math = TRUE)
+
+ggplot(df, aes(x, y,
+               label = eq,
+               colour = col,
+               size = c(14, 18, 14))) +
+  geom_text(size.unit = "pt") +
+  scale_colour_identity() +
+  scale_size_identity() +
+  labs(
+    x = r"($\beta_1 \cdot x + \beta_0$)",
+    y = r"($\mathrm{mpg}$)"
+  ) +
+  theme(axis.title = element_text(size = 14))
+```
+
+![](ggplot2-integration_files/figure-html/device-math-1.png)
+
+The middle label stays literal, and that is intended.
+[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
+reads its whole label as LaTeX, so `\frac{a}{b}` needs no delimiters
+there. `device_math` sees every string drawn on the device, most of
+which are not math, so it only acts on text inside `$...$`, `\(...\)` or
+`\[...\]`. Write `r"($\frac{a}{b}$)"` and the fraction renders here too.
+
+Which route to take? `device_math` keeps the code you already have, and
+it works the same way for base graphics and lattice. It is also a
+session-wide switch, and ggplot2 still sizes titles, facet strips and
+legend keys from the font rather than the formula, so a tall formula
+there can overflow its space.
+[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
+and
+[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
+measure the real height and affect only the layer or element you give
+them.
+[`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
+lists the other side effects. The rest of this vignette uses the
+gridmicrotex functions, with `device_math` off.
 
 ### Adding equation annotations to a scatter plot
 

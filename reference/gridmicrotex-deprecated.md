@@ -3,7 +3,7 @@
 These functions still work but will be removed in a future release. Both
 were renamed to say what they actually operate on: only **math** fonts
 (those carrying an OpenType MATH table) are ever registered with
-MicroTeX. Text fonts need no loading — they are resolved on demand by
+MicroTeX. Text fonts need no loading: they are resolved on demand by
 systemfonts from `gp$fontfamily`.
 
 ## Usage

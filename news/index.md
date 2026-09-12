@@ -1,5 +1,16 @@
 # Changelog
 
+## gridmicrotex 0.2.0
+
+- New `latex_options(device_math = TRUE)` renders `$…$` math in labels
+  drawn to the graphics device, so **base** graphics gets real LaTeX —
+  `main`, `xlab`, `ylab`,
+  [`text()`](https://rdrr.io/r/graphics/text.html),
+  [`mtext()`](https://rdrr.io/r/graphics/mtext.html),
+  [`legend()`](https://rdrr.io/r/graphics/legend.html) — with no other
+  change to your code. It intercepts the device, so grid, ggplot2 and
+  lattice text is covered too.
+
 ## gridmicrotex 0.1.1
 
 CRAN release: 2026-08-24

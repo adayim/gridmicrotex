@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,6 +35,8 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
+    <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
@@ -64,22 +66,25 @@
       <h1>Using LaTeX Math in ggplot2</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.1/vignettes/ggplot2-integration.Rmd" class="external-link"><code>vignettes/ggplot2-integration.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/vignettes/ggplot2-integration.Rmd" class="external-link"><code>vignettes/ggplot2-integration.Rmd</code></a></small>
       <div class="d-none name"><code>ggplot2-integration.Rmd</code></div>
     </div>
 
     
     
-<p>gridmicrotex provides ggplot2 extensions for rendering LaTeX math in
-plots:</p>
+<p>gridmicrotex offers two ways to put LaTeX math in a ggplot:</p>
 <ul>
 <li>
-<strong><code><a href="../reference/geom_latex.html">geom_latex()</a></code></strong> — a geom layer for
-placing LaTeX labels at data coordinates.</li>
+<strong><code><a href="../reference/geom_latex.html">geom_latex()</a></code></strong> and
+<strong><code><a href="../reference/element_latex.html">element_latex()</a></code></strong>: a geom layer for placing
+LaTeX labels at data coordinates, and a theme element for rendering axis
+titles, plot titles and other text elements as LaTeX.</li>
 <li>
-<strong><code><a href="../reference/element_latex.html">element_latex()</a></code></strong> — a theme element for
-rendering axis titles, plot titles, and other text elements as
-LaTeX.</li>
+<strong><code>latex_options(device_math = TRUE)</code></strong>: no
+new functions at all. Ordinary <code><a href="https://ggplot2.tidyverse.org/reference/geom_text.html" class="external-link">geom_text()</a></code> and
+<code><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs()</a></code> labels written with <code>$...$</code> are typeset
+as they are drawn; see <a href="#the-same-plot-with-no-gridmicrotex-functions">The same plot with
+no gridmicrotex functions</a>.</li>
 </ul>
 <p>There are matching <code><a href="../reference/geom_markdown.html">geom_markdown()</a></code> and
 <code><a href="../reference/element_markdown.html">element_markdown()</a></code> for labels written in markdown rather
@@ -122,13 +127,55 @@ math.</p>
 <code>r"(\frac{a}{b})"</code> and <code>r"($\frac{a}{b}$)"</code>
 produce the same output.</p>
 <div class="section level3">
+<h3 id="the-same-plot-with-no-gridmicrotex-functions">The same plot with no gridmicrotex functions<a class="anchor" aria-label="anchor" href="#the-same-plot-with-no-gridmicrotex-functions"></a>
+</h3>
+<p><code>latex_options(device_math = TRUE)</code> takes a different
+route to the same place. It works at the graphics device, so ordinary
+<code><a href="https://ggplot2.tidyverse.org/reference/geom_text.html" class="external-link">geom_text()</a></code> and <code><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs()</a></code> pick up math on their
+own, and a plot you already have needs no new geoms or theme elements.
+Here is the example above with every gridmicrotex function taken
+out:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>device_math <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">df</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>,</span>
+<span>               label <span class="op">=</span> <span class="va">eq</span>,</span>
+<span>               colour <span class="op">=</span> <span class="va">col</span>,</span>
+<span>               size <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">14</span>, <span class="fl">18</span>, <span class="fl">14</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_text.html" class="external-link">geom_text</a></span><span class="op">(</span>size.unit <span class="op">=</span> <span class="st">"pt"</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_identity.html" class="external-link">scale_colour_identity</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_identity.html" class="external-link">scale_size_identity</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span></span>
+<span>    x <span class="op">=</span> <span class="st">r"($\beta_1 \cdot x + \beta_0$)"</span>,</span>
+<span>    y <span class="op">=</span> <span class="st">r"($\mathrm{mpg}$)"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>axis.title <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">element_text</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="ggplot2-integration_files/figure-html/device-math-1.png" class="r-plt" alt="" width="70%"></p>
+<p>The middle label stays literal, and that is intended.
+<code><a href="../reference/geom_latex.html">geom_latex()</a></code> reads its whole label as LaTeX, so
+<code>\frac{a}{b}</code> needs no delimiters there.
+<code>device_math</code> sees every string drawn on the device, most of
+which are not math, so it only acts on text inside <code>$...$</code>,
+<code>\(...\)</code> or <code>\[...\]</code>. Write
+<code>r"($\frac{a}{b}$)"</code> and the fraction renders here too.</p>
+<p>Which route to take? <code>device_math</code> keeps the code you
+already have, and it works the same way for base graphics and lattice.
+It is also a session-wide switch, and ggplot2 still sizes titles, facet
+strips and legend keys from the font rather than the formula, so a tall
+formula there can overflow its space. <code><a href="../reference/geom_latex.html">geom_latex()</a></code> and
+<code><a href="../reference/element_latex.html">element_latex()</a></code> measure the real height and affect only the
+layer or element you give them. <code><a href="../articles/base-graphics.html">vignette("base-graphics")</a></code>
+lists the other side effects. The rest of this vignette uses the
+gridmicrotex functions, with <code>device_math</code> off.</p>
+</div>
+<div class="section level3">
 <h3 id="adding-equation-annotations-to-a-scatter-plot">Adding equation annotations to a scatter plot<a class="anchor" aria-label="anchor" href="#adding-equation-annotations-to-a-scatter-plot"></a>
 </h3>
 <p>A common use case is annotating a regression fit with the model
 equation. Use <code>annotate("latex", ...)</code> for single annotations
 — it delegates to <code>GeomLatex</code> internally but avoids creating
 a data frame and automatically hides the legend.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">wt</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="va">b0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">b1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span>, <span class="fl">1</span><span class="op">)</span></span>
@@ -153,7 +200,7 @@ word, a symbol in a sentence — <code><a href="../reference/geom_markdown.html"
 <code><a href="../reference/element_markdown.html">element_markdown()</a></code> accept markdown with inline
 <code>$math$</code>. They take the same aesthetics and theme slots as
 their LaTeX counterparts; only the label syntax differs.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  x   <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
 <span>  y   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span>,</span>
@@ -186,7 +233,7 @@ change the label.</p>
 <code>annotate("latex", ...)</code>. It suits a callout that is part
 prose and part formula — and because <code>&lt;br&gt;</code> starts a
 new line, one annotation can hold several:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">wt</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">note</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
@@ -216,7 +263,7 @@ object, CSS text, or the path to a <code>.css</code> file. It is the
 same cascade <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code> uses — so a stylesheet can
 set the look of every label at once, and
 <code>&lt;span class=&gt;</code> picks out one run inside a label.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">css</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
 <span><span class="st">  body   { color: #33475B }</span></span>
 <span><span class="st">  strong { color: #B22222 }</span></span>
@@ -255,7 +302,7 @@ more than one paragraph — is laid out as blocks instead of being
 flattened into a single run. There is nothing to switch on:
 <code><a href="../reference/element_markdown.html">element_markdown()</a></code> notices. That makes a title a small
 document, and the <code>body</code> rule styles the box around it.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>colour <span class="op">=</span> <span class="st">"grey40"</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">r"(## Fuel economy falls with weight</span></span>

@@ -13,7 +13,7 @@ font-size."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -26,6 +26,8 @@ font-size."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
+    <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
@@ -44,7 +46,7 @@ font-size."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Declarations for one markdown tag</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.1.1/R/markdown-style.R" class="external-link"><code>R/markdown-style.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/markdown-style.R" class="external-link"><code>R/markdown-style.R</code></a></small>
       <div class="d-none name"><code>md_style.Rd</code></div>
     </div>
 
@@ -89,13 +91,13 @@ or a length</td></tr><tr><td><code>transform</code></td><td>inline</td><td><code
 collapse</td></tr><tr><td><code>margin_left</code>, <code>margin_right</code></td><td>block</td><td></td></tr><tr><td><code>padding_left</code>, <code>padding_right</code></td><td>block</td><td></td></tr><tr><td><code>padding_top</code>, <code>padding_bottom</code></td><td>block</td><td></td></tr><tr><td><code>margin</code>, <code>padding</code></td><td>block</td><td>the CSS shorthand: one
 to four lengths, in CSS's order</td></tr><tr><td><code>text_align</code></td><td>block</td><td><code>left</code>, <code>center</code>,
 <code>right</code></td></tr><tr><td><code>border_left</code></td><td>block</td><td>the <code>blockquote</code> bar</td></tr><tr><td><code>border_top</code></td><td>block</td><td>the <code>hr</code> rule</td></tr><tr><td><code>border_bottom</code></td><td><code>tr</code></td><td>a rule under each table row</td></tr><tr><td><code>border_color</code></td><td><code>table</code></td><td>colour of the table's rules</td></tr><tr><td><code>table_layout</code></td><td><code>table</code></td><td><code>fixed</code> divides the
-width between the columns so a wide table wraps</td></tr><tr><td><code>height</code></td><td>block</td><td>the band an <code>hr</code> sits in</td></tr><tr><td><code>bullet</code></td><td><code>ul</code></td><td>raw LaTeX for the marker glyph</td></tr><tr><td><code>marker_gap</code></td><td><code>ul</code>, <code>ol</code></td><td>marker to text</td></tr></table><p><code>font_size</code> also accepts CSS's keywords — <code>xx-small</code> through
-<code>xx-large</code>, plus <code>smaller</code> and <code>larger</code> — taken from the
+width between the columns so a wide table wraps</td></tr><tr><td><code>height</code></td><td>block</td><td>the band an <code>hr</code> sits in</td></tr><tr><td><code>bullet</code></td><td><code>ul</code></td><td>raw LaTeX for the marker glyph</td></tr><tr><td><code>marker_gap</code></td><td><code>ul</code>, <code>ol</code></td><td>marker to text</td></tr></table><p><code>font_size</code> also accepts CSS's keywords (<code>xx-small</code> through
+<code>xx-large</code>, plus <code>smaller</code> and <code>larger</code>), taken from the
 <code>\tiny</code>..<code>\Huge</code> ladder MicroTeX implements.</p>
 <p><strong>The <code>body</code> rule styles the box itself.</strong> On any other tag,
 <code>background</code>, <code>border</code>, <code>border_radius</code>, <code>padding</code>
 and <code>margin</code> apply to that block. On <code>body</code> they apply to the
-whole <code><a href="markdown_box_grob.html">markdown_box_grob</a></code> — its fill, its frame, its
+whole <code><a href="markdown_box_grob.html">markdown_box_grob</a></code>: its fill, its frame, its
 corner radius, and the space inside and outside it. That is the only
 way to give a <code><a href="element_markdown.html">element_markdown</a></code> title a background, since
 the theme element takes no box arguments of its own:</p>
@@ -105,10 +107,10 @@ the theme element takes no box arguments of its own:</p>
 <p>An explicit <code>box_gp</code>, <code>padding</code>, <code>margin</code> or <code>r</code>
 argument to <code><a href="markdown_box_grob.html">markdown_box_grob()</a></code> wins over the rule, the way an
 inline style wins in CSS.</p>
-<p>Anything else is an error — unlike a pasted stylesheet, where an
+<p>Anything else is an error: unlike a pasted stylesheet, where an
 unknown property is ignored the way a browser ignores it.</p>
 <p><strong>One limitation worth knowing.</strong> <code>font_weight</code> and
-<code>font_style</code> apply to blocks whose content is prose — paragraphs,
+<code>font_style</code> apply to blocks whose content is prose: paragraphs,
 headings, list items, block quotes, table cells and <code>&lt;div&gt;</code>s. They
 do <em>not</em> apply to <code>pre</code> or an image's alt text, which build
 their own LaTeX and impose their own font handling. This is a MicroTeX
@@ -118,7 +120,7 @@ not wrapped around it afterwards.</p>
 <p><strong>What cannot be styled at all.</strong> There is no small-caps
 (<code>\textsc</code> is not a MicroTeX command), no
 <code>font-variant-numeric</code>, no right-to-left or bidirectional text,
-and no padding inside an inline <code>border</code> — MicroTeX has no
+and no padding inside an inline <code>border</code>: MicroTeX has no
 <code>\fboxsep</code>, so that inset is fixed.</p>
     </div>
     <div class="section level2">
