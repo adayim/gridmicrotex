@@ -33,7 +33,7 @@
 #'   opens math mode, matching document-level LaTeX semantics. Useful for
 #'   labels that arrive from external sources mixing prose and math without
 #'   explicit \code{\\text{}} markers. \code{"math"} is the classic
-#'   MicroTeX behaviour --- the whole string is treated as math, so unwrapped
+#'   MicroTeX behaviour: the whole string is treated as math, so unwrapped
 #'   prose renders as spaced math italics. The default can be changed globally via
 #'   \code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
 #'  for details on the wrapping process.
@@ -41,7 +41,7 @@
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
 #'   Bundled math fonts and any registered via \code{\link{load_math_font}}
-#'   are read directly from their OTF files --- no system-wide font
+#'   are read directly from their OTF files: no system-wide font
 #'   install is required.
 #'   Falls back to path mode automatically on devices that lack the
 #'   R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
@@ -63,7 +63,7 @@
 #'   greedy pass cannot see. Requires \code{max_width}, and costs a
 #'   little more layout time.
 #' @param debug Logical; if \code{TRUE}, draws diagnostic overlays on the
-#'   grob --- the full bounding box (dashed gray), the baseline (solid
+#'   grob: the full bounding box (dashed gray), the baseline (solid
 #'   red), the depth line (dashed gray), and a small dot at each
 #'   MicroTeX draw record's origin. Useful for checking positioning and
 #'   diagnosing vertical alignment.
@@ -80,7 +80,7 @@
 #'
 #' `tex_style` selects the size-and-spacing regime MicroTeX applies to
 #' the whole expression. It changes the *style* (display vs. text), not
-#' the font size --- size is always set via `gp$fontsize` / `gp$cex`;
+#' the font size: size is always set via `gp$fontsize` / `gp$cex`;
 #' style-dependent shrinking (for `"script"` and `"scriptscript"`) is
 #' applied on top of that size.
 #'
@@ -98,11 +98,11 @@
 #' - `"text"`: force text (inline) style. Big operators shrink to their
 #'   inline size and limits attach as scripts. The right choice for
 #'   formulas embedded in a line of prose.
-#' - `"script"`: force script style --- the size normally used for
+#' - `"script"`: force script style, the size normally used for
 #'   first-level subscripts and superscripts. Produces a smaller,
 #'   tighter layout; mainly useful for callouts or sub-labels where a
 #'   compact equation is wanted.
-#' - `"scriptscript"`: force scriptscript style --- the smallest style,
+#' - `"scriptscript"`: force scriptscript style, the smallest style,
 #'   used by TeX for doubly-nested scripts. Rarely needed on its own;
 #'   primarily for very dense annotations.
 #'
@@ -119,11 +119,11 @@
 #' - `fontfamily`: controls the font of text inside `\text` and `\mbox`
 #'   blocks. For example, `gpar(fontfamily = "serif")` renders `\text`
 #'   content in R's serif family. Any font available to R's graphics
-#'   system works --- base families (`"sans"`, `"serif"`, `"mono"`) as
+#'   system works: base families (`"sans"`, `"serif"`, `"mono"`) as
 #'   well as fonts registered via \pkg{showtext} or \pkg{systemfonts}.
 #'   Math symbols always use the selected math font (see `math_font`).
 #'   Bold/italic text is controlled from within the LaTeX source
-#'   (`\textbf{}`, `\textit{}`, `\bf`, ...), not via `gp$fontface` ---
+#'   (`\textbf{}`, `\textit{}`, `\bf`, ...), not via `gp$fontface`:
 #'   MicroTeX needs the style at layout time to size each run correctly,
 #'   so a `gpar()`-level face is not consulted.
 #'
@@ -173,7 +173,7 @@
 #'   Full LaTeX instead positions the caption by float type regardless of
 #'   source order, and numbers it from a counter; there is no counter here.
 #'   Wrap the figure and its caption in `\begin{array}{c}...\end{array}` to
-#'   centre them on each other (`\centering` is dropped --- a grob has no
+#'   centre them on each other (`\centering` is dropped: a grob has no
 #'   page to centre against).
 #' * `\graphicspath{{dir/}}` and `\DeclareGraphicsExtensions{...}` are
 #'   consumed rather than typeset; the former's directories are searched.
@@ -194,9 +194,9 @@
 #'   `plots/fig.svg`, then `.png`, `.jpg`, `.jpeg`.
 #' * An SVG is drawn as real vector and stays sharp at any output
 #'   resolution; a bitmap does not, and warns when it would be shown below
-#'   150 dpi. PDF and EPS are not supported --- save the figure as SVG
-#'   instead. A file that cannot be read --- missing, unsupported, or an
-#'   SVG with no `rsvg` installed --- warns and draws its name rather than
+#'   150 dpi. PDF and EPS are not supported: save the figure as SVG
+#'   instead. A file that cannot be read (missing, unsupported, or an
+#'   SVG with no `rsvg` installed) warns and draws its name rather than
 #'   disappearing.
 #'
 #' Anything not in this list is passed to MicroTeX unchanged. An unknown

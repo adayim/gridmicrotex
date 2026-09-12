@@ -1035,7 +1035,7 @@
 #' are passed through to MicroTeX byte-for-byte.
 #'
 #' @details
-#' Markdown and LaTeX disagree about several characters --- most
+#' Markdown and LaTeX disagree about several characters: most
 #' importantly \code{\\}, which CommonMark treats as an escape. Math
 #' spans are therefore hidden from the markdown parser before it runs and
 #' restored afterwards, so constructs like
@@ -1046,12 +1046,12 @@
 #' are \emph{removed} from the input. They are unassigned in Unicode, but
 #' icon fonts such as Nerd Fonts do put real glyphs there: if your text
 #' contains one it will be dropped rather than drawn. The alternative is
-#' worse --- a pasted marker would be spliced together with a math span
+#' worse: a pasted marker would be spliced together with a math span
 #' on the way back out and silently duplicate a formula.
 #'
 #' GFM has no markdown syntax for colour, underline, super/subscript,
-#' highlight or size, so --- as in CommonMark, and as \pkg{ggtext} does
-#' --- these come from inline HTML. Each tag renders as HTML's own
+#' highlight or size, so these come from inline HTML, as in CommonMark
+#' and as \pkg{ggtext} does. Each tag renders as HTML's own
 #' default rendering prescribes:
 #'
 #' \tabular{ll}{
@@ -1071,8 +1071,8 @@
 #' }
 #'
 #' A \code{style} attribute is read for \code{color} (any R colour name,
-#' the nine CSS names R lacks --- \code{crimson}, \code{teal},
-#' \code{rebeccapurple} and friends --- \code{#rgb}, \code{#rrggbb} or
+#' the nine CSS names R lacks (\code{crimson}, \code{teal},
+#' \code{rebeccapurple} and friends), \code{#rgb}, \code{#rrggbb} or
 #' \code{rgb()}; note that \code{green}, \code{gray}, \code{grey},
 #' \code{maroon} and \code{purple} keep their R values, not their CSS
 #' ones),
@@ -1088,14 +1088,14 @@
 #' \pkg{svglite} see any installed family plus anything registered with
 #' \code{systemfonts::register_font()}, cairo devices see installed
 #' families, and base \code{pdf()} sees only what \code{pdfFonts()}
-#' declares --- a named family will not resolve there. An unavailable
+#' declares: a named family will not resolve there. An unavailable
 #' font falls back silently, as it does for \code{gpar(fontfamily=)}.
 #' A font file that is not installed system-wide is used by registering
 #' it first:
 #'
 #' \preformatted{systemfonts::register_font(name = "MyFont", plain = "MyFont.otf")}
 #'
-#' \code{\link{load_math_font}} is \emph{not} the function for this ---
+#' \code{\link{load_math_font}} is \emph{not} the function for this:
 #' it registers \emph{math} fonts with MicroTeX, which is a different
 #' mechanism.
 #'
@@ -1103,8 +1103,8 @@
 #' the spaces \emph{between} its words still comes from
 #' \code{gp$fontfamily}; set both to the same family if that shows.
 #'
-#' Tags nest and combine freely with markdown. Any other tag --- and all
-#' block-level HTML --- is dropped, keeping the text inside it, which is
+#' Tags nest and combine freely with markdown. Any other tag (and all
+#' block-level HTML) is dropped, keeping the text inside it, which is
 #' also what a browser shows for the ones (\code{<a>}, \code{<abbr>},
 #' \code{<span>} without a style) that have no default rendering.
 #'
@@ -1122,10 +1122,10 @@
 #'   object, CSS text, or a path to a \code{.css} file. \code{NULL}
 #'   (default) uses \code{latex_options("markdown_style")} if set, and
 #'   the built-in defaults otherwise. Only the properties \code{md_style}
-#'   marks as \emph{inline} apply here --- there is no block layout in a
+#'   marks as \emph{inline} apply here: there is no block layout in a
 #'   single run for a margin, an indent or an alignment to act on, so
 #'   those are ignored. \code{\link{markdown_box_grob}} honours them all.
-#' @param ... Passed to \code{\link{latex_grob}} --- e.g. \code{x},
+#' @param ... Passed to \code{\link{latex_grob}}: e.g. \code{x},
 #'   \code{y}, \code{hjust}, \code{vjust}, \code{rot}, \code{max_width},
 #'   \code{gp}.
 #' @return A \code{latexgrob}, as returned by \code{\link{latex_grob}}.

@@ -1,3 +1,8 @@
+# gridmicrotex 0.2.0
+
+- New `latex_options(device_math = TRUE)` renders `$…$` math in labels drawn to the graphics device, so **base** graphics gets real LaTeX — `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()` — with no other change to your code. It intercepts the device, so grid, ggplot2 and lattice text is covered too.
+
+
 # gridmicrotex 0.1.1
 
 - The typeface fallback is now a message rather than a warning, is raised only when `render_mode = "typeface"` was actually asked for, and at most once per device. A figure holding many math labels no longer repeats it.

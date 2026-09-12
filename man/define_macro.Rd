@@ -38,7 +38,7 @@ Useful for domain-specific notation (e.g. \code{\\RR} for
 MicroTeX also accepts \code{\\newcommand} and plain-TeX \code{\\def}
 written inside the expression itself, and those are the more capable
 form: they take up to nine arguments, which \code{define_macro()} does
-not --- it substitutes text and nothing else.
+not: it substitutes text and nothing else.
 
 \preformatted{
   # parameterised, but local to this one expression

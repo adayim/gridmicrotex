@@ -20,8 +20,8 @@
 
 #' A ggplot2 geom for markdown labels
 #'
-#' Renders markdown labels -- \code{**bold**}, \code{*italic*},
-#' \code{`code`}, \code{~~strike~~} and \code{$math$} -- as native grid
+#' Renders markdown labels (\code{**bold**}, \code{*italic*},
+#' \code{`code`}, \code{~~strike~~} and \code{$math$}) as native grid
 #' grobs inside a plot. The markdown is converted to LaTeX and laid out by
 #' MicroTeX, so the output is resolution-independent vector graphics.
 #'
@@ -31,13 +31,13 @@
 #' \itemize{
 #'   \item \strong{\code{x}}
 #'   \item \strong{\code{y}}
-#'   \item \strong{\code{label}} --- markdown string
-#'   \item \code{size} --- font size in points (default: 11)
-#'   \item \code{colour} --- text colour (default: \code{"black"})
-#'   \item \code{angle} --- rotation angle in degrees (default: 0)
-#'   \item \code{hjust} --- horizontal justification, 0-1 (default: 0.5)
-#'   \item \code{vjust} --- vertical justification, 0-1 (default: 0.5)
-#'   \item \code{alpha} --- transparency (default: 1)
+#'   \item \strong{\code{label}}: markdown string
+#'   \item \code{size}: font size in points (default: 11)
+#'   \item \code{colour}: text colour (default: \code{"black"})
+#'   \item \code{angle}: rotation angle in degrees (default: 0)
+#'   \item \code{hjust}: horizontal justification, 0-1 (default: 0.5)
+#'   \item \code{vjust}: vertical justification, 0-1 (default: 0.5)
+#'   \item \code{alpha}: transparency (default: 1)
 #' }
 #'
 #' @inheritParams ggplot2::layer
@@ -57,7 +57,7 @@
 #'   path to a \code{.css} file, applied to every label this layer draws.
 #'   \code{NULL} falls back to
 #'   \code{\link{latex_options}(markdown_style = )}. Only the properties
-#'   that compile to LaTeX apply here --- a label has no block layout, so
+#'   that compile to LaTeX apply here: a label has no block layout, so
 #'   margins and padding are ignored. See \code{\link{md_style}}.
 #' @param na.rm If \code{FALSE}, the default, missing values are removed
 #'   with a warning. If \code{TRUE}, they are removed silently.
@@ -130,8 +130,8 @@ GeomMarkdown <- NULL
 #' A ggplot2 theme element for markdown text
 #'
 #' Use as a theme element for axis titles, axis labels, plot titles or any
-#' other text element. The label is parsed as markdown --- including
-#' \code{$...$} math --- and rendered via MicroTeX.
+#' other text element. The label is parsed as markdown (including
+#' \code{$...$} math), and rendered via MicroTeX.
 #'
 #' @details
 #' This is an S7 subclass of \code{ggplot2::element_text}, so it inherits
@@ -139,8 +139,8 @@ GeomMarkdown <- NULL
 #' and merges correctly with inherited theme entries.
 #'
 #' @section Block labels:
-#' A label with real block structure --- a heading, a list, a table, a
-#' rule, or more than one paragraph --- is laid out by
+#' A label with real block structure (a heading, a list, a table, a
+#' rule, or more than one paragraph) is laid out by
 #' \code{\link{markdown_box_grob}} rather than flattened into one run, so
 #' list markers, indents and block spacing survive. That makes a title
 #' like this work:
@@ -148,8 +148,8 @@ GeomMarkdown <- NULL
 #' \preformatted{labs(title = "## Findings\\n\\n- slope $\\\\beta_1$\\n- *p* < 0.001")}
 #'
 #' The box's own background, border, padding and corner radius come from
-#' the stylesheet's \code{body} rule --- \code{style = "body \{ background:
-#' grey95; padding: 8px \}"} --- not from arguments here. See
+#' the stylesheet's \code{body} rule (\code{style = "body \{ background:
+#' grey95; padding: 8px \}"}), not from arguments here. See
 #' \code{\link{markdown_style}}.
 #'
 #' Three details follow from how ggplot2 measures theme elements:
@@ -175,7 +175,7 @@ GeomMarkdown <- NULL
 #' Note that \pkg{ggtext} also exports a function called
 #' \code{element_markdown()}. If both packages are attached, the one loaded
 #' later wins; call \code{gridmicrotex::element_markdown()} explicitly to
-#' be unambiguous. The two are not interchangeable --- ggtext renders
+#' be unambiguous. The two are not interchangeable: ggtext renders
 #' HTML/CSS and images, this renders LaTeX math.
 #'
 #' @param math_font Name of the math font to use (e.g. \code{"stix"}).
@@ -190,7 +190,7 @@ GeomMarkdown <- NULL
 #'   \code{max_width}.
 #' @param style A \code{\link{markdown_style}} object, CSS text, or the
 #'   path to a \code{.css} file, applied to labels drawn through this
-#'   theme element. \code{NA}, the default, means unset --- the global
+#'   theme element. \code{NA}, the default, means unset: the global
 #'   \code{\link{latex_options}(markdown_style = )} applies instead. Only
 #'   the properties that compile to LaTeX have an effect, unless the label
 #'   is laid out as blocks (see \emph{Block labels}). See

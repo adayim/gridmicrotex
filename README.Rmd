@@ -22,8 +22,9 @@ knitr::opts_chunk$set(
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
-Render LaTeX math expressions --- and markdown containing them --- as native
-R **grid** graphics objects, with no external LaTeX installation required.
+Render LaTeX math in [**base R** plots](#base-graphics) and as native R
+**grid** graphics objects (markdown included), with no external LaTeX
+installation required.
 
 gridmicrotex embeds the [MicroTeX](https://github.com/NanoMichael/MicroTeX)
 C++ layout engine to parse LaTeX, compute the full box model, and produce
@@ -112,6 +113,36 @@ grid.latex(
 )
 ```
 
+## Base graphics
+
+R's own plotting system gets math too. Set
+`latex_options(device_math = TRUE)` and any label containing `$...$` is
+typeset by MicroTeX: `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()`,
+and anything built on them such as `hist()`. Nothing else in your plotting
+code changes. The switch acts at the device, so it reaches lattice, grid,
+ggplot2 and other packages' plot methods as well: a plain `geom_text()` label
+picks up math without any gridmicrotex function.
+
+```{r example-base, fig.height=4, fig.width=6, out.width="80%"}
+latex_options(device_math = TRUE)
+
+plot(1:10, (1:10)^2,
+     main = "Slope $\\hat{\\beta}_1 = \\sum_{i=1}^{n} x_i^2$",
+     xlab = "Cost $5-$10 per unit",   # left alone: not math
+     ylab = "$\\frac{y}{2}$")
+text(3, 80, "$\\int_0^\\infty e^{-x^2}\\,dx$", col = "steelblue")
+```
+
+```{r example-base-off, include=FALSE}
+latex_options(device_math = FALSE)
+```
+
+Everyday labels are left alone, which is why the x-axis title above
+renders as written. Because the switch is session-wide it has side effects
+worth knowing (a tall formula can overflow the space R reserved for it, and
+showtext overrides it); `vignette("base-graphics")` lists them.
+
+
 ## Markdown
 
 `grid.markdown()` renders markdown, with `$math$` inline. Unlike the other
@@ -183,23 +214,16 @@ See `vignette("ggplot2-integration")` for more examples.
 
 ## How it works
 
-1. Your LaTeX string is parsed by MicroTeX's C++ engine into a TeX box model
-2. A custom `Graphics2D` recorder captures every draw operation (glyph paths,
-   lines, rectangles) with exact coordinates
-3. The layout crosses the C++/R boundary as a data frame
-4. R converts each record into native grid primitives (`pathGrob`,
-   `segmentsGrob`, `rectGrob`)
-5. The result is a `gTree` that renders on any device at any resolution
+MicroTeX parses the LaTeX and computes the full TeX box model; a recorder
+captures every draw operation with exact coordinates, and R turns those
+into native grid primitives. Nothing is rasterised, so the output stays
+sharp at any resolution on any device.
 
-By default, math glyphs are rendered in typeface mode as native text
-using the selected math font, which keeps PDF/SVG output selectable and
-searchable on devices with font embedding support.
-
-When `render_mode = "path"` is used (or when automatic fallback is
-triggered on unsupported devices), glyphs are drawn as filled vector
-paths for consistent rendering everywhere.
-
-Make sure to use `ragg::agg_png()`, `svglite::svglite()` or `grDevices::cairo_pdf()` for best results, as some older devices may not support the full range of path operations.
+Glyphs are drawn either as native text (which keeps PDF and SVG output
+selectable and searchable) or as filled vector paths, which work
+everywhere. `render_mode` chooses, and falls back to paths by itself on a
+device that cannot embed fonts. `vignette("getting-started")` covers the
+trade-off.
 
 ## Graphics backend
 

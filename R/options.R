@@ -11,7 +11,8 @@
   input_mode  = NULL,
   justify     = NULL,
   line_break  = NULL,
-  markdown_style = NULL
+  markdown_style = NULL,
+  device_math   = NULL
 )
 
 # Validate the `justify` argument. Kept here so latex_grob(),
@@ -36,8 +37,8 @@
 #' default"). Supply one or more named arguments to update them.
 #'
 #' Font size and line spacing are controlled via \code{gp} parameters
-#' (\code{fontsize}, \code{cex}, \code{lineheight}) at the grob level
-#' --- see \code{\link{latex_grob}}.
+#' (\code{fontsize}, \code{cex}, \code{lineheight}) at the grob level;
+#' see \code{\link{latex_grob}}.
 #'
 #' @param math_font Math font name or alias (see
 #'   \code{\link{available_math_fonts}}).
@@ -50,10 +51,10 @@
 #' @param input_mode How the input string is interpreted before being
 #'   handed to MicroTeX. \code{"mixed"} (default) wraps the string in
 #'   \code{\\text{...}} so it reads as ordinary text, with \code{$...$}
-#'   (and \code{\\(...\\)}) opening math mode --- the document-level
+#'   (and \code{\\(...\\)}) opening math mode: the document-level
 #'   LaTeX convention. Useful when consuming labels from other packages
 #'   that mix prose and math without explicit \code{\\text{}} markers.
-#'   \code{"math"} treats the whole string as math --- the classic
+#'   \code{"math"} treats the whole string as math: the classic
 #'   MicroTeX behaviour, where letters render as math italics and
 #'   unwrapped prose looks wrong.
 #' @param justify Logical. When \code{TRUE}, wrapped text is stretched at
@@ -73,6 +74,80 @@
 #' @param markdown_style Default style for \code{\link{markdown_grob}} and
 #'   \code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}
 #'   object, CSS text, or a path to a \code{.css} file.
+#' @param device_math Logical. When \code{TRUE}, text drawn to the
+#'   graphics device is rendered with MicroTeX wherever it contains math.
+#'   The motivating case is \emph{base} graphics, which has no other route
+#'   to LaTeX: \code{plot(main=)}, \code{xlab}, \code{ylab},
+#'   \code{\link[graphics]{text}}, \code{\link[graphics]{mtext}},
+#'   \code{\link[graphics]{legend}}, and anything built on them such as
+#'   \code{hist()} or a package's own \code{plot} method.
+#'
+#'   Interception happens at the device, so it is \strong{not} limited to
+#'   base graphics: text drawn by \pkg{grid}, \pkg{ggplot2} and
+#'   \pkg{lattice}, and by other packages' plot methods, is affected too.
+#'   \code{grid.text("$x^2$")} renders math while this is on.
+#'   \code{\link{latex_grob}}, \code{\link{geom_latex}} and
+#'   \code{\link{element_latex}} give the same rendering confined to one
+#'   grob, layer or theme element, and measure its height correctly.
+#'
+#'   The convention is the one \code{\link{latex_wrap}} already uses:
+#'   \code{$...$}, \code{$$...$$}, \code{\\(...\\)}, \code{\\[...\\]},
+#'   with \code{\\$} a literal dollar sign. A label is intercepted only
+#'   when \emph{every} delimiter in it is closed and the content looks
+#'   like math, so \code{"Revenue ($)"}, \code{"Cost $5-$10"} and
+#'   \code{"Budget $1,000 to $5,000"} are passed through untouched.
+#'   Anything that cannot be laid out is drawn as plain text rather than
+#'   raising an error.
+#'
+#'   \strong{Height is the one thing that cannot be corrected.} R computes
+#'   text height from the font, never from the string, and a graphics
+#'   device has no string-height entry point to intercept. A tall formula
+#'   can therefore overflow a \code{legend()} box or the space
+#'   \code{par("mar")} reserved for it. Widths \emph{are} correct. Reserve
+#'   the room yourself with \code{\link{latex_dims}}:
+#'
+#'   \preformatted{
+#'   h  <- latex_dims("$\\\\frac{a}{b}$",
+#'                    gp = grid::gpar(fontsize = par("ps")))$height
+#'   bp <- grid::convertHeight(h, "bigpts", TRUE)
+#'   # par(mar) counts lines of par("cin"), not grid's "lines".
+#'   need <- ceiling(bp / (par("cin")[2] * 72 * par("mex")))
+#'   par(mar = c(5, need + 1, 4, 2))
+#'   }
+#'
+#'   Other side effects worth knowing:
+#'   \itemize{
+#'     \item It is session-wide and reaches every device opened while it
+#'       is on, including text drawn by packages you did not write. Labels
+#'       without math are passed through unchanged.
+#'     \item A label containing a newline reaches the device one line at a
+#'       time, so a formula split across lines is not recognised.
+#'     \item Math is drawn as vector outlines, so unlike
+#'       \code{\link{latex_grob}} it is not selectable in a PDF.
+#'     \item Prose inside a bold label is not bolded: face comes from
+#'       \code{\\textbf} rather than from the device.
+#'     \item \code{\\includegraphics} is left out, and rounded box corners
+#'       are drawn square.
+#'     \item A label that cannot be laid out is drawn as literal text, and
+#'       warnings raised while laying it out are suppressed.
+#'     \item \pkg{showtext} replaces the same device callbacks when a plot
+#'       starts, so with \code{showtext::showtext_auto()} on, labels stay
+#'       literal.
+#'     \item A package that gives \code{$} its own meaning acts first:
+#'       \pkg{corrplot} parses a label starting with \code{$} as plotmath.
+#'     \item \code{expression()} labels are untouched, because R lays
+#'       plotmath out inside the graphics engine.
+#'     \item Output not drawn through an R graphics device is unaffected:
+#'       \pkg{plotly} and other htmlwidgets, and \pkg{rgl}'s own
+#'       \code{text3d()} labels. \pkg{rgl}'s \code{plotmath3d()} (and
+#'       \code{text3d(usePlotmath = TRUE)}, which calls it) draws into an
+#'       R device and does pick it up.
+#'     \item In R Markdown, turn it off in a later chunk than the one that
+#'       draws: knitr captures a chunk's plots after its last line runs.
+#'   }
+#'
+#'   \code{vignette("base-graphics")} walks through all of this with
+#'   examples.
 #' @return Invisibly returns the previous settings (a list). With no
 #'   arguments, returns the current settings visibly.
 #' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}}
@@ -81,13 +156,26 @@
 #' @examples
 #' \donttest{
 #'   latex_options(math_font = "stix", render_mode = "typeface")
-#'   grid.latex("\\sum_{i=1}^{n} i^{2}", gp = grid::gpar(fontsize = 14))
+#'   grid.latex("$\\sum_{i=1}^{n} i^{2}$", gp = grid::gpar(fontsize = 14))
 #'   reset_latex_options()
+#'
+#'   # Math in base graphics, with no other change to the plotting code.
+#'   latex_options(device_math = TRUE)
+#'   plot(1:10, (1:10)^2,
+#'        main = "Slope $\\hat{\\beta}_1 = \\sum_{i=1}^{n} x_i^2$",
+#'        ylab = "$y^2$")
+#' }
+#' \dontshow{
+#' # pkgdown saves example figures only after all the example code has run,
+#' # so the option must stay on there or the plot shows literal $...$.
+#' # Everywhere else, including R CMD check, switch it off again.
+#' if (!identical(Sys.getenv("IN_PKGDOWN"), "true"))
+#'   latex_options(device_math = FALSE)
 #' }
 latex_options <- function(math_font = NULL, render_mode = NULL,
                           tex_style = NULL, input_mode = NULL,
                           justify = NULL, line_break = NULL,
-                          markdown_style = NULL) {
+                          markdown_style = NULL, device_math = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -124,6 +212,17 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     # the call that set it.
     .latex_options$values$markdown_style <- .md_as_style(markdown_style)
   }
+  if (!is.null(device_math)) {
+    if (!is.logical(device_math) || length(device_math) != 1L || is.na(device_math)) {
+      stop("`device_math` must be TRUE or FALSE.", call. = FALSE)
+    }
+    # Setting this one has an effect on open devices, in the same way
+    # `math_font` switches the engine font rather than only recording a
+    # preference. Flip the devices before recording, so a failure in the
+    # C layer leaves the option reading FALSE rather than lying.
+    .gm_base_set(device_math)
+    .latex_options$values$device_math <- device_math
+  }
   invisible(old)
 }
 
@@ -131,6 +230,10 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
 #'
 #' @export
 reset_latex_options <- function() {
+  # Clearing the value is not enough: armed devices would stay hooked
+  # while the option read FALSE, and stale callbacks would outlive the
+  # option that installed them.
+  .gm_base_set(FALSE)
   .latex_options$values <- list(
     math_font   = NULL,
     render_mode = NULL,
@@ -138,7 +241,8 @@ reset_latex_options <- function() {
     input_mode  = NULL,
     justify     = NULL,
     line_break  = NULL,
-    markdown_style = NULL
+    markdown_style = NULL,
+    device_math   = NULL
   )
   invisible(NULL)
 }

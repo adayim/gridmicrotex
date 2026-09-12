@@ -94,7 +94,7 @@ wrapping (default: 0, no wrapping).}
 path to a \code{.css} file, applied to every label this layer draws.
 \code{NULL} falls back to
 \code{\link{latex_options}(markdown_style = )}. Only the properties
-that compile to LaTeX apply here --- a label has no block layout, so
+that compile to LaTeX apply here: a label has no block layout, so
 margins and padding are ignored. See \code{\link{md_style}}.}
 
 \item{na.rm}{If \code{FALSE}, the default, missing values are removed
@@ -117,8 +117,8 @@ the default plot specification, e.g. \code{\link[ggplot2:annotation_borders]{ann
 A ggplot2 layer.
 }
 \description{
-Renders markdown labels -- \code{**bold**}, \code{*italic*},
-\code{`code`}, \code{~~strike~~} and \code{$math$} -- as native grid
+Renders markdown labels (\code{**bold**}, \code{*italic*},
+\code{`code`}, \code{~~strike~~} and \code{$math$}) as native grid
 grobs inside a plot. The markdown is converted to LaTeX and laid out by
 MicroTeX, so the output is resolution-independent vector graphics.
 }
@@ -129,13 +129,13 @@ aesthetics are in bold):
 \itemize{
 \item \strong{\code{x}}
 \item \strong{\code{y}}
-\item \strong{\code{label}} --- markdown string
-\item \code{size} --- font size in points (default: 11)
-\item \code{colour} --- text colour (default: \code{"black"})
-\item \code{angle} --- rotation angle in degrees (default: 0)
-\item \code{hjust} --- horizontal justification, 0-1 (default: 0.5)
-\item \code{vjust} --- vertical justification, 0-1 (default: 0.5)
-\item \code{alpha} --- transparency (default: 1)
+\item \strong{\code{label}}: markdown string
+\item \code{size}: font size in points (default: 11)
+\item \code{colour}: text colour (default: \code{"black"})
+\item \code{angle}: rotation angle in degrees (default: 0)
+\item \code{hjust}: horizontal justification, 0-1 (default: 0.5)
+\item \code{vjust}: vertical justification, 0-1 (default: 0.5)
+\item \code{alpha}: transparency (default: 1)
 }
 }
 

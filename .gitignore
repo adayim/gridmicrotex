@@ -23,3 +23,6 @@ debug_*
 tools/
 .positai
 CLAUDE\.md
+
+/.claude/
+/.vscode/

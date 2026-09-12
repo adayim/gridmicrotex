@@ -18,8 +18,8 @@ Invisibly, \code{lang}.
 \description{
 Registers a KDE/Kate syntax definition so that fenced code blocks
 tagged with \code{lang} are highlighted by
-\code{\link{markdown_box_grob}}. Ten languages are built in --- see
-\code{\link{available_highlighters}} --- and this is how to add
+\code{\link{markdown_box_grob}}. Ten languages are built in (see
+\code{\link{available_highlighters}}), and this is how to add
 another.
 }
 \details{
@@ -34,16 +34,16 @@ copy a built-in grammar and edit it:
 }
 
 Because the format is KDE's, the several hundred definitions upstream
-are a useful \emph{reference} when writing your own --- one XML file
+are a useful \emph{reference} when writing your own: one XML file
 per language, catalogued at \url{https://kate-editor.org/syntax/},
 repository at
 \url{https://invent.kde.org/frameworks/syntax-highlighting}.
 
 Many load and work directly: of twenty sampled, thirteen registered,
 including \code{python} (249 contexts), \code{css}, \code{yaml},
-\code{makefile} and \code{go}. The seven that did not --- \code{bash},
+\code{makefile} and \code{go}. The seven that did not (\code{bash},
 \code{ruby}, \code{perl}, \code{rust}, \code{lua},
-\code{javascript} and \code{markdown} --- all use \emph{dynamic}
+\code{javascript} and \code{markdown}) all use \emph{dynamic}
 rules, which substitute part of the match into a later pattern and are
 not implemented.
 
@@ -61,7 +61,7 @@ Colours come from the \code{defStyleNum} of each \code{<itemData>},
 which maps onto the same CSS class names \pkg{knitr} and Pandoc use
 (\code{kw} for a keyword, \code{co} for a comment, \code{st} for a
 string, and so on), so a grammar needs no colour information of its
-own --- restyle with \code{\link{markdown_style}}.
+own: restyle with \code{\link{markdown_style}}.
 
 At each position the current context's rules are tried in document
 order and the first to match wins. Contexts, \code{IncludeRules},
@@ -70,8 +70,8 @@ context stack carries across lines, so a string or block comment may
 span them.
 
 A rule this engine cannot represent is skipped when it would have
-stayed in the current context --- costing colour on the text it
-matched and nothing more --- but \emph{refuses the grammar} when it
+stayed in the current context (costing colour on the text it
+matched and nothing more), but \emph{refuses the grammar} when it
 would have switched, because a lost context switch leaves the machine
 in the wrong state and paints the rest of the file wrongly. The
 refusal names the construct.
