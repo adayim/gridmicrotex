@@ -1,4 +1,4 @@
-# gridmicrotex (development version)
+# gridmicrotex 0.2.0
 
 - New `latex_options(device_math = TRUE)` renders `$…$` math in labels drawn to the graphics device, so **base** graphics gets real LaTeX — `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()` — with no other change to your code. It intercepts the device, so grid, ggplot2 and lattice text is covered too.
 
