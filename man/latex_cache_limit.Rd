@@ -38,7 +38,7 @@ evicted.
 \examples{
 \donttest{
   latex_cache_limit(256)
-  grid.latex("e^{i\\\\pi} + 1 = 0")
+  grid.latex("$e^{i\\\\pi} + 1 = 0$")
   latex_cache_info()
   latex_cache_clear()
 }

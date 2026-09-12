@@ -70,10 +70,11 @@ to LaTeX: \code{plot(main=)}, \code{xlab}, \code{ylab},
 
 Interception happens at the device, so it is \strong{not} limited to
 base graphics: text drawn by \pkg{grid}, \pkg{ggplot2} and
-\pkg{lattice} is affected too. \code{grid.text("$x^2$")} renders math
-while this is on. Grid users normally want \code{\link{latex_grob}}
-or \code{\link{element_latex}} instead, which give the same result
-without a session-wide switch.
+\pkg{lattice}, and by other packages' plot methods, is affected too.
+\code{grid.text("$x^2$")} renders math while this is on.
+\code{\link{latex_grob}}, \code{\link{geom_latex}} and
+\code{\link{element_latex}} give the same rendering confined to one
+grob, layer or theme element, and measure its height correctly.
 
 The convention is the one \code{\link{latex_wrap}} already uses:
 \code{$...$}, \code{$$...$$}, \code{\\(...\\)}, \code{\\[...\\]},
@@ -100,14 +101,39 @@ the room yourself with \code{\link{latex_dims}}:
   par(mar = c(5, need + 1, 4, 2))
   }
 
-Other limitations: math is drawn as vector outlines, so unlike
-\code{\link{latex_grob}} it is not selectable in a PDF; prose inside a
-bold label is not bolded, because face comes from \code{\\textbf}
-rather than from the device; \code{\\includegraphics} is left out; and
-rounded box corners are drawn square.
+Other side effects worth knowing:
+\itemize{
+\item It is session-wide and reaches every device opened while it
+is on, including text drawn by packages you did not write. Labels
+without math are passed through unchanged.
+\item A label containing a newline reaches the device one line at a
+time, so a formula split across lines is not recognised.
+\item Math is drawn as vector outlines, so unlike
+\code{\link{latex_grob}} it is not selectable in a PDF.
+\item Prose inside a bold label is not bolded: face comes from
+\code{\\textbf} rather than from the device.
+\item \code{\\includegraphics} is left out, and rounded box corners
+are drawn square.
+\item A label that cannot be laid out is drawn as literal text, and
+warnings raised while laying it out are suppressed.
+\item \pkg{showtext} replaces the same device callbacks when a plot
+starts, so with \code{showtext::showtext_auto()} on, labels stay
+literal.
+\item A package that gives \code{$} its own meaning acts first:
+\pkg{corrplot} parses a label starting with \code{$} as plotmath.
+\item \code{expression()} labels are untouched, because R lays
+plotmath out inside the graphics engine.
+\item Output not drawn through an R graphics device is unaffected:
+\pkg{plotly} and other htmlwidgets, and \pkg{rgl}'s own
+\code{text3d()} labels. \pkg{rgl}'s \code{plotmath3d()} (and
+\code{text3d(usePlotmath = TRUE)}, which calls it) draws into an
+R device and does pick it up.
+\item In R Markdown, turn it off in a later chunk than the one that
+draws: knitr captures a chunk's plots after its last line runs.
+}
 
-\code{expression()} labels are untouched: R lays plotmath out inside
-the graphics engine, so a device never sees them.}
+\code{vignette("base-graphics")} walks through all of this with
+examples.}
 }
 \value{
 Invisibly returns the previous settings (a list). With no
@@ -132,19 +158,21 @@ see \code{\link{latex_grob}}.
 \examples{
 \donttest{
   latex_options(math_font = "stix", render_mode = "typeface")
-  grid.latex("\\\\sum_{i=1}^{n} i^{2}", gp = grid::gpar(fontsize = 14))
+  grid.latex("$\\\\sum_{i=1}^{n} i^{2}$", gp = grid::gpar(fontsize = 14))
   reset_latex_options()
 
   # Math in base graphics, with no other change to the plotting code.
-  # on.exit() rather than a trailing call: R CMD check runs examples on
-  # a shared device, which must not be left intercepted if this errors.
-  local({
-    on.exit(latex_options(device_math = FALSE), add = TRUE)
-    latex_options(device_math = TRUE)
-    plot(1:10, (1:10)^2,
-         main = "Slope $\\\\hat{\\\\beta}_1 = \\\\sum_{i=1}^{n} x_i^2$",
-         ylab = "$y^2$")
-  })
+  latex_options(device_math = TRUE)
+  plot(1:10, (1:10)^2,
+       main = "Slope $\\\\hat{\\\\beta}_1 = \\\\sum_{i=1}^{n} x_i^2$",
+       ylab = "$y^2$")
+}
+\dontshow{
+# pkgdown saves example figures only after all the example code has run,
+# so the option must stay on there or the plot shows literal $...$.
+# Everywhere else, including R CMD check, switch it off again.
+if (!identical(Sys.getenv("IN_PKGDOWN"), "true"))
+  latex_options(device_math = FALSE)
 }
 }
 \seealso{
