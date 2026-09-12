@@ -18,9 +18,10 @@ knitr::opts_chunk$set(
 
 ## What is gridmicrotex?
 
-**gridmicrotex** renders LaTeX math as native R `grid` graphics objects,
-embedding the [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++
-engine. The pipeline is:
+**gridmicrotex** renders LaTeX math in [base R plots](#base-graphics) and
+as native R `grid` graphics objects, embedding the
+[MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ engine. For a grob,
+the pipeline is:
 
 1. MicroTeX parses the LaTeX into a TeX box model
 2. A custom `Graphics2D` recorder captures every draw operation --- glyph
@@ -33,25 +34,16 @@ engine. The pipeline is:
 No LaTeX installation is required, and because nothing is rasterised the
 output is resolution independent on every R device.
 
-**Base graphics** reuses steps 1--3 and diverges at step 4: with
-`latex_options(device_math = TRUE)` the same layout is emitted straight
-through the graphics device's own drawing callbacks instead of being
-turned into grobs, which is how `plot()` titles and axis labels get real
-LaTeX without any change to your code. Because that interception sits at
-the device, it is not limited to base graphics: text drawn by grid,
-ggplot2 and lattice passes through it too. See
-[Base graphics](#base-graphics) below.
-
+- Base R graphics: `latex_options(device_math = TRUE)`, see
+  `vignette("base-graphics")`
 - Full math: fractions, roots, integrals, matrices, Greek, accents,
   delimiters, and colour via `\textcolor{}`
 - Two bundled math fonts, plus any OpenType math font through
   `load_math_font()`
 - CJK, RTL and multilingual text inside `\text{}`
-- Base graphics --- `latex_options(device_math = TRUE)`, see
-  `vignette("base-graphics")`
-- ggplot2 integration --- `geom_latex()` and `element_latex()`, see
+- ggplot2 integration: `geom_latex()` and `element_latex()`, see
   `vignette("ggplot2-integration")`
-- Markdown with inline math --- see `vignette("markdown")`
+- Markdown with inline math: see `vignette("markdown")`
 
 ## Quick start
 

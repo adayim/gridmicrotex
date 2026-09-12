@@ -22,19 +22,14 @@ knitr::opts_chunk$set(
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
-Render LaTeX math expressions --- and markdown containing them --- as native
-R **grid** graphics objects, with no external LaTeX installation required.
+Render LaTeX math in [**base R** plots](#base-graphics) and as native R
+**grid** graphics objects (markdown included), with no external LaTeX
+installation required.
 
 gridmicrotex embeds the [MicroTeX](https://github.com/NanoMichael/MicroTeX)
 C++ layout engine to parse LaTeX, compute the full box model, and produce
 resolution-independent vector output (paths, lines, rectangles) that works on
 any R graphics device.
-
-**Base R graphics** are covered too. `latex_options(device_math = TRUE)`
-intercepts the graphics device, so `plot()` titles, axis labels, `text()`,
-`mtext()` and `legend()` typeset their math with no other change to your
-code. Because it acts at the device, grid, ggplot2 and lattice text is
-covered as well. See [Base graphics](#base-graphics) below.
 
 ## Disclaimer
 **A note on development**: This package was developed as a proof of concept for AI-assisted package creation. I designed the architecture and specification, and the core C++ integration (via [MicroTeX](https://github.com/NanoMichael/MicroTeX)) was largely facilitated by AI, with my review and oversight of the design and final outputs. I am sharing it because it works, and I hope that others will find it useful. Contributions, bug reports and improvements from the community are very welcome.
