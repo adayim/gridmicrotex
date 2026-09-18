@@ -1,0 +1,75 @@
+#ifndef GRIDMICROTEX_FRONT_DIAGNOSTICS_H
+#define GRIDMICROTEX_FRONT_DIAGNOSTICS_H
+
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace microtex::front {
+
+/**
+ * Where a token or node came from in the input.
+ *
+ * Lines and columns are 1-based and columns count code points, not bytes,
+ * because they are shown to a person who counts characters. The byte
+ * offset and length are for slicing the source.
+ */
+struct SourceSpan {
+  std::uint32_t offset = 0;
+  std::uint32_t length = 0;
+  std::uint32_t line = 1;
+  std::uint32_t col = 1;
+};
+
+enum class Severity : std::uint8_t { warning, error };
+
+struct Diagnostic {
+  Severity severity;
+  SourceSpan span;
+  std::string message;
+};
+
+/**
+ * The problems found in one parse.
+ *
+ * The front end recovers from malformed input rather than stopping at the
+ * first mistake, so one document can produce many of these. Past `limit`
+ * they are counted but not kept: a pasted binary file must not turn into
+ * megabytes of messages.
+ */
+class Diagnostics {
+public:
+  explicit Diagnostics(std::size_t limit = 100) : _limit(limit) {}
+
+  void add(Severity severity, const SourceSpan& span, std::string message) {
+    if (_items.size() >= _limit) {
+      _dropped++;
+      return;
+    }
+    _items.push_back({severity, span, std::move(message)});
+  }
+
+  void warn(const SourceSpan& span, std::string message) {
+    add(Severity::warning, span, std::move(message));
+  }
+
+  void error(const SourceSpan& span, std::string message) {
+    add(Severity::error, span, std::move(message));
+  }
+
+  const std::vector<Diagnostic>& items() const { return _items; }
+
+  /** How many were not kept because the limit was reached. */
+  std::size_t dropped() const { return _dropped; }
+
+private:
+  std::vector<Diagnostic> _items;
+  std::size_t _dropped = 0;
+  std::size_t _limit;
+};
+
+}  // namespace microtex::front
+
+#endif

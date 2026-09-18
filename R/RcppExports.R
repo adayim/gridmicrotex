@@ -17,6 +17,10 @@ gm_base_armed_count <- function() {
     .Call(`_gridmicrotex_gm_base_armed_count`)
 }
 
+lex_latex_cpp <- function(tex, blank_line_is_par = FALSE) {
+    .Call(`_gridmicrotex_lex_latex_cpp`, tex, blank_line_is_par)
+}
+
 register_text_measurer <- function(fn) {
     invisible(.Call(`_gridmicrotex_register_text_measurer`, fn))
 }

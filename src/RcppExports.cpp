@@ -51,6 +51,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// lex_latex_cpp
+Rcpp::DataFrame lex_latex_cpp(std::string tex, bool blank_line_is_par);
+RcppExport SEXP _gridmicrotex_lex_latex_cpp(SEXP texSEXP, SEXP blank_line_is_parSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
+    Rcpp::traits::input_parameter< bool >::type blank_line_is_par(blank_line_is_parSEXP);
+    rcpp_result_gen = Rcpp::wrap(lex_latex_cpp(tex, blank_line_is_par));
+    return rcpp_result_gen;
+END_RCPP
+}
 // register_text_measurer
 void register_text_measurer(SEXP fn);
 RcppExport SEXP _gridmicrotex_register_text_measurer(SEXP fnSEXP) {
@@ -247,6 +259,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_gm_base_teardown", (DL_FUNC) &_gridmicrotex_gm_base_teardown, 0},
     {"_gridmicrotex_gm_base_release_pending", (DL_FUNC) &_gridmicrotex_gm_base_release_pending, 0},
     {"_gridmicrotex_gm_base_armed_count", (DL_FUNC) &_gridmicrotex_gm_base_armed_count, 0},
+    {"_gridmicrotex_lex_latex_cpp", (DL_FUNC) &_gridmicrotex_lex_latex_cpp, 2},
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
     {"_gridmicrotex_microtex_init", (DL_FUNC) &_gridmicrotex_microtex_init, 2},
