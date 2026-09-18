@@ -41,15 +41,14 @@ test_that("markdown-only constructs never emit unknown LaTeX commands", {
   # MicroTeX renders an unknown command as literal glyphs instead of
   # erroring, so a leaked \href would silently typeset the letters.
   tex <- .md_to_tex(paste(
-    "# Heading", "", "a [link](http://x.com) and ![alt](i.png)", "",
+    "# Heading", "", "a [link](http://x.com)", "",
     "> quote", "", "```", "code", "```", sep = "\n"))
-  for (bad in c("\\section", "\\href", "\\includegraphics", "verbatim",
+  for (bad in c("\\section", "\\href", "verbatim",
                 "\\linewidth", "\\begin{quote}")) {
     expect_false(grepl(bad, tex, fixed = TRUE), label = paste("leaked", bad))
   }
-  # Link and image degrade to their text, which must survive.
+  # A link degrades to its text, which must survive.
   expect_match(.md_to_tex("[label](http://x)"), "label", fixed = TRUE)
-  expect_match(.md_to_tex("![alt text](i.png)"), "alt text", fixed = TRUE)
 })
 
 test_that("TeX special characters in prose are escaped", {
@@ -350,15 +349,16 @@ test_that("a block image is drawn as a raster and scaled to the column", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
 
   # Only a paragraph holding nothing but images becomes an image block;
-  # one in the middle of a sentence has no raster to sit in.
+  # one in the middle of a sentence stays inline in its paragraph.
   types <- vapply(.md_parse_blocks(paste0("Before\n\n![alt](", f, ")\n\nAfter")),
                   function(b) b$type, character(1))
   expect_equal(types, c("paragraph", "image", "paragraph"))
-  expect_equal(vapply(.md_parse_blocks("text ![alt](x.png) more"),
-                      function(b) b$type, character(1)), "paragraph")
-  expect_match(.md_to_tex("text ![alt](x.png) more"), "alt", fixed = TRUE)
+  inline <- paste0("text ![alt](", f, ") more")
+  expect_equal(vapply(.md_parse_blocks(inline), function(b) b$type,
+                      character(1)), "paragraph")
+  expect_match(.md_to_tex(inline), "includegraphics", fixed = TRUE)
 
-  r <- .md_image_raster(f)
+  r <- .image_raster(f)
   expect_equal(c(r$w_px, r$h_px), c(400, 100))
 
   g <- markdown_box_grob(paste0("![x](", f, ")"), width = grid::unit(100, "bigpts"))
@@ -369,18 +369,6 @@ test_that("a block image is drawn as a raster and scaled to the column", {
   h <- grid::convertHeight(ras$height, "bigpts", valueOnly = TRUE)
   expect_lte(w, 100 + 0.5)             # scaled down to the column
   expect_equal(h / w, 100 / 400, tolerance = 0.01)   # aspect preserved
-})
-
-test_that("an unusable image degrades to its alt text", {
-  # Missing file, unsupported format, or reader package absent must not
-  # error -- png and jpeg are Suggests.
-  for (bad in list("does-not-exist.png", "file.svg", "", NA_character_)) {
-    expect_null(.md_image_raster(bad))
-  }
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  g <- markdown_box_grob("![the alt text](missing.png)",
-                         width = grid::unit(3, "in"))
-  expect_s3_class(grid::makeContent(g), "markdownbox")
 })
 
 # --- inline HTML ---------------------------------------------------------
@@ -708,7 +696,7 @@ test_that("a registered user font can be named by a span", {
 
 # --- regressions: block nesting and gp handling --------------------------
 
-test_that("an absolute font-size resolves inside a list item or image alt", {
+test_that("an absolute font-size resolves inside a list item or table cell", {
   # `base` was referenced but never passed into .md_list_block(),
   # .md_image_blocks() or .md_table_tex(), so any CSS length that needs a
   # reference size errored with "object 'base' not found". Only absolute
@@ -726,7 +714,6 @@ test_that("an absolute font-size resolves inside a list item or image alt", {
     sort(unique(stats::na.omit(out)))
   }
   for (md in c("- <span style=\"font-size:12pt\">big</span> item",
-               "![<span style=\"font-size:12pt\">alt</span>](missing.png)",
                "| <span style=\"font-size:12pt\">a</span> | b |\n|---|---|\n| 1 | 2 |")) {
     # Not just "it laid out": the 12pt has to arrive, or the length was
     # resolved against the wrong reference and nobody would notice.
@@ -1038,39 +1025,4 @@ test_that("an inline <a> is styled by the same rule as [text](url)", {
                col("a [LINK](http://x) c", style = green))
   expect_false(col("a <a href='http://x'>LINK</a> c", style = green) ==
                  .MD_LINK_COLOR)
-})
-
-test_that("an <img> keeps its alt text, as markdown's own image does", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Neither form can draw a raster into a text run, so both fall back to
-  # the alt text. `<img>` used to contribute nothing at all, losing the
-  # one part of itself that could be rendered.
-  txt <- function(md) {
-    d <- markdown_grob(md, gp = grid::gpar(fontsize = 14))$layout_df
-    d$text[d$type == "text" & !is.na(d$text)]
-  }
-  expect_equal(txt("a <img src='x.png' alt='ALT'> c"),
-               txt("a ![ALT](x.png) c"))
-  expect_true("ALT" %in% txt("a <img src='x.png' alt='ALT'> c"))
-
-  # Inside a text command the alt text must be emitted bare, or the
-  # emphasis around it is thrown away.
-  expect_true("ALT" %in% txt("a <b><img src='x.png' alt='ALT'></b> c"))
-
-  # No alt is the HTML spelling of "decorative": nothing to say.
-  expect_false("ALT" %in% txt("a <img src='x.png'> c"))
-
-  # The alt text is prose, so its LaTeX specials must be escaped rather
-  # than reaching the parser: a bare `_` would open a subscript and `%`
-  # would comment out the rest of the line.
-  #
-  # Written inline on purpose. An <img> alone on its line is an *html
-  # block* to cmark, not an inline node, and raw HTML blocks are dropped
-  # -- a separate rule, older than this one.
-  expect_equal(.md_to_tex("a <img src='x.png' alt='a_b'> c"),
-               .md_to_tex("a ![a_b](x.png) c"))
-  expect_match(.md_to_tex("a <img src='x.png' alt='a_b'> c"),
-               "a\\\\_b", fixed = FALSE)
-  expect_match(.md_to_tex("a <img src='x.png' alt='100% sure'> c"),
-               "100\\\\%", fixed = FALSE)
 })

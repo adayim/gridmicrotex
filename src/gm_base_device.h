@@ -5,7 +5,8 @@
 // (device_hook.cpp) and the record emitter (device_emit.cpp).
 //
 // Everything here runs *inside* a device callback. It must not allocate
-// R memory outside the guarded R_ToplevelExec call, must not signal, and
+// R memory outside the R_UnwindProtect call, must not raise an error
+// (an interrupt or a time limit is let through; see layout_for()), and
 // must not re-enter the graphics engine -- drawing happens only through
 // the original callbacks captured in GmSavedDev.
 
@@ -19,6 +20,23 @@
 #include <Rinternals.h>
 #include <R_ext/GraphicsEngine.h>
 #include <R_ext/GraphicsDevice.h>
+
+// Element `i` of a numeric vector, or `dflt` when it is absent, NA or not
+// numeric. Accepts integers as well as doubles: MicroTeX metrics start
+// out as ints, and reading one as 0 means "no horizontal adjustment",
+// which silently left-aligned every centred label.
+inline double gm_num_at(SEXP col, R_xlen_t i, double dflt = 0.0) {
+    if (col == R_NilValue || i >= Rf_xlength(col)) return dflt;
+    if (TYPEOF(col) == REALSXP) {
+        double v = REAL(col)[i];
+        return ISNA(v) ? dflt : v;
+    }
+    if (TYPEOF(col) == INTSXP) {
+        int v = INTEGER(col)[i];
+        return v == NA_INTEGER ? dflt : (double) v;
+    }
+    return dflt;
+}
 
 // The original callbacks for one armed device, plus the identity checks
 // that keep us from restoring into the wrong pDevDesc after R recycles a

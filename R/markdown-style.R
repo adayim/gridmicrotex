@@ -216,8 +216,8 @@
 #' \strong{One limitation worth knowing.} \code{font_weight} and
 #' \code{font_style} apply to blocks whose content is prose: paragraphs,
 #' headings, list items, block quotes, table cells and \code{<div>}s. They
-#' do \emph{not} apply to \code{pre} or an image's alt text, which build
-#' their own LaTeX and impose their own font handling. This is a MicroTeX
+#' do \emph{not} apply to \code{pre}, which builds its own LaTeX and
+#' imposes its own font handling. This is a MicroTeX
 #' constraint rather than a choice: \code{\\text\{\}} resets the font
 #' style, so emphasis has to be decided when the content is generated,
 #' not wrapped around it afterwards.
@@ -556,6 +556,13 @@ print.gridmicrotex_markdown_style <- function(x, ...) {
     if (!is.null(cc)) color <- cc
   }
   list(width = width, color = color)
+}
+
+# TRUE when a `border` value draws something: it is declared, and is not
+# `none`, `hidden` or zero wide. A width left unsaid is CSS's `medium`.
+.md_css_border_drawn <- function(v, body) {
+  bd <- .md_css_border(v, body)
+  !is.null(bd) && (is.null(bd$width) || bd$width > 0)
 }
 
 # The text-mode LaTeX commands a resolved style implies.

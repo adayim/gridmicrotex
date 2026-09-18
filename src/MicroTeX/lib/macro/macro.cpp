@@ -15,18 +15,49 @@ bool NewCommandMacro::isMacro(const string& name) {
   return (it != _codes.end());
 }
 
+// A built-in command (\frac, \sqrt, ...) counts as defined, as it does in
+// LaTeX, so \newcommand refuses it and \renewcommand accepts it. Only the
+// code macros were checked before: \newcommand{\frac} replaced the built-in,
+// and clearUserMacros() then removed the replacement, so no later parse in
+// the process had a \frac at all.
+static bool isDefined(const string& name) {
+  return NewCommandMacro::isMacro(name) || MacroInfo::get(name) != nullptr;
+}
+
 void NewCommandMacro::checkNew(const string& name) {
-  if (_errIfConflict && isMacro(name))
+  if (_errIfConflict && (_sealed ? isDefined(name) : isMacro(name)))
     throw ex_parse("Command " + name + " already exists! Use renewcommand instead!");
 }
 
 void NewCommandMacro::checkRenew(const string& name) {
-  if (NewCommandMacro::_errIfConflict && !isMacro(name))
+  if (NewCommandMacro::_errIfConflict && !(_sealed ? isDefined(name) : isMacro(name)))
     throw ex_parse("Command " + name + " is no defined! Use newcommand instead!");
+}
+
+// Record what defining `name` is about to displace, the first time it is
+// defined in a parse, so clearUserMacros() can restore it -- and take the
+// displaced MacroInfo out of the registry rather than let MacroInfo::add()
+// delete it.
+void NewCommandMacro::save(const string& name) {
+  if (!_sealed || _displaced.count(name) != 0) return;
+  Displaced d;
+  const auto code = _codes.find(name);
+  if (code != _codes.end()) {
+    d.hadCode = true;
+    d.code = code->second;
+  }
+  const auto rep = _replacements.find(name);
+  if (rep != _replacements.end()) {
+    d.hadReplacement = true;
+    d.replacement = rep->second;
+  }
+  d.info = MacroInfo::release(name);
+  _displaced[name] = d;
 }
 
 void NewCommandMacro::addNewCommand(const string& name, const string& code, int argc) {
   checkNew(name);
+  save(name);
   _codes[name] = code;
   MacroInfo::add(name, new InflationMacroInfo(_instance, argc));
 }
@@ -38,6 +69,7 @@ void NewCommandMacro::addNewCommand(
   const string& def
 ) {
   checkNew(name);
+  save(name);
   _codes[name] = code;
   _replacements[name] = def;
   MacroInfo::add(name, new InflationMacroInfo(_instance, argc, 1));
@@ -45,6 +77,7 @@ void NewCommandMacro::addNewCommand(
 
 void NewCommandMacro::addRenewCommand(const string& name, const string& code, int argc) {
   checkRenew(name);
+  save(name);
   _codes[name] = code;
   MacroInfo::add(name, new InflationMacroInfo(_instance, argc));
 }
@@ -56,12 +89,14 @@ void NewCommandMacro::addRenewCommand(
   const string& def
 ) {
   checkRenew(name);
+  save(name);
   _codes[name] = code;
   _replacements[name] = def;
   MacroInfo::add(name, new InflationMacroInfo(_instance, argc, 1));
 }
 
 void NewCommandMacro::addDefCommand(const string& name, const string& code, int argc) {
+  save(name);
   _codes[name] = code;
   MacroInfo::add(name, new InflationMacroInfo(_instance, argc));
 }
@@ -113,30 +148,43 @@ void NewEnvironmentMacro::addRenewEnvironment(
 }
 
 void NewCommandMacro::clearUserMacros() {
-  std::vector<std::string> to_drop;
-  for (const auto& kv : _codes) {
-    if (_builtin_names.find(kv.first) == _builtin_names.end()) {
-      to_drop.push_back(kv.first);
+  for (auto& kv : _displaced) {
+    const string& name = kv.first;
+    const Displaced& d = kv.second;
+    // add() deletes the definition the parse made; remove() does the same
+    // when there was nothing before it.
+    if (d.info != nullptr) {
+      MacroInfo::add(name, d.info);
+    } else {
+      MacroInfo::remove(name);
+    }
+    if (d.hadCode) {
+      _codes[name] = d.code;
+    } else {
+      _codes.erase(name);
+    }
+    if (d.hadReplacement) {
+      _replacements[name] = d.replacement;
+    } else {
+      _replacements.erase(name);
     }
   }
-  for (const auto& name : to_drop) {
-    _codes.erase(name);
-    _replacements.erase(name);
-    MacroInfo::remove(name);
-  }
+  _displaced.clear();
 }
 
 void NewCommandMacro::snapshotBuiltins() {
-  if (!_builtin_names.empty()) return;
-  for (const auto& kv : _codes) _builtin_names.insert(kv.first);
+  _sealed = true;
 }
 
 void NewCommandMacro::_free_() {
+  // A built-in displaced by the last parse is owned here, not by the
+  // registry, which MacroInfo::_free_() has already emptied.
+  for (auto& kv : _displaced) delete kv.second.info;
+  _displaced.clear();
   delete _instance;
   _instance = nullptr;
   _codes.clear();
   _replacements.clear();
-  _builtin_names.clear();
 }
 
 void MacroInfo::remove(const string& name) {
@@ -144,6 +192,14 @@ void MacroInfo::remove(const string& name) {
   if (it == _commands.end()) return;
   delete it->second;
   _commands.erase(it);
+}
+
+MacroInfo* MacroInfo::release(const string& name) {
+  auto it = _commands.find(name);
+  if (it == _commands.end()) return nullptr;
+  MacroInfo* mac = it->second;
+  _commands.erase(it);
+  return mac;
 }
 
 void MacroInfo::add(const string& name, MacroInfo* mac) {

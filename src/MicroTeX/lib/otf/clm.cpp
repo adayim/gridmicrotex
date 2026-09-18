@@ -65,7 +65,10 @@ public:
   const u8* readBytes(size_t bytes) override {
     const auto remain = _currentSize - _index;
     if (remain < bytes) readChunk(remain);
-    if (_index >= _currentSize) throw ex_eof("end of data");
+    // As in BinaryDataReader: the whole request must have been read.
+    if (_index > _currentSize || bytes > _currentSize - _index) {
+      throw ex_eof("end of data");
+    }
     const u8* p = _buff + _index;
     _index += bytes;
     return p;
@@ -100,7 +103,9 @@ public:
   explicit BinaryDataReader(size_t len, const u8* data) : _data(data), _len(len) {}
 
   const u8* readBytes(size_t bytes) override {
-    if (_index >= _len) throw ex_eof("end of data");
+    // All of the request must be there, not only its first byte: with one
+    // byte left, read<u32>() dereferenced three past the end.
+    if (_index > _len || bytes > _len - _index) throw ex_eof("end of data");
     const u8* p = _data + _index;
     _index += bytes;
     return p;

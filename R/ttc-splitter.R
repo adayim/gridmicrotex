@@ -42,8 +42,18 @@
   }
 
   bytes <- readBin(ttc_path, what = "raw", n = file.info(ttc_path)$size)
-  if (length(bytes) < 16L || !identical(bytes[1:4], charToRaw("ttcf"))) {
+  n <- length(bytes)
+  if (n < 16L || !identical(bytes[1:4], charToRaw("ttcf"))) {
     stop("Not a TrueType Collection: ", ttc_path, call. = FALSE)
+  }
+
+  # Every offset and length below comes from the file, and R pads an
+  # out-of-range raw index with zero bytes rather than failing: a 44-byte
+  # file declaring a 1 MiB table wrote a 1 MiB cache file. So each span is
+  # checked against the file before anything is sized or copied.
+  malformed <- function(what) {
+    stop("Malformed TrueType Collection (", what, "): ", ttc_path,
+         call. = FALSE)
   }
 
   # TTC header: tag(4) + version(4) + numFonts(u32) + offsets[numFonts](u32).
@@ -53,7 +63,10 @@
          num_fonts, " face", if (num_fonts == 1) "" else "s", "): ",
          ttc_path, call. = FALSE)
   }
-  face_off <- as.integer(.ru32(bytes, 13L + index * 4L)) + 1L  # R 1-based
+  if (12 + (index + 1) * 4 > n) malformed("face offset table")
+  face_off <- .ru32(bytes, 13L + index * 4L) + 1  # R 1-based
+  if (face_off + 11 > n) malformed("face header")
+  face_off <- as.integer(face_off)
 
   # sfnt header at face_off: sfntVersion(4), numTables(u16), then three u16
   # search fields we recompute.
@@ -62,17 +75,27 @@
   if (num_tables == 0L) {
     stop("TTC face ", index, " has no tables: ", ttc_path, call. = FALSE)
   }
+  if (face_off + 11 + num_tables * 16 > n) malformed("table directory")
 
   records <- vector("list", num_tables)
   rec_pos <- face_off + 12L
   for (i in seq_len(num_tables)) {
+    offset <- .ru32(bytes, rec_pos + 8L)
+    len <- .ru32(bytes, rec_pos + 12L)
+    if (offset + len > n) malformed("a table runs past the end of the file")
     records[[i]] <- list(
       tag      = bytes[rec_pos:(rec_pos + 3L)],
       checksum = bytes[(rec_pos + 4L):(rec_pos + 7L)],
-      offset   = .ru32(bytes, rec_pos + 8L),
-      length   = as.integer(.ru32(bytes, rec_pos + 12L))
+      offset   = offset,
+      length   = as.integer(len)
     )
     rec_pos <- rec_pos + 16L
+  }
+  # The tables of one face do not overlap, so together they fit in the
+  # file. Without this, a small file whose many tables each span all of it
+  # could still ask for a huge allocation below.
+  if (sum(vapply(records, `[[`, numeric(1), "length")) > n) {
+    malformed("tables larger than the file")
   }
 
   # Lay out the new file: sfnt header (12) + table directory (numTables*16)

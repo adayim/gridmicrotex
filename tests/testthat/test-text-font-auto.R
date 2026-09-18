@@ -52,3 +52,31 @@ test_that("latex_dims accepts a fontfamily via gp and returns finite dims", {
   expect_true(is.finite(as.numeric(d$width)))
   expect_gt(as.numeric(d$width), 0)
 })
+
+test_that("a TrueType Collection that points past its own end is rejected", {
+  cache <- file.path(tempdir(), "gm-ttc-cache")
+  old <- Sys.getenv("R_USER_CACHE_DIR", unset = NA)
+  Sys.setenv(R_USER_CACHE_DIR = cache)
+  on.exit({
+    if (is.na(old)) Sys.unsetenv("R_USER_CACHE_DIR")
+    else Sys.setenv(R_USER_CACHE_DIR = old)
+    unlink(cache, recursive = TRUE)
+  }, add = TRUE)
+  u32 <- gridmicrotex:::.w_u32
+  u16 <- gridmicrotex:::.w_u16
+  ttc <- tempfile(fileext = ".ttc")
+
+  # 44 bytes: one face whose one table claims to be 1 MiB long. R pads an
+  # out-of-range raw index with zero bytes rather than failing, so this
+  # wrote a 1 MiB cache file of zeros.
+  writeBin(c(charToRaw("ttcf"), as.raw(c(0, 1, 0, 0)), u32(1), u32(16),
+             as.raw(c(0, 1, 0, 0)), u16(1), as.raw(rep(0, 6)),
+             charToRaw("abcd"), as.raw(rep(0, 4)), u32(44), u32(1048576)),
+           ttc)
+  expect_error(gridmicrotex:::.extract_ttc_face(ttc, 0L), "Malformed")
+  expect_length(list.files(cache, recursive = TRUE), 0L)
+
+  # A face that starts past the end of the file.
+  writeBin(c(charToRaw("ttcf"), as.raw(c(0, 1, 0, 0)), u32(1), u32(4096)), ttc)
+  expect_error(gridmicrotex:::.extract_ttc_face(ttc, 0L), "Malformed")
+})

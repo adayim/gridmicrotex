@@ -61,6 +61,48 @@ test_that(".strip_document_wrappers handles comments and floats", {
                      strip("\\begin{table*}[ht]x\\end{table*}")))
 })
 
+test_that(".strip_document_wrappers gives the same answer from its memo", {
+  strip <- gridmicrotex:::.strip_document_wrappers
+  tex <- "\\centering $\\emph{x}$ % note"
+  expect_equal(strip(tex), " $\\textit{x}$ ")
+  expect_equal(strip(tex), " $\\textit{x}$ ")
+  # Environment names stop at 10000 bytes, so a longer string bypasses the
+  # memo -- and must still be stripped.
+  long <- paste0(strrep("a", 20000), "\\centering")
+  expect_equal(strip(long), strrep("a", 20000))
+
+  # The memo is keyed on the UTF-8 form. Latin-1 text under 10000 bytes
+  # can be over it once converted, and bytes-encoded text cannot be a name
+  # at all; both made latex_dims() error.
+  once <- gridmicrotex:::.strip_wrappers_once
+  latin <- iconv(paste0(strrep("\u00e9t\u00e9 ", 1700), "\\centering"),
+                 "UTF-8", "latin1")
+  expect_lt(nchar(latin, type = "bytes"), 10000)
+  expect_equal(strip(latin), once(latin))
+  # The text measurer keyed its own cache the same way.
+  expect_gt(as.numeric(latex_dims(latin)$width), 0)
+  raw_bytes <- "caf\xe9 \\centering"
+  Encoding(raw_bytes) <- "bytes"
+  expect_equal(strip(raw_bytes), once(raw_bytes))
+})
+
+test_that("the stripping memo follows the layout cache's controls", {
+  strip <- gridmicrotex:::.strip_document_wrappers
+  memo <- gridmicrotex:::.strip_memo
+  old <- latex_cache_info()$max_size
+  on.exit(latex_cache_limit(old), add = TRUE)
+
+  strip("\\centering memo probe one")
+  expect_gt(length(memo), 0)
+  # latex_cache_clear() is how a user gives the memory back...
+  latex_cache_clear()
+  expect_equal(length(memo), 0)
+  # ...and a limit of 0 is documented as turning caching off.
+  latex_cache_limit(0)
+  strip("\\centering memo probe two")
+  expect_equal(length(memo), 0)
+})
+
 test_that(".strip_document_wrappers removes preamble and title metadata", {
   strip <- gridmicrotex:::.strip_document_wrappers
 
@@ -322,8 +364,11 @@ test_that("\\cmidrule renders end-to-end via \\cline", {
 })
 
 test_that("strip emits no messages — all transforms are silent", {
+  # The rules sit in a table, where they are valid: outside one, LaTeX and
+  # now MicroTeX reject them.
   msgs <- testthat::capture_messages(
-    latex_dims("\\caption{X}\\usepackage{amsmath}\\toprule x \\bottomrule")
+    latex_dims(paste0("\\caption{X}\\usepackage{amsmath}",
+                      "\\begin{tabular}{c}\\toprule x \\\\ \\bottomrule\\end{tabular}"))
   )
   expect_equal(length(msgs), 0L)
 })

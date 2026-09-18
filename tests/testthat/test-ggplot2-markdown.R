@@ -69,6 +69,15 @@ test_that("geom_markdown contributes one rendered grob per row", {
   expect_true(all(vapply(gs, function(g) nrow(g$layout_df) > 0, logical(1))))
 })
 
+test_that("geom_markdown treats a missing alpha as opaque", {
+  # A mapped alpha can be NA, and `NA < 1` made the layer fail to build.
+  df <- data.frame(x = 1, y = 1, lab = "**b**", a = NA_real_)
+  g <- ggplot2::layer_grob(
+    ggplot2::ggplot(df, ggplot2::aes(x, y, label = lab, alpha = a)) +
+      geom_markdown(colour = "red"))[[1]][[1]]
+  expect_equal(g$gp$col, "red")
+})
+
 test_that("element_markdown installs our grob as the axis titles", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   df <- data.frame(x = 1:3, y = 1:3)

@@ -19,6 +19,28 @@ test_that("text measurer creates, measures, and handles styles", {
   expect_equal(gridmicrotex:::.resolve_text_face(NA_integer_), "plain")
 })
 
+test_that("a layout measured at one resolution is not reused at another", {
+  on.exit(latex_cache_clear(), add = TRUE)
+  tex <- "\\text{WAVY fi MM 12345}"
+  measure_at <- function(res) {
+    f <- tempfile(fileext = ".png")
+    grDevices::png(f, width = 400, height = 200, res = res)
+    on.exit({ grDevices::dev.off(); unlink(f) })
+    list(key = gridmicrotex:::.cache_device(),
+         width = grid::convertWidth(latex_dims(tex)$width, "bigpts", TRUE))
+  }
+  latex_cache_clear()
+  at_72 <- measure_at(72)
+  at_300_after_72 <- measure_at(300)
+  latex_cache_clear()
+  at_300 <- measure_at(300)
+  # Text is measured on the device, and one png() measured this phrase at
+  # 175bp at 72dpi and 174bp at 300. Keyed on the device name alone, the
+  # second device reused the first one's layout.
+  expect_false(identical(at_72$key, at_300$key))
+  expect_equal(at_300_after_72$width, at_300$width)
+})
+
 test_that("\\texttt renders and measures in a monospace family", {
   # Bit 128 is MicroTeX's \texttt. It has to reach the *measurer* as well
   # as the renderer: measuring in one family and drawing in another puts

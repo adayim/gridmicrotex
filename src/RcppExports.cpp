@@ -22,12 +22,23 @@ BEGIN_RCPP
 END_RCPP
 }
 // gm_base_teardown
-void gm_base_teardown();
+int gm_base_teardown();
 RcppExport SEXP _gridmicrotex_gm_base_teardown() {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    gm_base_teardown();
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(gm_base_teardown());
+    return rcpp_result_gen;
+END_RCPP
+}
+// gm_base_release_pending
+bool gm_base_release_pending();
+RcppExport SEXP _gridmicrotex_gm_base_release_pending() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(gm_base_release_pending());
+    return rcpp_result_gen;
 END_RCPP
 }
 // gm_base_armed_count
@@ -234,6 +245,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_gm_base_set_enabled", (DL_FUNC) &_gridmicrotex_gm_base_set_enabled, 2},
     {"_gridmicrotex_gm_base_teardown", (DL_FUNC) &_gridmicrotex_gm_base_teardown, 0},
+    {"_gridmicrotex_gm_base_release_pending", (DL_FUNC) &_gridmicrotex_gm_base_release_pending, 0},
     {"_gridmicrotex_gm_base_armed_count", (DL_FUNC) &_gridmicrotex_gm_base_armed_count, 0},
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
@@ -255,7 +267,9 @@ static const R_CallMethodDef CallEntries[] = {
     {NULL, NULL, 0}
 };
 
+void gm_register_unload_hook(DllInfo* dll);
 RcppExport void R_init_gridmicrotex(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
+    gm_register_unload_hook(dll);
 }

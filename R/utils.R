@@ -545,7 +545,37 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
 # not be added.
 .strip_document_wrappers <- function(tex) {
   if (!nzchar(tex)) return(tex)
+  # A pure function of `tex`, but its ~30 PCRE patterns are compiled
+  # afresh on every call: 2.6 ms for a one-command label, most of what a
+  # cached redraw costs, and a base-graphics label pays it on every
+  # strWidth and text call. So it is memoised, under the layout cache's
+  # own controls (latex_cache_limit(), latex_cache_clear()).
+  #
+  # The key becomes a variable name, which R translates to the native
+  # encoding and caps at 10000 bytes. So key on the UTF-8 form, skip
+  # bytes-encoded text (it cannot be translated at all), and leave
+  # anything long enough to near the cap unmemoised -- it is a document,
+  # not a label.
+  key <- if (!is.na(tex) && !identical(Encoding(tex), "bytes")) enc2utf8(tex)
+  if (is.null(key) || .latex_cache$max_size <= 0L ||
+      nchar(key, type = "bytes") > 2048L) {
+    return(.strip_wrappers_once(tex))
+  }
+  hit <- .strip_memo[[key]]
+  if (is.null(hit)) {
+    if (length(.strip_memo) >= .latex_cache$max_size) .strip_memo_clear()
+    hit <- .strip_memo[[key]] <- .strip_wrappers_once(tex)
+  }
+  hit
+}
 
+.strip_memo <- new.env(parent = emptyenv())
+
+.strip_memo_clear <- function() {
+  rm(list = ls(.strip_memo, all.names = TRUE), envir = .strip_memo)
+}
+
+.strip_wrappers_once <- function(tex) {
   # 0. Links, before the comment stripper: a `%` inside a URL is a real
   # character, and .replace_links() escapes it to `\%`, which step 1 then
   # leaves alone. Stripping comments first would eat the rest of the URL.

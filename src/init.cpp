@@ -210,8 +210,14 @@ public:
                     bounds.h = hr * _size;
                     return;
                 }
+            } catch (Rcpp::internal::InterruptedException&) {
+                throw;
+            } catch (Rcpp::LongjumpException&) {
+                throw;
             } catch (...) {
-                // Fall through to heuristic on any error
+                // Fall through to the heuristic on any other error. An
+                // interrupt or a jump is not one: taking it for one turned
+                // Ctrl-C into "estimate the width" and let the layout run on.
             }
         }
 
@@ -354,12 +360,18 @@ bool microtex_bidi_available() {
     return microtex::bidi_available();
 }
 
-// Run by R when the shared object is unloaded. It only fires because
-// .onUnload() calls library.dynam.unload() -- without that R keeps the
-// DLL mapped and this never runs at all.
+// device_hook.cpp: restores every armed device and unregisters the
+// graphics system, whose callback lives in this DLL.
+void gm_base_unload();
+
+// Run by R as the shared object is unloaded: from .onUnload()'s
+// library.dynam.unload(), and from routes that skip .onUnload() entirely,
+// such as pkgload::unload() while another loaded package imports us.
+// Device teardown is repeated here for those routes -- an armed device
+// left pointing into an unmapped DLL crashes on its next label -- and the
+// preserved text-measurer callback is released.
 //
-// Releasing the preserved text-measurer callback is the whole job. It
-// deliberately does NOT call MicroTeX::release(): the macro registries
+// It deliberately does NOT call MicroTeX::release(): the macro registries
 // are torn down by the static object at the end of macro_def.cpp, which
 // covers both exits. If dlclose really unmaps us, that destructor runs
 // here and the statics -- registries and the s_registered guards in
@@ -372,7 +384,29 @@ bool microtex_bidi_available() {
 // would still read "registered" over an empty table and \gmfontfamily,
 // \textrm, \mark and \includegraphics would vanish after a reload.
 extern "C" void R_unload_gridmicrotex(DllInfo*) {
+    gm_base_unload();
     clear_text_measurer();
+}
+
+// R finds R_unload_<pkg> with R_dlsym(), which searches only registered
+// routines once R_useDynamicSymbols(dll, FALSE) has run -- and
+// RcppExports.cpp runs it. Unregistered, the hook above never ran at all:
+// an REprintf() in it never fired on dyn.unload() (R 4.6). Registering it
+// as a .C routine is what lets R find it. This second R_registerRoutines()
+// leaves the .Call table alone but switches dynamic lookup back on, hence
+// the call after it.
+// [[Rcpp::init]]
+void gm_register_unload_hook(DllInfo* dll) {
+    // Through void (*)(void), which -Wcast-function-type accepts either way.
+    static const R_CMethodDef entries[] = {
+        {"R_unload_gridmicrotex",
+         reinterpret_cast<DL_FUNC>(
+             reinterpret_cast<void (*)(void)>(&R_unload_gridmicrotex)),
+         1, nullptr},
+        {nullptr, nullptr, 0, nullptr}
+    };
+    R_registerRoutines(dll, entries, nullptr, nullptr, nullptr);
+    R_useDynamicSymbols(dll, FALSE);
 }
 
 // [[Rcpp::export]]

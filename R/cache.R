@@ -39,7 +39,8 @@
 #' interactive sessions. The default limit is 512 entries, which
 #' should be sufficient for most use cases. When the limit is
 #' exceeded, the least recently used entries are automatically
-#' evicted.
+#' evicted. The same limit, and \code{latex_cache_clear()}, also apply to
+#' a smaller memo of pre-processed input kept alongside the layouts.
 #'
 #' @param n Non-negative integer cache capacity. Default is 512. Set
 #'   to \code{0} to disable caching.
@@ -89,6 +90,7 @@ latex_cache_clear <- function() {
   # far larger than a layout. They have no size limit of their own, so this
   # is the only way to give that memory back.
   .image_cache_clear()
+  .strip_memo_clear()
   invisible(NULL)
 }
 
@@ -112,10 +114,16 @@ latex_cache_info <- function() {
 # this in the key, a layout measured on the screen device was reused
 # verbatim by a later ggsave(), placing text using the wrong widths.
 #
+# The resolution is part of it too: one png() measured a phrase at 175bp
+# at 72dpi and 174bp at 300, so the name alone let a layout measured at one
+# resolution be reused at another.
+#
 # With no device open the measurer opens a pdf(NULL) of its own, so that
 # is the device the measurements will come from.
 .cache_device <- function() {
-  if (grDevices::dev.cur() == 1L) "pdf" else names(grDevices::dev.cur())
+  if (grDevices::dev.cur() == 1L) return("pdf@72")
+  dpi <- grDevices::dev.size("px")[1] / grDevices::dev.size("in")[1]
+  sprintf("%s@%.0f", names(grDevices::dev.cur()), dpi)
 }
 
 # Cache key for a parse_latex_cpp call. Concatenation is fine because the

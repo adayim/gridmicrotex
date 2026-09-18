@@ -258,9 +258,17 @@ figure to nothing.
 \item An SVG is drawn as real vector and stays sharp at any output
 resolution; a bitmap does not, and warns when it would be shown below
 150 dpi. PDF and EPS are not supported: save the figure as SVG
-instead. A file that cannot be read (missing, unsupported, or an
-SVG with no \code{rsvg} installed) warns and draws its name rather than
-disappearing.
+instead.
+\item The file must be local; a URL is not downloaded. A file that cannot
+be drawn -- missing, a URL, an unsupported format, or unreadable --
+is an error saying why. Each format needs its reader, all
+\emph{Suggests}: \code{png} for PNG, \code{jpeg} for JPEG and \code{rsvg} for SVG; the
+error names the one to install.
+\item \verb{\\includegraphics} must be written directly. One that a \verb{\newcommand}
+or \verb{\\def} in the expression produces is an error, because those are
+expanded after the file would have been read; a macro from
+\code{\link[=define_macro]{define_macro()}} is expanded in time. A commented-out
+\verb{\% \\includegraphics\{...\}} is ignored.
 }
 
 Anything not in this list is passed to MicroTeX unchanged. An unknown

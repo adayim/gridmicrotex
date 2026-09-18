@@ -159,6 +159,12 @@
 .md_text_node <- function(s, spans, bare = FALSE) {
   one <- function(t) {
     raw <- .md_unmask_math(.md_escape_tex(t), spans)
+    # Prose backslashes are escaped by now, so an \includegraphics here was
+    # written in a math span. It is read now, like markdown's own images,
+    # so a box fails when it is built rather than when it is drawn.
+    if (grepl("\\includegraphics", raw, fixed = TRUE)) {
+      .resolve_graphics(raw, check_only = TRUE)
+    }
     if (bare) raw else latex_wrap(raw, input_mode = "mixed")
   }
   # CommonMark decodes &nbsp; to a real U+00A0. MicroTeX spells it \nbsp,
@@ -402,6 +408,8 @@
 .md_css_inline_latex <- function(props, base = 20) {
   open <- character(0)
   text_mode <- character(0)
+  # `none`, `hidden` and a zero width draw no frame.
+  framed <- .md_css_border_drawn(props$border, base)
   # Emitted in declaration order, so the nesting matches what the author
   # wrote rather than an order of our choosing.
   for (prop in names(props)) {
@@ -425,9 +433,10 @@
       #
       # A border alongside it takes the fill as \fcolorbox's second
       # argument, so emitting \bgcolor as well would paint it twice.
-      hex <- if (is.null(props$border)) .md_resolve_color(val) else NULL
+      hex <- if (!framed) .md_resolve_color(val) else NULL
       if (!is.null(hex)) open <- c(open, paste0("\\bgcolor{", hex, "}{"))
     } else if (prop == "border") {
+      if (!framed) next
       # \fcolorbox needs both colours, \fbox neither. MicroTeX has no
       # \fboxsep, so the inset is fixed -- see ?md_style.
       bd <- .md_css_border(val_raw, base)
@@ -566,16 +575,46 @@
 
 # Read one attribute out of a tag's attribute text, or NULL if absent.
 #
-# Match to the *closing* quote of the same kind, not to whichever quote
-# comes first: a value may legitimately contain the other one, as
-# font-family: 'Courier New', monospace does.
+# The attributes are read in order, one whole `name=value` at a time, the
+# way HTML does: names are case-insensitive, a value may be double-quoted,
+# single-quoted or bare, and a quoted value runs to the *closing* quote of
+# its own kind -- it may contain the other one, as
+# font-family: 'Courier New', monospace does. Reading them in order is
+# also what keeps `data-src=` from answering for `src=`.
 .md_html_attr <- function(attrs, name) {
-  for (q in c('"', "'")) {
-    m <- regmatches(attrs, regexec(
-      paste0(name, "\\s*=\\s*", q, "([^", q, "]*)", q), attrs))[[1]]
-    if (length(m) == 2L) return(m[2])
-  }
-  NULL
+  m <- gregexpr(paste0("([^\\s\"'>/=]+)(?:\\s*=\\s*(?:\"([^\"]*)\"|",
+                       "'([^']*)'|([^\\s\"'=<>`]+)))?"), attrs, perl = TRUE)[[1]]
+  if (m[1L] == -1L) return(NULL)
+  cs <- attr(m, "capture.start"); cl <- attr(m, "capture.length")
+  grab <- function(j) substring(attrs, cs[, j], cs[, j] + cl[, j] - 1L)
+  i <- match(tolower(name), tolower(grab(1L)))
+  if (is.na(i)) return(NULL)
+  v <- c(grab(2L)[i], grab(3L)[i], grab(4L)[i])
+  if (any(nzchar(v))) v[nzchar(v)][1L] else ""
+}
+
+# \includegraphics for a markdown image, checked now so that markdown
+# fails when its grob is built. A brace in the file name is escaped so the
+# argument still ends at the right one; the resolver unescapes it.
+.md_includegraphics <- function(path, opt = character(0)) {
+  .image_check(path)
+  paste0("\\includegraphics",
+         if (length(opt)) paste0("[", paste(opt, collapse = ","), "]") else "",
+         "{", gsub("([{}])", "\\\\\\1", path), "}")
+}
+
+# An <img> alone on its line is an HTML *block* to CommonMark, and raw HTML
+# blocks are dropped -- but a browser draws this one, so it is kept. Returns
+# the LaTeX its tags make, or NULL when the block holds anything else.
+.MD_IMG_TAG <- "<img\\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>"
+
+.md_img_block <- function(txt, spans, base = 20, style = NULL) {
+  tags <- regmatches(txt, gregexpr(.MD_IMG_TAG, txt, perl = TRUE,
+                                   ignore.case = TRUE))[[1]]
+  rest <- gsub(.MD_IMG_TAG, "", txt, perl = TRUE, ignore.case = TRUE)
+  if (!length(tags) || nzchar(trimws(rest))) return(NULL)
+  paste(vapply(tags, function(t) .md_html_tag(t, FALSE, base, style, spans)$text,
+               character(1)), collapse = "")
 }
 
 # The class names on a tag, lowercased -- CSS class matching here is
@@ -602,13 +641,18 @@
 #   "break" -- <br>, a line break; nothing to push
 #   "text"  -- emit `text` as-is; a void element, so nothing to push
 #   "drop"  -- emit nothing (unrecognised markup)
-.md_html_tag <- function(txt, bare = FALSE, base = 20, style = NULL) {
-  m <- regmatches(txt, regexec("^<\\s*(/?)\\s*([A-Za-z][A-Za-z0-9]*)([^>]*)>$",
+.md_html_tag <- function(txt, bare = FALSE, base = 20, style = NULL,
+                         spans = character(0)) {
+  # CommonMark hands over exactly one tag, so everything up to its final
+  # `>` is attributes -- a quoted value may hold a `>` of its own.
+  m <- regmatches(txt, regexec("^<\\s*(/?)\\s*([A-Za-z][A-Za-z0-9]*)(.*)>$",
                                trimws(txt)))[[1]]
   if (length(m) != 4L) return(list(kind = "drop"))
   closing <- nzchar(m[2])
   tag <- tolower(m[3])
-  attrs <- m[4]
+  # The math masking runs over attributes too, and an attribute is literal
+  # text: a `$...$` pair in a file name came out as a span's index.
+  attrs <- .md_unmask_math(m[4], spans)
 
   if (closing) {
     if (tag %in% .MD_CASCADE_TAGS || tag == "q" ||
@@ -618,32 +662,21 @@
     return(list(kind = "drop"))
   }
   if (tag == "br") return(list(kind = "break"))
-  # An image cannot be drawn by a text grob, so keep its alt text -- which
-  # is what markdown's own `![alt](src)` already does. Dropping the tag
-  # whole meant the two spellings of one thing disagreed, and `<img>` lost
-  # the only part of itself that could be rendered.
+  # <img> is markdown's own `![alt](src)` spelled in HTML, and fails the
+  # same way when there is nothing to draw -- a missing `src` included.
   if (tag == "img") {
-    src <- .md_html_attr(attrs, "src")
-    if (.image_drawable(src)) {
-      # HTML sizes an <img> in pixels, which is exactly what `px` means to
-      # the resolver. A command, so it is emitted bare either way.
-      opt <- character(0)
-      for (a in c("width", "height")) {
-        v <- .md_html_attr(attrs, a)
-        if (!is.null(v) && grepl("^[0-9.]+$", trimws(v))) {
-          opt <- c(opt, paste0(a, "=", trimws(v), "px"))
-        }
+    # HTML strips the spaces around a URL, so `src=' fig.png '` is fig.png.
+    src <- trimws(.md_html_attr(attrs, "src") %||% "")
+    # HTML sizes an <img> in pixels, which is exactly what `px` means to
+    # the resolver. A command, so it is emitted bare either way.
+    opt <- character(0)
+    for (a in c("width", "height")) {
+      v <- .md_html_attr(attrs, a)
+      if (!is.null(v) && grepl("^[0-9.]+$", trimws(v))) {
+        opt <- c(opt, paste0(a, "=", trimws(v), "px"))
       }
-      return(list(kind = "text", text = paste0(
-        "\\includegraphics",
-        if (length(opt)) paste0("[", paste(opt, collapse = ","), "]") else "",
-        "{", src, "}")))
     }
-    alt <- .md_html_attr(attrs, "alt")
-    if (is.null(alt) || !nzchar(trimws(alt))) return(list(kind = "drop"))
-    alt <- .md_escape_tex(alt)
-    return(list(kind = "text",
-                text = if (bare) alt else paste0("\\text{", alt, "}")))
+    return(list(kind = "text", text = .md_includegraphics(src, opt)))
   }
   if (tag %in% .MD_CASCADE_TAGS) {
     # Only a *link* gets the link rendering. The HTML standard styles
@@ -795,14 +828,11 @@
                  strrep("}", length(sty)), ln$close)
         }
       },
-      # A drawable file becomes a real inline image; anything else -- a web
-      # URL, a missing file, an unsupported format -- keeps its alt text,
-      # silently, as it always has.
-      image         = {
-        dest <- xml2::xml_attr(k, "destination")
-        if (.image_drawable(dest)) paste0("\\includegraphics{", dest, "}")
-        else .md_inline_to_tex(k, spans, bare, sty, base, style)
-      },
+      # A real inline image, or an error saying why it cannot be one. The
+      # check is made here, not left to the resolver, so markdown_box_grob()
+      # -- which lays out only when drawn -- fails when it is built.
+      image         = .md_includegraphics(
+        .md_unmask_math(xml2::xml_attr(k, "destination"), spans)),
       # A footnote reference. CommonMark gives the target's id, not a
       # number, so the number is the position of the matching <fn> in the
       # document -- computed once in .md_parse_doc() and carried on
@@ -877,7 +907,7 @@
       out <- c(out, s)
       next
     }
-    tg <- .md_html_tag(xml2::xml_text(k), cur_bare(), base, style)
+    tg <- .md_html_tag(xml2::xml_text(k), cur_bare(), base, style, spans)
     if (identical(tg$kind, "open")) {
       sty <- cur_styles()
       # The font-style commands this tag contributes: \textbf, \textit,
@@ -917,8 +947,8 @@
     } else if (identical(tg$kind, "break")) {
       out <- c(out, emit_break())
     } else if (identical(tg$kind, "text")) {
-      # A void element that renders as characters -- <img>'s alt text.
-      # Nothing to push: there is no closing tag to pair with.
+      # A void element -- <img>, as an \includegraphics. Nothing to push:
+      # there is no closing tag to pair with.
       out <- c(out, tg$text)
       row_empty <- FALSE
     }
@@ -989,8 +1019,10 @@
     # would typeset the tags -- and the markdown inside them, unparsed.
     # Drop it, matching .md_blocks() on the block path, which would
     # otherwise disagree about the same document. Only *inline* HTML
-    # (.md_html_tag) is interpreted.
-    if (identical(nm, "html_block")) return("")
+    # (.md_html_tag) is interpreted -- and an <img> alone on its line.
+    if (identical(nm, "html_block")) {
+      return(.md_img_block(xml2::xml_text(b), parsed$spans, base, style) %||% "")
+    }
     # A footnote definition needs a foot to sit at, and an inline label has
     # none: the marker still renders, the note itself is dropped. Only
     # markdown_box_grob() lays them out.
@@ -1109,7 +1141,9 @@
 #' \code{<span>} without a style) that have no default rendering.
 #'
 #' Not every markdown feature has a MicroTeX equivalent. Links keep their
-#' text and drop the destination, and images keep their alt text.
+#' text and drop the destination. An image is drawn inline from a local
+#' PNG, JPEG or SVG file, and one that cannot be drawn is an error, as
+#' for \code{\\includegraphics} in \code{\link{latex_grob}}.
 #'
 #' Everything is flattened into a single run here, with paragraphs joined
 #' by line breaks: there is no block layout, so indentation, list markers

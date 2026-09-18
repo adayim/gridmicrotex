@@ -101,6 +101,12 @@
     nm <- xml2::xml_name(nd)
 
     if (identical(nm, "html_block")) {
+      # An <img> alone on its line is drawn, as it is inline.
+      img <- .md_img_block(xml2::xml_text(nd), spans, base, style)
+      if (!is.null(img)) {
+        emit(list(type = "paragraph", tex = img))
+        next
+      }
       tg <- .md_div_tag(xml2::xml_text(nd))
       if (identical(tg$kind, "open")) {
         open[[length(open) + 1L]] <- list(
@@ -120,7 +126,7 @@
     # how markdown renderers treat it. Handled before the switch because
     # one paragraph can yield several image blocks.
     if (identical(nm, "paragraph")) {
-      imgs <- .md_image_blocks(nd, spans, base, style)
+      imgs <- .md_image_blocks(nd, spans)
       if (!is.null(imgs)) {
         for (im in imgs) emit(im)
         next
@@ -277,39 +283,18 @@
 
 # Return one image block per image when a paragraph contains nothing but
 # images, otherwise NULL so the paragraph is rendered normally. Images
-# mixed into a sentence stay inline, where only their alt text survives.
-.md_image_blocks <- function(nd, spans, base = 20, style = NULL) {
+# mixed into a sentence stay inline. Each file is checked now, when the
+# box is built, because the layout that reads it runs only when drawn.
+.md_image_blocks <- function(nd, spans) {
   kids <- xml2::xml_children(nd)
   if (length(kids) == 0L) return(NULL)
   nms <- xml2::xml_name(kids)
   if (!all(nms %in% c("image", "softbreak"))) return(NULL)
   lapply(which(nms == "image"), function(i) {
-    im <- kids[[i]]
-    list(type = "image",
-         path = xml2::xml_attr(im, "destination"),
-         alt = .md_inline_to_tex(im, spans, base = base, style = style))
+    path <- .md_unmask_math(xml2::xml_attr(kids[[i]], "destination"), spans)
+    .image_check(path)
+    list(type = "image", path = path)
   })
-}
-
-# Load a raster image. Returns NULL -- and the caller falls back to the
-# alt text -- when the file is missing, the format is unsupported, or the
-# reader package is not installed. png and jpeg are Suggests, so images
-# degrade rather than becoming a hard dependency of the whole package.
-.md_image_raster <- function(path) {
-  if (is.null(path) || is.na(path) || !nzchar(path)) return(NULL)
-  if (!file.exists(path)) return(NULL)
-  ext <- tolower(tools::file_ext(path))
-  reader <- switch(ext,
-    png = if (requireNamespace("png", quietly = TRUE)) png::readPNG else NULL,
-    jpg = ,
-    jpeg = if (requireNamespace("jpeg", quietly = TRUE)) jpeg::readJPEG else NULL,
-    NULL
-  )
-  if (is.null(reader)) return(NULL)
-  ras <- tryCatch(reader(path), error = function(e) NULL)
-  if (is.null(ras) || length(dim(ras)) < 2L) return(NULL)
-  list(raster = grDevices::as.raster(ras),
-       w_px = dim(ras)[2], h_px = dim(ras)[1])
 }
 
 # Build a `tabular` from the GFM table extension. MicroTeX supports
@@ -389,7 +374,7 @@
   # Vertical rules from a border on the cells, and the gap between
   # columns from their horizontal padding. `@{...}` replaces the default
   # inter-column space entirely, so it is only emitted when asked for.
-  vrule <- if (!is.null(.md_css_border(r_td[["border-left"]], base))) "|" else ""
+  vrule <- if (.md_css_border_drawn(r_td[["border-left"]], base)) "|" else ""
   gap <- .md_css_length(r_td[["padding-left"]], base, base, horizontal = TRUE)
   sep <- if (!is.null(gap)) sprintf("@{\\hspace{%.2fpt}}", gap) else ""
   spec_str <- if (nzchar(vrule)) {
@@ -779,7 +764,7 @@
       # deliberately unchanged: .image_dims() reports the same
       # `w_px * 72/96` this used to compute inline, so a bitmap lays out
       # exactly as before.
-      dims <- .image_dims(blk$path)
+      dims <- tryCatch(.image_dims(blk$path), error = function(e) NULL)
       g <- if (is.null(dims)) NULL else {
         # Scaled down to fit the column, never blown up past natural size.
         iw <- min(dims$w, avail)
@@ -790,15 +775,9 @@
         if (is.null(gg)) NULL else list(g = gg, w = iw, h = ih)
       }
       if (is.null(g)) {
-        # Missing file, unsupported format, or no reader installed: show
-        # the alt text so the reader still learns what belongs here.
-        if (nzchar(blk$alt)) {
-          tex <- wrap(blk$alt)
-          m <- .md_measure(tex, avail, gp_blk)
-          add(.md_item(.md_run_grob(tex, indent_blk, y, m$mw, gp_blk),
-                       indent_blk, y, m$w, m$h, align))
-          y <- y + m$h
-        }
+        # Checked when the box was built, so only a file changed since
+        # then gets here.
+        .image_warn_gone(blk$path)
       } else {
         add(.md_item(g$g, indent_blk, y, g$w, g$h, align))
         y <- y + g$h
@@ -1022,12 +1001,19 @@
   }
 
   bd <- .md_css_border(body[["border"]], fontsize)
+  framed <- .md_css_border_drawn(body[["border"]], fontsize)
   fill <- .md_resolve_color(body[["background"]])
   col <- bd$color %||% .md_resolve_color(body[["border-color"]])
-  box_gp <- if (!is.null(fill) || !is.null(col)) {
+  # `border: none` or `0` draws no frame, whatever colour it names.
+  if (!is.null(bd) && !framed) col <- NULL
+  box_gp <- if (!is.null(fill) || !is.null(col) || framed) {
     # A border width is a length in big points; gpar()'s lwd is 1/96in.
     lwd <- if (is.null(bd$width)) 1 else bd$width * 96 / 72
-    grid::gpar(fill = fill %||% NA, col = col %||% NA, lwd = lwd)
+    gp <- grid::gpar(fill = fill %||% NA, col = col %||% NA, lwd = lwd)
+    # A border with no colour of its own is drawn in CSS's currentColor:
+    # body's text colour, or else whatever colour the box inherits.
+    if (framed && is.null(col)) gp$col <- .md_resolve_color(body[["color"]])
+    gp
   }
   radius <- .md_css_length(body[["border-radius"]], fontsize, fontsize,
                            horizontal = TRUE)
@@ -1041,7 +1027,13 @@
 # every dimension makeContent() and the *Details() methods need. Must run
 # at draw time, because the width may be relative and because measuring
 # text needs an open device.
-.md_box_layout <- function(x) {
+#
+# Every image was checked when the box was built, so one that cannot be
+# read now has gone since, and only warns: an error here, mid-draw, would
+# leave half a page (.images_lenient()).
+.md_box_layout <- function(x) .images_lenient(.md_box_geometry(x))
+
+.md_box_geometry <- function(x) {
   gp <- x$gp %||% grid::gpar()
   # markdown_box_grob() has already folded cex in, so this is the drawn
   # size; .md_base_size() is the same rule latex_grob() applies.
@@ -1211,13 +1203,15 @@ heightDetails.markdownbox <- function(x) {
 #' items are stacked here rather than handed to MicroTeX's
 #' \code{itemize}, which is what gives them a proper hanging indent.
 #'
-#' An image on a line of its own is drawn as a raster, scaled to fit the
+#' An image on a line of its own is drawn as a block, scaled to fit the
 #' column but never enlarged past its natural size (pixels are read at
-#' 96 dpi). PNG needs the \pkg{png} package and JPEG needs \pkg{jpeg},
-#' both \emph{Suggests}: when the reader is not installed, the file is
-#' missing, or the format is anything else, the image degrades to its alt
-#' text. An image \emph{within} a sentence stays inline, where only its
-#' alt text survives.
+#' 96 dpi); an image \emph{within} a sentence is drawn inline, and so is an
+#' \code{<img>} tag, even alone on its line. It must be
+#' a local PNG, JPEG or SVG file, read by \pkg{png}, \pkg{jpeg} or
+#' \pkg{rsvg} respectively, all \emph{Suggests} and needed only for their
+#' own format. An image that cannot be drawn -- a missing file, a URL,
+#' another format, or a reader that is not installed -- is an error when
+#' the grob is built, saying which.
 #'
 #' The layout is computed at draw time, so an open device is required,
 #' which is what lets a relative \code{width} and the measured height of

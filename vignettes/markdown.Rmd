@@ -216,9 +216,11 @@ grid.draw(markdown_box_grob(
 
 ### Images
 
-An image on its own line is drawn as a raster, scaled to the column
-width. `png` and `jpeg` are optional --- if neither is installed, or the
-file is missing, the image degrades to its alt text.
+An image on its own line is drawn as a block, scaled to the column
+width; one inside a sentence is drawn inline. It must be a local PNG,
+JPEG or SVG file, read by the optional `png`, `jpeg` or `rsvg` package
+for its format. An image that cannot be drawn --- a missing file, a URL,
+another format, or its reader not installed --- is an error saying which.
 
 ```{r image, fig.height = 1.8, fig.width = 4, out.width = "70%"}
 # Any .png / .jpeg path works; this one ships with the png package.
@@ -439,13 +441,13 @@ Full CommonMark plus the GitHub extensions --- tables, strikethrough,
 autolinks and task lists --- is parsed, so parsing is never the
 limitation.
 
-Nothing errors: anything that cannot be drawn degrades to its text. This
+Apart from an image that cannot be drawn (see *Images* above), nothing
+errors: anything that cannot be drawn degrades to its text. This
 document contains every degradation at once, which is easier to look at
 than to read about:
 
 ```{r degrade, fig.height = 1.5, fig.width = 4.4, out.width = "80%"}
-doc <- r"(A [link](https://example.org) keeps its text, an
-![inline diagram](missing.png) becomes its alt text, and an
+doc <- r"(A [link](https://example.org) keeps its text, and an
 <unknown>unknown tag</unknown> keeps its content.
 
 Footnotes[^1] land at the foot.
@@ -462,13 +464,12 @@ grid.draw(markdown_box_grob(
 ))
 ```
 
-The link is styled but inert, the missing image shows its alt text, the
-unknown tag is stripped and its words kept, the footnote is numbered and
-moved to the foot, and the HTML table is gone entirely --- no error, no
-placeholder. In detail:
+The link is styled but inert, the unknown tag is stripped and its words
+kept, the footnote is numbered and moved to the foot, and the HTML table
+is gone entirely --- no error, no placeholder. In detail:
 
-- **Inline images** keep their alt text only. A block-level image, alone
-  on its line, is drawn.
+- **Images** are drawn inline within a sentence, or as a block alone on
+  their line. Alt text is not drawn.
 - **Links** keep their text; the destination is dropped. They are styled
   blue and underlined through the `a` tag, which a stylesheet can
   change.
@@ -480,8 +481,8 @@ placeholder. In detail:
   its own centred line, styleable as the `math` tag. Inline `$…$` is
   unaffected.
 - **Small caps** and `font-variant-numeric` are not rendered.
-- **Block-level HTML** other than `<div>` is dropped, `<table>` included
-  --- use GFM's table syntax.
+- **Block-level HTML** other than `<div>` and an `<img>` alone on its
+  line is dropped, `<table>` included --- use GFM's table syntax.
 - **Spanning cells** are not reachable from markdown table syntax. Write
   the table as LaTeX instead; see *Dropping down to LaTeX*.
 - **Syntax highlighting** refuses a downloaded grammar that uses KDE's

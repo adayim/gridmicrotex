@@ -18,27 +18,45 @@ test_that("bundled STIX math font loads, resolves aliases, and renders", {
   expect_equal(gridmicrotex:::resolve_math_font("stix"), "STIX Two Math")
   expect_equal(gridmicrotex:::resolve_math_font("stix2"), "STIX Two Math")
 
-  # Switching the math font has to be undone explicitly, and neither
-  # do.call(latex_options, old) nor reset_latex_options() is enough:
-  #
-  #  * latex_options() ignores NULL arguments -- that is how it separates
-  #    "leave this alone" from "set it" -- so replaying an all-NULL `old`
-  #    (the state when nothing has been set yet) restores nothing.
-  #  * latex_options(math_font=) also calls .set_math_font(), which sets
-  #    MicroTeX's default font in C++. reset_latex_options() only clears
-  #    the R-side list, leaving the engine still on STIX.
-  #
-  # Left unrestored, every later test file renders in the wrong font --
-  # which is exactly how the visual snapshots came to be recorded against
-  # STIX rather than the default Lete.
-  latex_options(math_font = "stix")
+  # Switching the math font also switches MicroTeX's default in C++, so it
+  # must be undone. Left unrestored, every later test file renders in the
+  # wrong font -- which is exactly how the visual snapshots came to be
+  # recorded against STIX rather than the default Lete.
+  old <- latex_options(math_font = "stix")
   expect_equal(latex_options()$math_font, "stix")
-
-  latex_options(math_font = "lete")  # restores the engine default
-  reset_latex_options()              # and clears the R-side record
+  do.call(latex_options, old)
   expect_null(latex_options()$math_font)
 
   g <- latex_grob("\\frac{a}{b}", math_font = "stix",
                   gp = grid::gpar(fontsize = 20))
   expect_s3_class(g, "latexgrob")
+})
+
+test_that("restoring or resetting options puts the engine font back", {
+  pdf(NULL)
+  on.exit({
+    latex_options(math_font = "lete")
+    reset_latex_options()
+    dev.off()
+  }, add = TRUE)
+  width <- function() {
+    latex_cache_clear()
+    grid::convertWidth(latex_dims("$\\sum_{i=1}^n x_i$")$width, "bigpts", TRUE)
+  }
+  reset_latex_options()
+  lete <- width()
+
+  # latex_options() ignored NULL, so replaying the settings it returned --
+  # all NULL before anything was set -- restored nothing.
+  old <- latex_options(math_font = "stix")
+  expect_false(isTRUE(all.equal(width(), lete)))
+  do.call(latex_options, old)
+  expect_null(latex_options()$math_font)
+  expect_equal(width(), lete)
+
+  # reset_latex_options() cleared the R-side record and left the engine
+  # on STIX.
+  latex_options(math_font = "stix")
+  reset_latex_options()
+  expect_equal(width(), lete)
 })

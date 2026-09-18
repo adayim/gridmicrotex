@@ -159,12 +159,7 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
         # no longer does -- deleted since, or a reader that parsed the header
         # and then choked on the body -- say so rather than leaving a gap
         # nothing in the output accounts for.
-        if (is.null(g) && !is.null(p)) {
-          .image_warn_once(paste0("draw\x1f", .image_stamp(p)),
-                           paste0("Cannot draw '", p,
-                                  "' now, though it was readable when the ",
-                                  "layout was measured; leaving it blank."))
-        }
+        if (is.null(g) && !is.null(p)) .image_warn_gone(p)
         g
       },
       NULL  # glyph rows handled in bulk below; everything else → NULL

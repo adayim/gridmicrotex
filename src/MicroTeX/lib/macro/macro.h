@@ -11,6 +11,7 @@
 namespace microtex {
 
 class Parser;
+class MacroInfo;
 
 class Macro {
 public:
@@ -24,14 +25,30 @@ protected:
   static std::map<std::string, std::string> _codes;
   static std::map<std::string, std::string> _replacements;
   static Macro* _instance;
-  // Snapshot of the macro names known at the end of _init_(). Anything
-  // not in this set is considered user-defined and is dropped by
-  // clearUserMacros(). Populated once by snapshotBuiltins().
-  static std::set<std::string> _builtin_names;
+
+  // What a definition made during the current parse displaced, so that
+  // clearUserMacros() can put it back: the name's previous code and
+  // replacement, and the MacroInfo it replaced -- a built-in such as
+  // \frac, owned here until it is restored. Only a name's first definition
+  // in a parse is recorded, since that is the state to return to.
+  struct Displaced {
+    bool hadCode = false;
+    std::string code;
+    bool hadReplacement = false;
+    std::string replacement;
+    MacroInfo* info = nullptr;
+  };
+  static std::map<std::string, Displaced> _displaced;
+
+  // Set by snapshotBuiltins() once _init_() has defined the built-ins,
+  // which are the baseline rather than something a parse did.
+  static bool _sealed;
 
   static void checkNew(const std::string& name);
 
   static void checkRenew(const std::string& name);
+
+  static void save(const std::string& name);
 
 public:
   /**
@@ -67,10 +84,9 @@ public:
   static bool isMacro(const std::string& name);
 
   /**
-   * Drop every user-defined macro currently registered (\newcommand,
-   * \renewcommand, \def). Built-in macros and environments registered
-   * by _init_() are preserved via the snapshot taken by
-   * snapshotBuiltins().
+   * Undo every definition made since the last call (\newcommand,
+   * \renewcommand, \def): a new name is removed, and a redefined one --
+   * a built-in included -- gets back what it had.
    *
    * Call this between independent parses so that the static state
    * doesn't leak macros across calls and so that the typeface/path
@@ -80,10 +96,9 @@ public:
   static void clearUserMacros();
 
   /**
-   * Record the set of macro names currently in `_codes`. Anything
-   * present at the time of the call is considered "built-in" and will
-   * not be removed by clearUserMacros(). Idempotent — only the first
-   * call has an effect, so multiple init paths can call it safely.
+   * Mark the definitions made so far as the built-in baseline, which
+   * clearUserMacros() never undoes. Idempotent, so multiple init paths
+   * can call it safely.
    */
   static void snapshotBuiltins();
 
@@ -125,6 +140,10 @@ public:
   /** Remove and delete the macro info entry for the given name. No-op
    *  if the name is not registered. */
   static void remove(const std::string& name);
+
+  /** Remove the entry for the given name *without* deleting it, and hand
+   *  it to the caller; nullptr if the name is not registered. */
+  static MacroInfo* release(const std::string& name);
 
   // Number of arguments
   const int argc;

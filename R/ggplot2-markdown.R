@@ -301,7 +301,8 @@ element_markdown <- function(math_font = "", fontsize = NULL,
 
         if (is.na(row$label) || !nzchar(row$label)) return(grid::nullGrob())
 
-        col <- if (!is.null(row$alpha) && row$alpha < 1) {
+        # A mapped alpha can be NA, which ggplot2 draws opaque.
+        col <- if (isTRUE(row$alpha < 1)) {
           grDevices::adjustcolor(row$colour, alpha.f = row$alpha)
         } else {
           row$colour

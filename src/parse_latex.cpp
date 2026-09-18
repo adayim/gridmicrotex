@@ -4,6 +4,7 @@
 #include "graphic/graphic.h"
 #include "graphic/graphic_recorder.h"
 #include "atom/font_family_atom.h"
+#include "atom/image_atom.h"
 #include "macro/macro.h"
 #include "core/split.h"
 #include "atom/atom_row.h"
@@ -79,6 +80,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // The \gmfontfamily registry is per-parse too: indices are only
     // meaningful against the names collected during this parse.
     clear_font_families();
+    // As is the list of \includegraphics that reached the parser unread.
+    unresolved_images().clear();
 
     // Toggle glyph rendering mode (guard restores default on any exit)
     RenderModeGuard render_guard;
@@ -452,6 +455,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
         marks_df.attr("row.names") = Rcpp::IntegerVector::create();
     }
     result.attr("marks") = marks_df;
+
+    // Each \includegraphics the parser met unread; R refuses them.
+    result.attr("unresolved_images") = Rcpp::wrap(unresolved_images());
 
     return result;
 }

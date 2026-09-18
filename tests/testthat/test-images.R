@@ -206,46 +206,66 @@ test_that("an SVG falls back to a raster when there is no picture reader", {
   expect_gt(nrow(g$raster), 1L)
   expect_gt(ncol(g$raster), 1L)
 
-  # And with neither reader there is nothing to draw, so the resolver's
-  # fallback text is what the user sees.
+  # And with neither reader there is nothing to draw: the grob is NULL and
+  # the grid builder warns that the box was left blank.
   testthat::local_mocked_bindings(.image_raster = function(...) NULL,
                                   .package = "gridmicrotex")
   expect_null(.image_grob(tempfile(fileext = ".png"), 72, 72))
 })
 
-test_that("an image that cannot be drawn warns once and shows its name", {
+test_that("an image that cannot be drawn is an error saying why", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  drawn <- function(tex) {
-    d <- suppressWarnings(
-      latex_grob(tex, input_mode = "math")$layout_df)
-    paste(d$text[d$type == "text" & !is.na(d$text)], collapse = "")
+  # A figure that was asked for and not drawn is easy to miss in the
+  # output, so it stops instead of drawing a stand-in. A URL is a path like
+  # any other and is not fetched, so it fails the same way.
+  for (f in c("no-such-file.png", "https://example.org/fig.png")) {
+    expect_error(latex_grob(sprintf("\\includegraphics{%s}", f),
+                            input_mode = "math"),
+                 "file not found", label = f)
   }
-  expect_warning(latex_dims("\\includegraphics{no-such-file.png}",
-                            input_mode = "math"), "file not found")
-  expect_equal(drawn("\\includegraphics{no-such-file.png}"), "no-such-file.png")
 
-  # PDF and EPS are the formats real LaTeX points at, so the message says
-  # what to do instead rather than only that it failed.
-  p <- tempfile(fileext = ".pdf")
-  grDevices::pdf(p, width = 2, height = 1); grid::grid.rect(); grDevices::dev.off()
-  expect_warning(latex_dims(sprintf("\\includegraphics{%s}", p),
-                            input_mode = "math"), "save the figure as SVG")
+  # A format with no reader has nothing else to ask, so it is refused here.
+  for (ext in c(".pdf", ".tiff")) {
+    f <- tempfile(fileext = ext); writeBin(as.raw(1:20), f)
+    expect_error(latex_dims(sprintf("\\includegraphics{%s}", f),
+                            input_mode = "math"),
+                 "not a PNG, JPEG or SVG file", label = ext)
+  }
+})
 
-  t <- tempfile(fileext = ".tiff"); writeBin(as.raw(1:20), t)
-  expect_warning(latex_dims(sprintf("\\includegraphics{%s}", t),
-                            input_mode = "math"), "not a supported image format")
+test_that("a commented-out \\includegraphics is not read", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Commenting out a figure is routine LaTeX. The resolver runs before the
+  # comments are stripped, so it has to skip them itself or the missing
+  # draft figure stops the whole render.
+  expect_equal(wid("x % \\includegraphics{old.png}\ny"), wid("xy"))
+  doc <- c("\\documentclass{article}", "\\begin{document}", "Text",
+           "% \\includegraphics{draft.png}", "\\end{document}")
+  expect_equal(as.numeric(latex_dims(paste(doc, collapse = "\n"))$width),
+               as.numeric(latex_dims(paste(doc[-4], collapse = "\n"))$width))
+  # `\\` is a line break, so the `%` after it still starts a comment...
+  expect_equal(wid("x\\\\% \\includegraphics{old.png}\ny"), wid("x\\\\y"))
+  # ...but an escaped `\%` is a percent sign, and the figure is real.
+  expect_error(latex_dims("50\\% \\includegraphics{nope.png}", input_mode = "math"),
+               "file not found")
+  # Likewise `\\includegraphics` is a line break and then a word, not the
+  # command; a third backslash makes it the command again.
+  expect_equal(gridmicrotex:::.resolve_graphics("a\\\\includegraphics{x}", 20, 0),
+               "a\\\\includegraphics{x}")
+  expect_error(latex_dims("a\\\\\\includegraphics{nope.png}", input_mode = "math"),
+               "file not found")
 })
 
 test_that("one warning per file, however many times the layout is measured", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # .md_measure() calls latex_dims() up to seven times for a single render
   # and editDetails() re-runs the pipeline, so deduplicating per parse
   # would not deduplicate at all.
-  f <- tempfile(fileext = ".png")   # never created
+  tex <- sprintf("\\includegraphics[trim=1 2 3 4]{%s}", mk_png())
   seen <- character(0)
   withCallingHandlers(
-    for (i in 1:5) latex_dims(sprintf("\\includegraphics{%s}", f),
-                              input_mode = "math"),
+    for (i in 1:5) latex_dims(tex, input_mode = "math"),
     warning = function(w) {
       seen <<- c(seen, conditionMessage(w)); invokeRestart("muffleWarning")
     })
@@ -287,22 +307,37 @@ test_that("an \\includegraphics inside a macro definition still resolves", {
   expect_true("image" %in% d$type)
 })
 
-test_that("an \\includegraphics the resolver declines is still not silent", {
+test_that("an \\includegraphics the resolver cannot read is an error", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Malformed input -- no braces, or unbalanced ones -- is the case the R
-  # scanner deliberately leaves alone rather than guessing at. It then
-  # reaches MicroTeX, whose vendored stub returns nullptr and draws
-  # nothing at all. The C++ override draws the argument instead, so a
-  # broken \includegraphics is visible rather than an invisible gap.
-  drawn <- function(tex) {
-    d <- suppressWarnings(latex_grob(tex, input_mode = "math")$layout_df)
-    paste(d$text[d$type == "text" & !is.na(d$text)], collapse = "")
+  # Two kinds reach MicroTeX unread: malformed input -- no braces, or
+  # unbalanced ones -- which the R scanner leaves alone rather than guess
+  # at, and one a \newcommand or \def produces, which MicroTeX expands
+  # after both resolver passes. The vendored stub drew nothing; the
+  # override reports them, and they fail like every other image that cannot
+  # be drawn. In "mixed" mode too, where the prose goes inside \text{} --
+  # MicroTeX parses that leniently and swallowed an exception thrown there,
+  # with the rest of the text.
+  for (tex in c("x\\includegraphics{unbalanced", "x\\includegraphics y",
+                "\\newcommand{\\ig}{\\includegraphics}\\ig{nope.png}",
+                "\\newcommand{\\fig}[1]{\\includegraphics{#1}}\\fig{nope.png}",
+                "\\def\\fig#1{\\includegraphics{#1}}\\fig{nope.png}")) {
+    for (mode in c("math", "mixed")) {
+      expect_error(latex_grob(tex, input_mode = mode), "written directly",
+                   label = paste(mode, tex))
+    }
   }
-  expect_equal(drawn("x\\includegraphics{unbalanced"), "unbalanced")
-  expect_equal(drawn("x\\includegraphics y"), "y")
-
+  # Where images only warn (base graphics, a box mid-draw), it warns and
+  # draws the argument, as for any image.
+  .image_reset_warnings(); on.exit(.image_reset_warnings(), add = TRUE)
+  alias <- "\\newcommand{\\ig}{\\includegraphics}\\ig{nope.png}"
+  expect_warning(g <- .images_lenient(latex_grob(alias, input_mode = "math")),
+                 "drawing the file name instead")
+  expect_true("nope.png" %in% g$layout_df$text)
+  expect_false(is.null(.gm_base_layout(paste("$x$", alias), 12)))
   # And the resolver really did leave them: these are not rewritten forms.
-  for (tex in c("x\\includegraphics{unbalanced", "x\\includegraphics y")) {
+  # A macro parameter is not a file, so it is not read as one either.
+  for (tex in c("x\\includegraphics{unbalanced", "x\\includegraphics y",
+                "\\def\\fig#1{\\includegraphics{#1}}")) {
     expect_match(gridmicrotex:::.resolve_graphics(tex, 20, 0),
                  "includegraphics", fixed = TRUE)
   }
@@ -327,22 +362,75 @@ test_that("the layout cache notices a file that changed on disk", {
   expect_false(identical(wid(sprintf("\\includegraphics{%s}", f)), w1))
 })
 
-test_that("markdown draws a real image, and keeps alt text when it cannot", {
+test_that("markdown draws a real image", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png()
   tex <- gridmicrotex:::.md_to_tex(sprintf("a ![ALT](%s) b", f))
   expect_match(tex, "includegraphics", fixed = TRUE)
 
-  # A web URL or a missing file is not an error in markdown -- it keeps the
-  # alt text and stays silent, which is what it has always done.
-  expect_match(gridmicrotex:::.md_to_tex("a ![ALT](https://x/y.png) b"), "ALT")
-  expect_no_warning(markdown_grob("a ![ALT](https://x/y.png) b"))
-  expect_no_warning(markdown_grob("a ![ALT](nope.png) b"))
-
   # <img> reaches the same place, and HTML sizes it in pixels.
   expect_match(gridmicrotex:::.md_to_tex(sprintf("a <img src='%s' width='48'> b", f)),
                "width=48px", fixed = TRUE)
+
+  # An <img> alone on its line is an HTML *block* to CommonMark, not an
+  # inline tag, and HTML blocks are otherwise dropped. It is drawn, as it
+  # is in a browser.
+  expect_match(gridmicrotex:::.md_to_tex(sprintf("<img src='%s'>", f)),
+               "includegraphics", fixed = TRUE)
+  blk <- gridmicrotex:::.md_parse_blocks(sprintf("Intro\n\n<img src='%s'>\n\nEnd", f))
+  expect_match(blk[[2]]$tex, "includegraphics", fixed = TRUE)
+})
+
+test_that("markdown that names an image it cannot draw is an error", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Every spelling fails the same way, a URL included, and none falls back
+  # to its alt text. An <img> with no src names no file at all.
+  for (md in c("a ![ALT](nope.png) b", "a ![ALT](https://x/y.png) b",
+               "a <img src='nope.png' alt='ALT'> b", "a <img alt='ALT'> b",
+               "<img src='nope.png'>", "a <img src='nope.png' alt='a > b'> c")) {
+    expect_error(markdown_grob(md), "file not found", label = md)
+  }
+  # The block renderer lays out only when drawn, so it checks when it is
+  # built: an error from inside a draw would leave half a page. That
+  # includes an \includegraphics written inside a math span.
+  for (md in c("![ALT](nope.png)", "text ![ALT](nope.png) more",
+               "Intro\n\n<img src='nope.png'>\n\nEnd",
+               "see $\\includegraphics{nope.png}$")) {
+    expect_error(markdown_box_grob(md), "file not found", label = md)
+  }
+  # Code is literal: an \includegraphics shown there names no figure.
+  expect_match(gridmicrotex:::.md_to_tex("`$\\includegraphics{nope.png}$`"),
+               "\\texttt{", fixed = TRUE)
+})
+
+test_that("markdown reads an image's path the way HTML and CommonMark do", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  d <- tempfile("paths"); dir.create(d)
+  put <- function(name) { p <- file.path(d, name); file.copy(mk_png(), p); p }
+  drawn <- function(md) "image" %in% markdown_grob(md)$layout_df$type
+
+  # A `$...$` pair in a file name is masked as math before CommonMark
+  # runs, and has to be put back or the name comes out as "a1c.png".
+  dollar <- put("a$b$c.png")
+  expect_true(drawn(sprintf("x ![a](%s) y", dollar)))
+  expect_true(drawn(sprintf("x <img src='%s'> y", dollar)))
+  blk <- gridmicrotex:::.md_parse_blocks(sprintf("![a](%s)", dollar))[[1]]
+  expect_identical(blk$path, dollar)
+
+  # A brace in a file name must not end the \includegraphics argument.
+  expect_true(drawn(sprintf("x ![a](%s) y", put("a}b.png"))))
+  expect_true(drawn(sprintf("x ![a](%s) y", put("a{b.png"))))
+
+  # HTML attributes: names are case-insensitive, values may be unquoted
+  # or padded with spaces, and `data-src` is not `src`.
+  f <- put("ok.png")
+  for (tag in c("<img src=%s>", "<img SRC='%s'>", "<img src=' %s '>",
+                "<img data-src='nope.png' src='%s'>",
+                "<img src='%s' alt='a > b'>")) {
+    expect_true(drawn(paste("x", sprintf(tag, f), "y")), label = tag)
+  }
 })
 
 test_that("keepaspectratio fits inside the box instead of stretching it", {
@@ -455,17 +543,27 @@ test_that("an SVG no reader can draw is refused at parse time, not at draw time"
   dir <- tempfile("gfx"); dir.create(dir)
   f <- file.path(dir, "notanimage.svg")
   writeLines("<notsvg width='72pt' height='36pt'><x/></notsvg>", f)
-  expect_null(gridmicrotex:::.image_dims(f))
-  expect_false(gridmicrotex:::.image_drawable(f))
+  expect_error(gridmicrotex:::.image_dims(f))
+  expect_error(latex_grob(sprintf("\\includegraphics{%s}", f), input_mode = "math"),
+               "notanimage.svg", fixed = TRUE)
+  # Markdown refuses it for the same reason.
+  expect_error(gridmicrotex:::.md_to_tex(sprintf("a ![ALT](%s) b", f)),
+               "notanimage.svg", fixed = TRUE)
 
-  d <- suppressWarnings(latex_grob(sprintf("\\includegraphics{%s}", f),
-                                   input_mode = "math")$layout_df)
-  expect_false("image" %in% d$type)
-  expect_match(paste(d$text[!is.na(d$text)], collapse = ""), "notanimage.svg",
-               fixed = TRUE)
-
-  # Markdown keeps its alt text for the same reason.
-  expect_match(gridmicrotex:::.md_to_tex(sprintf("a ![ALT](%s) b", f)), "ALT")
+  # An <svg> root in some other namespace is not an SVG either: rsvg
+  # rejects it, so it drew a blank box and blamed the file for changing.
+  skip_if_not_installed("rsvg")
+  foreign <- file.path(dir, "foreign.svg")
+  writeLines("<svg xmlns='http://example.org/x' width='72pt' height='36pt'/>",
+             foreign)
+  expect_error(latex_dims(sprintf("\\includegraphics{%s}", foreign),
+                          input_mode = "math"), "no <svg> root")
+  # The SVG namespace, declared or left implicit, is fine.
+  for (ns in c("", " xmlns='http://www.w3.org/2000/svg'")) {
+    ok <- file.path(dir, "ok.svg")
+    writeLines(sprintf("<svg%s width='72pt' height='36pt'/>", ns), ok)
+    expect_equal(wid(sprintf("\\includegraphics{%s}", ok)), 72, label = ns)
+  }
 })
 
 test_that("a rotated image is drawn rotated, not dropped", {
@@ -534,26 +632,24 @@ test_that("a size that cannot be drawn says why instead of vanishing quietly", {
   expect_no_error(suppressWarnings(latex_dims(G("[width=1e7in]"), input_mode = "math")))
 })
 
-test_that("an unreadable file says which of the two things went wrong", {
+test_that("an unreadable file is reported in the reader's own words", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  skip_if_not_installed("png")
-  why <- function(path) {
-    ws <- character(0)
-    withCallingHandlers(
-      gridmicrotex:::.resolve_graphics(sprintf("\\includegraphics{%s}", path), 20, 0),
-      warning = function(w) { ws <<- c(ws, conditionMessage(w)); invokeRestart("muffleWarning") })
-    paste(ws, collapse = " ")
-  }
+  skip_if_not_installed("png"); skip_if_not_installed("jpeg")
+  why <- function(path) tryCatch({
+    gridmicrotex:::.resolve_graphics(sprintf("\\includegraphics{%s}", path), 20, 0)
+    ""
+  }, error = conditionMessage)
   dir <- tempfile("gfx"); dir.create(dir)
-  # "no dimensions" has two causes and they need different answers. Blaming
-  # a missing package for a truncated file sends the reader to install
-  # something they already have.
+  # The reader knows its format better than a guess made here. A missing
+  # reader package is reported the same way, by R: "there is no package
+  # called 'png'".
   empty <- file.path(dir, "empty.png"); file.create(empty)
-  expect_match(why(empty), "could not read it")
-  expect_false(grepl("is needed", why(empty)))
-  expect_match(why(dir), "directory")
+  expect_match(why(empty), "empty.png': file is not in PNG format", fixed = TRUE)
+  fake <- file.path(dir, "fake.jpg"); writeLines("x", fake)
+  expect_match(why(fake), "Not a JPEG file", fixed = TRUE)
+  expect_match(why(dir), "it is a directory, not a file")
   noext <- file.path(dir, "noext"); writeLines("x", noext)
-  expect_match(why(noext), "no extension")
+  expect_match(why(noext), "not a PNG, JPEG or SVG file")
 })
 
 test_that("latex_cache_clear() gives back the decoded images too", {
@@ -578,4 +674,18 @@ test_that("a file that stops being readable after measuring is reported", {
   # The box is already in the layout and cannot be given back, so the only
   # honest thing left is to say the gap is there.
   expect_warning(grid::makeContent(g), "was readable when")
+
+  # A markdown box is checked when it is built and laid out when it is
+  # drawn, so it has the same gap between the two -- for a block image, an
+  # inline one, and one in a table cell alike. None may error mid-draw.
+  f <- mk_png(300, 200)
+  g <- markdown_box_grob(sprintf("![a](%s)", f), width = grid::unit(3, "in"))
+  unlink(f)
+  expect_warning(grid::makeContent(g), "was readable when")
+  for (md in c("text ![a](%s) more", "| a |\n|---|\n| ![x](%s) |")) {
+    f <- mk_png(300, 200)
+    g <- markdown_box_grob(sprintf(md, f), width = grid::unit(3, "in"))
+    unlink(f)
+    expect_warning(grid::makeContent(g), "file not found", label = md)
+  }
 })

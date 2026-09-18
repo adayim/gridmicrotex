@@ -94,8 +94,8 @@ unknown property is ignored the way a browser ignores it.
 \strong{One limitation worth knowing.} \code{font_weight} and
 \code{font_style} apply to blocks whose content is prose: paragraphs,
 headings, list items, block quotes, table cells and \code{<div>}s. They
-do \emph{not} apply to \code{pre} or an image's alt text, which build
-their own LaTeX and impose their own font handling. This is a MicroTeX
+do \emph{not} apply to \code{pre}, which builds its own LaTeX and
+imposes its own font handling. This is a MicroTeX
 constraint rather than a choice: \code{\\text\{\}} resets the font
 style, so emphasis has to be decided when the content is generated,
 not wrapped around it afterwards.

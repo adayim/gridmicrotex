@@ -33,7 +33,8 @@ rendering of the same expressions, especially in loops or
 interactive sessions. The default limit is 512 entries, which
 should be sufficient for most use cases. When the limit is
 exceeded, the least recently used entries are automatically
-evicted.
+evicted. The same limit, and \code{latex_cache_clear()}, also apply to
+a smaller memo of pre-processed input kept alongside the layouts.
 }
 \examples{
 \donttest{

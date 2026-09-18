@@ -361,7 +361,8 @@ map<string, MacroInfo*> MacroInfo::_commands{
 
 map<string, string> NewCommandMacro::_codes;
 map<string, string> NewCommandMacro::_replacements;
-std::set<std::string> NewCommandMacro::_builtin_names;
+map<string, NewCommandMacro::Displaced> NewCommandMacro::_displaced;
+bool NewCommandMacro::_sealed = false;
 Macro* NewCommandMacro::_instance = new NewCommandMacro();
 
 inline static void env(int argc, const string& name, const string& begDef, const string& endDef) {
@@ -376,6 +377,9 @@ void NewCommandMacro::_init_() {
   // _free_() nulls the singleton, so a release/re-init cycle must be able
   // to rebuild it. Static init still creates the first one.
   if (_instance == nullptr) _instance = new NewCommandMacro();
+  // What follows is the baseline, not a parse: no conflict with a built-in
+  // and nothing to restore until snapshotBuiltins() below.
+  _sealed = false;
   // region Predefined environments
   env(1, "array", "\\array@@env{#1}{", "}");
   env(1, "tabular", "\\array@@env{#1}{", "}");
@@ -441,26 +445,26 @@ void NewCommandMacro::_init_() {
   );
   // endregion
 
-  // Lock in the set of built-in names so clearUserMacros() can later
-  // drop user-defined macros without touching these.
+  // Everything defined so far is the built-in baseline: clearUserMacros()
+  // undoes only what a parse defines after this point.
   snapshotBuiltins();
 }
 
 namespace {
 
 // The registries above are static-duration containers holding raw `new`ed
-// pointers, so at process exit the containers are destroyed but their
-// values are not: valgrind reports ~1600 "definitely lost" records
-// pointing at defMac() static initialisation. Nothing frees them, because
-// R never unloads a package DLL of its own accord and MicroTeX::release()
-// is therefore not reached on the way out.
+// pointers. At process exit the containers are destroyed but their values
+// are not, so a leak checker reports ~1600 "definitely lost" records
+// pointing at defMac() static initialisation. Hosts that never call
+// MicroTeX::release() -- anything embedding the library and relying on
+// process teardown -- leak all of it.
 //
 // This object is defined last in this translation unit, so it is
-// constructed last and destroyed *first* -- ahead of _commands, _codes,
-// _replacements, _builtin_names and _instance above. That is the only
-// point at which _free_() can still run against live containers. _free_()
-// clears them as it goes, so a second run (DLL unload calls
-// R_unload_gridmicrotex before dlclose) is a no-op, not a double free.
+// constructed last and destroyed *first*, ahead of _commands, _codes,
+// _replacements, _displaced and _instance above. That is the only point at
+// which _free_() can still run against live containers. _free_() clears
+// them as it goes, so an explicit MicroTeX::release() beforehand makes
+// this a no-op rather than a double free.
 struct MacroRegistryCleanup {
   ~MacroRegistryCleanup() {
     MacroInfo::_free_();

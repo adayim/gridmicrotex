@@ -6,7 +6,11 @@ gm_base_set_enabled <- function(on, layout_fn) {
 }
 
 gm_base_teardown <- function() {
-    invisible(.Call(`_gridmicrotex_gm_base_teardown`))
+    .Call(`_gridmicrotex_gm_base_teardown`)
+}
+
+gm_base_release_pending <- function() {
+    .Call(`_gridmicrotex_gm_base_release_pending`)
 }
 
 gm_base_armed_count <- function() {

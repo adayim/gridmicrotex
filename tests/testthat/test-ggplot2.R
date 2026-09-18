@@ -37,6 +37,14 @@ test_that("geom_latex passes colour and size down to the grob", {
   expect_gt(big$bbox_w, small$bbox_w)
 })
 
+test_that("geom_latex treats a missing alpha as opaque", {
+  # A mapped alpha can be NA, and `NA < 1` made the layer fail to build.
+  df <- data.frame(x = 1, y = 1, eq = "x^2", a = NA_real_)
+  g <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq, alpha = a)) +
+                     geom_latex(colour = "red"))[[1]]
+  expect_equal(g$gp$col, "red")
+})
+
 test_that("geom_latex draws nothing for an empty or missing label", {
   # Without the guard in draw_panel these render the literal "NA", or an
   # empty formula that still reserves space.

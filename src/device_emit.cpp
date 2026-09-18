@@ -26,19 +26,6 @@ SEXP df_col(SEXP df, const char *name) {
     return R_NilValue;
 }
 
-double num_at(SEXP col, R_xlen_t i, double dflt = 0.0) {
-    if (col == R_NilValue || i >= Rf_xlength(col)) return dflt;
-    if (TYPEOF(col) == REALSXP) {
-        double v = REAL(col)[i];
-        return ISNA(v) ? dflt : v;
-    }
-    if (TYPEOF(col) == INTSXP) {
-        int v = INTEGER(col)[i];
-        return v == NA_INTEGER ? dflt : (double) v;
-    }
-    return dflt;
-}
-
 const char *str_at(SEXP col, R_xlen_t i) {
     if (col == R_NilValue || TYPEOF(col) != STRSXP || i >= Rf_xlength(col))
         return nullptr;
@@ -46,9 +33,11 @@ const char *str_at(SEXP col, R_xlen_t i) {
     return (s == NA_STRING) ? nullptr : CHAR(s);
 }
 
-// MicroTeX writes "#RRGGBB" or, when translucent, "#AARRGGBB" -- alpha
-// first, which is the opposite of what R_GE_str2col() expects (see the
-// comment in .parse_from_gp(), R/latex-grob.R). Parse both by hand.
+// Records are "#RRGGBB", or "#RRGGBBAA" when translucent: the order
+// color_to_hex() in parse_latex.cpp writes. Only the colour going *in*,
+// from .parse_from_gp(), is MicroTeX's #AARRGGBB. Parsed by hand because
+// R_GE_str2col() signals on a malformed string, and this runs inside a
+// device callback.
 rcolor parse_color(const char *s, rcolor dflt) {
     if (!s || s[0] != '#') return dflt;
     size_t n = std::strlen(s);
@@ -64,7 +53,7 @@ rcolor parse_color(const char *s, rcolor dflt) {
     };
     int r, g, b, a = 255;
     if (n == 7) { r = hex2(1); g = hex2(3); b = hex2(5); }
-    else if (n == 9) { a = hex2(1); r = hex2(3); g = hex2(5); b = hex2(7); }
+    else if (n == 9) { r = hex2(1); g = hex2(3); b = hex2(5); a = hex2(7); }
     else return dflt;
     if (r < 0 || g < 0 || b < 0 || a < 0) return dflt;
     return R_RGBA(r, g, b, a);
@@ -210,7 +199,7 @@ void emit_path(const Frame &f, SEXP rec, rcolor col,
     // Glyph outlines have counters (o, a, 8, A). evenodd + one subpath
     // per contour is what R/grid-builder.R:290-296 uses; dd->polygon has
     // no notion of holes, so a multi-contour glyph needs dd->path.
-    if (dd->path && dd->deviceVersion >= R_GE_version - 100) {
+    if (dd->path) {
         dd->path(xs.data(), ys.data(), (int) nper.size(), nper.data(),
                  FALSE /* evenodd */, &g, dd);
     } else if (nper.size() == 1 && dd->polygon) {
@@ -276,9 +265,9 @@ void gm_emit_layout(const GmSavedDev *sv, SEXP layout,
             emit_path(f, rec, col, gc, dd);
 
         } else if (std::strcmp(ty, "line") == 0) {
-            double x0 = num_at(c_x, i),  y0 = num_at(c_y, i);
-            double x1 = num_at(c_x2, i), y1 = num_at(c_y2, i);
-            double lwd_bp = num_at(c_lwd, i, 1.0);
+            double x0 = gm_num_at(c_x, i),  y0 = gm_num_at(c_y, i);
+            double x1 = gm_num_at(c_x2, i), y1 = gm_num_at(c_y2, i);
+            double lwd_bp = gm_num_at(c_lwd, i, 1.0);
             if (std::fabs(y0 - y1) < 0.001) {
                 // R/grid-builder.R:48-59: a horizontal rule is drawn as a
                 // filled rect of height lwd, centred on y -- not stroked.
@@ -302,19 +291,19 @@ void gm_emit_layout(const GmSavedDev *sv, SEXP layout,
             // with r = min(rx, ry). Documented, not fixed: dd has no
             // rounded primitive and a rotated one would need a path.
             bool filled = (ty[0] == 'f');   // fill_rect / fill_roundrect
-            double x0 = num_at(c_x, i), y0 = num_at(c_y, i);
-            double w  = num_at(c_w, i), h  = num_at(c_h, i);
+            double x0 = gm_num_at(c_x, i), y0 = gm_num_at(c_y, i);
+            double w  = gm_num_at(c_w, i), h  = gm_num_at(c_h, i);
             quad(f, x0, y0, x0 + w, y0 + h, col, filled,
-                 num_at(c_lwd, i, 1.0), gc, dd);
+                 gm_num_at(c_lwd, i, 1.0), gc, dd);
 
         } else if (std::strcmp(ty, "text") == 0) {
             const char *s = str_at(c_txt, i);
             if (!s || !*s) continue;
             double X, Y;
-            f.map(num_at(c_x, i), num_at(c_y, i), &X, &Y);
+            f.map(gm_num_at(c_x, i), gm_num_at(c_y, i), &X, &Y);
             R_GE_gcontext g; base_gc(&g, gc);
             g.col = col;
-            double fs = num_at(c_fs, i, gc->ps * gc->cex);
+            double fs = gm_num_at(c_fs, i, gc->ps * gc->cex);
             g.cex = 1.0;
             g.ps  = fs;
             // Face and family come from the record, not from the caller.
@@ -324,7 +313,7 @@ void gm_emit_layout(const GmSavedDev *sv, SEXP layout,
             // drawn text would then overrun the width we reported.
             // Mirrors .resolve_text_face()/.resolve_text_family(),
             // R/grid-builder.R:328-369.
-            int style = (int) num_at(c_style, i, 0.0);
+            int style = (int) gm_num_at(c_style, i, 0.0);
             int bold = (style & 2) != 0, ital = (style & 4) != 0;
             g.fontface = bold && ital ? 4 : bold ? 2 : ital ? 3 : 1;
             const char *fam = str_at(c_fam, i);
@@ -337,7 +326,7 @@ void gm_emit_layout(const GmSavedDev *sv, SEXP layout,
             // MicroTeX rotation is ccw in a y-down frame, i.e. visually
             // clockwise, hence the sign flip -- the same reason
             // R/grid-builder.R:136 negates it for grid.
-            double trot = rot - num_at(c_rot, i, 0.0);
+            double trot = rot - gm_num_at(c_rot, i, 0.0);
             // Sub-runs are positioned absolutely; each is left-aligned.
             if (dd->hasTextUTF8 && sv->textUTF8)
                 sv->textUTF8(X, Y, s, trot, 0.0, &g, dd);

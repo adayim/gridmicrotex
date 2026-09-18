@@ -79,9 +79,11 @@ grob, layer or theme element, and measure its height correctly.
 The convention is the one \code{\link{latex_wrap}} already uses:
 \code{$...$}, \code{$$...$$}, \code{\\(...\\)}, \code{\\[...\\]},
 with \code{\\$} a literal dollar sign. A label is intercepted only
-when \emph{every} delimiter in it is closed and the content looks
-like math, so \code{"Revenue ($)"}, \code{"Cost $5-$10"} and
-\code{"Budget $1,000 to $5,000"} are passed through untouched.
+when \emph{every} delimiter in it is closed, and either the label is
+a single formula or every \code{$...$} pair wraps something that
+looks like math. So \code{"Revenue ($)"}, \code{"Cost $5-$10"},
+\code{"Budget $1,000 to $5,000"} and R's own
+\code{"Histogram of df$a_b - df$c_d"} are passed through untouched.
 Anything that cannot be laid out is drawn as plain text rather than
 raising an error.
 
@@ -149,7 +151,11 @@ supplied at the call site, so explicit arguments always win.
 \details{
 Calling \code{latex_options()} with no arguments returns the current
 settings (a list whose \code{NULL} entries mean "use the built-in
-default"). Supply one or more named arguments to update them.
+default"). Supply one or more named arguments to update them. An
+argument set to \code{NULL} resets that option to its default, as with
+\code{\link[base]{options}}, so either list \code{latex_options()}
+returns can be passed back with \code{do.call(latex_options, old)} to
+restore those settings.
 
 Font size and line spacing are controlled via \code{gp} parameters
 (\code{fontsize}, \code{cex}, \code{lineheight}) at the grob level;
@@ -157,9 +163,9 @@ see \code{\link{latex_grob}}.
 }
 \examples{
 \donttest{
-  latex_options(math_font = "stix", render_mode = "typeface")
+  old <- latex_options(math_font = "stix", render_mode = "typeface")
   grid.latex("$\\\\sum_{i=1}^{n} i^{2}$", gp = grid::gpar(fontsize = 14))
-  reset_latex_options()
+  do.call(latex_options, old)
 
   # Math in base graphics, with no other change to the plotting code.
   latex_options(device_math = TRUE)

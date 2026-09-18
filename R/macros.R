@@ -66,6 +66,10 @@ clear_macros <- function(name = NULL) {
   if (is.null(name)) {
     .latex_macros$defs <- list()
   } else {
+    # A number would index the definitions by position and drop whichever
+    # macro happens to come first.
+    stopifnot(is.character(name), length(name) == 1L, !is.na(name),
+              nzchar(name))
     .latex_macros$defs[[name]] <- NULL
   }
   invisible(NULL)

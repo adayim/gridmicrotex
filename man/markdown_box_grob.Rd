@@ -97,13 +97,15 @@ wrapped, so a wide table overflows rather than reflowing. And list
 items are stacked here rather than handed to MicroTeX's
 \code{itemize}, which is what gives them a proper hanging indent.
 
-An image on a line of its own is drawn as a raster, scaled to fit the
+An image on a line of its own is drawn as a block, scaled to fit the
 column but never enlarged past its natural size (pixels are read at
-96 dpi). PNG needs the \pkg{png} package and JPEG needs \pkg{jpeg},
-both \emph{Suggests}: when the reader is not installed, the file is
-missing, or the format is anything else, the image degrades to its alt
-text. An image \emph{within} a sentence stays inline, where only its
-alt text survives.
+96 dpi); an image \emph{within} a sentence is drawn inline, and so is an
+\code{<img>} tag, even alone on its line. It must be
+a local PNG, JPEG or SVG file, read by \pkg{png}, \pkg{jpeg} or
+\pkg{rsvg} respectively, all \emph{Suggests} and needed only for their
+own format. An image that cannot be drawn -- a missing file, a URL,
+another format, or a reader that is not installed -- is an error when
+the grob is built, saying which.
 
 The layout is computed at draw time, so an open device is required,
 which is what lets a relative \code{width} and the measured height of

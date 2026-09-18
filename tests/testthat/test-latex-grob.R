@@ -201,6 +201,60 @@ test_that("\\def silently overwrites an existing macro, and the last wins", {
   expect_false(isTRUE(all.equal(got, parse_latex_cpp("x", text_size = 20))))
 })
 
+test_that("an error inside a command's argument is reported, not swallowed", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # MicroTeX parsed every argument leniently and kept what came before an
+  # error, silently: \text{a <bad array> b} drew "a", and a fraction or a
+  # root lost its whole argument. The same input at the top level errors.
+  for (tex in c("\\text{a \\begin{array}{q}x\\end{array} b}",
+                "\\frac{1}{\\begin{array}{q}x\\end{array}} + y",
+                "\\sqrt{\\begin{array}{q}x\\end{array}}",
+                "a \\begin{array}{q}x\\end{array} b")) {
+    expect_error(latex_grob(tex, input_mode = "math"), "Invalid alignment",
+                 label = tex)
+  }
+  # The deliberate leniency stays: an unknown command is drawn in red, in
+  # an argument as at the top level, and the text around it survives.
+  d <- latex_grob("\\text{a \\nosuchcmd b}", input_mode = "math")$layout_df
+  expect_true(all(c("a ", " b") %in% d$text))
+  expect_true("#FF0000" %in% d$color)
+})
+
+test_that("redefining a built-in lasts one label and never breaks the next", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  has_rule <- function(tex) "line" %in% latex_grob(tex, input_mode = "math")$layout_df$type
+  text_of <- function(tex) {
+    d <- latex_grob(tex, input_mode = "math")$layout_df
+    d$text[!is.na(d$text)]
+  }
+  latex_cache_clear(); on.exit(latex_cache_clear(), add = TRUE)
+  expect_true(has_rule("\\frac{1}{2}"))
+
+  # As in LaTeX, \newcommand refuses a name that exists. It used to
+  # replace the built-in -- and the per-label cleanup then deleted it, so
+  # \frac stopped working in every later label of the session.
+  expect_error(latex_grob("\\newcommand{\\frac}{Q}\\frac z", input_mode = "math"),
+               "already exists")
+  latex_cache_clear()
+  expect_true(has_rule("\\frac{1}{2}"))
+
+  # \renewcommand and \def may redefine a built-in, for that label only.
+  expect_true("R" %in% text_of("\\renewcommand{\\frac}{\\text{R}}\\frac"))
+  latex_cache_clear()
+  expect_true(has_rule("\\frac{1}{2}"))
+  expect_true("D" %in% text_of("\\def\\sqrt{\\text{D}}\\sqrt"))
+  latex_cache_clear()
+  expect_false("D" %in% text_of("\\sqrt{x}"))
+  # A built-in defined in LaTeX source (\degree) comes back too.
+  expect_true("G" %in% text_of("\\renewcommand{\\degree}{\\text{G}}\\degree"))
+  latex_cache_clear()
+  expect_false("G" %in% text_of("90\\degree"))
+
+  # And \renewcommand of something that does not exist is still an error.
+  expect_error(latex_grob("\\renewcommand{\\nosuch}{Q}\\nosuch", input_mode = "math"),
+               "no defined")
+})
+
 test_that("\\def with invalid control sequence name throws a parse error", {
   expect_error(
     parse_latex_cpp("\\def{notacontrolseq}{body}", text_size = 20)
@@ -244,7 +298,7 @@ test_that("the typeface fallback warns once per device, not once per grob", {
   gridmicrotex:::.clear_typeface_noted()
 
   draw <- function() {
-    g <- latex_grob("\frac{a}{b}", render_mode = "typeface",
+    g <- latex_grob("\\frac{a}{b}", render_mode = "typeface",
                     gp = grid::gpar(fontsize = 20))
     grid::grid.newpage()
     grid::grid.draw(g)
@@ -303,4 +357,41 @@ test_that("the fallback is reported only when typeface was asked for", {
   on.exit(reset_latex_options(), add = TRUE)
   expect_length(on_ps(function()
     grid.latex("x^2", gp = grid::gpar(fontsize = 20))), 1L)
+})
+
+test_that("a macro that expands to itself is a parse error, not a hang", {
+  # Each expansion put the same text back and rewound to it, so the parser
+  # never finished. \def rather than \newcommand, which refuses to redefine
+  # and so would fail differently the second time the suite runs.
+  for (tex in c("\\def\\gmloop{\\gmloop}\\gmloop",
+                "\\def\\gmping{\\gmpong}\\def\\gmpong{\\gmping}\\gmping",
+                "\\def\\gmgrow{x\\gmgrow}\\gmgrow")) {
+    expect_error(parse_latex_cpp(tex, text_size = 20), "macro expansions",
+                 label = tex)
+  }
+})
+
+test_that("an unterminated $$ at the end of text mode lays out as empty", {
+  # getGroup() stepped past the end of the string and its caller read one
+  # character further. That read only shows under a sanitizer; this pins
+  # down that bounding it changed nothing visible.
+  expect_equal(nrow(parse_latex_cpp("\\text{$$}", text_size = 20)), 0L)
+  a <- parse_latex_cpp("\\text{a$$}", text_size = 20)
+  b <- parse_latex_cpp("\\text{a}", text_size = 20)
+  expect_equal(attr(a, "bbox_width"), attr(b, "bbox_width"))
+})
+
+test_that("a colour with alpha of 50% or more keeps its colour", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  record_colour <- function(alpha) {
+    p <- .parse_from_gp(
+      tex = "$x$", math_font = "", max_width = 0, tex_style = "",
+      render_mode = "path",
+      gp = grid::gpar(fontsize = 20, col = grDevices::rgb(1, 0, 0, alpha)))
+    unique(p$layout$color)
+  }
+  # Eight hex digits overflow a signed 32-bit long, which is what `long` is
+  # on Windows, so every such colour came back opaque black.
+  expect_equal(record_colour(0.3), "#FF00004D")
+  expect_equal(record_colour(0.8), "#FF0000CC")
 })

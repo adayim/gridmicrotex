@@ -99,15 +99,18 @@ void Parser::addRow() const {
 }
 
 string Parser::getGroup(char openclose) {
-  int spos = _pos;
-  char ch;
-
-  do {
-    ch = _latex[_pos++];
-    if (ch == ESCAPE) _pos++;
-  } while (_pos < _len && ch != openclose);
-
-  if (ch == openclose) return _latex.substr(spos, _pos - spos - 1);
+  const int spos = _pos;
+  // Never step past the end. Called with _pos == _len -- a `$$` that ends
+  // the input -- this used to read _latex[_len] and leave _pos beyond it,
+  // and the caller then read one character further.
+  while (_pos < _len) {
+    const char ch = _latex[_pos++];
+    if (ch == ESCAPE) {
+      if (_pos < _len) _pos++;
+    } else if (ch == openclose) {
+      return _latex.substr(spos, _pos - spos - 1);
+    }
+  }
   return _latex.substr(spos, _pos - spos);
 }
 
@@ -667,6 +670,13 @@ void Parser::inflateEnv(string& cmd, Args& args, int& pos) {
 void Parser::preprocess() {
   if (_len == 0) return;
 
+  // An expansion replaces its command in place and rewinds to it, so a
+  // macro defined in terms of itself -- directly, through another, or
+  // growing each time -- was expanded forever. TeX stops that with its
+  // capacity limits; this is the same stop.
+  const int maxExpansions = 10000;
+  int expansions = 0;
+
   char ch;
   int spos;
   vector<string> args;
@@ -682,6 +692,9 @@ void Parser::preprocess() {
           if (!_isPartial) throw e;
         }
         args.clear();
+        if (_pos <= spos && ++expansions > maxExpansions) {
+          throw ex_parse("Too many macro expansions: is a macro defined in terms of itself?");
+        }
         break;
       }
       case PERCENT: {
@@ -735,7 +748,7 @@ void Parser::parse() {
         if (!_isMathMode) {  // we are in text mode
           TexStyle style = TexStyle::text;
           bool doubleDollar = false;
-          if (_latex[_pos] == DOLLAR) {
+          if (_pos < _len && _latex[_pos] == DOLLAR) {
             style = TexStyle::display;
             doubleDollar = true;
             _pos++;
@@ -744,7 +757,7 @@ void Parser::parse() {
           auto atom = sptrOf<MathAtom>(Formula(*this, getGroup(DOLLAR), false)._root, style);
           _formula->add(atom);
           if (doubleDollar) {
-            if (_latex[_pos] == DOLLAR) _pos++;
+            if (_pos < _len && _latex[_pos] == DOLLAR) _pos++;
           }
         }
       } break;

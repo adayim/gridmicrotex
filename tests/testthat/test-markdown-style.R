@@ -398,12 +398,11 @@ test_that("emphasis inherits into quotes, list items and divs", {
                          ".b { font-weight: bold }"), 2)
 })
 
-test_that("emphasis does not apply to pre or alt text", {
-  # A documented limitation, tested so the documentation stays true: these
-  # build their own LaTeX and impose their own font handling.
+test_that("emphasis does not apply to pre", {
+  # A documented limitation, tested so the documentation stays true: code
+  # builds its own LaTeX and imposes its own font handling.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 1)
-  expect_equal(styles_of("![alt](nope.png)", "img { font-weight: bold }"), 1)
 
   # Tables used to be in this list. They are not any more: cell content is
   # generated with its emphasis already applied, so font-weight inherits
@@ -594,6 +593,23 @@ test_that("table CSS compiles to the tabular primitives MicroTeX has", {
   # Cell padding becomes the inter-column @{} material.
   expect_match(tbl_tex("td { padding-left: 6pt }"),
                "@{\\hspace{6.00pt}}", fixed = TRUE)
+})
+
+test_that("a border of none or zero draws nothing", {
+  # .md_css_border() reports these as zero width, and both callers only
+  # asked whether a border had been declared at all.
+  expect_match(tbl_tex("td { border-left: none }"), "{lr}", fixed = TRUE)
+  expect_match(tbl_tex("td { border-left: 0 }"), "{lr}", fixed = TRUE)
+
+  open <- function(css) {
+    paste(.md_css_inline_latex(.md_parse_css(css), 12)$open, collapse = "")
+  }
+  expect_match(open("border: 1px solid red"), "fbox{", fixed = TRUE)
+  expect_false(grepl("box", open("border: none"), fixed = TRUE))
+  expect_false(grepl("box", open("border: 0"), fixed = TRUE))
+  # With no frame to carry it, a background is still painted.
+  expect_match(open("border: none; background: #EEEEEE"),
+               "bgcolor{#EEEEEE}", fixed = TRUE)
 })
 
 test_that("tr border-bottom rules rows without doubling the bottom rule", {
@@ -788,6 +804,24 @@ test_that("body {} styles the box itself", {
     "a note", width = grid::unit(3, "in"),
     style = "body { background: #EEF3FB }"))$children
   expect_true(any(vapply(kids, function(z) inherits(z, "rect"), logical(1))))
+})
+
+test_that("a body border with no colour of its own is still drawn", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  box <- function(css) {
+    .md_box_layout(markdown_box_grob("a note", width = grid::unit(3, "in"),
+                                     style = css))$box_gp
+  }
+  # CSS draws it in currentColor. It was dropped, because neither a fill
+  # nor a border colour had been given.
+  plain <- box("body { border: 1px solid }")
+  expect_false(is.null(plain))
+  expect_null(plain$col)          # inherits the text colour
+  expect_equal(plain$lwd, 1)      # 1px == 0.75bp == lwd 1
+  expect_equal(box("body { color: #B22222; border: 1px solid }")$col,
+               "#B22222")
+  expect_null(box("body { border: none }"))
+  expect_null(box("body { border: 0 }"))
 })
 
 test_that("an explicit box argument beats the body rule", {

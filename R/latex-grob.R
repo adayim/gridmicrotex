@@ -195,9 +195,17 @@
 #' * An SVG is drawn as real vector and stays sharp at any output
 #'   resolution; a bitmap does not, and warns when it would be shown below
 #'   150 dpi. PDF and EPS are not supported: save the figure as SVG
-#'   instead. A file that cannot be read (missing, unsupported, or an
-#'   SVG with no `rsvg` installed) warns and draws its name rather than
-#'   disappearing.
+#'   instead.
+#' * The file must be local; a URL is not downloaded. A file that cannot
+#'   be drawn -- missing, a URL, an unsupported format, or unreadable --
+#'   is an error saying why. Each format needs its reader, all
+#'   *Suggests*: `png` for PNG, `jpeg` for JPEG and `rsvg` for SVG; the
+#'   error names the one to install.
+#' * `\includegraphics` must be written directly. One that a `\newcommand`
+#'   or `\def` in the expression produces is an error, because those are
+#'   expanded after the file would have been read; a macro from
+#'   [define_macro()] is expanded in time. A commented-out
+#'   `% \includegraphics{...}` is ignored.
 #'
 #' Anything not in this list is passed to MicroTeX unchanged. An unknown
 #' command is not an error: MicroTeX typesets its name in red, which
@@ -552,6 +560,8 @@ grobMark <- function(grob, name) {
     tex_style = tex_style, text_family = text_family, justify = justify,
     optimal_break = identical(line_break, "optimal")
   )
+  # Read off the layout rather than the parse, so a cached one says it too.
+  for (p in attr(layout, "unresolved_images")) .image_unresolved(p)
 
   path_layout <- NULL
   if (with_path_fallback && render_mode == "typeface") {
@@ -937,12 +947,12 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
   # repeated span.
   cache <- new.env(parent = emptyenv())
 
-  # `font_family` is the family named by a \gmfontfamily span, passed in by
-  # TextLayout_R. Defaulted, so the two-argument calls that predate it --
-  # including register_text_measurer() users -- keep working.
-  function(text, font_style, font_family = "") {
+  measure <- function(text, font_style, font_family) {
     key <- paste0(as.integer(font_style), "\x1f", font_family, "\x1f", text)
-    hit <- cache[[key]]
+    # The key becomes a variable name, which R caps at 10000 bytes, so a
+    # long run is measured every time rather than cached.
+    cacheable <- nchar(key, type = "bytes") <= 2048L
+    hit <- if (cacheable) cache[[key]]
     if (!is.null(hit)) return(hit)
 
     # MicroTeX probes C-style escapes while tokenising \text{} content
@@ -953,7 +963,7 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     # device.
     if (grepl("^[[:cntrl:]]*$", text)) {
       result <- c(0, 0.8, 1)
-      cache[[key]] <- result
+      if (cacheable) cache[[key]] <- result
       return(result)
     }
 
@@ -1012,7 +1022,20 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     desc <- ad[2]
 
     result <- c(w / ref_size, asc / ref_size, (asc + desc) / ref_size)
-    cache[[key]] <- result
+    if (cacheable) cache[[key]] <- result
     result
+  }
+
+  # `font_family` is the family named by a \gmfontfamily span, passed in by
+  # TextLayout_R. Defaulted, so the two-argument calls that predate it --
+  # including register_text_measurer() users -- keep working.
+  #
+  # An error becomes an empty result, which TextLayout_R::getBounds()
+  # answers with its own width estimate. It has to be caught here: Rcpp
+  # hands an R error to C++ as the same jump as an interrupt, and
+  # getBounds() lets jumps through so that Ctrl-C stops the layout.
+  function(text, font_style, font_family = "") {
+    tryCatch(measure(text, font_style, font_family),
+             error = function(e) numeric(0))
   }
 }

@@ -11,9 +11,9 @@
 #include <Rcpp.h>          // must precede the R headers pulled in below
 #include "gm_base_device.h"
 
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
-#include <string>
 
 namespace {
 
@@ -56,131 +56,133 @@ bool maybe_math(const char *s) {
 
 // ------------------------------------------------------- the R call
 
+// Plain data only: an interrupt unwinds straight through layout_for() and
+// the callback above it, and a longjmp runs no destructors.
 struct LayoutReq {
-    std::string str;
+    const char *str;
     double      fontsize;
-    std::string col;
-    std::string family;
-    SEXP        result;   // preserved on success, nullptr otherwise
+    char        col[16];
+    const char *family;
 };
 
-void do_layout(void *data) {
+SEXP do_layout(void *data) {
     LayoutReq *rq = (LayoutReq *) data;
-    SEXP s   = PROTECT(Rf_mkString(rq->str.c_str()));
+    SEXP s   = PROTECT(Rf_mkString(rq->str));
     SEXP fs  = PROTECT(Rf_ScalarReal(rq->fontsize));
-    SEXP cl  = PROTECT(Rf_mkString(rq->col.c_str()));
-    SEXP fam = PROTECT(Rf_mkString(rq->family.c_str()));
+    SEXP cl  = PROTECT(Rf_mkString(rq->col));
+    SEXP fam = PROTECT(Rf_mkString(rq->family));
     SEXP call = PROTECT(Rf_lang5(g_layout_fn, s, fs, cl, fam));
-    SEXP res  = PROTECT(Rf_eval(call, R_GlobalEnv));
-    if (res != R_NilValue) { R_PreserveObject(res); rq->result = res; }
-    UNPROTECT(6);
+    SEXP res  = Rf_eval(call, R_GlobalEnv);
+    UNPROTECT(5);
+    return res;
 }
+
+void leave_hook(void *, Rboolean) { g_in_hook = false; }
 
 // Colour for the R side, from the caller's context -- always opaque.
 //
-// Alpha deliberately does not travel through the layout. A translucent
-// colour reaches MicroTeX as 9-char hex, and 9-char hex is ambiguous:
-// .parse_from_gp() writes #AARRGGBB for the engine while the records
-// come back #RRGGBBAA, so whichever order the emitter assumes is wrong
-// half the time -- reading them the wrong way round drew a 20%-opacity
-// label as either fully opaque or fully invisible. The emitter applies
-// the caller's alpha itself, where the byte order is not in doubt.
-std::string gc_col_hex(const pGEcontext gc) {
-    char buf[16];
+// Alpha deliberately does not travel through the layout: .parse_from_gp()
+// hands it to MicroTeX as #AARRGGBB and the records come back #RRGGBBAA,
+// and mixing the two up drew a 20%-opacity label either fully opaque or
+// not at all. The emitter applies the caller's alpha itself.
+void gc_col_hex(const pGEcontext gc, char *out, size_t n) {
     unsigned int c = (unsigned int) gc->col;
-    std::snprintf(buf, sizeof buf, "#%02X%02X%02X",
-                  R_RED(c), R_GREEN(c), R_BLUE(c));
-    return std::string(buf);
+    std::snprintf(out, n, "#%02X%02X%02X", R_RED(c), R_GREEN(c), R_BLUE(c));
 }
 
-// Lay out `str`, or return nullptr to mean "draw it literally".
+// Lay out `str`, or return R_NilValue to mean "draw it literally". The
+// result is unprotected.
+//
+// Nothing is caught here. .gm_base_layout() turns every failure it can
+// recover from into NULL itself, so what reaches this frame is a jump
+// that has to get out: an interrupt, or a time limit. R_ToplevelExec
+// caught those too, and since layout is most of the time a math-heavy
+// plot spends drawing, Ctrl-C rarely stopped one. R_UnwindProtect only
+// resets the flag on the way through; R_tryCatch would add an R-level
+// tryCatch() to every call, which is most of the cost of a label that
+// merely contains a `$`.
 SEXP layout_for(const char *str, const pGEcontext gc) {
-    if (!g_enabled || !g_layout_fn || g_in_hook) return nullptr;
-    if (!maybe_math(str)) return nullptr;
+    if (!g_enabled || !g_layout_fn || g_in_hook) return R_NilValue;
+    if (!maybe_math(str)) return R_NilValue;
 
     LayoutReq rq;
-    rq.str      = str;                      // copy: engine memory is not ours
+    rq.str      = str;
     rq.fontsize = gc->ps * gc->cex;
-    rq.col      = gc_col_hex(gc);
-    rq.family   = gc->fontfamily[0] ? gc->fontfamily : "";  // char[], never null
-    rq.result   = nullptr;
+    gc_col_hex(gc, rq.col, sizeof rq.col);
+    rq.family   = gc->fontfamily;        // char[], never null
 
-    g_in_hook = true;
-    R_ToplevelExec(do_layout, &rq);         // failure -> result stays null
-    g_in_hook = false;
-    return rq.result;
+    SEXP cont = PROTECT(R_MakeUnwindCont());
+    g_in_hook = true;                    // leave_hook() clears it, jump or not
+    SEXP res = R_UnwindProtect(do_layout, &rq, leave_hook, nullptr, cont);
+    UNPROTECT(1);
+    return res;
 }
 
-// The metrics originate as MicroTeX ints; .gm_base_layout() coerces them,
-// but accept either type so a change on the R side cannot silently make
-// every width zero -- which reads as "no horizontal adjustment" and
-// left-aligns every centred label.
-double num_elt(SEXP lay, int i) {
-    SEXP v = VECTOR_ELT(lay, i);
-    if (!Rf_xlength(v)) return 0.0;
-    if (TYPEOF(v) == REALSXP) return REAL(v)[0];
-    if (TYPEOF(v) == INTSXP)  return (double) INTEGER(v)[0];
-    return 0.0;
-}
-double layout_width_bp(SEXP lay)  { return num_elt(lay, 1); }  // list(layout, width, ...)
-double layout_ascent_bp(SEXP lay) { return num_elt(lay, 4); }
+// list(layout, width, height, depth, ascent), metrics in bigpts.
+double layout_width_bp(SEXP lay)  { return gm_num_at(VECTOR_ELT(lay, 1), 0); }
+double layout_ascent_bp(SEXP lay) { return gm_num_at(VECTOR_ELT(lay, 4), 0); }
 
 // ------------------------------------------------------ the callbacks
 
+using TextFn  = void   (*)(double, double, const char *, double, double,
+                           const pGEcontext, pDevDesc);
+using WidthFn = double (*)(const char *, const pGEcontext, pDevDesc);
+
+// One body each for text/textUTF8 and strWidth/strWidthUTF8; `orig` names
+// the saved callback a literal label goes to.
+//
 // find_saved() must be repeated after layout_for(): it evaluates R, which
 // can disarm a device, and disarm() fills the freed slot from the end of
 // g_saved -- so a GmSavedDev* taken before the call can point at a
 // different device by the time it returns.
+void hook_text(TextFn GmSavedDev::*orig, double x, double y, const char *str,
+               double rot, double hadj, const pGEcontext gc, pDevDesc dd) {
+    if (!find_saved(dd)) return;
+    SEXP lay = PROTECT(layout_for(str, gc));
+    const GmSavedDev *sv = find_saved(dd);
+    if (sv && lay != R_NilValue) {
+        gm_emit_layout(sv, VECTOR_ELT(lay, 0), x, y, rot, hadj,
+                       layout_width_bp(lay), layout_ascent_bp(lay), gc, dd);
+    } else if (sv && sv->*orig) {
+        (sv->*orig)(x, y, str, rot, hadj, gc, dd);
+    }
+    UNPROTECT(1);
+}
+
+// strWidth and text must agree, or GEText centres the literal string
+// using the math width.
+double hook_width(WidthFn GmSavedDev::*orig, const char *str,
+                  const pGEcontext gc, pDevDesc dd) {
+    if (!find_saved(dd)) return 0.0;
+    SEXP lay = PROTECT(layout_for(str, gc));
+    const GmSavedDev *sv = find_saved(dd);
+    double w = 0.0;
+    if (sv && lay != R_NilValue) {
+        w = layout_width_bp(lay);
+        if (dd->ipr[0] > 0) w /= 72.0 * dd->ipr[0];
+    } else if (sv && sv->*orig) {
+        w = (sv->*orig)(str, gc, dd);
+    }
+    UNPROTECT(1);
+    return w;
+}
+
 void hooked_text(double x, double y, const char *str, double rot,
                  double hadj, const pGEcontext gc, pDevDesc dd) {
-    if (!find_saved(dd)) return;
-    SEXP lay = layout_for(str, gc);
-    GmSavedDev *sv = find_saved(dd);
-    if (!sv) { if (lay) R_ReleaseObject(lay); return; }
-    if (!lay) { if (sv->text) sv->text(x, y, str, rot, hadj, gc, dd); return; }
-    gm_emit_layout(sv, VECTOR_ELT(lay, 0), x, y, rot, hadj,
-                   layout_width_bp(lay), layout_ascent_bp(lay), gc, dd);
-    R_ReleaseObject(lay);
+    hook_text(&GmSavedDev::text, x, y, str, rot, hadj, gc, dd);
 }
 
 void hooked_textUTF8(double x, double y, const char *str, double rot,
                      double hadj, const pGEcontext gc, pDevDesc dd) {
-    if (!find_saved(dd)) return;
-    SEXP lay = layout_for(str, gc);
-    GmSavedDev *sv = find_saved(dd);
-    if (!sv) { if (lay) R_ReleaseObject(lay); return; }
-    if (!lay) {
-        if (sv->textUTF8) sv->textUTF8(x, y, str, rot, hadj, gc, dd);
-        return;
-    }
-    gm_emit_layout(sv, VECTOR_ELT(lay, 0), x, y, rot, hadj,
-                   layout_width_bp(lay), layout_ascent_bp(lay), gc, dd);
-    R_ReleaseObject(lay);
+    hook_text(&GmSavedDev::textUTF8, x, y, str, rot, hadj, gc, dd);
 }
 
-// strWidth and text must agree, or GEText centres the literal string
-// using the math width. Both go through layout_for(), and the layout
-// cache makes the second call a lookup rather than a re-parse.
 double hooked_strWidth(const char *str, const pGEcontext gc, pDevDesc dd) {
-    if (!find_saved(dd)) return 0.0;
-    SEXP lay = layout_for(str, gc);
-    GmSavedDev *sv = find_saved(dd);
-    if (!sv) { if (lay) R_ReleaseObject(lay); return 0.0; }
-    if (!lay) return sv->strWidth ? sv->strWidth(str, gc, dd) : 0.0;
-    double w = layout_width_bp(lay);
-    R_ReleaseObject(lay);
-    return (dd->ipr[0] > 0) ? w / (72.0 * dd->ipr[0]) : w;
+    return hook_width(&GmSavedDev::strWidth, str, gc, dd);
 }
 
 double hooked_strWidthUTF8(const char *str, const pGEcontext gc, pDevDesc dd) {
-    if (!find_saved(dd)) return 0.0;
-    SEXP lay = layout_for(str, gc);
-    GmSavedDev *sv = find_saved(dd);
-    if (!sv) { if (lay) R_ReleaseObject(lay); return 0.0; }
-    if (!lay) return sv->strWidthUTF8 ? sv->strWidthUTF8(str, gc, dd) : 0.0;
-    double w = layout_width_bp(lay);
-    R_ReleaseObject(lay);
-    return (dd->ipr[0] > 0) ? w / (72.0 * dd->ipr[0]) : w;
+    return hook_width(&GmSavedDev::strWidthUTF8, str, gc, dd);
 }
 
 // ------------------------------------------------------ arm / disarm
@@ -235,9 +237,8 @@ bool disarm(pDevDesc dd) {
 }
 
 // Backwards, because disarm() fills the freed slot from the end.
-int disarm_all() {
+void disarm_all() {
     for (int i = g_n_saved - 1; i >= 0; i--) disarm(g_saved[i].dd);
-    return g_n_saved;
 }
 
 // Every event returns the same named placeholder. We keep no per-device
@@ -253,15 +254,28 @@ int disarm_all() {
 //    kills replayPlot(), dev.copy(), and every knitr chunk.
 SEXP gm_system_cb(GEevent event, pGEDevDesc gd, SEXP) {
     if (gd) {
+        if (event == GE_InitState) { if (g_enabled) arm(gd->dev); }
         // The engine is about to free dd, so drop the entry without
         // writing back into it.
-        if (event == GE_InitState) { if (g_enabled) arm(gd->dev); }
         else if (event == GE_FinaliseState) forget(gd->dev);
     }
     SEXP state = PROTECT(Rf_ScalarInteger(1));
     Rf_setAttrib(state, Rf_install("pkgName"), Rf_mkString("gridmicrotex"));
     UNPROTECT(1);
     return state;
+}
+
+// GEunregisterSystem() sends GE_FinaliseState to every open device, not
+// only to one being destroyed. Unregistering while a wrapped device still
+// has its entry forgot that entry, and once the wrapper handed our
+// callbacks back every label on the device drew nothing. So the system
+// stays registered until nothing is left to track -- which is also what
+// lets a later destruction drop the entry.
+void release_system() {
+    if (g_system_id >= 0 && g_n_saved == 0) {
+        GEunregisterSystem(g_system_id);
+        g_system_id = -1;
+    }
 }
 
 }  // namespace
@@ -286,16 +300,44 @@ void gm_base_set_enabled(bool on, SEXP layout_fn) {
     } else {
         g_enabled = false;
         disarm_all();
-        if (g_system_id >= 0) { GEunregisterSystem(g_system_id); g_system_id = -1; }
+        release_system();
         if (g_layout_fn) { R_ReleaseObject(g_layout_fn); g_layout_fn = nullptr; }
     }
 }
 
-// Restore every device before the DLL is unmapped. Without this,
-// .onUnload's library.dynam.unload() leaves armed devices pointing into
-// freed address space and the next plot jumps to nowhere.
+// Restore every device before the DLL is unmapped. Returns how many could
+// not be, because another package has wrapped them since: those still call
+// into this DLL, so .onUnload must leave it loaded.
 // [[Rcpp::export]]
-void gm_base_teardown() { gm_base_set_enabled(false, R_NilValue); }
+int gm_base_teardown() {
+    gm_base_set_enabled(false, R_NilValue);
+    return g_n_saved;
+}
+
+// For R_unload_gridmicrotex() (init.cpp), which runs as the DLL is
+// unloaded by any route. The DLL goes whatever happens here, so the
+// graphics system, whose callback lives in it, goes too. A device another
+// package has wrapped cannot be restored, and crashes once that package
+// hands our callbacks back: .onUnload avoids that by keeping the DLL, but
+// pkgload::unload() comes straight here, and nothing can.
+void gm_base_unload() {
+    gm_base_set_enabled(false, R_NilValue);
+    if (g_system_id >= 0) {
+        GEunregisterSystem(g_system_id);
+        g_system_id = -1;
+    }
+}
+
+// For the task callback .gm_base_set() leaves behind when switching off
+// strands a wrapped device: unregister the graphics system once the last
+// such device has closed. TRUE while there is still something to wait
+// for, which keeps the callback.
+// [[Rcpp::export]]
+bool gm_base_release_pending() {
+    if (g_enabled) return false;         // switched back on: nothing to release
+    release_system();
+    return g_system_id >= 0;
+}
 
 // [[Rcpp::export]]
 int gm_base_armed_count() { return g_n_saved; }
