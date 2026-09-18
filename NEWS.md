@@ -1,6 +1,22 @@
 # gridmicrotex 0.2.0
 
 - New `latex_options(device_math = TRUE)` renders `$…$` math in labels drawn to the graphics device, so **base** graphics gets real LaTeX — `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()` — with no other change to your code. It intercepts the device, so grid, ggplot2 and lattice text is covered too.
+- `latex_options()` now resets an option passed as `NULL`, as `options()` does, so the list it returns can be passed back with `do.call()` to restore those settings.
+- An image that cannot be drawn is now an error saying why, and names the package to install when a reader is missing. This covers a missing file, a URL, an unsupported format or an unreadable file, in `\includegraphics`, markdown `![]()` and `<img>`. It used to draw the file name or the alt text. Base-graphics labels are unchanged.
+- Bug fix: an `<img>` alone on its line in markdown was dropped.
+- Bug fix: a markdown image whose file name contains a `$…$` pair or a brace drew its alt text instead of the image, as did an `<img>` whose `src` was unquoted, upper-case or padded with spaces.
+- Bug fix: a commented-out `% \includegraphics{…}` warned that its file was missing.
+- Bug fix: an error inside a command's argument, such as `\text{}` or `\frac{}{}`, silently dropped the rest of that argument; it is now reported like any other parse error.
+- Bug fix: `\newcommand` or `\def` of a built-in command such as `\frac` broke it in every later label. `\newcommand` of an existing command is now an error, as in LaTeX, and `\renewcommand` or `\def` redefines a built-in for that label only.
+- Bug fix: `reset_latex_options()` left a math font set with `latex_options(math_font = )` in effect.
+- Bug fix: a colour at 50% opacity or more was drawn black on Windows.
+- Bug fix: a macro defined in terms of itself hung R; it is now a parse error.
+- Bug fix: a layout measured on one device was reused on a device of the same kind at a different resolution.
+- Bug fix: `geom_latex()` and `geom_markdown()` failed when a mapped `alpha` was `NA`.
+- Bug fix: CSS `border: none` or `border: 0` still drew a frame or table rule, and a `body` border with no colour was not drawn.
+- Bug fix: `clear_macros()` given a number removed an unrelated macro.
+- Bug fix: Ctrl-C was ignored while text in a formula was being measured.
+- Hardened the parser, the font reader and the TrueType Collection splitter against malformed input.
 
 
 # gridmicrotex 0.1.1
