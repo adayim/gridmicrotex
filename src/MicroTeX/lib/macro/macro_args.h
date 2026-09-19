@@ -9,6 +9,7 @@
 
 namespace microtex {
 
+class ArrayFormula;
 class Parser;
 
 /**
@@ -33,6 +34,10 @@ public:
    *  is empty. `preprocess` is the old parser's, for the calls that asked
    *  for it; the new front end has nothing left to preprocess. */
   virtual sptr<Atom> formula(std::size_t i, bool math = true, bool preprocess = false) = 0;
+
+  /** Argument i as the body of an alignment, its rows and cells in a
+   *  formula of its own, which the caller finishes (checkDimensions()). */
+  virtual sptr<ArrayFormula> alignment(std::size_t i) = 0;
 
   /** Whether the command itself was read in math mode. */
   virtual bool isMathMode() const = 0;

@@ -109,6 +109,8 @@ public:
   std::vector<std::vector<sptr<Atom>>> _array;
   std::map<int, std::vector<sptr<CellSpecifier>>> _rowSpecifiers;
   std::map<std::string, std::vector<sptr<CellSpecifier>>> _cellSpecifiers;
+  /** `\\[len]`: extra space below a row, by row index. */
+  std::map<int, Dimen> _rowGaps;
 
   ArrayFormula();
 
@@ -121,6 +123,9 @@ public:
   void addRow();
 
   void addRowSpecifier(const sptr<CellSpecifier>& spe);
+
+  /** Extra space below the current row, as `\\[len]` asks for. */
+  void addRowGap(const Dimen& gap);
 
   void addCellSpecifier(const sptr<CellSpecifier>& spe);
 

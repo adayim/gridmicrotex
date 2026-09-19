@@ -17,49 +17,37 @@
 namespace microtex {
 
 inline cmdmacro(smallmatrixATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
-  parser.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::smallMatrix);
 }
 
 inline cmdmacro(matrixATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
-  parser.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::matrix);
 }
 
 inline cmdmacro(arrayATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(args.isPartial(), args.text(2), arr.get(), false);
-  parser.parse();
+  const auto arr = args.alignment(2);
   arr->checkDimensions();
   return sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
 }
 
 inline cmdmacro(alignATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
-  parser.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::align);
 }
 
 inline cmdmacro(flalignATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
-  parser.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::flAlign);
 }
 
 inline cmdmacro(alignatATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser par(args.isPartial(), args.text(2), arr.get(), false);
-  par.parse();
+  const auto arr = args.alignment(2);
   arr->checkDimensions();
   size_t n = 0;
   valueOf(args.text(1), n);
@@ -69,17 +57,13 @@ inline cmdmacro(alignatATATenv) {
 }
 
 inline cmdmacro(alignedATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser p(args.isPartial(), args.text(1), arr.get(), false);
-  p.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::aligned);
 }
 
 inline cmdmacro(alignedatATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser p(args.isPartial(), args.text(2), arr.get(), false);
-  p.parse();
+  const auto arr = args.alignment(2);
   arr->checkDimensions();
   size_t n = 0;
   valueOf(args.text(1), n);
@@ -91,9 +75,7 @@ inline cmdmacro(alignedatATATenv) {
 }
 
 inline cmdmacro(multlineATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser p(args.isPartial(), args.text(1), arr.get(), false);
-  p.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   if (arr->cols() > 1) {
     throw ex_parse("Requires exact one column in multiline environment!");
@@ -104,9 +86,7 @@ inline cmdmacro(multlineATATenv) {
 }
 
 inline cmdmacro(gatherATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser p(args.isPartial(), args.text(1), arr.get(), false);
-  p.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   if (arr->cols() > 1) throw ex_parse("Requires exact one column in gather environment!");
   if (arr->cols() == 0) return nullptr;
@@ -115,9 +95,7 @@ inline cmdmacro(gatherATATenv) {
 }
 
 inline cmdmacro(gatheredATATenv) {
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser p(args.isPartial(), args.text(1), arr.get(), false);
-  p.parse();
+  const auto arr = args.alignment(1);
   arr->checkDimensions();
   if (arr->cols() > 1) throw ex_parse("Requires exact one column in gathered environment!");
   if (arr->cols() == 0) return nullptr;

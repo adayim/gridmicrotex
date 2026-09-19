@@ -254,6 +254,13 @@ public:
     return Formula(_tp, _args[i], preprocess, math)._root;
   }
 
+  sptr<ArrayFormula> alignment(size_t i) override {
+    auto arr = sptrOf<ArrayFormula>();
+    Parser parser(_tp.isPartial(), _args[i], arr.get(), false);
+    parser.parse();
+    return arr;
+  }
+
   bool isMathMode() const override { return _tp.isMathMode(); }
 
   bool isPartial() const override { return _tp.isPartial(); }

@@ -135,6 +135,10 @@ void ArrayFormula::addRowSpecifier(const sptr<CellSpecifier>& spe) {
   _rowSpecifiers[_row].push_back(spe);
 }
 
+void ArrayFormula::addRowGap(const Dimen& gap) {
+  _rowGaps[static_cast<int>(_row)] = gap;
+}
+
 void ArrayFormula::addCellSpecifier(const sptr<CellSpecifier>& spe) {
   string str = toString(_row) + toString(_col);
   auto it = _cellSpecifiers.find(str);

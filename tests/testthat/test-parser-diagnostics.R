@@ -128,6 +128,20 @@ test_that("an environment left open inside a group ends with the group", {
                    layout_quietly(paste0(env, "\\frac{\\begin{gmp} a\\end{gmp}}{b} c")))
 })
 
+test_that("\\\\[len] in an alignment adds that much space below its row", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # It was never read: the `[len]` was drawn as text in the next cell.
+  height <- function(tex) latex_tree(tex, input_mode = "math", render_mode = "path")$bbox[["height"]]
+  for (env in c("aligned", "matrix", "gather")) {
+    body <- if (env == "gather") c("a", "b") else c("a & b", "c & d")
+    plain <- sprintf("\\begin{%s} %s \\\\ %s \\end{%s}", env, body[1], body[2], env)
+    gapped <- sprintf("\\begin{%s} %s \\\\[10pt] %s \\end{%s}", env, body[1], body[2], env)
+    expect_equal(height(gapped) - height(plain), 10, tolerance = 0.05, label = env)
+    r <- latex_tree(gapped, input_mode = "math", render_mode = "path")$records
+    expect_false("[" %in% intToUtf8(r$codepoint[!is.na(r$codepoint)], multiple = TRUE), label = env)
+  }
+})
+
 test_that("an environment in an optional argument keeps its name", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_no_warning(latex_grob("\\sqrt[\\begin{matrix}3\\end{matrix}]{x}", input_mode = "math"))

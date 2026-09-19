@@ -523,6 +523,12 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
     }
   }
 
+  // `\\[len]`: extra space below a row, added to its depth as LaTeX's array
+  // adds it, so the rows after it move down and vertical rules run through.
+  for (const auto& [row, gap] : _matrix->_rowGaps) {
+    if (row >= 0 && row < rows) lineDepth[row] += Units::fsize(gap, env);
+  }
+
   for (int j = 0; j < cols; j++) matW += colWidth[j];
 
   // The horizontal separator's width
@@ -816,7 +822,16 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
   Alignment alignment = _lineType == MultiLineType::gather ? Alignment::center : Alignment::left;
   if (atom->_alignment != Alignment::none) alignment = atom->_alignment;
 
+  // `\\[len]`: extra space below a row.
+  const auto gapAfter = [&](size_t row) {
+    const auto it = _column->_rowGaps.find(static_cast<int>(row));
+    if (it != _column->_rowGaps.end()) {
+      vb->add(sptrOf<StrutBox>(0.f, Units::fsize(it->second, env), 0.f, 0.f));
+    }
+  };
+
   vb->add(sptrOf<HBox>(atom->createBox(env), tw, alignment));
+  gapAfter(0);
   auto Vsep = _vsep_in.createBox(env);
   for (size_t i = 1; i < _column->rows() - 1; i++) {
     atom = _column->_array[i][0];
@@ -824,6 +839,7 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
     if (atom->_alignment != Alignment::none) alignment = atom->_alignment;
     vb->add(Vsep);
     vb->add(sptrOf<HBox>(atom->createBox(env), tw, alignment));
+    gapAfter(i);
   }
 
   if (_column->rows() > 1) {

@@ -51,6 +51,10 @@ float sizeFactor(const std::string& n) {
   return 1.f;  // normalsize
 }
 
+bool isRule(const std::string& name) {
+  return name == "hline" || name == "thickhline" || name == "cline";
+}
+
 bool isSize(const std::string& n) {
   return n == "tiny" || n == "scriptsize" || n == "footnotesize" || n == "small" ||
          n == "normalsize" || n == "large" || n == "Large" || n == "LARGE" || n == "huge" ||
@@ -273,11 +277,18 @@ private:
       f.add(atom);
       return;
     }
-    f.add(commandAtom(id));
+    auto atom = commandAtom(id, f);
+    f.add(atom);
+    // A rule in an alignment is a row of its own, as the old parser made it.
+    if (f.isArrayMode() && dynamic_cast<HlineAtom*>(atom.get()) != nullptr) {
+      static_cast<ArrayFormula&>(f).addRow();
+    }
   }
 
   /** The atom a command stands for on its own. */
-  sptr<Atom> commandAtom(NodeId id) {
+  /** The atom a command stands for, built for `f`, the formula it goes
+   *  into: a rule or \intertext in an alignment works on it. */
+  sptr<Atom> commandAtom(NodeId id, Formula& f) {
     const Node& x = node(id);
     const std::string& name = x.text;
     const CommandSpec* spec = x.flag ? nullptr : findCommand(name);
@@ -298,13 +309,16 @@ private:
       middle(child(id, 0), g);
       return g._root;
     }
+    // In an alignment, a rule or \intertext is its handler's, which works
+    // on the alignment's rows.
+    if (f.isArrayMode() && (isRule(name) || name == "intertext")) return bridge(id, name, spec, f);
     // Rules and \intertext outside an alignment (the parser warned), line
     // breaks (read by the list), and catcode switches (read by the lexer).
     if (spec->special || name == "makeatletter" || name == "makeatother") return nullptr;
     // A declaration or infix command read as a one-token argument has no
     // operand here; the old parser read on past the argument for one.
     if (spec->shape != Shape::prefix) return nullptr;
-    return bridge(id, name, spec);
+    return bridge(id, name, spec, f);
   }
 
   sptr<Atom> charCode(const std::string& raw, bool math) {
@@ -338,6 +352,10 @@ private:
 
     bool isPartial() const override { return true; }
 
+    sptr<ArrayFormula> alignment(std::size_t i) override {
+      return _lx.alignmentOf(i < _nodes.size() ? _nodes[i] : kNoNode);
+    }
+
   private:
     Lowerer& _lx;
     bool _math;
@@ -368,7 +386,7 @@ private:
   /** Build a command with its engine handler, its arguments laid out as the
    *  old parser laid them out: mandatory ones from 1, optional ones after
    *  them. */
-  sptr<Atom> bridge(NodeId id, const std::string& name, const CommandSpec* spec) {
+  sptr<Atom> bridge(NodeId id, const std::string& name, const CommandSpec* spec, Formula& f) {
     MacroInfo* mac = MacroInfo::get(name);
     if (mac == nullptr) return unknownAtom(name);
     std::vector<std::string> args(static_cast<std::size_t>(mac->argc) + 12);
@@ -396,12 +414,13 @@ private:
         return unknownAtom(name);
       }
     }
-    return invoke(mac, args, node(id));
+    return invoke(mac, args, node(id), f);
   }
 
-  sptr<Atom> invoke(MacroInfo* mac, std::vector<std::string>& args, const Node& at) {
-    Formula scratch;
-    microtex::Parser tp(true, "", &scratch, false, at.mode == Mode::math);
+  /** An old handler, given a stand-in parser on `f`, the formula the atom
+   *  goes into, as the old parser gave it its own. */
+  sptr<Atom> invoke(MacroInfo* mac, std::vector<std::string>& args, const Node& at, Formula& f) {
+    microtex::Parser tp(true, "", &f, false, at.mode == Mode::math);
     try {
       return mac->invoke(tp, args);
     } catch (const std::exception& e) {
@@ -519,7 +538,7 @@ private:
   }
 
   /** A script's argument, as the old parser's getArgument() built it. */
-  sptr<Atom> scriptArgument(NodeId list, const Formula& f) {
+  sptr<Atom> scriptArgument(NodeId list, Formula& f) {
     if (count(list) == 0) return sptrOf<EmptyAtom>();
     const NodeId item = child(list, 0);
     const Node& y = node(item);
@@ -529,7 +548,7 @@ private:
       case NodeKind::character:
         return charAtom(y);
       case NodeKind::command:
-        return commandAtom(item);
+        return commandAtom(item, f);
       case NodeKind::leftRight:
         return leftRight(item);
       case NodeKind::environment:
@@ -726,7 +745,39 @@ private:
     if (k < args.size()) args[k] = " " + legacyText(x.raw) + " ";
     Node at = x;
     at.text = "begin{" + x.text + "}";
-    return invoke(mac, args, at);
+    if (auto* cm = dynamic_cast<CommandMacro*>(mac)) {
+      std::vector<NodeId> nodes(args.size(), kNoNode);
+      if (k < nodes.size()) nodes[k] = id;
+      TreeArgs a(*this, true, std::move(args), std::move(nodes));
+      try {
+        return cm->call(a);
+      } catch (const std::exception& e) {
+        _diags.warn(at.span, "\\" + at.text + ": " + clean(e.what()) + "; drawn as its name");
+        return unknownAtom(at.text);
+      }
+    }
+    Formula scratch;
+    return invoke(mac, args, at, scratch);
+  }
+
+  /** An alignment's body, from its rows and cells, in the order the old
+   *  parser filled its formula: `&` starts a cell, `\\` and \cr end a row,
+   *  and a rule or \intertext ends one itself (command()). */
+  sptr<ArrayFormula> alignmentOf(NodeId env) {
+    auto arr = sptrOf<ArrayFormula>();
+    if (env == kNoNode || node(env).kind != NodeKind::environment) return arr;
+    for (std::uint32_t r = 0; r < count(env); r++) {
+      const NodeId row = child(env, r);
+      if (node(row).kind != NodeKind::row) continue;
+      for (std::uint32_t c = 0; c < count(row); c++) {
+        if (c > 0) arr->addCol();
+        lowerList(child(child(row, c), 0), *arr, 0);
+      }
+      const std::string& end = node(row).text;
+      if (!node(row).raw.empty()) arr->addRowGap(Units::getDimen(node(row).raw));
+      if (end == "\\" || end == "cr") arr->addRow();
+    }
+    return arr;
   }
 };
 
