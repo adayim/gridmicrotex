@@ -21,6 +21,34 @@ lex_latex_cpp <- function(tex, blank_line_is_par = FALSE) {
     .Call(`_gridmicrotex_lex_latex_cpp`, tex, blank_line_is_par)
 }
 
+expand_latex_cpp <- function(tex) {
+    .Call(`_gridmicrotex_expand_latex_cpp`, tex)
+}
+
+set_frontend_cpp <- function(which) {
+    .Call(`_gridmicrotex_set_frontend_cpp`, which)
+}
+
+persistent_macro_set_cpp <- function(name, body) {
+    invisible(.Call(`_gridmicrotex_persistent_macro_set_cpp`, name, body))
+}
+
+persistent_macro_remove_cpp <- function(name) {
+    .Call(`_gridmicrotex_persistent_macro_remove_cpp`, name)
+}
+
+persistent_macro_clear_cpp <- function() {
+    invisible(.Call(`_gridmicrotex_persistent_macro_clear_cpp`))
+}
+
+persistent_macro_list_cpp <- function() {
+    .Call(`_gridmicrotex_persistent_macro_list_cpp`)
+}
+
+persistent_macro_generation_cpp <- function() {
+    .Call(`_gridmicrotex_persistent_macro_generation_cpp`)
+}
+
 register_text_measurer <- function(fn) {
     invisible(.Call(`_gridmicrotex_register_text_measurer`, fn))
 }

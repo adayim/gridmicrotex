@@ -73,6 +73,28 @@ test_that("a macro expands to what it stands for", {
   ))
 })
 
+test_that("a starred command is the command's starred form, not a `*` argument", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_same_layout(c(
+    "\\operatorname*{argmax}_x f" = "\\mathop{\\mathrm{argmax}}\\limits_x f",
+    "\\newcommand*{\\f}{x}\\f"     = "x",
+    "\\hspace*{1em}a"             = "\\hspace{1em}a",
+    "\\DeclareMathOperator*{\\am}{am}\\am_x f" = "\\mathop{\\mathrm{am}}\\limits_x f",
+    "\\begin{aligned} a \\\\* b \\end{aligned}" = "\\begin{aligned} a \\\\ b \\end{aligned}"
+  ))
+})
+
+test_that("macro arguments are substituted once and may be delimited", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_same_layout(c(
+    "\\newcommand{\\A}[2]{#1,#2} \\A{\\#2}{z}" = "\\#2,z",
+    "\\def\\foo#1.{[#1]} \\foo abc."           = "[abc]",
+    "\\newcommand{\\sq}[1]{#1^2}\\sq α"   = "α^2",
+    "\\let\\oldfrac\\frac\\renewcommand{\\frac}[2]{\\oldfrac{#2}{#1}}\\frac{a}{b}" =
+      "\\frac{b}{a}"
+  ))
+})
+
 test_that("text arguments keep their words, braces and escapes", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_same_layout(c(

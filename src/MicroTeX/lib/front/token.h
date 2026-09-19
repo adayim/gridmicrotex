@@ -55,6 +55,10 @@ struct Token {
   c32 cp = 0;
   std::string text;
   SourceSpan span;
+  /** Byte offset, in the lexer's own source, where the whitespace and
+   *  comments before this token begin. With `span` it recovers the exact
+   *  source text between tokens. */
+  std::uint32_t leadStart = 0;
   /** Line ends in the whitespace right before this token, including any a
    *  space token itself stands for. TeX drops some of them (after a
    *  control word, at the start of a line); the plot-label reading of a

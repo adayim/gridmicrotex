@@ -20,9 +20,9 @@
 #
 # The payload is hex because a real path is hostile to everything between
 # here and MicroTeX: Windows paths hold backslashes, paths hold spaces,
-# .strip_document_wrappers() eats `%`-to-end-of-line, and .expand_macros()
-# would rewrite `\Users` or `\Temp` mid-path for anyone who had defined a
-# macro by that name. Hex is [0-9a-f]+ and survives all of it.
+# .strip_document_wrappers() eats `%`-to-end-of-line, and the macro
+# expander would rewrite `\Users` or `\Temp` mid-path for anyone who had
+# defined a macro by that name. Hex is [0-9a-f]+ and survives all of it.
 #
 # mtime and size ride along so the layout cache -- which keys on the tex
 # string and holds no file metadata -- misses when a figure is edited in
@@ -365,14 +365,13 @@
 }
 
 # An \includegraphics that reached MicroTeX unread -- malformed, or produced
-# by a \newcommand or \def in the string, which MicroTeX expands after the
-# images were read. Its C++ override draws the file's name and reports it
-# here (src/MicroTeX/lib/atom/image_atom.h).
+# by a macro (\newcommand, \def or define_macro()), which the C++ front end
+# expands after the images were read. Its C++ override draws the file's name
+# and reports it here (src/MicroTeX/lib/atom/image_atom.h).
 .image_unresolved <- function(path) {
   .image_fail(path, paste0(
     "\\includegraphics must be written directly, with its file in braces; ",
-    "one produced by \\newcommand or \\def is expanded too late to be read, ",
-    "but a define_macro() macro is expanded in time"),
+    "one produced by a macro is expanded too late to be read"),
     paste0("unres\x1f", path))
 }
 
@@ -511,12 +510,11 @@
 # \gmgraphics, which this never matches.
 #
 # Runs twice in .parse_from_gp() -- once at the very top, before
-# .strip_document_wrappers() and .expand_macros() can mangle a path, and
-# once after macro expansion to catch an \includegraphics a user macro
-# produced. A third case, \newcommand expanded inside MicroTeX's own
-# parser, is out of reach of both; the C++ override in
-# src/MicroTeX/lib/atom/image_atom.cpp reports it, and .image_unresolved()
-# refuses it.
+# .strip_document_wrappers() can mangle a path, and once after it. An
+# \includegraphics a macro produces (\newcommand, \def, define_macro()) is
+# out of reach of both, because macros are expanded later, in C++; the
+# override in src/MicroTeX/lib/atom/image_atom.cpp reports it, and
+# .image_unresolved() refuses it.
 #
 # `check_only` reads each file and rewrites nothing. Markdown uses it to
 # fail when a grob is built, since a box lays out only when drawn.

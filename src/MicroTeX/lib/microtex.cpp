@@ -1,6 +1,7 @@
 #include "microtex.h"
 
 #include "core/formula.h"
+#include "front/front.h"
 #include "otf/fontsense.h"
 #include "macro/macro.h"
 #include "utils/exceptions.h"
@@ -179,7 +180,8 @@ Render* MicroTeX::parse(
   bool fillWidth, const OverrideTeXStyle& overrideTeXStyle,
   const string& mathFontName, const string& mainFontFamily
 ) {
-  Formula formula(latex);
+  // User macros are expanded by the new front end first (plan Stage 2).
+  Formula formula(front::prepareForLegacyParser(latex));
   // Bidirectional levels, resolved once over the whole formula while the
   // atoms still hold their text -- a box keeps only an opaque layout. It
   // has to be one pass over the whole tree, not one per row: a group's

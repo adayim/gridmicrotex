@@ -201,11 +201,10 @@
 #'   is an error saying why. Each format needs its reader, all
 #'   *Suggests*: `png` for PNG, `jpeg` for JPEG and `rsvg` for SVG; the
 #'   error names the one to install.
-#' * `\includegraphics` must be written directly. One that a `\newcommand`
-#'   or `\def` in the expression produces is an error, because those are
-#'   expanded after the file would have been read; a macro from
-#'   [define_macro()] is expanded in time. A commented-out
-#'   `% \includegraphics{...}` is ignored.
+#' * `\includegraphics` must be written directly. One that a macro
+#'   produces (`\newcommand`, `\def` or [define_macro()]) is an error,
+#'   because macros are expanded after the file would have been read. A
+#'   commented-out `% \includegraphics{...}` is ignored.
 #'
 #' Anything not in this list is passed to MicroTeX unchanged. An unknown
 #' command is not an error: MicroTeX typesets its name in red, which
@@ -497,18 +496,16 @@ grobMark <- function(grob, name) {
   fontsize <- gp$fontsize %||% 20
   if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
 
-  # Images are resolved first, before any other rewriting, because both of
-  # the steps below would corrupt a file path: .strip_document_wrappers()
-  # eats `%`-to-end-of-line, and .expand_macros() would rewrite `\Users` or
-  # `\Temp` mid-path for anyone who had defined a macro by that name. The
-  # second pass catches an \includegraphics that a macro produced; it is a
-  # no-op when the first pass already consumed them all.
+  # Images are resolved first, before any other rewriting, because
+  # .strip_document_wrappers() eats `%`-to-end-of-line and would corrupt a
+  # file path. The second pass catches an \includegraphics the stripping
+  # uncovered; it is a no-op when the first pass consumed them all. Macros,
+  # define_macro()'s included, are expanded later, in C++.
   tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
   tex <- .strip_document_wrappers(tex)
-  tex <- .expand_macros(tex)
   tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
-  # The user-facing `tex` stays as the macro-expanded source so that
-  # editDetails() can re-parse without doubling up the \text{} wrap.
+  # The user-facing `tex` stays as this source so that editDetails() can
+  # re-parse without doubling up the \text{} wrap.
   # `parse_input` is the actual string handed to the MicroTeX parser.
   parse_input <- latex_wrap(tex, input_mode = input_mode)
   math_font <- resolve_math_font(math_font)

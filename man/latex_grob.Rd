@@ -264,11 +264,10 @@ be drawn -- missing, a URL, an unsupported format, or unreadable --
 is an error saying why. Each format needs its reader, all
 \emph{Suggests}: \code{png} for PNG, \code{jpeg} for JPEG and \code{rsvg} for SVG; the
 error names the one to install.
-\item \verb{\\includegraphics} must be written directly. One that a \verb{\newcommand}
-or \verb{\\def} in the expression produces is an error, because those are
-expanded after the file would have been read; a macro from
-\code{\link[=define_macro]{define_macro()}} is expanded in time. A commented-out
-\verb{\% \\includegraphics\{...\}} is ignored.
+\item \verb{\\includegraphics} must be written directly. One that a macro
+produces (\verb{\newcommand}, \verb{\\def} or \code{\link[=define_macro]{define_macro()}}) is an error,
+because macros are expanded after the file would have been read. A
+commented-out \verb{\% \\includegraphics\{...\}} is ignored.
 }
 
 Anything not in this list is passed to MicroTeX unchanged. An unknown

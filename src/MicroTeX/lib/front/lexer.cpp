@@ -1,6 +1,6 @@
 #include "front/lexer.h"
 
-#include <utility>
+#include <string>
 
 #include "utils/utf.h"
 
@@ -13,8 +13,7 @@ constexpr const char* kReplacementUtf8 = "\xEF\xBF\xBD";
 
 }  // namespace
 
-Lexer::Lexer(std::string source, LexOptions options, Diagnostics& diagnostics)
-    : _src(std::move(source)), _opts(options), _diags(diagnostics) {
+CatcodeTable::CatcodeTable() {
   // LaTeX's catcodes. Every other ASCII character is `other`.
   _cat.fill(Cat::other);
   for (char c = 'a'; c <= 'z'; c++) _cat[static_cast<std::size_t>(c)] = Cat::letter;
@@ -35,17 +34,14 @@ Lexer::Lexer(std::string source, LexOptions options, Diagnostics& diagnostics)
   _cat['~'] = Cat::active;
   _cat['%'] = Cat::comment;
   _cat[127] = Cat::invalid;
+}
 
+Lexer::Lexer(std::string_view source, LexOptions options, Diagnostics& diagnostics,
+             CatcodeTable& catcodes)
+    : _src(source), _cat(catcodes), _opts(options), _diags(diagnostics) {
+  if (_opts.startMidLine) _state = State::midLine;
   // A byte-order mark is an encoding signature, not text.
-  if (_src.compare(0, 3, "\xEF\xBB\xBF") == 0) _pos = 3;
-}
-
-void Lexer::setCatcode(c32 ch, Cat cat) {
-  if (ch < _cat.size()) _cat[ch] = cat;
-}
-
-Cat Lexer::catcode(c32 ch) const {
-  return ch < _cat.size() ? _cat[ch] : Cat::other;
+  if (_src.compare(0, 3, "\xEF\xBB\xBF") == 0) _pos = _lastEnd = 3;
 }
 
 SourceSpan Lexer::here() const {
@@ -105,6 +101,8 @@ Token Lexer::make(TokKind kind, std::size_t start, std::uint32_t line, std::uint
   Token t;
   t.kind = kind;
   t.span = {static_cast<std::uint32_t>(start), static_cast<std::uint32_t>(_pos - start), line, col};
+  t.leadStart = static_cast<std::uint32_t>(_lastEnd);
+  _lastEnd = _pos;
   t.lineEnds = _pendingLineEnds;
   _pendingLineEnds = 0;
   return t;
@@ -194,12 +192,12 @@ Token Lexer::controlSequence() {
     const std::size_t nameStart = _pos;
     while (_pos < _src.size()) {
       const auto b = static_cast<unsigned char>(_src[_pos]);
-      if (b >= 0x80 || _cat[b] != Cat::letter) break;
+      if (b >= 0x80 || _cat.get(b) != Cat::letter) break;
       advance(1, 1);
     }
     _state = State::skipBlanks;
     Token t = make(TokKind::controlWord, start, line, col);
-    t.text = _src.substr(nameStart, _pos - nameStart);
+    t.text = std::string(_src.substr(nameStart, _pos - nameStart));
     return t;
   }
 
@@ -221,7 +219,7 @@ Token Lexer::controlSequence() {
   const bool space = !invalidUtf8 && catcode(cp) == Cat::space;
   _state = space ? State::skipBlanks : State::midLine;
   Token t = make(TokKind::controlSymbol, start, line, col);
-  t.text = invalidUtf8 ? kReplacementUtf8 : space ? " " : _src.substr(start + 1, len);
+  t.text = invalidUtf8 ? kReplacementUtf8 : space ? " " : std::string(_src.substr(start + 1, static_cast<std::size_t>(len)));
   return t;
 }
 
@@ -265,7 +263,7 @@ Token Lexer::character(c32 cp, int len) {
   Token t = make(TokKind::character, start, line, col);
   t.cat = cat;
   t.cp = cp;
-  t.text = invalidUtf8 ? kReplacementUtf8 : _src.substr(start, _pos - start);
+  t.text = invalidUtf8 ? kReplacementUtf8 : std::string(_src.substr(start, _pos - start));
   return t;
 }
 

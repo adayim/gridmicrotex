@@ -61,7 +61,7 @@ test_that("a file reference survives the pipeline that would mangle a path", {
   dec <- gridmicrotex:::.image_ref_decode
   # Hex, because every one of these breaks a raw path: backslashes are
   # LaTeX escapes, `%` starts a comment that .strip_document_wrappers()
-  # would run to end of line, and .expand_macros() would rewrite `\Users`
+  # would run to end of line, and the macro expander would rewrite `\Users`
   # for anyone who had defined a macro of that name.
   for (p in c("C:\\Users\\a\\my fig.png", "a/b/100%plot.png",
               "with space_and_under.png", "plain.png")) {

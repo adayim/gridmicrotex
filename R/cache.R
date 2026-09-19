@@ -142,6 +142,9 @@ latex_cache_info <- function() {
     as.integer(use_path), "|", tex_style, "|", as.integer(justify),
     "|", as.integer(optimal_break),
     "|", device,
+    # define_macro() macros are expanded in C++, so a layout depends on them
+    # without `tex` showing it.
+    "|", persistent_macro_generation_cpp(),
     sep = ""
   )
 }

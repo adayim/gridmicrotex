@@ -1,18 +1,15 @@
-.latex_macros <- new.env(parent = emptyenv())
-.latex_macros$defs <- list()
-
 #' Define a user-level LaTeX macro
 #'
-#' Registers a zero-argument shorthand that is expanded by text
-#' substitution before the expression reaches the MicroTeX parser.
-#' Useful for domain-specific notation (e.g. \code{\\RR} for
+#' Registers a zero-argument shorthand that every later expression can use,
+#' expanded by the parser as a \code{\\newcommand} without arguments would
+#' be. Useful for domain-specific notation (e.g. \code{\\RR} for
 #' \code{\\mathbb\{R\}}) you reuse across many plots.
 #'
 #' @section Choosing between this and \code{\\newcommand}:
 #' MicroTeX also accepts \code{\\newcommand} and plain-TeX \code{\\def}
 #' written inside the expression itself, and those are the more capable
 #' form: they take up to nine arguments, which \code{define_macro()} does
-#' not: it substitutes text and nothing else.
+#' not.
 #'
 #' \preformatted{
 #'   # parameterised, but local to this one expression
@@ -20,12 +17,12 @@
 #'                 \\norm{\\vec{v}})")
 #' }
 #'
-#' What they cannot do is persist: the user-macro table is cleared at the
-#' start of every parse, so a \code{\\newcommand} written in one call is
-#' gone by the next. That is the one thing \code{define_macro()} is for.
+#' What they cannot do is persist: a \code{\\newcommand} written in one call
+#' is gone by the next. That is the one thing \code{define_macro()} is for.
 #' Use \code{\\newcommand} / \code{\\def} for an abbreviation local to a
 #' single label, and \code{define_macro()} for notation you want available
-#' to every label in a script.
+#' to every label in a script. A \code{\\renewcommand} in one label
+#' overrides a \code{define_macro()} macro for that label only.
 #'
 #' @param name Macro name \strong{without} the leading backslash. For
 #'   \code{clear_macros}, the macro name to drop, or \code{NULL}
@@ -56,7 +53,7 @@ define_macro <- function(name, definition) {
     stop("Macro name must contain only letters (ASCII a-z, A-Z).",
          call. = FALSE)
   }
-  .latex_macros$defs[[name]] <- definition
+  persistent_macro_set_cpp(name, enc2utf8(definition))
   invisible(NULL)
 }
 
@@ -64,13 +61,13 @@ define_macro <- function(name, definition) {
 #' @export
 clear_macros <- function(name = NULL) {
   if (is.null(name)) {
-    .latex_macros$defs <- list()
+    persistent_macro_clear_cpp()
   } else {
     # A number would index the definitions by position and drop whichever
     # macro happens to come first.
     stopifnot(is.character(name), length(name) == 1L, !is.na(name),
               nzchar(name))
-    .latex_macros$defs[[name]] <- NULL
+    persistent_macro_remove_cpp(name)
   }
   invisible(NULL)
 }
@@ -79,37 +76,7 @@ clear_macros <- function(name = NULL) {
 #' @rdname define_macro
 #' @export
 list_macros <- function() {
-  defs <- .latex_macros$defs
+  defs <- persistent_macro_list_cpp()
   if (length(defs) == 0L) return(character(0))
-  unlist(defs)
-}
-
-# Apply macro expansion to a tex string. Matches \name where the next
-# character is not a letter (so `\RR` matches but `\RRend` does not),
-# in iteration until a fixed point so nested macros expand.
-.expand_macros <- function(tex) {
-  defs <- .latex_macros$defs
-  if (length(defs) == 0L) return(tex)
-  patterns <- paste0("\\\\", names(defs), "(?![A-Za-z])")
-  for (depth in seq_len(8L)) {
-    before <- tex
-    for (i in seq_along(defs)) {
-      # Escape backslashes in the replacement so gsub treats them
-      # literally rather than as backreference escapes.
-      replacement <- gsub("\\\\", "\\\\\\\\", defs[[i]])
-      tex <- gsub(patterns[i], replacement, tex, perl = TRUE)
-    }
-    if (identical(tex, before)) break
-  }
-  # A defined macro token still present means expansion never resolved --
-  # either a circular definition (\a -> \b -> \a) or one too deep for the
-  # 8-iteration cap. Either way the output is wrong, so warn.
-  if (any(vapply(patterns, grepl, logical(1), x = tex, perl = TRUE))) {
-    warning(
-      "Macro expansion did not resolve; check for circular macro ",
-      "definitions.",
-      call. = FALSE
-    )
-  }
-  tex
+  defs
 }

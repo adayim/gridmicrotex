@@ -8,7 +8,10 @@
 #include <vector>
 
 #include "front/diagnostics.h"
+#include "front/expander.h"
+#include "front/front.h"
 #include "front/lexer.h"
+#include "macro/macro.h"
 
 using namespace microtex::front;
 
@@ -58,7 +61,8 @@ Rcpp::DataFrame lex_latex_cpp(std::string tex, bool blank_line_is_par = false) {
   Diagnostics diags;
   LexOptions opts;
   opts.blankLineIsPar = blank_line_is_par;
-  Lexer lexer(std::move(tex), opts, diags);
+  CatcodeTable catcodes;
+  Lexer lexer(tex, opts, diags, catcodes);
 
   std::vector<Token> toks;
   while (true) {
@@ -91,4 +95,78 @@ Rcpp::DataFrame lex_latex_cpp(std::string tex, bool blank_line_is_par = false) {
     Rcpp::Named("stringsAsFactors") = false);
   out.attr("diagnostics") = diagnostics_frame(diags);
   return out;
+}
+
+// `tex` with its user macros expanded, as the old parser receives it, with
+// the problems found attached as the "diagnostics" attribute. Errors the old
+// parser also raised (redefinition, runaway recursion) are R errors.
+// [[Rcpp::export]]
+Rcpp::CharacterVector expand_latex_cpp(std::string tex) {
+  ExpanderOptions opts;
+  opts.isBuiltinCommand = [](const std::string& name) {
+    return microtex::MacroInfo::get(name) != nullptr || microtex::NewCommandMacro::isMacro(name);
+  };
+  opts.isBuiltinEnvironment = [](const std::string& name) {
+    return microtex::NewCommandMacro::isMacro(name + "@env");
+  };
+  Diagnostics diags;
+  std::string out;
+  try {
+    out = Expander(std::move(tex), std::move(opts), diags).expandToText();
+  } catch (const std::exception& e) {
+    Rcpp::stop(std::string("LaTeX parse error: ") + e.what());
+  }
+  Rcpp::CharacterVector res = Rcpp::CharacterVector::create(Rcpp::String(out, CE_UTF8));
+  res.attr("diagnostics") = diagnostics_frame(diags);
+  return res;
+}
+
+// Switch the front end: "legacy" (MicroTeX's parser alone) or "expander".
+// Returns the previous one, so a caller can put it back.
+// [[Rcpp::export]]
+std::string set_frontend_cpp(std::string which) {
+  const std::string previous = frontEnd() == FrontEnd::legacy ? "legacy" : "expander";
+  if (which == "legacy") {
+    setFrontEnd(FrontEnd::legacy);
+  } else if (which == "expander") {
+    setFrontEnd(FrontEnd::expander);
+  } else {
+    Rcpp::stop("Unknown front end: " + which);
+  }
+  return previous;
+}
+
+// The macros made with define_macro(), which outlive a parse.
+// [[Rcpp::export]]
+void persistent_macro_set_cpp(std::string name, std::string body) {
+  setPersistentMacro(name, body);
+}
+
+// [[Rcpp::export]]
+bool persistent_macro_remove_cpp(std::string name) {
+  return removePersistentMacro(name);
+}
+
+// [[Rcpp::export]]
+void persistent_macro_clear_cpp() {
+  clearPersistentMacros();
+}
+
+// [[Rcpp::export]]
+Rcpp::CharacterVector persistent_macro_list_cpp() {
+  const auto& table = persistentMacros();
+  Rcpp::CharacterVector bodies(table.size());
+  Rcpp::CharacterVector names(table.size());
+  for (std::size_t i = 0; i < table.size(); i++) {
+    names[static_cast<R_xlen_t>(i)] = Rcpp::String(table[i].first, CE_UTF8);
+    bodies[static_cast<R_xlen_t>(i)] = Rcpp::String(table[i].second, CE_UTF8);
+  }
+  bodies.attr("names") = names;
+  return bodies;
+}
+
+// Changes whenever a persistent macro does; part of the layout cache key.
+// [[Rcpp::export]]
+double persistent_macro_generation_cpp() {
+  return static_cast<double>(persistentMacroGeneration());
 }
