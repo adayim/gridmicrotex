@@ -187,6 +187,25 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// register_image_resolver
+void register_image_resolver(SEXP fn);
+RcppExport SEXP _gridmicrotex_register_image_resolver(SEXP fnSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type fn(fnSEXP);
+    register_image_resolver(fn);
+    return R_NilValue;
+END_RCPP
+}
+// clear_image_resolver
+void clear_image_resolver();
+RcppExport SEXP _gridmicrotex_clear_image_resolver() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    clear_image_resolver();
+    return R_NilValue;
+END_RCPP
+}
 // microtex_init
 void microtex_init(std::string clm_path, std::string otf_path);
 RcppExport SEXP _gridmicrotex_microtex_init(SEXP clm_pathSEXP, SEXP otf_pathSEXP) {
@@ -378,6 +397,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_math_env_names_cpp", (DL_FUNC) &_gridmicrotex_math_env_names_cpp, 0},
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
+    {"_gridmicrotex_register_image_resolver", (DL_FUNC) &_gridmicrotex_register_image_resolver, 1},
+    {"_gridmicrotex_clear_image_resolver", (DL_FUNC) &_gridmicrotex_clear_image_resolver, 0},
     {"_gridmicrotex_microtex_init", (DL_FUNC) &_gridmicrotex_microtex_init, 2},
     {"_gridmicrotex_microtex_init_from_otf", (DL_FUNC) &_gridmicrotex_microtex_init_from_otf, 2},
     {"_gridmicrotex_microtex_add_font", (DL_FUNC) &_gridmicrotex_microtex_add_font, 2},

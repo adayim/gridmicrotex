@@ -63,7 +63,7 @@ test_that("the command table and the prelude cover every command the engine defi
                    character(0))
   # Read by the parser, not registered as commands in the old one.
   expect_identical(sort(setdiff(t$spec_commands, t$engine_commands)),
-                   c("begin", "cmidrule", "end", "ensuremath", "href", "right", "url"))
+                   c("begin", "cmidrule", "end", "ensuremath", "graphicspath", "href", "right", "url"))
 })
 
 test_that("the math environments R scans for come from the C++ tables", {
@@ -158,7 +158,8 @@ test_that("a value TeX reads without braces is kept as text", {
 
 test_that("a file name keeps %, # and _ as characters", {
   a <- ast("\\includegraphics[width=1in]{a%b_c#1.png}")
-  expect_identical(a$raw[a$kind == "argument"], c("width=1in", "a%b_c#1.png"))
+  # The second option group is the older [llx,lly][urx,ury] spelling.
+  expect_identical(a$raw[a$kind == "argument"], c("width=1in", "", "a%b_c#1.png"))
 })
 
 test_that("text drops the space after a control word, as TeX does", {

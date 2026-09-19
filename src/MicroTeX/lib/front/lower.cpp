@@ -22,6 +22,7 @@
 #include "box/box_factory.h"
 #include "env/units.h"
 #include "front/front.h"
+#include "front/hooks.h"
 #include "front/spec.h"
 #include "graphic/graphic.h"
 #include "macro/macro.h"
@@ -92,6 +93,8 @@ private:
   Diagnostics& _diags;
   /** Per node, whether a line break is in it: 0 not known yet, 1 no, 2 yes. */
   std::vector<std::int8_t> _breaks;
+  /** Where images are looked for: the last \graphicspath. */
+  std::vector<std::string> _graphicsDirs;
 
   const Node& node(NodeId id) const { return _ast.node(id); }
   NodeId child(NodeId id, std::uint32_t i) const { return _ast.child(id, i); }
@@ -333,6 +336,11 @@ private:
     }
     if (name == "char") return charCode(rawOf(child(id, 0)), x.mode == Mode::math);
     if (name == "url" || name == "href") return link(id, f);
+    if (name == "includegraphics") return image(id);
+    if (name == "graphicspath") {
+      graphicsPath(rawOf(child(id, 0)));
+      return nullptr;
+    }
     if (name == "middle") {
       Formula g;
       middle(child(id, 0), g);
@@ -380,6 +388,50 @@ private:
       }
     }
     return fragment("\\textcolor{" + colour + "}{\\texttt{" + chars + "}}", math);
+  }
+
+  /** \includegraphics[options]{path}: the host reads the file and says
+   *  what stands for it (front/hooks.h); with nothing from it, the file's
+   *  name, so the gap is seen. */
+  sptr<Atom> image(NodeId id) {
+    std::string options = rawOf(child(id, 0));
+    const std::string more = rawOf(child(id, 1));
+    if (!more.empty()) options += (options.empty() ? "" : ",") + more;
+    std::string path = rawOf(child(id, 2));
+    const auto first = path.find_first_not_of(" \t\r\n");
+    path = first == std::string::npos ? "" : path.substr(first, path.find_last_not_of(" \t\r\n") - first + 1);
+    std::string latex;
+    if (const ImageResolver& resolve = imageResolver()) latex = resolve(path, options, _graphicsDirs);
+    if (!latex.empty()) return fragment(latex, node(id).mode == Mode::math);
+    // The name without its directory, character by character, so that a
+    // `_` or `%` in it is itself. Either separator: it may be a Windows path.
+    const auto cut = path.find_last_of("/\\");
+    const std::string name = cut == std::string::npos ? path : path.substr(cut + 1);
+    auto text = sptrOf<TextAtom>(false);
+    for (int i = 0, n = static_cast<int>(name.size()); i < n;) {
+      int len = 0;
+      const c32 c = nextUnicode(name, i, len);
+      if (len <= 0) break;
+      text->append(c);
+      i += len;
+    }
+    return text;
+  }
+
+  /** \graphicspath{{dir/}{dir/}}: the directories, in place of the last. */
+  void graphicsPath(const std::string& raw) {
+    _graphicsDirs.clear();
+    std::size_t i = 0;
+    while ((i = raw.find('{', i)) != std::string::npos) {
+      const auto j = raw.find('}', i + 1);
+      if (j == std::string::npos) break;
+      std::string dir = raw.substr(i + 1, j - i - 1);
+      const auto a = dir.find_first_not_of(" \t\r\n");
+      if (a != std::string::npos) {
+        _graphicsDirs.push_back(dir.substr(a, dir.find_last_not_of(" \t\r\n") - a + 1));
+      }
+      i = j + 1;
+    }
   }
 
   sptr<Atom> charCode(const std::string& raw, bool math) {

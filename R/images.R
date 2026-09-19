@@ -10,9 +10,10 @@
 # is fixed early, but the choice of rasterGrob vs grImport2 pictureGrob is
 # made late, and a new reader never needs an engine change.
 #
-# .resolve_graphics() rewrites
+# The parser asks .image_resolver() what stands for each
 #     \includegraphics[width=2cm]{fig.png}
-# into the private, fully-resolved
+# as it meets one -- after macros are expanded, and never in a comment --
+# and gets the private, fully-resolved
 #     \gmgraphics{<hex>}{<width_bp>}{<height_bp>}
 # which src/MicroTeX/lib/atom/image_atom.cpp turns into a box and an IMAGE draw record.
 
@@ -364,17 +365,6 @@
   })
 }
 
-# An \includegraphics that reached MicroTeX unread -- malformed, or produced
-# by a macro (\newcommand, \def or define_macro()), which the C++ front end
-# expands after the images were read. Its C++ override draws the file's name
-# and reports it here (src/MicroTeX/lib/atom/image_atom.h).
-.image_unresolved <- function(path) {
-  .image_fail(path, paste0(
-    "\\includegraphics must be written directly, with its file in braces; ",
-    "one produced by a macro is expanded too late to be read"),
-    paste0("unres\x1f", path))
-}
-
 .image_fail <- function(named, why, key) {
   msg <- paste0("Cannot draw image '", named, "': ", why)
   if (.image_state$strict) stop(msg, call. = FALSE)
@@ -506,33 +496,45 @@
   grepl("(?<!\\\\)(?:\\\\\\\\)*%", line, perl = TRUE)
 }
 
-# Rewrite every \includegraphics in `tex`. Idempotent: the output is
-# \gmgraphics, which this never matches.
-#
-# Runs in .parse_from_gp(), before the parse. An \includegraphics a macro
-# produces (\newcommand, \def, define_macro()) is out of its reach, because
-# macros are expanded later, in C++; the override in
-# src/MicroTeX/lib/atom/image_atom.cpp reports it, and .image_unresolved()
-# refuses it.
-#
-# `check_only` reads each file and rewrites nothing. Markdown uses it to
-# fail when a grob is built, since a box lays out only when drawn.
-.resolve_graphics <- function(tex, fontsize = 20, max_width = 0,
-                              check_only = FALSE) {
+# What the parser is to draw for `\includegraphics[options]{path}`: the
+# front end calls this (through register_image_resolver()) for each one it
+# lowers, after macros are expanded, so one a \newcommand, \def or
+# define_macro() produces is read like any other, and one in a comment is
+# never seen. `dirs` are those the last \graphicspath named. The files
+# read, with their stamps, go into `used$stamps` for the layout cache.
+.image_resolver <- function(fontsize, max_width, used) {
+  used$stamps <- character(0)
+  function(path, options, dirs) {
+    # Markdown escapes a brace in a file name so the argument still ends at
+    # the right one; the name itself has none.
+    path <- gsub("\\\\([{}])", "\\1", path)
+    found <- .image_find(path, dirs)
+    used$stamps[[found]] <- .image_stamp(found)
+    .resolve_one_graphic(path, options, fontsize, max_width, dirs)
+  }
+}
+
+# Whether every image a cached layout read is as it was then.
+.images_current <- function(layout) {
+  st <- attr(layout, "images")
+  is.null(st) || identical(unname(vapply(names(st), .image_stamp, "")), unname(st))
+}
+
+# Read every \includegraphics in `tex`, failing on one that cannot be
+# drawn, and change nothing. Markdown calls it when a grob is built, since
+# a box lays out only when it is drawn and an error then would leave half a
+# page; everything else meets its images while it is parsed.
+.check_graphics <- function(tex) {
   gp <- .extract_graphicspath(tex)
   out <- gp$tex
-  if (!grepl("\\includegraphics", out, fixed = TRUE)) return(out)
+  if (!grepl("\\includegraphics", out, fixed = TRUE)) return(invisible(NULL))
   from <- 1L
   repeat {
-    # The starred form clips to the bounding box; there is nothing outside
-    # the box to clip here, so it differs from the plain form only in being
-    # spelled with a `*`.
     m <- regexpr("\\\\includegraphics\\*?", substr(out, from, nchar(out)), perl = TRUE)
     if (m == -1L) break
     start <- from + m - 1L
-    # This runs before comments are stripped, so a commented-out figure --
-    # routine in LaTeX -- would otherwise be read, and a missing draft
-    # figure would stop the render. The comment stripper removes it later.
+    # A commented-out figure is routine in LaTeX, and a missing draft
+    # figure must not stop the render.
     if (.in_tex_comment(out, start)) { from <- start + 1L; next }
     # Nor is `\\includegraphics` the command: it is a line break and then
     # the word. The backslash that starts a match must not itself be escaped.
@@ -544,14 +546,11 @@
     n <- nchar(out)
     skip_ws <- function(k) { while (k <= n && grepl("^[ \t\r\n]$", substr(out, k, k))) k <- k + 1L; k }
     i <- skip_ws(i)
-    opt <- character(0)
-    bad <- FALSE
     # Up to two bracket groups: the graphicx `[key=val]` and the older
-    # `[llx,lly][urx,ury]` spelling, whose bare numbers simply parse as no
-    # recognised key.
-    while (i <= n && substr(out, i, i) == "[" && length(opt) < 2L) {
-      # Scan to the matching `]`, ignoring one inside braces so
-      # `[width={0.5\textwidth}]` survives.
+    # `[llx,lly][urx,ury]` spelling.
+    bad <- FALSE
+    groups <- 0L
+    while (i <= n && substr(out, i, i) == "[" && groups < 2L) {
       j <- i + 1L; depth <- 0L
       while (j <= n) {
         ch <- substr(out, j, j)
@@ -561,32 +560,18 @@
         j <- j + 1L
       }
       if (j > n) { bad <- TRUE; break }
-      opt <- c(opt, substr(out, i + 1L, j - 1L))
+      groups <- groups + 1L
       i <- skip_ws(j + 1L)
     }
     if (bad) break
     if (i > n || substr(out, i, i) != "{") { from <- start + 1L; next }
     close <- .find_close_brace(out, i + 1L)
     if (is.na(close)) break
-    # Markdown escapes a brace in a file name so the argument still ends
-    # at the right one; the name itself has none.
     path <- gsub("\\\\([{}])", "\\1", trimws(substr(out, i + 1L, close - 1L)))
-    # `#1` is a macro parameter in a \newcommand or \def body, not a file.
-    # MicroTeX expands the macro, and .image_unresolved() refuses the result.
-    if (grepl("#[0-9]", path)) { from <- close + 1L; next }
-    if (check_only) {
-      .image_check(.image_find(path, gp$dirs), path)
-      from <- close + 1L
-      next
-    }
-
-    rep <- .resolve_one_graphic(path, paste(opt, collapse = ","),
-                                fontsize, max_width, gp$dirs)
-    out <- paste0(substr(out, 1L, start - 1L), rep,
-                  substr(out, close + 1L, nchar(out)))
-    from <- start + nchar(rep)
+    .image_check(.image_find(path, gp$dirs), path)
+    from <- close + 1L
   }
-  out
+  invisible(NULL)
 }
 
 # graphicx keys that change what is drawn but that a fixed box cannot

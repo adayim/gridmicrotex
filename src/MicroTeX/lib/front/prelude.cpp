@@ -66,7 +66,6 @@ std::string_view preludeSource() {
 \newcommand{\title}[1]{}
 \newcommand{\author}[1]{}
 \newcommand{\label}[1]{}
-\newcommand{\graphicspath}[1]{}
 \newcommand{\DeclareGraphicsExtensions}[1]{}
 \newcommand{\centering}{}
 \newcommand{\raggedright}{}

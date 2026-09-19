@@ -162,9 +162,7 @@
     # Prose backslashes are escaped by now, so an \includegraphics here was
     # written in a math span. It is read now, like markdown's own images,
     # so a box fails when it is built rather than when it is drawn.
-    if (grepl("\\includegraphics", raw, fixed = TRUE)) {
-      .resolve_graphics(raw, check_only = TRUE)
-    }
+    if (grepl("\\includegraphics", raw, fixed = TRUE)) .check_graphics(raw)
     if (bare) raw else latex_wrap(raw, input_mode = "mixed")
   }
   # CommonMark decodes &nbsp; to a real U+00A0. MicroTeX spells it \nbsp,

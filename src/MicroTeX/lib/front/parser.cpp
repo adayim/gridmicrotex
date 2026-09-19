@@ -772,20 +772,27 @@ NodeId Parser::parseRawArgument(const ArgSpec& spec, const std::string& who) {
   const std::size_t mark = startRecording();
   int depth = 0;
   bool closed = false;
+  // In a URL, a backslash right before a brace makes it a character (a
+  // file name holding one, as markdown writes it); the host unescapes it.
+  bool escaped = false;
   while (true) {
     ExpandedToken u = next();
     if (u.tok.kind == TokKind::end) {
       unread(std::move(u));
       break;
     }
-    if (u.tok.isChar(Cat::beginGroup)) depth++;
-    if (u.tok.isChar(Cat::endGroup)) {
-      if (depth == 0) {
-        closed = true;
-        break;
+    const bool brace = u.tok.isChar(Cat::beginGroup) || u.tok.isChar(Cat::endGroup);
+    if (!(escaped && brace && u.lead.empty())) {
+      if (u.tok.isChar(Cat::beginGroup)) depth++;
+      if (u.tok.isChar(Cat::endGroup)) {
+        if (depth == 0) {
+          closed = true;
+          break;
+        }
+        depth--;
       }
-      depth--;
     }
+    escaped = spec.kind == ArgKind::url && isOther(u.tok, '\\') && !escaped;
   }
   arg.raw = stopRecording(mark, closed ? 1 : 0);
   for (const Saved& s : saved) _in.setCatcode(s.ch, s.cat);

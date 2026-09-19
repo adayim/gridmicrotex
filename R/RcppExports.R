@@ -69,6 +69,14 @@ clear_text_measurer <- function() {
     invisible(.Call(`_gridmicrotex_clear_text_measurer`))
 }
 
+register_image_resolver <- function(fn) {
+    invisible(.Call(`_gridmicrotex_register_image_resolver`, fn))
+}
+
+clear_image_resolver <- function() {
+    invisible(.Call(`_gridmicrotex_clear_image_resolver`))
+}
+
 microtex_init <- function(clm_path, otf_path) {
     invisible(.Call(`_gridmicrotex_microtex_init`, clm_path, otf_path))
 }

@@ -201,10 +201,10 @@
 #'   is an error saying why. Each format needs its reader, all
 #'   *Suggests*: `png` for PNG, `jpeg` for JPEG and `rsvg` for SVG; the
 #'   error names the one to install.
-#' * `\includegraphics` must be written directly. One that a macro
-#'   produces (`\newcommand`, `\def` or [define_macro()]) is an error,
-#'   because macros are expanded after the file would have been read. A
-#'   commented-out `% \includegraphics{...}` is ignored.
+#' * The file is read when the parser meets the command, after macros are
+#'   expanded, so one a macro produces (`\newcommand`, `\def` or
+#'   [define_macro()]) works like any other. A commented-out
+#'   `% \includegraphics{...}` is ignored.
 #'
 #' Anything not in this list is passed to MicroTeX unchanged. An unknown
 #' command is not an error: MicroTeX typesets its name in red, which
@@ -499,9 +499,6 @@ grobMark <- function(grob, name) {
   # The parser reads UTF-8 bytes; a Latin-1 string would reach it as
   # invalid ones.
   tex <- enc2utf8(tex)
-  # Images are read here, before the parse. Macros, define_macro()'s
-  # included, are expanded later, in C++.
-  tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
   math_font <- resolve_math_font(math_font)
 
   fg_color <- if (!is.null(gp$col)) {
@@ -552,7 +549,6 @@ grobMark <- function(grob, name) {
     optimal_break = identical(line_break, "optimal"), input_mode = input_mode
   )
   # Read off the layout rather than the parse, so a cached one says it too.
-  for (p in attr(layout, "unresolved_images")) .image_unresolved(p)
   .warn_diagnostics(attr(layout, "diagnostics"))
 
   path_layout <- NULL

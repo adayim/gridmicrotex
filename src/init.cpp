@@ -6,6 +6,7 @@
 #include "macro/macro.h"
 #include "atom/mark_atom.h"
 #include "atom/image_atom.h"
+#include "front/hooks.h"
 #include "utils/bidi.h"
 #include "utils/utf.h"
 #include "unimath/font_src.h"
@@ -56,6 +57,39 @@ void clear_text_measurer() {
     }
     g_text_measure_fn = nullptr;
     g_text_measure_cache.clear();
+}
+
+
+// --- image resolver R callback ---
+//
+// The front end asks the host what stands for each \includegraphics it
+// lowers (front/hooks.h). R answers with \gmgraphics{ref}{w}{h}, or the file
+// name when it only warns; when an image cannot be drawn it raises an R
+// error, which Rcpp carries through the engine as a LongjumpException and
+// resumes at the export boundary. Nothing on the way catches it.
+static SEXP g_image_resolve_fn = nullptr;
+
+// [[Rcpp::export]]
+void register_image_resolver(SEXP fn) {
+    if (g_image_resolve_fn != nullptr) R_ReleaseObject(g_image_resolve_fn);
+    g_image_resolve_fn = fn;
+    R_PreserveObject(g_image_resolve_fn);
+    microtex::front::setImageResolver(
+        [](const std::string& path, const std::string& options,
+           const std::vector<std::string>& dirs) {
+            Rcpp::Function resolve(g_image_resolve_fn);
+            Rcpp::CharacterVector d(dirs.size());
+            for (std::size_t i = 0; i < dirs.size(); i++) d[i] = Rcpp::String(dirs[i], CE_UTF8);
+            SEXP out = resolve(Rcpp::String(path, CE_UTF8), Rcpp::String(options, CE_UTF8), d);
+            return Rcpp::as<std::string>(out);
+        });
+}
+
+// [[Rcpp::export]]
+void clear_image_resolver() {
+    microtex::front::setImageResolver(nullptr);
+    if (g_image_resolve_fn != nullptr) R_ReleaseObject(g_image_resolve_fn);
+    g_image_resolve_fn = nullptr;
 }
 
 
@@ -386,6 +420,7 @@ void gm_base_unload();
 extern "C" void R_unload_gridmicrotex(DllInfo*) {
     gm_base_unload();
     clear_text_measurer();
+    clear_image_resolver();
 }
 
 // R finds R_unload_<pkg> with R_dlsym(), which searches only registered

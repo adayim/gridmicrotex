@@ -5,8 +5,11 @@
 .latex_cache$hits <- 0L
 .latex_cache$misses <- 0L
 
-.cache_get <- function(key) {
-  if (!nzchar(key) || is.null(.latex_cache$entries[[key]])) {
+# `valid`: a check an entry must still pass, or it is a miss -- a layout
+# whose image file has changed since.
+.cache_get <- function(key, valid = NULL) {
+  if (!nzchar(key) || is.null(.latex_cache$entries[[key]]) ||
+      (!is.null(valid) && !valid(.latex_cache$entries[[key]]))) {
     .latex_cache$misses <- .latex_cache$misses + 1L
     return(NULL)
   }
@@ -159,14 +162,21 @@ latex_cache_info <- function() {
                           math_font, main_font, text_family, use_path,
                           tex_style, justify, optimal_break,
                           device = .cache_device(), input_mode = input_mode)
-  hit <- .cache_get(key)
+  hit <- .cache_get(key, valid = .images_current)
   if (!is.null(hit)) return(hit)
+  # The parser asks R for each image as it meets one (.image_resolver()),
+  # and the files it read ride along with the layout: the key is the
+  # source, which says nothing of an image edited since.
+  used <- new.env(parent = emptyenv())
+  register_image_resolver(.image_resolver(text_size, max_width, used))
+  on.exit(clear_image_resolver(), add = TRUE)
   layout <- parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = use_path, tex_style = tex_style,
     justify = justify, optimal_break = optimal_break, input_mode = input_mode
   )
+  if (length(used$stamps)) attr(layout, "images") <- used$stamps
   .cache_put(key, layout)
   layout
 }

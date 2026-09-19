@@ -62,7 +62,11 @@ struct Table {
   Table() {
     // --- in the order of lib/macro/macro_def.cpp -------------------------
     add({"rule"}, "Ddd");
-    add({"includegraphics"}, "Ru");
+    // Two option groups: graphicx's [key=value], and the older
+    // [llx,lly][urx,ury] spelling.
+    add({"includegraphics"}, "RRu");
+    // The directories later images are looked for in; the lowering keeps them.
+    add({"graphicspath"}, "r");
     add({"cfrac"}, "Rmm");
     add({"xleftarrow", "xrightarrow", "xleftrightarrow", "xRightarrow", "xLeftarrow",
          "xLeftrightarrow", "xhookleftarrow", "xhookrightarrow", "xmapsto",

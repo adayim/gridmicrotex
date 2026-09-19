@@ -3,6 +3,7 @@
 #include "core/formula.h"
 #include "front/diagnostics.h"
 #include "front/expander.h"
+#include "front/hooks.h"
 #include "front/lower.h"
 #include "front/parser.h"
 #include "front/spec.h"
@@ -87,6 +88,23 @@ void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
 
 const Diagnostics& lastDiagnostics() {
   return lastStore();
+}
+
+namespace {
+
+ImageResolver& resolverStore() {
+  static ImageResolver resolver;
+  return resolver;
+}
+
+}  // namespace
+
+void setImageResolver(ImageResolver resolver) {
+  resolverStore() = std::move(resolver);
+}
+
+const ImageResolver& imageResolver() {
+  return resolverStore();
 }
 
 }  // namespace microtex::front
