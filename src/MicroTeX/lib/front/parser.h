@@ -92,9 +92,6 @@ private:
   std::vector<Logged> _log;
   std::size_t _consumed = 0;
   int _recording = 0;
-  /** A space TeX dropped after a control word is kept, marked, so text
-   *  can be read either way (see the space node). */
-  bool _afterControlWord = false;
   int _depth = 0;
   /** Inside an argument read as text (\text{}, \mbox{}): TeX's restricted
    *  horizontal mode, where `$$` is an empty formula, not display math. */

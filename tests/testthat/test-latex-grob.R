@@ -218,13 +218,20 @@ test_that("an error inside a command's argument is reported, not swallowed", {
                    label = tex)
     expect_true("#FF0000" %in% g$layout_df$color, label = tex)
   }
+  # Only the bad part is lost: the text around it survives.
+  expect_warning(
+    d <- latex_grob("\\text{a \\begin{array}{q}x\\end{array} b}", input_mode = "math")$layout_df,
+    "Invalid alignment"
+  )
+  expect_true(all(c("a ", " b") %in% d$text))
   # The deliberate leniency stays: an unknown command is drawn in red, in
-  # an argument as at the top level, and the text around it survives.
+  # an argument as at the top level, and the text around it survives (the
+  # space after it goes, as TeX drops a space after a control word).
   expect_warning(
     d <- latex_grob("\\text{a \\nosuchcmd b}", input_mode = "math")$layout_df,
     "unknown command \\nosuchcmd", fixed = TRUE
   )
-  expect_true(all(c("a ", " b") %in% d$text))
+  expect_true(all(c("a ", "b") %in% d$text))
   expect_true("#FF0000" %in% d$color)
 })
 

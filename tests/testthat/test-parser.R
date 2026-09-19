@@ -8,7 +8,7 @@
 #   \bf{args|body}             a declaration
 #   LR(left;body;...;right)    \left ... \right
 #   env:name(args rows)        row:end(cells)   $(...) / $$(...)  math in text
-#   ~ a tie, _ a space, . a space TeX dropped after a control word
+#   ~ a tie, _ a space
 
 ast <- function(tex, mode = "math") gridmicrotex:::parse_ast_cpp(tex, mode)
 
@@ -26,7 +26,7 @@ tree <- function(tex, mode = "math") {
       list = paste0("[", paste(sub, collapse = " "), "]"),
       group = paste0("{", inner(ch[1]), "}"),
       char = d$text[i],
-      space = c("_", "~", ".")[d$aux[i] + 1L],
+      space = c("_", "~")[d$aux[i] + 1L],
       command = paste0("\\", d$text[i], if (d$flag[i]) "?",
                        if (length(sub)) paste0("(", paste(sub, collapse = " "), ")")),
       argument = if (!d$flag[i]) "-" else if (length(ch)) paste0("<", inner(ch[1]), ">")
@@ -161,8 +161,11 @@ test_that("a file name keeps %, # and _ as characters", {
   expect_identical(a$raw[a$kind == "argument"], c("width=1in", "a%b_c#1.png"))
 })
 
-test_that("text keeps the spaces TeX drops after a control word, marked", {
-  expect_identical(tree("\\text{\\alpha b}", "math"), "[\\text(<\\alpha . b>)]")
+test_that("text drops the space after a control word, as TeX does", {
+  expect_identical(tree("\\text{\\alpha b}", "math"), "[\\text(<\\alpha b>)]")
+  # A control symbol keeps it, and so does a word ended by a group.
+  expect_identical(tree("\\text{\\% b}", "math"), "[\\text(<\\% _ b>)]")
+  expect_identical(tree("\\text{\\LaTeX{} b}", "math"), "[\\text(<\\LaTeX {} _ b>)]")
 })
 
 test_that("problems are reported where they are, and parsing goes on", {

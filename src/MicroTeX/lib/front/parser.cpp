@@ -228,21 +228,6 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
   ExpandedToken t = next();
   const Token& k = t.tok;
 
-  // TeX drops the spaces after a control word, even in text. They are kept
-  // here, marked, so the text can be laid out either way.
-  if (mode == Mode::text && _afterControlWord && k.kind != TokKind::space &&
-      !t.lead.empty() && (t.lead[0] == ' ' || t.lead[0] == '\t' || t.lead[0] == '\n' ||
-                          t.lead[0] == '\r')) {
-    Node s;
-    s.kind = NodeKind::space;
-    s.mode = mode;
-    s.span = k.span;
-    s.aux = 2;
-    s.raw = t.lead;
-    items.push_back(_ast.add(std::move(s), {}));
-  }
-  _afterControlWord = k.kind == TokKind::controlWord;
-
   switch (k.kind) {
     case TokKind::end:
       unread(std::move(t));

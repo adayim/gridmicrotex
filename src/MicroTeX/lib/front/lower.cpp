@@ -57,37 +57,6 @@ bool isSize(const std::string& n) {
          n == "Huge";
 }
 
-/** How many spaces the old parser drew for a run of whitespace in text:
- *  one for the run, and one more for each line end after its start
- *  (it absorbed spaces, tabs and returns, never a newline). Comments are
- *  dropped first, as its preprocessing dropped them, newline kept. */
-int legacySpaceCount(const std::string& run, bool skipFirst) {
-  std::string ws;
-  bool comment = false;
-  for (const char c : run) {
-    if (comment) {
-      if (c == '\n') {
-        comment = false;
-        ws += c;
-      }
-      continue;
-    }
-    if (c == '%') {
-      comment = true;
-      continue;
-    }
-    if (c == ' ' || c == '\t' || c == '\r' || c == '\n') ws += c;
-  }
-  // \bf and friends skipped one whitespace character before their body.
-  if (skipFirst && !ws.empty()) ws.erase(0, 1);
-  if (ws.empty()) return 0;
-  int n = 1;
-  for (std::size_t i = 1; i < ws.size(); i++) {
-    if (ws[i] == '\n') n++;
-  }
-  return n;
-}
-
 std::size_t codepoints(const std::string& s) {
   std::size_t n = 0;
   for (std::size_t i = 0; i < s.size();) {
@@ -101,8 +70,7 @@ std::size_t codepoints(const std::string& s) {
 
 class Lowerer {
 public:
-  Lowerer(const Ast& ast, Diagnostics& diags, const LowerOptions& opts)
-      : _ast(ast), _diags(diags), _opts(opts) {}
+  Lowerer(const Ast& ast, Diagnostics& diags) : _ast(ast), _diags(diags) {}
 
   void run(Formula& f) {
     if (_ast.root != kNoNode) lowerList(_ast.root, f, 0);
@@ -111,7 +79,6 @@ public:
 private:
   const Ast& _ast;
   Diagnostics& _diags;
-  LowerOptions _opts;
 
   const Node& node(NodeId id) const { return _ast.node(id); }
   NodeId child(NodeId id, std::uint32_t i) const { return _ast.child(id, i); }
@@ -148,7 +115,7 @@ private:
   // --- lists -------------------------------------------------------------
 
   /** Replay the items of `list`, from `from` on, into `f`. */
-  void lowerList(NodeId list, Formula& f, std::uint32_t from, bool skipFirstSpace = false) {
+  void lowerList(NodeId list, Formula& f, std::uint32_t from) {
     const std::uint32_t n = count(list);
     for (std::uint32_t i = from; i < n; i++) {
       const NodeId id = child(list, i);
@@ -168,18 +135,14 @@ private:
         f._root = arr.getAsVRow();
         return;
       }
-      if (i == from && skipFirstSpace && x.kind == NodeKind::space && x.aux == 2) {
-        spaces(x, f, true);
-        continue;
-      }
       lowerItem(id, f);
     }
   }
 
   /** A list built in a formula of its own; its root. */
-  sptr<Atom> build(NodeId list, bool skipFirstSpace = false) {
+  sptr<Atom> build(NodeId list) {
     Formula g;
-    lowerList(list, g, 0, skipFirstSpace);
+    lowerList(list, g, 0);
     return g._root;
   }
 
@@ -190,7 +153,7 @@ private:
         f.add(charAtom(x));
         return;
       case NodeKind::space:
-        spaces(x, f, false);
+        spaces(x, f);
         return;
       case NodeKind::group: {
         auto atom = groupAtom(build(child(id, 0)), f);
@@ -248,18 +211,18 @@ private:
     return singleChar(x.cp, math);
   }
 
-  void spaces(const Node& x, Formula& f, bool skipFirst) {
+  /** A space in text is one space, however much whitespace it was, as in
+   *  TeX (the lexer has already dropped what TeX drops: the spaces after a
+   *  control word). The old parser drew one more for each line end in the
+   *  run, and kept those after a control word. */
+  void spaces(const Node& x, Formula& f) {
     if (x.aux == 1) {  // ~
       f.add(sptrOf<SpaceAtom>());
       return;
     }
     if (x.mode == Mode::math) return;
-    if (x.aux == 2 && !_opts.keepDroppedSpaces) return;
-    const int n = legacySpaceCount(x.raw, skipFirst);
-    for (int i = 0; i < n; i++) {
-      f.add(sptrOf<SpaceAtom>(false));
-      f.add(sptrOf<BreakMarkAtom>());
-    }
+    f.add(sptrOf<SpaceAtom>(false));
+    f.add(sptrOf<BreakMarkAtom>());
   }
 
   // --- commands --------------------------------------------------------------
@@ -391,7 +354,7 @@ private:
     const Ast fragment = parseLatex(text, want, unreported);
     if (fragment.root == kNoNode) return nullptr;
     Formula g;
-    Lowerer(fragment, unreported, _opts).lowerList(fragment.root, g, 0);
+    Lowerer(fragment, unreported).lowerList(fragment.root, g, 0);
     return g._root;
   }
 
@@ -607,7 +570,7 @@ private:
     const bool math = x.mode == Mode::math;
     try {
       if (isTextFont(name)) {
-        const auto atom = build(body, true);
+        const auto atom = build(body);
         f.add(sptrOf<FontStyleAtom>(FontContext::mainFontStyleOf(name), math, atom));
       } else if (isSize(name)) {
         auto a = build(body);
@@ -711,9 +674,8 @@ private:
 
 }  // namespace
 
-void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics,
-               const LowerOptions& options) {
-  Lowerer(ast, diagnostics, options).run(formula);
+void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics) {
+  Lowerer(ast, diagnostics).run(formula);
 }
 
 }  // namespace microtex::front

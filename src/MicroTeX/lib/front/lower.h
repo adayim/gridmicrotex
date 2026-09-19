@@ -7,12 +7,6 @@
 
 namespace microtex::front {
 
-struct LowerOptions {
-  /** Draw the spaces TeX drops after a command in text, as labels always
-   *  have (`\text{\LaTeX is}`). Document mode follows TeX and does not. */
-  bool keepDroppedSpaces = true;
-};
-
 /**
  * Builds the engine's atoms from a syntax tree, into `formula`.
  *
@@ -28,8 +22,7 @@ struct LowerOptions {
  * An error a handler raises is recorded as a diagnostic at the command, and
  * the command is drawn as its name in red, as an unknown one is.
  */
-void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics,
-               const LowerOptions& options);
+void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics);
 
 }  // namespace microtex::front
 

@@ -79,11 +79,7 @@ void buildModern(const std::string& latex, Mode mode, Formula& formula) {
   const Ast ast = parseLatex(latex, mode, diags);
   // A capacity ran out: what was read is not what the input means.
   if (const Diagnostic* e = diags.firstError()) throw ex_parse(e->message);
-  LowerOptions lo;
-  // Labels keep the spaces TeX drops after a command in text; document
-  // mode will not (plan Stage 7).
-  lo.keepDroppedSpaces = true;
-  lowerInto(ast, formula, diags, lo);
+  lowerInto(ast, formula, diags);
   lastStore() = std::move(diags);
 }
 
