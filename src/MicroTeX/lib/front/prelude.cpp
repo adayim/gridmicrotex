@@ -6,6 +6,7 @@ namespace microtex::front {
 // from NewCommandMacro::_init_() in lib/macro/macro_def.cpp. The old parser
 // expands those itself; the new front end expands these. Environments built
 // in C++ (matrix, array, align, ...) are not here: the parser reads them.
+// `\|` is LaTeX's \Vert (‖); the engine's symbol table has it as a single bar.
 std::string_view preludeSource() {
   static constexpr std::string_view source = R"TEX(
 \newenvironment{tabular}[1]{\begin{array}{#1}}{\end{array}}
@@ -35,6 +36,7 @@ std::string_view preludeSource() {
 \newcommand{\spdot}{^{\displaystyle.}}
 \newcommand{\d}[1]{\underaccent{\dot}{#1}}
 \newcommand{\b}[1]{\underaccent{\bar}{#1}}
+\newcommand{\|}{\Vert}
 \newcommand{\Bra}[1]{\left\langle{#1}\right\vert}
 \newcommand{\Ket}[1]{\left\vert{#1}\right\rangle}
 \newcommand{\textsuperscript}[1]{{}^{\text{#1}}}

@@ -73,6 +73,15 @@ test_that("\\middle takes a delimiter by name, as \\left and \\right do", {
   ))
 })
 
+test_that("\\| is \\Vert, as in LaTeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The engine's symbol table had it as a single bar.
+  expect_same_layout(c(
+    "\\|x\\|"                  = "\\Vert x\\Vert",
+    "\\left\\| x \\right\\|"   = "\\left\\Vert x \\right\\Vert"
+  ))
+})
+
 test_that("a prime is the superscript \\prime, as in TeX", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_same_layout(c(

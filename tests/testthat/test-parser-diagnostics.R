@@ -155,16 +155,20 @@ test_that("a runaway argument in a loop is an error, not a slow render", {
   expect_error(latex_dims(tex, input_mode = "math"), "Too many runaway arguments")
 })
 
-test_that("a delimiter that is not one is left out, with a warning", {
+test_that("a delimiter that is not one is read again as itself, with a warning", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Found only at layout, it failed the whole label: TeX puts a null
-  # delimiter in its place.
+  # Found only at layout, it failed the whole label. TeX puts a null
+  # delimiter in its place and reads the token again.
   expect_warning(latex_grob("\\left( a \\middle x b \\right)", input_mode = "math"),
-                 "\\middle: x is not a delimiter; left out", fixed = TRUE)
+                 "\\middle: x is not a delimiter; drawn after it", fixed = TRUE)
   expect_identical(layout_quietly("\\left( a \\middle x b \\right)"),
-                   layout_quietly("\\left( a \\middle. b \\right)"))
+                   layout_quietly("\\left( a \\middle. x b \\right)"))
   expect_warning(latex_grob("\\left x a \\right)", input_mode = "math"),
-                 "\\left: x is not a delimiter", fixed = TRUE)
+                 "\\left: x is not a delimiter; drawn inside the fence", fixed = TRUE)
+  expect_identical(layout_quietly("\\left x a \\right)"), layout_quietly("\\left. x a \\right)"))
+  expect_warning(latex_grob("\\left( a \\right d", input_mode = "math"),
+                 "\\right: d is not a delimiter; drawn after the fence", fixed = TRUE)
+  expect_identical(layout_quietly("\\left( a \\right d"), layout_quietly("\\left( a \\right. d"))
   # In a command the engine builds, the command is drawn as its name.
   expect_warning(g <- latex_grob("\\genfrac{x}{y}{0pt}{}{a}{b} + c", input_mode = "math"),
                  "x is not a delimiter", fixed = TRUE)

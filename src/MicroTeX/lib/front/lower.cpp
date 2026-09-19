@@ -173,9 +173,12 @@ private:
       case NodeKind::declaration:
         declaration(id, f);
         return;
-      case NodeKind::leftRight:
-        f.add(leftRight(id));
+      case NodeKind::leftRight: {
+        sptr<Atom> after;
+        f.add(leftRight(id, after));
+        f.add(after);
         return;
+      }
       case NodeKind::environment: {
         auto atom = groupAtom(environment(id), f);
         if (atom != nullptr) atom->_type = AtomType::ordinary;
@@ -290,7 +293,11 @@ private:
       return sptrOf<SpaceAtom>(unit, value, 0.f, 0.f);
     }
     if (name == "char") return charCode(rawOf(child(id, 0)), x.mode == Mode::math);
-    if (name == "middle") return middleAtom(child(id, 0));
+    if (name == "middle") {
+      Formula g;
+      middle(child(id, 0), g);
+      return g._root;
+    }
     // Rules and \intertext outside an alignment (the parser warned), line
     // breaks (read by the list), and catcode switches (read by the lexer).
     if (spec->special || name == "makeatletter" || name == "makeatother") return nullptr;
@@ -624,52 +631,76 @@ private:
     return atom;
   }
 
-  /** The symbol name a \left, \middle or \right delimiter stands for; one
-   *  that is not a delimiter warns and is left out, as TeX puts a null
-   *  delimiter in its place. `\middle\vert` used to hand the engine the
-   *  text "\vert" and fail at layout. */
-  std::string delimiterName(const sptr<Atom>& atom, NodeId arg, const std::string& who) {
+  /** Whether `atom` names a delimiter ("" and "." are none, and are fine). */
+  static bool isDelimiter(const sptr<Atom>& atom) {
     const auto sym = std::dynamic_pointer_cast<CharSymbol>(atom);
-    const std::string name = sym != nullptr ? sym->name() : std::string();
-    if (name.empty() || name == "." || delimiterSymbol(name) != nullptr) return name;
-    _diags.warn(node(arg).span, who + ": " + rawOf(arg) + " is not a delimiter; left out");
+    if (sym == nullptr) return false;
+    const std::string name = sym->name();
+    return name.empty() || name == "." || delimiterSymbol(name) != nullptr;
+  }
+
+  /** The symbol name of a \left, \middle or \right delimiter. One that is
+   *  not a delimiter is TeX's "Missing delimiter": a null delimiter goes in
+   *  its place, with a warning, and the token is read again as itself --
+   *  `put` says where. `\middle\vert` used to hand the engine the text
+   *  "\vert" and fail at layout. */
+  std::string delimiterName(const sptr<Atom>& atom, NodeId arg, const std::string& who,
+                            const char* put) {
+    if (isDelimiter(atom)) return std::dynamic_pointer_cast<CharSymbol>(atom)->name();
+    if (!rawOf(arg).empty()) {
+      _diags.warn(node(arg).span, who + ": " + rawOf(arg) + " is not a delimiter; drawn " + put);
+    }
     return ".";
   }
 
-  sptr<Atom> middleAtom(NodeId arg) {
+  /** A \middle, and what it put back when its delimiter is not one. */
+  void middle(NodeId arg, Formula& f) {
     auto atom = delimiter(rawOf(arg));
-    if (std::dynamic_pointer_cast<CharSymbol>(atom) == nullptr) {
-      if (!rawOf(arg).empty()) {
-        _diags.warn(node(arg).span, "\\middle: " + rawOf(arg) + " is not a delimiter; left out");
-      }
-      return sptrOf<MiddleAtom>(".");
-    }
-    return sptrOf<MiddleAtom>(delimiterName(atom, arg, "\\middle"));
+    f.add(sptrOf<MiddleAtom>(delimiterName(atom, arg, "\\middle", "after it")));
+    if (!isDelimiter(atom)) f.add(atom);
   }
 
-  sptr<Atom> leftRight(NodeId id) {
+  /** \left...\right. A \left whose delimiter is not one puts it back inside
+   *  the fence; a \right's goes after the fence, into `after`. */
+  sptr<Atom> leftRight(NodeId id, sptr<Atom>& after) {
     const std::uint32_t n = count(id);
     auto left = delimiter(rawOf(child(id, 0)));
     auto right = delimiter(rawOf(child(id, n - 1)));
+    auto sl = std::dynamic_pointer_cast<CharSymbol>(left);
+    auto sr = std::dynamic_pointer_cast<CharSymbol>(right);
+    const bool fenced = sl != nullptr && sr != nullptr;
     Formula tf;
+    std::string leftName, rightName;
+    if (fenced) {
+      leftName = delimiterName(left, child(id, 0), "\\left", "inside the fence");
+      rightName = delimiterName(right, child(id, n - 1), "\\right", "after the fence");
+      if (!isDelimiter(left)) tf.add(left);
+      if (!isDelimiter(right)) after = right;
+    }
     for (std::uint32_t i = 1; i + 1 < n; i++) {
       const NodeId c = child(id, i);
       if (node(c).kind == NodeKind::list) {
         lowerList(c, tf, 0);
       } else {
-        tf.add(middleAtom(c));
+        middle(c, tf);
       }
     }
-    auto sl = std::dynamic_pointer_cast<CharSymbol>(left);
-    auto sr = std::dynamic_pointer_cast<CharSymbol>(right);
-    if (sl != nullptr && sr != nullptr) {
-      return sptrOf<FencedAtom>(tf._root, delimiterName(left, child(id, 0), "\\left"),
-                                delimiterName(right, child(id, n - 1), "\\right"), tf.middle());
-    }
+    if (fenced) return sptrOf<FencedAtom>(tf._root, leftName, rightName, tf.middle());
     auto ra = sptrOf<RowAtom>();
     ra->add(left);
     ra->add(tf._root);
     ra->add(right);
+    return ra;
+  }
+
+  /** \left...\right as one atom, with what a \right put back after it. */
+  sptr<Atom> leftRight(NodeId id) {
+    sptr<Atom> after;
+    auto fence = leftRight(id, after);
+    if (after == nullptr) return fence;
+    auto ra = sptrOf<RowAtom>();
+    ra->add(fence);
+    ra->add(after);
     return ra;
   }
 
