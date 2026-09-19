@@ -125,15 +125,21 @@ Rcpp::CharacterVector expand_latex_cpp(std::string tex) {
   return res;
 }
 
-// Switch the front end: "legacy" (MicroTeX's parser alone) or "expander".
+// Switch the front end: "legacy" (MicroTeX's parser alone), "expander" (the
+// new expander before the old parser) or "modern" (the new front end).
 // Returns the previous one, so a caller can put it back.
 // [[Rcpp::export]]
 std::string set_frontend_cpp(std::string which) {
-  const std::string previous = frontEnd() == FrontEnd::legacy ? "legacy" : "expander";
+  const FrontEnd now = frontEnd();
+  const std::string previous = now == FrontEnd::legacy     ? "legacy"
+                               : now == FrontEnd::expander ? "expander"
+                                                           : "modern";
   if (which == "legacy") {
     setFrontEnd(FrontEnd::legacy);
   } else if (which == "expander") {
     setFrontEnd(FrontEnd::expander);
+  } else if (which == "modern") {
+    setFrontEnd(FrontEnd::modern);
   } else {
     Rcpp::stop("Unknown front end: " + which);
   }

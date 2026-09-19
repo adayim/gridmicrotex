@@ -8,9 +8,34 @@
 #include "macro/macro.h"
 #include "core/split.h"
 #include "atom/atom_row.h"
+#include "front/front.h"
 
 using namespace microtex;
 using namespace Rcpp;
+
+// The new front end's diagnostics for the parse just done, one row each:
+// line, col, severity, message. Empty for the old parser.
+static Rcpp::DataFrame diagnostics_of_last_parse() {
+    const bool modern = front::frontEnd() == front::FrontEnd::modern;
+    const auto& items = front::lastDiagnostics().items();
+    const R_xlen_t n = modern ? static_cast<R_xlen_t>(items.size()) : 0;
+    Rcpp::IntegerVector line(n), col(n);
+    Rcpp::CharacterVector severity(n), message(n);
+    for (R_xlen_t i = 0; i < n; i++) {
+        const auto& d = items[static_cast<std::size_t>(i)];
+        line[i] = static_cast<int>(d.span.line);
+        col[i] = static_cast<int>(d.span.col);
+        severity[i] = d.severity == front::Severity::error ? "error" : "warning";
+        message[i] = Rcpp::String(d.message, CE_UTF8);
+    }
+    Rcpp::DataFrame out = Rcpp::DataFrame::create(
+        Rcpp::Named("line") = line, Rcpp::Named("col") = col,
+        Rcpp::Named("severity") = severity, Rcpp::Named("message") = message,
+        Rcpp::Named("stringsAsFactors") = false);
+    const std::size_t dropped = modern ? front::lastDiagnostics().dropped() : 0;
+    out.attr("dropped") = static_cast<double>(dropped);
+    return out;
+}
 
 // RAII guard: restores the global render-mode flag on scope exit
 struct RenderModeGuard {
@@ -458,6 +483,10 @@ Rcpp::List parse_latex_cpp(std::string tex,
 
     // Each \includegraphics the parser met unread; R refuses them.
     result.attr("unresolved_images") = Rcpp::wrap(unresolved_images());
+
+    // What the new front end found wrong with the input and recovered
+    // from; R turns it into warnings.
+    result.attr("diagnostics") = diagnostics_of_last_parse();
 
     return result;
 }

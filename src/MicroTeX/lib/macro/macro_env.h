@@ -17,68 +17,68 @@
 namespace microtex {
 
 inline macro(smallmatrixATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser parser(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser parser(tp.isPartial(), args[1], arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::smallMatrix);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::smallMatrix);
 }
 
 inline macro(matrixATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser parser(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser parser(tp.isPartial(), args[1], arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::matrix);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::matrix);
 }
 
 inline macro(arrayATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser parser(tp.isPartial(), args[2], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser parser(tp.isPartial(), args[2], arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), args[1], true);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, args[1], true);
 }
 
 inline macro(alignATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser parser(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser parser(tp.isPartial(), args[1], arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::align);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::align);
 }
 
 inline macro(flalignATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser parser(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser parser(tp.isPartial(), args[1], arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::flAlign);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::flAlign);
 }
 
 inline macro(alignatATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser par(tp.isPartial(), args[2], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser par(tp.isPartial(), args[2], arr.get(), false);
   par.parse();
   arr->checkDimensions();
   size_t n = 0;
   valueOf(args[1], n);
   if (arr->cols() != 2 * n) throw ex_parse("Bad number of equations in alignat environment!");
 
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::alignAt);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::alignAt);
 }
 
 inline macro(alignedATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser p(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser p(tp.isPartial(), args[1], arr.get(), false);
   p.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::aligned);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::aligned);
 }
 
 inline macro(alignedatATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser p(tp.isPartial(), args[2], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser p(tp.isPartial(), args[2], arr.get(), false);
   p.parse();
   arr->checkDimensions();
   size_t n = 0;
@@ -87,12 +87,12 @@ inline macro(alignedatATATenv) {
     throw ex_parse("Bad number of equations in alignedat environment!");
   }
 
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::alignedAt);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::alignedAt);
 }
 
 inline macro(multlineATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser p(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser p(tp.isPartial(), args[1], arr.get(), false);
   p.parse();
   arr->checkDimensions();
   if (arr->cols() > 1) {
@@ -100,29 +100,29 @@ inline macro(multlineATATenv) {
   }
   if (arr->cols() == 0) return nullptr;
 
-  return sptrOf<MultlineAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MultiLineType::multiline);
+  return sptrOf<MultlineAtom>(tp.isPartial(), arr, MultiLineType::multiline);
 }
 
 inline macro(gatherATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser p(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser p(tp.isPartial(), args[1], arr.get(), false);
   p.parse();
   arr->checkDimensions();
   if (arr->cols() > 1) throw ex_parse("Requires exact one column in gather environment!");
   if (arr->cols() == 0) return nullptr;
 
-  return sptrOf<MultlineAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MultiLineType::gather);
+  return sptrOf<MultlineAtom>(tp.isPartial(), arr, MultiLineType::gather);
 }
 
 inline macro(gatheredATATenv) {
-  auto* arr = new ArrayFormula();
-  Parser p(tp.isPartial(), args[1], arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser p(tp.isPartial(), args[1], arr.get(), false);
   p.parse();
   arr->checkDimensions();
   if (arr->cols() > 1) throw ex_parse("Requires exact one column in gathered environment!");
   if (arr->cols() == 0) return nullptr;
 
-  return sptrOf<MultlineAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MultiLineType::gathered);
+  return sptrOf<MultlineAtom>(tp.isPartial(), arr, MultiLineType::gathered);
 }
 
 inline macro(multicolumn) {
@@ -389,11 +389,11 @@ inline sptr<Atom> listBuild(
     if (i > 0) s += "\\\\";
     s += marker((int)i + 1) + "\\quad{}" + items[i];
   }
-  auto* arr = new ArrayFormula();
-  Parser parser(tp.isPartial(), s, arr, false);
+  const auto arr = sptrOf<ArrayFormula>();
+  Parser parser(tp.isPartial(), s, arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), "l", false);
+  return sptrOf<MatrixAtom>(tp.isPartial(), arr, "l", false);
 }
 
 inline macro(itemizeATATenv) {

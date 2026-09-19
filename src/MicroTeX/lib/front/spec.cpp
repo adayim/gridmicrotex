@@ -134,6 +134,9 @@ struct Table {
     add({"overset", "underset"}, "mm");
     add({"displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle"}, "",
         Shape::declaration);
+    for (const char* style : {"displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle"}) {
+      commands[style].body = ArgKind::math;
+    }
     add({"everymath"}, "r");
     add({"dnomstyle", "numstyle", "substyle", "supstyle"}, "m");
     add({"definecolor"}, "rrr");

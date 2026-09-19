@@ -1,6 +1,8 @@
 #include "front/expander.h"
 
+#include <algorithm>
 #include <deque>
+#include <iterator>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -57,6 +59,23 @@ std::string trim(std::string s) {
  *  command handlers wrapped every error this way). */
 [[noreturn]] void fail(const std::string& command, const std::string& message) {
   throw ex_parse("Problem with command: " + command + "\n caused by: " + message);
+}
+
+/** Runaway expansion: nothing after it can be trusted. */
+class ExpansionLimit : public ex_parse {
+public:
+  explicit ExpansionLimit(const std::string& msg) : ex_parse(msg) {}
+};
+
+/** An error's text for a diagnostic: without the dispatcher's wrapper. */
+std::string cleanMessage(std::string msg) {
+  const std::string mark = "caused by: ";
+  const auto p = msg.rfind(mark);
+  if (p != std::string::npos) msg = msg.substr(p + mark.size());
+  for (char& c : msg) {
+    if (c == '\n') c = ' ';
+  }
+  return msg;
 }
 
 std::vector<BodyPiece> literal(std::string text) {
@@ -131,6 +150,13 @@ struct Expander::Impl {
   std::size_t expansions = 0;
   std::size_t expandedBytes = 0;
   int atLetter = 0;
+  // Set after runaway expansion in recover mode: the input ends there.
+  bool halted = false;
+  // Set when a delimited macro's use does not fit its definition: the
+  // call is dropped (see readUntil()).
+  bool abandoned = false;
+  // Tokens read by delimited arguments that were then abandoned.
+  std::size_t runawayTokens = 0;
   std::string out;
   bool lastControlWord = false;
 
@@ -153,6 +179,11 @@ struct Expander::Impl {
   /** The next token, unexpanded. The end of an expansion is not a token:
    *  reading carries on in the source around it. */
   ExpToken raw() {
+    if (halted) {
+      ExpToken e;
+      e.tok.kind = TokKind::end;
+      return e;
+    }
     while (true) {
       Frame& f = frames.back();
       if (!f.pushback.empty()) {
@@ -220,12 +251,12 @@ struct Expander::Impl {
   std::string readArg(const std::string& who, bool greedy = true) {
     ExpToken t = nextNonSpace();
     if (t.tok.kind == TokKind::end || t.tok.kind == TokKind::par) {
-      diags.error(t.tok.span, "missing argument for " + who);
+      diags.warn(t.tok.span, "missing argument for " + who);
       unread(std::move(t));
       return {};
     }
     if (t.tok.isChar(Cat::endGroup)) {
-      diags.error(t.tok.span, "argument of " + who + " has an extra }");
+      diags.warn(t.tok.span, "argument of " + who + " has an extra }");
       unread(std::move(t));
       return {};
     }
@@ -437,38 +468,51 @@ struct Expander::Impl {
     for (const Token& d : def.delimiters[0]) {
       ExpToken t = raw();
       if (!sameToken(t.tok, d)) {
-        diags.error(t.tok.span, "use of " + who + " does not match its definition");
+        diags.warn(t.tok.span, "use of " + who + " does not match its definition; it is left out");
         unread(std::move(t));
+        abandoned = true;
         return args;
       }
     }
     for (int i = 1; i <= def.nparams; i++) {
       const auto& delim = def.delimiters[static_cast<std::size_t>(i)];
       args[static_cast<std::size_t>(i) - 1] = delim.empty() ? readArg(who) : readUntil(delim, who);
+      if (abandoned) break;
     }
     return args;
   }
 
   /** A delimited argument: everything up to the delimiter at brace depth
-   *  0. One pair of braces around the whole argument is removed. */
+   *  0. One pair of braces around the whole argument is removed. When the
+   *  delimiter never comes -- the input or the group ends first -- the
+   *  call is abandoned, as after TeX's runaway-argument error, and what was
+   *  read is read again as ordinary input. Taking it all as the argument
+   *  instead let a macro that calls itself copy the rest of the input into
+   *  every expansion. */
   std::string readUntil(const std::vector<Token>& delim, const std::string& who) {
     std::vector<ExpToken> got;
     int depth = 0;
     while (true) {
       ExpToken t = raw();
-      if (t.tok.kind == TokKind::end) {
-        diags.error(t.tok.span, "runaway argument: " + who + " is missing its delimiter");
+      const bool end = t.tok.kind == TokKind::end;
+      if (end || (t.tok.isChar(Cat::endGroup) && depth == 0)) {
+        diags.warn(t.tok.span, end ? "runaway argument: " + who + " is missing its delimiter; it is left out"
+                                   : "argument of " + who + " has an extra }; it is left out");
+        // Each abandoned call re-reads what it put back, so one in a loop
+        // reads the rest of the input once per turn: a capacity, like the
+        // expansion caps.
+        runawayTokens += got.size() + 1;
+        if (runawayTokens > opts.maxExpandedBytes) {
+          throw ExpansionLimit("Too many runaway arguments: is a macro missing its delimiter?");
+        }
         unread(std::move(t));
-        break;
+        for (auto it = got.rbegin(); it != got.rend(); ++it) unread(std::move(*it));
+        abandoned = true;
+        return {};
       }
       if (t.tok.isChar(Cat::beginGroup)) {
         depth++;
       } else if (t.tok.isChar(Cat::endGroup)) {
-        if (depth == 0) {
-          diags.error(t.tok.span, "argument of " + who + " has an extra }");
-          unread(std::move(t));
-          break;
-        }
         depth--;
       }
       got.push_back(std::move(t));
@@ -529,11 +573,11 @@ struct Expander::Impl {
 
   void pushExpansion(std::string text, const SourceSpan& at) {
     if (++expansions > opts.maxExpansions) {
-      throw ex_parse("Too many macro expansions: is a macro defined in terms of itself?");
+      throw ExpansionLimit("Too many macro expansions: is a macro defined in terms of itself?");
     }
     expandedBytes += text.size();
     if (expandedBytes > opts.maxExpandedBytes) {
-      throw ex_parse("Macro expansion is too large: is a macro defined in terms of itself?");
+      throw ExpansionLimit("Macro expansion is too large: is a macro defined in terms of itself?");
     }
     buffers.push_back(std::move(text));
     LexOptions lo = opts.lex;
@@ -594,6 +638,10 @@ struct Expander::Impl {
       return true;
     }
     std::vector<std::string> args = readArgs(*def, who);
+    if (abandoned) {
+      abandoned = false;
+      return true;
+    }
     pushExpansion(substitute(def->body, args), e.tok.span);
     return true;
   }
@@ -649,18 +697,84 @@ struct Expander::Impl {
     // braced one -- an ordinary atom in math -- which spacing depends on.
     if (begin) {
       std::vector<std::string> args = readArgs(*def, "\\begin{" + name + "}");
+      if (opts.recover) openEnvs.push_back({name, e.tok.span});
       pushExpansion("{" + substitute(def->body, args), e.tok.span);
-    } else {
-      pushExpansion(substitute(def->endBody, {}) + "}", e.tok.span);
+      return true;
     }
+    if (opts.recover) {
+      auto it = std::find_if(openEnvs.rbegin(), openEnvs.rend(),
+                             [&](const OpenEnv& o) { return o.name == name; });
+      if (it == openEnvs.rend()) {
+        diags.warn(e.tok.span, "\\end{" + name + "} without \\begin ignored");
+        return true;
+      }
+      openEnvs.erase(std::next(it).base());
+    }
+    endEnvironment(name, e.tok.span);
+    return true;
+  }
+
+  void endEnvironment(const std::string& name, const SourceSpan& at) {
+    pushExpansion(substitute(lookupEnv(name)->endBody, {}) + "}", at);
+  }
+
+  /** In recover mode, the environments of ours begun and not yet ended:
+   *  the input's end closes them. */
+  struct OpenEnv {
+    std::string name;
+    SourceSpan at;
+  };
+  std::vector<OpenEnv> openEnvs;
+
+  /** At the end of the input, the end of the innermost environment left
+   *  open, if any: true when there was one. */
+  bool closeOpenEnvironment() {
+    if (openEnvs.empty() || halted) return false;
+    const OpenEnv o = openEnvs.back();
+    openEnvs.pop_back();
+    diags.warn(o.at, "missing \\end{" + o.name + "} inserted");
+    endEnvironment(o.name, o.at);
     return true;
   }
 
   // --- definitions ------------------------------------------------------
 
+  /** Skip to the next group and past it. */
+  void skipGroup() {
+    while (true) {
+      ExpToken t = raw();
+      if (t.tok.kind == TokKind::end) {
+        unread(std::move(t));
+        return;
+      }
+      if (t.tok.isChar(Cat::beginGroup)) {
+        readGroupContent(t);
+        return;
+      }
+    }
+  }
+
+  /** A definition that cannot be made is dropped whole in recover mode:
+   *  the rest of it -- optional arguments, then `groups` groups -- is
+   *  skipped, or it would be drawn. Then the error is raised. */
+  [[noreturn]] void failDefinition(const std::string& command, const std::string& message,
+                                   int groups, bool optionals = false) {
+    if (opts.recover) {
+      while (optionals && readOptional()) {
+      }
+      for (int i = 0; i < groups; i++) skipGroup();
+    }
+    fail(command, message);
+  }
+
   void defineCommand(const ExpToken& e, const std::string& kind) {
     takeStar();
-    const std::string name = readCsName(kind);
+    std::string name;
+    try {
+      name = readCsName(kind);
+    } catch (const ex_parse& x) {
+      failDefinition(kind, cleanMessage(x.what()), 1, true);
+    }
     MacroDef def;
     def.nparams = readParamCount(readOptional(), kind);
     if (const auto d = readOptional()) {
@@ -675,7 +789,9 @@ struct Expander::Impl {
       fail(kind, "Command " + name + " already exists! Use renewcommand instead!");
     }
     if (kind == "renewcommand" && !exists) {
-      fail(kind, "Command " + name + " is no defined! Use newcommand instead!");
+      // LaTeX complains and defines it anyway; so does recover mode.
+      if (!opts.recover) fail(kind, "Command " + name + " is no defined! Use newcommand instead!");
+      diags.warn(e.tok.span, "\\renewcommand: \\" + name + " was not defined; defined now");
     }
     if (!(kind == "providecommand" && exists)) macros[name] = std::move(def);
   }
@@ -694,7 +810,7 @@ struct Expander::Impl {
 
   void defineDef(const ExpToken& e) {
     ExpToken n = raw();
-    if (!n.tok.isControl()) fail("def", "\\def: expected '\\' before the name");
+    if (!n.tok.isControl()) failDefinition("def", "\\def: expected '\\' before the name", 1);
     const std::string name = n.tok.text;
     MacroDef def;
     def.delimiters.emplace_back();
@@ -712,7 +828,7 @@ struct Expander::Impl {
         ExpToken d = raw();
         if (d.tok.kind == TokKind::character && d.tok.cp >= '1' && d.tok.cp <= '9') {
           const int k = static_cast<int>(d.tok.cp - '0');
-          if (k != def.nparams + 1) fail("def", "\\def: parameters must be sequential starting at #1");
+          if (k != def.nparams + 1) failDefinition("def", "\\def: parameters must be sequential starting at #1", 1);
           def.nparams = k;
           def.delimiters.emplace_back();
           continue;
@@ -721,7 +837,7 @@ struct Expander::Impl {
           body = readGroupContent(d);
           break;
         }
-        fail("def", "\\def: '#' must be followed by a digit 1..9");
+        failDefinition("def", "\\def: '#' must be followed by a digit 1..9", 1);
       }
       def.delimiters.back().push_back(t.tok);
     }
@@ -756,7 +872,7 @@ struct Expander::Impl {
   void defineEnvironment(const ExpToken& e, const std::string& kind) {
     takeStar();
     const auto name = readGroupText();
-    if (!name || name->empty()) fail(kind, "\\" + kind + ": missing the environment name");
+    if (!name || name->empty()) failDefinition(kind, "\\" + kind + ": missing the environment name", 2, true);
     MacroDef def;
     def.nparams = readParamCount(readOptional(), kind);
     if (const auto d = readOptional()) {
@@ -819,6 +935,25 @@ struct Expander::Impl {
     return expandMacro(e);
   }
 
+  /** process(), with errors reported rather than thrown in recover mode: a
+   *  bad definition is skipped; runaway expansion ends the input there. */
+  bool consume(const ExpToken& e) {
+    if (!opts.recover) return process(e);
+    try {
+      return process(e);
+    } catch (const ExpansionLimit& x) {
+      diags.error(e.tok.span, cleanMessage(x.what()));
+      halted = true;
+      return true;
+    } catch (const ex_parse& x) {
+      std::string msg = cleanMessage(x.what());
+      const std::string who = "\\" + e.tok.text + ":";
+      if (msg.compare(0, who.size(), who) != 0) msg = who + " " + msg;
+      diags.warn(e.tok.span, msg);
+      return true;
+    }
+  }
+
   /** Leading whitespace of consumed tokens, owed to the next token out. */
   std::string carry;
 
@@ -826,9 +961,15 @@ struct Expander::Impl {
   ExpToken nextExpanded() {
     while (true) {
       ExpToken e = raw();
-      if (e.tok.kind != TokKind::end && e.tok.isControl() && !e.tok.noexpand && process(e)) {
+      if (e.tok.kind != TokKind::end && e.tok.isControl() && !e.tok.noexpand && consume(e)) {
         carry += e.lead;
         continue;
+      }
+      if (e.tok.kind == TokKind::end && frames.size() == 1 && !openEnvs.empty()) {
+        // The end is read again after the environment's closing code.
+        unread(std::move(e));
+        if (closeOpenEnvironment()) continue;
+        e = raw();
       }
       if (!carry.empty()) {
         e.lead = carry + e.lead;

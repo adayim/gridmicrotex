@@ -52,15 +52,23 @@ struct ExpanderOptions {
   /** The same for environments. */
   std::function<bool(const std::string&)> isBuiltinEnvironment;
   LexOptions lex;
-  /** TeX stops runaway recursion with its capacity limits; these are ours. */
+  /** TeX stops runaway recursion with its capacity limits; these are ours.
+   *  The bytes are all the expansions of one parse together, and reading
+   *  and parsing them is the cost, about 0.8 s per MB -- and all of it
+   *  wasted, since a runaway is an error. Real input stays in the hundreds
+   *  of KB (the count cap times a few dozen bytes each). */
   std::size_t maxExpansions = 10000;
-  std::size_t maxExpandedBytes = std::size_t{16} << 20;
+  std::size_t maxExpandedBytes = std::size_t{1} << 20;
   /** Expand the prelude: the commands and environments the engine defines
    *  in LaTeX (\dfrac, pmatrix, ...; front/prelude.cpp). The old parser
    *  expands those itself, so only the new one wants this. */
   bool prelude = false;
   /** See the define_macro() macros (setPersistentMacro). */
   bool persistent = true;
+  /** Report a bad definition or runaway recursion as a diagnostic and go
+   *  on (the new front end), rather than throwing ex_parse as the old
+   *  parser did (its text path). */
+  bool recover = false;
 };
 
 /** A token after expansion, with the source text it came from: the

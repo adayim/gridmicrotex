@@ -90,11 +90,14 @@ test_that("latex_grob handles empty input as a zero-size grob", {
   expect_equal(nrow(g$layout_df), 0L)
 })
 
-test_that("an unknown command is set as its own name, not dropped", {
+test_that("an unknown command is set as its own name, not dropped, and warns", {
   # MicroTeX is lenient rather than strict: \notavalidcommand comes out as
   # the letters of its name followed by its argument. Rendering nothing
   # would hide a typo completely, so assert the name is actually drawn.
-  g <- latex_grob("\\notavalidcommand{x}", input_mode = "math")
+  expect_warning(
+    g <- latex_grob("\\notavalidcommand{x}", input_mode = "math"),
+    "1:1: unknown command \\notavalidcommand", fixed = TRUE
+  )
   expect_gte(nrow(g$layout_df), nchar("notavalidcommand"))
   expect_gt(g$bbox_w, 0)
 })
@@ -205,17 +208,22 @@ test_that("an error inside a command's argument is reported, not swallowed", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # MicroTeX parsed every argument leniently and kept what came before an
   # error, silently: \text{a <bad array> b} drew "a", and a fraction or a
-  # root lost its whole argument. The same input at the top level errors.
+  # root lost its whole argument. It is a warning now, in an argument as at
+  # the top level, and the command it broke is drawn as its name, in red.
   for (tex in c("\\text{a \\begin{array}{q}x\\end{array} b}",
                 "\\frac{1}{\\begin{array}{q}x\\end{array}} + y",
                 "\\sqrt{\\begin{array}{q}x\\end{array}}",
                 "a \\begin{array}{q}x\\end{array} b")) {
-    expect_error(latex_grob(tex, input_mode = "math"), "Invalid alignment",
-                 label = tex)
+    expect_warning(g <- latex_grob(tex, input_mode = "math"), "Invalid alignment",
+                   label = tex)
+    expect_true("#FF0000" %in% g$layout_df$color, label = tex)
   }
   # The deliberate leniency stays: an unknown command is drawn in red, in
   # an argument as at the top level, and the text around it survives.
-  d <- latex_grob("\\text{a \\nosuchcmd b}", input_mode = "math")$layout_df
+  expect_warning(
+    d <- latex_grob("\\text{a \\nosuchcmd b}", input_mode = "math")$layout_df,
+    "unknown command \\nosuchcmd", fixed = TRUE
+  )
   expect_true(all(c("a ", " b") %in% d$text))
   expect_true("#FF0000" %in% d$color)
 })
@@ -233,8 +241,8 @@ test_that("redefining a built-in lasts one label and never breaks the next", {
   # As in LaTeX, \newcommand refuses a name that exists. It used to
   # replace the built-in -- and the per-label cleanup then deleted it, so
   # \frac stopped working in every later label of the session.
-  expect_error(latex_grob("\\newcommand{\\frac}{Q}\\frac z", input_mode = "math"),
-               "already exists")
+  expect_warning(rule <- has_rule("\\newcommand{\\frac}{Q}\\frac{1}{2}"), "already exists")
+  expect_true(rule)
   latex_cache_clear()
   expect_true(has_rule("\\frac{1}{2}"))
 
@@ -250,15 +258,21 @@ test_that("redefining a built-in lasts one label and never breaks the next", {
   latex_cache_clear()
   expect_false("G" %in% text_of("90\\degree"))
 
-  # And \renewcommand of something that does not exist is still an error.
-  expect_error(latex_grob("\\renewcommand{\\nosuch}{Q}\\nosuch", input_mode = "math"),
-               "no defined")
+  # \renewcommand of something that does not exist warns and, as LaTeX
+  # does, defines it anyway.
+  expect_warning(got <- text_of("\\renewcommand{\\nosuch}{\\text{Q}}\\nosuch"),
+                 "\\nosuch was not defined; defined now", fixed = TRUE)
+  expect_true("Q" %in% got)
 })
 
-test_that("\\def with invalid control sequence name throws a parse error", {
-  expect_error(
-    parse_latex_cpp("\\def{notacontrolseq}{body}", text_size = 20)
+test_that("a \\def with an invalid name warns and is dropped whole", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_warning(
+    g <- latex_grob("\\def{notacontrolseq}{body}x", input_mode = "math"),
+    "expected '\\' before the name", fixed = TRUE
   )
+  # Nothing of the definition is drawn, only what follows it.
+  expect_equal(nrow(g$layout_df), 1L)
 })
 
 test_that("\\def with sequential #1..#N parameters expands like \\newcommand[N]", {
@@ -274,18 +288,19 @@ test_that("\\def with sequential #1..#N parameters expands like \\newcommand[N]"
 })
 
 test_that("\\def rejects non-sequential or malformed parameter patterns", {
-  # Out-of-order parameters: #2 before #1
-  expect_error(
-    parse_latex_cpp("\\def\\bad#2#1{#1#2}", text_size = 20)
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Each warns and is dropped whole, so only the trailing `y` is drawn --
+  # not the parameter text and body as stray characters.
+  rejected <- c(
+    "\\def\\bad#2#1{#1#2}y" = "parameters must be sequential",   # #2 before #1
+    "\\def\\skip#1#3{#1#3}y" = "parameters must be sequential",  # #1 then #3
+    "\\def\\noarg#x{x}y" = "'#' must be followed by a digit"     # no digit
   )
-  # Skipping a parameter: #1 then #3
-  expect_error(
-    parse_latex_cpp("\\def\\skip#1#3{#1#3}", text_size = 20)
-  )
-  # '#' not followed by a digit
-  expect_error(
-    parse_latex_cpp("\\def\\noarg#x{x}", text_size = 20)
-  )
+  for (tex in names(rejected)) {
+    expect_warning(g <- latex_grob(tex, input_mode = "math"), rejected[[tex]],
+                   fixed = TRUE, label = tex)
+    expect_equal(nrow(g$layout_df), 1L, label = tex)
+  }
 })
 
 test_that("the typeface fallback warns once per device, not once per grob", {

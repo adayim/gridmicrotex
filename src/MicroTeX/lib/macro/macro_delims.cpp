@@ -45,12 +45,12 @@ macro(left) {
     return sptrOf<FencedAtom>(tf._root, sl->name(), sr->name(), tf.middle());
   }
 
-  auto* ra = new RowAtom();
+  auto ra = sptrOf<RowAtom>();
   ra->add(left);
   ra->add(Formula(tp, grep, false)._root);
   ra->add(right);
 
-  return sptr<Atom>(ra);
+  return ra;
 }
 
 }  // namespace microtex

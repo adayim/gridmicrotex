@@ -32,6 +32,8 @@ macro(accents) {
 }
 
 macro(undertilde) {
+  // Parsed first: it can throw, and `stack` is a bare pointer until the end.
+  auto a = Formula(tp, args[1], false)._root;
   auto stack = new StackAtom({StackElement::base, StackElement::under});
   auto tilde = sptrOf<ExtensibleAtom>(
     "tilde",
@@ -39,7 +41,6 @@ macro(undertilde) {
     [stack](const Env& env) { return stack->getMaxWidth(); },
     false
   );
-  auto a = Formula(tp, args[1], false)._root;
   const StackArgs under{tilde, UnitType::mu, 0.5f, true};
   stack->setAdjustBottom(true);
   stack->setBaseAtom(a);

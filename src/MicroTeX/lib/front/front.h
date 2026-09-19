@@ -7,6 +7,10 @@
 #include "front/ast.h"
 #include "front/diagnostics.h"
 
+namespace microtex {
+class Formula;
+}
+
 namespace microtex::front {
 
 /**
@@ -17,8 +21,9 @@ namespace microtex::front {
  *   legacy    MicroTeX's own parser, macros included.
  *   expander  The new token-level macro expander, handing its result to
  *             the old parser as text.
+ *   modern    The new front end throughout: expander, parser, lowering.
  */
-enum class FrontEnd : std::uint8_t { legacy, expander };
+enum class FrontEnd : std::uint8_t { legacy, expander, modern };
 
 FrontEnd frontEnd();
 
@@ -37,6 +42,15 @@ std::string prepareForLegacyParser(const std::string& latex);
  * redefinition, runaway recursion) are thrown as ex_parse.
  */
 Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics);
+
+/**
+ * The atoms of `latex`, read by the new front end in `mode`, into
+ * `formula`. The problems found replace lastDiagnostics().
+ */
+void buildModern(const std::string& latex, Mode mode, Formula& formula);
+
+/** The diagnostics of the last buildModern(), for the host to report. */
+const Diagnostics& lastDiagnostics();
 
 }  // namespace microtex::front
 

@@ -3,17 +3,19 @@
 #include "core/formula.h"
 #include "front/diagnostics.h"
 #include "front/expander.h"
+#include "front/lower.h"
 #include "front/parser.h"
 #include "front/spec.h"
 #include "macro/macro.h"
 #include "unimath/uni_symbol.h"
+#include "utils/exceptions.h"
 
 namespace microtex::front {
 
 namespace {
 
 FrontEnd& current() {
-  static FrontEnd which = FrontEnd::expander;
+  static FrontEnd which = FrontEnd::modern;
   return which;
 }
 
@@ -45,6 +47,7 @@ std::string prepareForLegacyParser(const std::string& latex) {
 Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics) {
   ExpanderOptions eo;
   eo.prelude = true;
+  eo.recover = true;
   eo.lex.blankLineIsPar = false;
   eo.isBuiltinCommand = [](const std::string& name) { return findCommand(name) != nullptr; };
   eo.isBuiltinEnvironment = [](const std::string& name) {
@@ -59,6 +62,33 @@ Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics) {
   Ast ast;
   Parser(expander, ast, diagnostics, std::move(po)).parse();
   return ast;
+}
+
+namespace {
+
+Diagnostics& lastStore() {
+  static Diagnostics last;
+  return last;
+}
+
+}  // namespace
+
+void buildModern(const std::string& latex, Mode mode, Formula& formula) {
+  lastStore() = Diagnostics();
+  Diagnostics diags;
+  const Ast ast = parseLatex(latex, mode, diags);
+  // A capacity ran out: what was read is not what the input means.
+  if (const Diagnostic* e = diags.firstError()) throw ex_parse(e->message);
+  LowerOptions lo;
+  // Labels keep the spaces TeX drops after a command in text; document
+  // mode will not (plan Stage 7).
+  lo.keepDroppedSpaces = true;
+  lowerInto(ast, formula, diags, lo);
+  lastStore() = std::move(diags);
+}
+
+const Diagnostics& lastDiagnostics() {
+  return lastStore();
 }
 
 }  // namespace microtex::front

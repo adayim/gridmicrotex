@@ -48,7 +48,7 @@ void VRowAtom::append(const sptr<Atom>& el) {
 }
 
 sptr<Box> VRowAtom::createBox(Env& env) {
-  auto vb = new VBox();
+  auto vb = sptrOf<VBox>();
   auto lineSpace = sptrOf<StrutBox>(0.f, env.lineSpace(), 0.f, 0.f);
 
   if (_halign != Alignment::none) {
@@ -92,5 +92,5 @@ sptr<Box> VRowAtom::createBox(Env& env) {
     vb->_height = vb->_depth + vb->_height - t;
     vb->_depth = t;
   }
-  return sptr<Box>(vb);
+  return vb;
 }

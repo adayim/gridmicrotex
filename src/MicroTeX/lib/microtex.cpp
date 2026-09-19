@@ -11,6 +11,7 @@
 #include "utils/bidi.h"
 
 #include <clocale>
+#include <memory>
 
 using namespace std;
 using namespace microtex;
@@ -180,8 +181,16 @@ Render* MicroTeX::parse(
   bool fillWidth, const OverrideTeXStyle& overrideTeXStyle,
   const string& mathFontName, const string& mainFontFamily
 ) {
-  // User macros are expanded by the new front end first (plan Stage 2).
-  Formula formula(front::prepareForLegacyParser(latex));
+  // The new front end throughout, or (to compare against) the old parser
+  // behind the new macro expander, or the old parser alone.
+  std::unique_ptr<Formula> built;
+  if (front::frontEnd() == front::FrontEnd::modern) {
+    built = std::make_unique<Formula>();
+    front::buildModern(latex, front::Mode::math, *built);
+  } else {
+    built = std::make_unique<Formula>(front::prepareForLegacyParser(latex));
+  }
+  Formula& formula = *built;
   // Bidirectional levels, resolved once over the whole formula while the
   // atoms still hold their text -- a box keeps only an opaque layout. It
   // has to be one pass over the whole tree, not one per row: a group's

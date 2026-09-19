@@ -55,6 +55,9 @@ struct CommandSpec {
   Shape shape = Shape::prefix;
   std::vector<ArgSpec> args;
   Bare bare = Bare::none;
+  /** For a declaration, the mode its body is read in: \displaystyle's is
+   *  math even in text, as the engine has always read it. */
+  ArgKind body = ArgKind::current;
   /** Handled by the parser itself rather than by its arguments alone:
    *  \left, \right, \middle, \begin, \end, \\, \cr, \(, \[, \hline. */
   bool special = false;

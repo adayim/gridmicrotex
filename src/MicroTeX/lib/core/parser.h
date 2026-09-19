@@ -156,6 +156,9 @@ public:
   /** Return true if we get a partial formula */
   inline bool isPartial() const { return _isPartial; }
 
+  /** The text being parsed, after preprocessing if it was preprocessed. */
+  inline const std::string& latex() const { return _latex; }
+
   /** Get and remove the last atom of the current formula */
   sptr<Atom> popBack() const;
 

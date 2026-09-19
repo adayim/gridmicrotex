@@ -127,12 +127,12 @@ macro(genfrac) {
   }
 
   auto fa = sptrOf<FracAtom>(num._root, den._root, rule, thickness);
-  auto* ra = new RowAtom();
+  auto ra = sptrOf<RowAtom>();
   const auto texStyle = static_cast<TexStyle>(style * 2);
   auto f = sptrOf<FencedAtom>(fa, args[1], args[2]);
   ra->add(sptrOf<StyleAtom>(texStyle, f));
 
-  return sptr<Atom>(ra);
+  return ra;
 }
 
 }  // namespace microtex

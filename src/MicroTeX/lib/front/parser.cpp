@@ -172,7 +172,7 @@ NodeId Parser::parseList(Mode mode, const Stop& stop, const SourceSpan& at) {
   std::vector<NodeId> items;
   if (_depth >= kMaxDepth) {
     // Too deep to recurse: skip to where this list would have ended.
-    _diags.error(at, "input nested too deeply; the rest of this group is dropped");
+    _diags.error(at, "Input nested too deeply");
     int depth = 0;
     while (true) {
       ExpandedToken t = next();
@@ -198,9 +198,8 @@ NodeId Parser::parseList(Mode mode, const Stop& stop, const SourceSpan& at) {
     const ExpandedToken& t = peek();
     if (atStop(t, stop)) break;
     const Token& k = t.tok;
-    if (mode == Mode::math &&
-        (k.isChar(Cat::superscript) || k.isChar(Cat::subscript) || isOther(k, '\'') ||
-         isOther(k, '"'))) {
+    if (mode == Mode::math && (k.isChar(Cat::superscript) || k.isChar(Cat::subscript) ||
+                               isOther(k, '\'') || isOther(k, '"') || isOther(k, '`'))) {
       // Scripts belong to the item before them, as in the old parser.
       NodeId base = kNoNode;
       if (!items.empty()) {
@@ -255,7 +254,9 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
         s.kind = NodeKind::space;
         s.mode = mode;
         s.span = k.span;
-        s.raw = t.lead + t.text;
+        // The whole run of whitespace, which the lexer split between this
+        // token and the next one's lead: the engine counted its line ends.
+        s.raw = t.lead + t.text + peek().lead;
         items.push_back(_ast.add(std::move(s), {}));
       }
       return true;
@@ -281,9 +282,9 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
     case Cat::mathShift: {
       if (mode == Mode::math) return true;  // the old parser ignored `$` in math
       const ExpandedToken& n = peek();
-      const bool display = n.tok.isChar(Cat::mathShift) && n.lead.empty();
+      const bool display = _restricted == 0 && n.tok.isChar(Cat::mathShift) && n.lead.empty();
       if (display) next();
-      items.push_back(parseMath(t, display, ""));
+      items.push_back(parseMath(t, display, "", stop.group));
       return true;
     }
     case Cat::alignTab:
@@ -339,13 +340,15 @@ NodeId Parser::parseScripts(NodeId base, Mode mode, const SourceSpan& at) {
   while (true) {
     ExpandedToken t = next();
     const Token& k = t.tok;
-    if (isOther(k, '\'') || isOther(k, '"')) {
+    if (isOther(k, '\'') || isOther(k, '"') || isOther(k, '`')) {
       if (sup != kNoNode) {
         unread(std::move(t));
         break;
       }
+      // Each prime is kept as written: the engine builds one atom per run
+      // of the same character, and `"` as a double prime of its own.
       primes += isOther(k, '"') ? 2 : 1;
-      if (order.empty() || order.back() != '\'') order += '\'';
+      order += static_cast<char>(k.cp);
       continue;
     }
     if (k.isChar(Cat::superscript)) {
@@ -443,8 +446,8 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
   if (spec->special) {
     if (name == "left") return parseLeftRight(t, mode);
     if (name == "begin") return parseEnvironment(t, mode);
-    if (name == "(") return parseMath(t, false, ")");
-    if (name == "[") return parseMath(t, true, "]");
+    if (name == "(") return parseMath(t, false, ")", stop.group);
+    if (name == "[") return parseMath(t, true, "]", stop.group);
     if (name == "right") {
       _diags.warn(at, "\\right without \\left: drawn as its name");
       n.flag = true;
@@ -515,7 +518,8 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     items.clear();
     Stop rest = stop;
     rest.cellTop = false;
-    const NodeId denominator = parseList(mode, rest, at);
+    // The engine reads the denominator in math mode, even in text.
+    const NodeId denominator = parseList(Mode::math, rest, at);
     n.kind = NodeKind::infix;
     std::vector<NodeId> kids{numerator, denominator};
     kids.insert(kids.end(), args.begin(), args.end());
@@ -532,7 +536,8 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     body.cellTop = false;
     body.argument = false;
     body.overArg = spec->shape == Shape::declaration;
-    const NodeId list = parseList(mode, body, at);
+    const Mode bodyMode = spec->body == ArgKind::math ? Mode::math : mode;
+    const NodeId list = parseList(bodyMode, body, at);
     n.kind = NodeKind::declaration;
     args.push_back(list);
     return _ast.add(std::move(n), args);
@@ -554,6 +559,15 @@ NodeId Parser::parseArgument(const ArgSpec& spec, Mode mode, const std::string& 
   arg.mode = argMode;
   arg.flag = true;
   arg.text = std::string(1, kindCode(spec.kind));
+  const bool restricted = argMode == Mode::text;
+  if (restricted) _restricted++;
+  struct Unrestrict {
+    int& n;
+    bool on;
+    ~Unrestrict() {
+      if (on) n--;
+    }
+  } unrestrict{_restricted, restricted};
 
   if (spec.optional) {
     ExpandedToken t = nextNonSpace();
@@ -959,8 +973,10 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
 
 // --- math in text --------------------------------------------------------------
 
-NodeId Parser::parseMath(const ExpandedToken& open, bool display, const std::string& closeSymbol) {
+NodeId Parser::parseMath(const ExpandedToken& open, bool display, const std::string& closeSymbol,
+                         bool inGroup) {
   Stop inner;
+  inner.group = inGroup;
   if (closeSymbol.empty()) {
     inner.dollar = true;
   } else {

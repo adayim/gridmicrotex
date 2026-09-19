@@ -28,7 +28,13 @@ test_that("an argument without braces is one token", {
     "\\binom nk"        = "\\binom{n}{k}",
     "\\textcolor{red}a" = "\\textcolor{red}{a}",
     "\\tfrac12"         = "\\tfrac{1}{2}",
-    "\\mathbf 1"        = "\\mathbf{1}"
+    "\\mathbf 1"        = "\\mathbf{1}",
+    # One character, not one byte of it.
+    "\\frac αβ"         = "\\frac{α}{β}",
+    "\\sqrt α"          = "\\sqrt{α}",
+    "\\hat é"           = "\\hat{é}",
+    "\\overline ω"      = "\\overline{ω}",
+    "\\mathrm é"        = "\\mathrm{é}"
   ))
 })
 
@@ -48,7 +54,22 @@ test_that("a declaration runs to the end of its group", {
     "{a {\\color{red} b} c} d"      = "{a {\\textcolor{red}{b}} c} d",
     "\\mathbf{a\\color{red}b}c"     = "\\mathbf{a\\textcolor{red}{b}}c",
     "{\\bf a} b"                    = "{\\mathbf{a}} b",
-    "{\\bf a} {b}"                  = "{\\mathbf{a}} {b}"
+    "{\\bf a} {b}"                  = "{\\mathbf{a}} {b}",
+    # A group after a declaration's group is a group of its own.
+    "{\\color{red} a} + {b}"        = "\\textcolor{red}{a} + {b}",
+    "{\\color{blue} a} {\\color{red} b}" = "\\textcolor{blue}{a} \\textcolor{red}{b}",
+    "{a \\\\ b} {c}"                = "{a \\\\ b}{c}",
+    "\\bf a \\\\ b \\color{red} c"  = "\\bf a \\\\ b {\\color{red} c}"
+  ))
+})
+
+test_that("\\middle takes a delimiter by name, as \\left and \\right do", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # It was handed the text "\vert" and failed at layout: only a single
+  # character worked.
+  expect_same_layout(c(
+    "\\left\\{ x \\middle\\vert x > 0 \\right\\}" = "\\left\\{ x \\middle| x > 0 \\right\\}",
+    "\\left\\langle a \\middle\\vert b \\right\\rangle" = "\\left\\langle a \\middle| b \\right\\rangle"
   ))
 })
 

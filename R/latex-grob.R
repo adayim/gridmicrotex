@@ -559,6 +559,7 @@ grobMark <- function(grob, name) {
   )
   # Read off the layout rather than the parse, so a cached one says it too.
   for (p in attr(layout, "unresolved_images")) .image_unresolved(p)
+  .warn_diagnostics(attr(layout, "diagnostics"))
 
   path_layout <- NULL
   if (with_path_fallback && render_mode == "typeface") {
@@ -580,6 +581,21 @@ grobMark <- function(grob, name) {
     text_gp = text_gp,
     gp = gp,
     render_mode = render_mode
+  )
+}
+
+# What the parser recovered from -- it drew the rest -- as one warning,
+# each problem at its line:col in the string the parser was given.
+.warn_diagnostics <- function(d) {
+  if (is.null(d) || !NROW(d)) return(invisible(NULL))
+  d <- d[order(d$line, d$col), , drop = FALSE]
+  lines <- sprintf("%d:%d: %s", d$line, d$col, d$message)
+  dropped <- attr(d, "dropped") %||% 0
+  if (dropped > 0) lines <- c(lines, sprintf("... and %d more", as.integer(dropped)))
+  warning(
+    "LaTeX input: ",
+    if (length(lines) == 1L) lines else paste0("\n  ", lines, collapse = ""),
+    call. = FALSE
   )
 }
 

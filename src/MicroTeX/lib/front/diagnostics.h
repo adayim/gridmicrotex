@@ -44,6 +44,10 @@ public:
   explicit Diagnostics(std::size_t limit = 100) : _limit(limit) {}
 
   void add(Severity severity, const SourceSpan& span, std::string message) {
+    if (severity == Severity::error && !_hasError) {
+      _hasError = true;
+      _firstError = {severity, span, message};
+    }
     if (_items.size() >= _limit) {
       _dropped++;
       return;
@@ -64,8 +68,15 @@ public:
   /** How many were not kept because the limit was reached. */
   std::size_t dropped() const { return _dropped; }
 
+  /** The first error, kept even past the limit. An error is a capacity
+   *  running out (runaway expansion, nesting), after which nothing drawn
+   *  could be trusted; everything else is a warning. */
+  const Diagnostic* firstError() const { return _hasError ? &_firstError : nullptr; }
+
 private:
   std::vector<Diagnostic> _items;
+  bool _hasError = false;
+  Diagnostic _firstError{Severity::error, {}, {}};
   std::size_t _dropped = 0;
   std::size_t _limit;
 };

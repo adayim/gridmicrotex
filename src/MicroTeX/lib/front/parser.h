@@ -96,6 +96,9 @@ private:
    *  can be read either way (see the space node). */
   bool _afterControlWord = false;
   int _depth = 0;
+  /** Inside an argument read as text (\text{}, \mbox{}): TeX's restricted
+   *  horizontal mode, where `$$` is an empty formula, not display math. */
+  int _restricted = 0;
   /** Set when an infix command took the rest of the list. */
   bool _listDone = false;
   /** Set when a rule or \intertext ended the row of the cell being read. */
@@ -127,7 +130,9 @@ private:
   NodeId parseLeftRight(const ExpandedToken& left, Mode mode);
   NodeId parseDelimiter(const std::string& who);
   NodeId parseEnvironment(const ExpandedToken& begin, Mode mode);
-  NodeId parseMath(const ExpandedToken& open, bool display, const std::string& closeSymbol);
+  /** `inGroup`: the math sits in a group, whose `}` ends it too. */
+  NodeId parseMath(const ExpandedToken& open, bool display, const std::string& closeSymbol,
+                   bool inGroup);
   NodeId parseBare(Bare bare, const std::string& who);
   std::vector<ExpandedToken> collectBracketed(const std::string& who);
   std::string readGroupName();

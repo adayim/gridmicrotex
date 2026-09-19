@@ -555,7 +555,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   // Recalculate the height of the row
   recalculateLine(rows, boxarr, multiRows, lineHeight, lineDepth, drt, Vsep->_height);
 
-  auto* vb = new VBox();
+  auto vb = sptrOf<VBox>();
   float totalHeight = 0;
   float Vspace = Vsep->_height / 2;
 
@@ -675,7 +675,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   for (int i = 0; i < rows; i++) delete[] boxarr[i];
   delete[] boxarr;
 
-  return sptr<Box>(vb);
+  return vb;
 }
 
 sptr<Box> MatrixAtom::createBox(Env& env) {
@@ -811,7 +811,7 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
   if (tw == POS_INF || _lineType == MultiLineType::gathered)
     return MatrixAtom(_isPartial, _column, "").createBox(env);
 
-  auto* vb = new VBox();
+  auto vb = sptrOf<VBox>();
   auto atom = _column->_array[0][0];
   Alignment alignment = _lineType == MultiLineType::gather ? Alignment::center : Alignment::left;
   if (atom->_alignment != Alignment::none) alignment = atom->_alignment;
@@ -838,5 +838,5 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
   vb->_height = h / 2;
   vb->_depth = h / 2;
 
-  return sptr<Box>(vb);
+  return vb;
 }
