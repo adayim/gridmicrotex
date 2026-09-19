@@ -425,6 +425,21 @@ private:
     // the scripts; they take it back off.
     if (node(base).kind != NodeKind::list) lowerItem(base, f);
     const std::string& order = x.text;
+    // TeX's prime: `'` is `^{\prime}`, and primes with a `^` after them are
+    // one superscript -- f''^2 is f^{\prime\prime 2} -- so f' draws as
+    // f^{\prime} does. (` and " are the engine's own backprime and double
+    // prime, with no meaning in TeX; they are kept as it drew them.)
+    if (order.find('\'') != std::string::npos && order.find_first_of("`\"") == std::string::npos) {
+      Formula primed;
+      for (const char c : order) {
+        if (c == '\'') primed.add(SymbolAtom::get("prime"));
+      }
+      if (order.find('^') != std::string::npos) appendScript(sup, primed);
+      const sptr<Atom> supAtom = groupAtom(primed._root, f);
+      const sptr<Atom> subAtom = order.find('_') != std::string::npos ? scriptArgument(sub, f) : nullptr;
+      f.add(attach(f, subAtom, supAtom));
+      return;
+    }
     std::size_t i = 0;
     while (i < order.size()) {
       const char c = order[i];
@@ -482,6 +497,18 @@ private:
     }
     if (atom->rightType() == AtomType::bigOperator) return sptrOf<OperatorAtom>(atom, sub, sup);
     return sptrOf<ScriptsAtom>(atom, sub, sup);
+  }
+
+  /** A superscript's content added after primes, as TeX's `'` takes it:
+   *  a group's braces go, so f'^{ab} is f^{\prime ab}. */
+  void appendScript(NodeId list, Formula& g) {
+    if (count(list) == 0) return;
+    const NodeId item = child(list, 0);
+    if (node(item).kind == NodeKind::group) {
+      lowerList(child(item, 0), g, 0);
+    } else {
+      lowerItem(item, g);
+    }
   }
 
   /** A script's argument, as the old parser's getArgument() built it. */

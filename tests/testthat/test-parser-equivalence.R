@@ -73,6 +73,18 @@ test_that("\\middle takes a delimiter by name, as \\left and \\right do", {
   ))
 })
 
+test_that("a prime is the superscript \\prime, as in TeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_same_layout(c(
+    "f'(x)"     = "f^{\\prime}(x)",
+    "f''"       = "f^{\\prime\\prime}",
+    "f'^2"      = "f^{\\prime 2}",
+    "f'^{ab}"   = "f^{\\prime ab}",
+    "f'_1"      = "f^{\\prime}_1",
+    "f_1'"      = "f_1^{\\prime}"
+  ))
+})
+
 test_that("scripts attach the same in either order", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_same_layout(c(

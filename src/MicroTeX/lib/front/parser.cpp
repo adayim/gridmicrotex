@@ -330,6 +330,13 @@ NodeId Parser::parseScripts(NodeId base, Mode mode, const SourceSpan& at) {
         unread(std::move(t));
         break;
       }
+      // Primes are a superscript: a second run of them, after a subscript
+      // (f'_1'), is TeX's double superscript.
+      if (primes > 0 && order.back() == '_') {
+        _diags.warn(k.span, "double superscript: read as {...}^");
+        unread(std::move(t));
+        break;
+      }
       // Each prime is kept as written: the engine builds one atom per run
       // of the same character, and `"` as a double prime of its own.
       primes += isOther(k, '"') ? 2 : 1;
@@ -337,7 +344,9 @@ NodeId Parser::parseScripts(NodeId base, Mode mode, const SourceSpan& at) {
       continue;
     }
     if (k.isChar(Cat::superscript)) {
-      if (sup != kNoNode) {
+      // Only a `^` right after the primes joins them (f'^2); after a
+      // subscript between (f'_1^2) it is a second superscript.
+      if (sup != kNoNode || (primes > 0 && order.back() == '_')) {
         _diags.warn(k.span, "double superscript: read as {...}^");
         unread(std::move(t));
         break;

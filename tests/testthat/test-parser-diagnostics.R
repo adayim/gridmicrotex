@@ -171,6 +171,14 @@ test_that("a delimiter that is not one is left out, with a warning", {
   expect_true("#FF0000" %in% g$layout_df$color)
 })
 
+test_that("primes and a superscript apart are a double superscript, as in TeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (tex in c("f'_1'", "f'_1^2")) {
+    expect_warning(latex_grob(tex, input_mode = "math"), "double superscript", label = tex)
+  }
+  expect_identical(layout_quietly("f'_1^2"), layout_quietly("{f'_1}^2"))
+})
+
 test_that("a definition that cannot be made is dropped whole", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   for (tex in c("\\newcommand{x}[1]{y}z", "\\def{x}{y}z", "\\newenvironment{}{a}{b}z",
