@@ -77,8 +77,8 @@
     # A `$$...$$` paragraph. Centred, as display math is everywhere else.
     math       = list("margin-top" = 0.55, "text-align" = "center"),
     # A link cannot be clicked in a grob, but it should still look like
-    # one. Blue and underlined is what a browser does; the LaTeX side
-    # follows hyperref's convention instead -- see .strip_document_wrappers().
+    # one. Blue and underlined is what a browser does; LaTeX's \url and
+    # \href follow hyperref's convention instead (link() in front/lower.cpp).
     a          = list(color = "#0969DA", "text-decoration" = "underline"),
     # The footnote section at the foot of the document: smaller, and set
     # off from the body above it.

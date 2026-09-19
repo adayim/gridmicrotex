@@ -110,6 +110,12 @@ struct Table {
     // \( and \[ open math; \left, \middle and \right delimit a group.
     add({"(", "["}, "", Shape::prefix, Bare::none, true);
     add({"ensuremath"}, "m", Shape::prefix, Bare::none, true);
+    // Links: the look of one, as hyperref's colorlinks and the url package
+    // set it (the lowering builds it). A URL reads its specials as text.
+    add({"url"}, "u");
+    add({"href"}, "uc");
+    // booktabs' \cmidrule, which the parser reads as \cline.
+    add({"cmidrule"}, "r", Shape::prefix, Bare::none, true);
     add({"left", "middle", "right"}, "l", Shape::prefix, Bare::none, true);
     add({"mathop", "mathpunct", "mathord", "mathrel", "mathinner", "mathbin", "mathopen",
          "mathclose"},

@@ -20,9 +20,9 @@
 #
 # The payload is hex because a real path is hostile to everything between
 # here and MicroTeX: Windows paths hold backslashes, paths hold spaces,
-# .strip_document_wrappers() eats `%`-to-end-of-line, and the macro
-# expander would rewrite `\Users` or `\Temp` mid-path for anyone who had
-# defined a macro by that name. Hex is [0-9a-f]+ and survives all of it.
+# `%` starts a comment, and the macro expander would rewrite `\Users` or
+# `\Temp` mid-path for anyone who had defined a macro by that name. Hex is
+# [0-9a-f]+ and survives all of it.
 #
 # mtime and size ride along so the layout cache -- which keys on the tex
 # string and holds no file metadata -- misses when a figure is edited in
@@ -509,12 +509,11 @@
 # Rewrite every \includegraphics in `tex`. Idempotent: the output is
 # \gmgraphics, which this never matches.
 #
-# Runs twice in .parse_from_gp() -- once at the very top, before
-# .strip_document_wrappers() can mangle a path, and once after it. An
-# \includegraphics a macro produces (\newcommand, \def, define_macro()) is
-# out of reach of both, because macros are expanded later, in C++; the
-# override in src/MicroTeX/lib/atom/image_atom.cpp reports it, and
-# .image_unresolved() refuses it.
+# Runs in .parse_from_gp(), before the parse. An \includegraphics a macro
+# produces (\newcommand, \def, define_macro()) is out of its reach, because
+# macros are expanded later, in C++; the override in
+# src/MicroTeX/lib/atom/image_atom.cpp reports it, and .image_unresolved()
+# refuses it.
 #
 # `check_only` reads each file and rewrites nothing. Markdown uses it to
 # fail when a grob is built, since a box lays out only when drawn.

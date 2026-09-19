@@ -90,7 +90,6 @@ latex_cache_clear <- function() {
   # far larger than a layout. They have no size limit of their own, so this
   # is the only way to give that memory back.
   .image_cache_clear()
-  .strip_memo_clear()
   invisible(NULL)
 }
 

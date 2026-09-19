@@ -85,6 +85,12 @@ const ExpandedToken& Parser::peek() {
   return _ahead.back().tok;
 }
 
+const ExpandedToken& Parser::peekNonSpace() {
+  ExpandedToken t = nextNonSpace();
+  unread(std::move(t));
+  return _ahead.back().tok;
+}
+
 ExpandedToken Parser::nextNonSpace() {
   ExpandedToken t = next();
   while (t.tok.kind == TokKind::space) t = next();
@@ -346,7 +352,7 @@ NodeId Parser::parseGroupAfterOpen(const ExpandedToken& open, Mode mode) {
   g.kind = NodeKind::group;
   g.mode = mode;
   g.span = open.tok.span;
-  g.aux = open.tok.environment ? 1 : 0;  // an environment's expansion
+  g.aux = open.tok.environment;  // a prelude environment's expansion
   return _ast.add(std::move(g), {list});
 }
 
@@ -537,7 +543,27 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
       }
       return _ast.add(std::move(n), args);
     }
-    if (isRule(name) || name == "intertext") {
+    if (name == "cmidrule") {
+      // booktabs' \cmidrule[width](trim){a-b}: the rule of \cline{a-b};
+      // its width and trims have nothing to act on here.
+      if (isOther(peekNonSpace().tok, '[')) {
+        nextNonSpace();
+        collectBracketed(who);
+      }
+      if (isOther(peekNonSpace().tok, '(')) {
+        nextNonSpace();
+        while (true) {
+          ExpandedToken u = next();
+          if (u.tok.kind == TokKind::end) {
+            unread(std::move(u));
+            break;
+          }
+          if (isOther(u.tok, ')')) break;
+        }
+      }
+      n.text = "cline";
+    }
+    if (isRule(n.text) || name == "intertext") {
       std::vector<NodeId> args;
       for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
       if (stop.cellTop) {
@@ -729,15 +755,16 @@ NodeId Parser::parseRawArgument(const ArgSpec& spec, const std::string& who) {
     arg.raw = t.text;
     return _ast.add(std::move(arg), {});
   }
-  // A URL or file name reads its special characters as characters. The
-  // `{` is read already; nothing after it has been lexed yet.
+  // A URL or file name reads its special characters as characters, a
+  // backslash included, so nothing in it is a command to expand. The `{` is
+  // read already; nothing after it has been lexed yet.
   struct Saved {
     c32 ch;
     Cat cat;
   };
   std::vector<Saved> saved;
   if (spec.kind == ArgKind::url) {
-    for (const char c : std::string("%#_^~&$")) {
+    for (const char c : std::string("\\%#_^~&$")) {
       saved.push_back({static_cast<c32>(c), _in.catcode(static_cast<c32>(c))});
       _in.setCatcode(static_cast<c32>(c), Cat::other);
     }
@@ -922,6 +949,12 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
   n.mode = mode;
   n.span = at;
   n.text = name;
+  if (spec == nullptr && name.size() > 1 && name.back() == '*') {
+    // A starred environment is its plain form: amsmath's star turns off
+    // numbering, and nothing is numbered here.
+    spec = findEnvironment(name.substr(0, name.size() - 1));
+    if (spec != nullptr) n.text = name.substr(0, name.size() - 1);
+  }
   if (spec == nullptr) {
     _diags.warn(at, "unknown environment " + name + ": read as an array");
   }

@@ -112,6 +112,8 @@ private:
   void unread(ExpandedToken t);
   const ExpandedToken& peek();
   ExpandedToken nextNonSpace();
+  /** The next token that is not a space; the spaces before it are read. */
+  const ExpandedToken& peekNonSpace();
 
   std::size_t startRecording();
   /** The source of the tokens consumed since `mark`, less `dropLast`

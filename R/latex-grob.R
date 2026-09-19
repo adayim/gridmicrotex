@@ -496,13 +496,11 @@ grobMark <- function(grob, name) {
   fontsize <- gp$fontsize %||% 20
   if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
 
-  # Images are resolved first, before any other rewriting, because
-  # .strip_document_wrappers() eats `%`-to-end-of-line and would corrupt a
-  # file path. The second pass catches an \includegraphics the stripping
-  # uncovered; it is a no-op when the first pass consumed them all. Macros,
-  # define_macro()'s included, are expanded later, in C++.
-  tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
-  tex <- .strip_document_wrappers(tex)
+  # The parser reads UTF-8 bytes; a Latin-1 string would reach it as
+  # invalid ones.
+  tex <- enc2utf8(tex)
+  # Images are read here, before the parse. Macros, define_macro()'s
+  # included, are expanded later, in C++.
   tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
   math_font <- resolve_math_font(math_font)
 

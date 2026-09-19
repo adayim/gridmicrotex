@@ -66,9 +66,11 @@ struct Token {
   std::uint16_t lineEnds = 0;
   /** Set by \noexpand: the expander must pass this token through as is. */
   bool noexpand = false;
-  /** The `{` the expander opens an environment's expansion with, which a
-   *  label sets as an environment, not as prose. */
-  bool environment = false;
+  /** Set on the `{` the expander opens a prelude environment's expansion
+   *  with: 1 for one with code of its own (tabular, pmatrix), which a label
+   *  sets as a unit, not as prose; 2 for one with none (document, table),
+   *  whose content a label sets as if it were not there. */
+  std::uint8_t environment = 0;
 
   bool isControl() const {
     return kind == TokKind::controlWord || kind == TokKind::controlSymbol;

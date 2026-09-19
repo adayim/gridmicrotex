@@ -63,7 +63,7 @@ test_that("the command table and the prelude cover every command the engine defi
                    character(0))
   # Read by the parser, not registered as commands in the old one.
   expect_identical(sort(setdiff(t$spec_commands, t$engine_commands)),
-                   c("begin", "end", "ensuremath", "right"))
+                   c("begin", "cmidrule", "end", "ensuremath", "href", "right", "url"))
 })
 
 test_that("the math environments R scans for come from the C++ tables", {

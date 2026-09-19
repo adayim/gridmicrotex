@@ -630,7 +630,14 @@ struct Expander::Impl {
     if (it != envs.end()) return &it->second;
     if (shared == nullptr) return nullptr;
     const auto p = shared->envs.find(name);
-    return p == shared->envs.end() ? nullptr : &p->second;
+    if (p != shared->envs.end()) return &p->second;
+    // A starred prelude environment is its plain form: the star turns off
+    // numbering (equation*), and nothing is numbered here.
+    if (name.size() > 1 && name.back() == '*') {
+      const auto q = shared->envs.find(name.substr(0, name.size() - 1));
+      if (q != shared->envs.end()) return &q->second;
+    }
+    return nullptr;
   }
 
   bool takeStar() {
@@ -724,7 +731,9 @@ struct Expander::Impl {
       if (opts.recover) openEnvs.push_back({name, e.tok.span, depth});
       pushExpansion("{" + substitute(def->body, args), e.tok.span);
       ExpToken open = rawUntaped();
-      open.tok.environment = true;
+      if (envs.find(name) == envs.end()) {  // the prelude's, not the input's
+        open.tok.environment = def->body.empty() && def->endBody.empty() ? 2 : 1;
+      }
       frames.back().pushback.push_back(std::move(open));
       return true;
     }

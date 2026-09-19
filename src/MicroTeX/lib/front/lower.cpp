@@ -332,6 +332,7 @@ private:
       return sptrOf<SpaceAtom>(unit, value, 0.f, 0.f);
     }
     if (name == "char") return charCode(rawOf(child(id, 0)), x.mode == Mode::math);
+    if (name == "url" || name == "href") return link(id, f);
     if (name == "middle") {
       Formula g;
       middle(child(id, 0), g);
@@ -351,6 +352,34 @@ private:
     // operand here; the old parser read on past the argument for one.
     if (spec->shape != Shape::prefix) return nullptr;
     return bridge(id, name, spec, f);
+  }
+
+  /** \url and \href. A grob has no links, so only their look, LaTeX's
+   *  rather than HTML's: hyperref's colorlinks colours the text, and the url
+   *  package sets a URL in monospace, its characters as written. */
+  sptr<Atom> link(NodeId id, Formula& f, NodeId replaced = kNoNode,
+                  const sptr<Atom>& replacement = nullptr) {
+    static const std::string colour = "#0969DA";
+    const bool math = node(id).mode == Mode::math;
+    auto* cm = dynamic_cast<CommandMacro*>(MacroInfo::get("textcolor"));
+    if (cm == nullptr) return nullptr;
+    if (node(id).text == "href") {
+      const NodeId text = child(id, 1);
+      TreeArgs a(*this, math, {"textcolor", colour, rawOf(text)}, {kNoNode, kNoNode, text}, &f);
+      if (replaced != kNoNode) a.replace(replaced, replacement);
+      return cm->call(a);
+    }
+    std::string chars;
+    const std::string raw = rawOf(child(id, 0));
+    for (std::size_t i = 0; i < raw.size(); i++) {
+      const char c = raw[i];
+      if (std::string("\\{}$&#_%~^").find(c) != std::string::npos) {
+        chars += "\\char" + std::to_string(static_cast<unsigned char>(c)) + "{}";
+      } else {
+        chars += c;
+      }
+    }
+    return fragment("\\textcolor{" + colour + "}{\\texttt{" + chars + "}}", math);
   }
 
   sptr<Atom> charCode(const std::string& raw, bool math) {
@@ -850,7 +879,8 @@ private:
         continue;
       }
       Formula here;
-      out.push_back({bridge(id, x.text, spec, here, arg, line->_root)});
+      out.push_back({x.text == "href" ? link(id, here, arg, line->_root)
+                                      : bridge(id, x.text, spec, here, arg, line->_root)});
     }
     return out;
   }
@@ -989,6 +1019,12 @@ private:
     return node(id).kind == NodeKind::group && node(id).aux == 1;
   }
 
+  /** The expansion of document, table or figure: nothing of their own, so
+   *  their content is set as if they were not there. */
+  bool isTransparentGroup(NodeId id) const {
+    return node(id).kind == NodeKind::group && node(id).aux == 2;
+  }
+
   /** A space a break takes with it: not `~`, which TeX never drops. */
   bool isSpace(const Node& x) const { return x.kind == NodeKind::space && x.aux != 1; }
 
@@ -1000,11 +1036,24 @@ private:
    *  formula. A break before everything or after it is none. */
   void runLines(Formula& f) {
     Label l(f);
-    const NodeId root = _ast.root;
-    for (std::uint32_t i = 0; i < count(root); i++) {
-      const NodeId id = child(root, i);
+    feedLines(l, _ast.root);
+    // Spaces at the very end are kept, as they were in the \text{}.
+    beforeProse(l);
+    endProse(l);
+    if (l.rows != nullptr) {
+      l.rows->checkDimensions();
+      f._root = l.rows->getAsVRow();
+    }
+  }
+
+  /** The items of `list` onto the label's lines. */
+  void feedLines(Label& l, NodeId list) {
+    for (std::uint32_t i = 0; i < count(list); i++) {
+      const NodeId id = child(list, i);
       const Node& x = node(id);
-      if (isBreakNode(x)) {
+      if (isTransparentGroup(id)) {
+        feedLines(l, child(id, 0));
+      } else if (isBreakNode(x)) {
         lineBreak(l, id);
       } else if (isSpace(x)) {
         if (!l.afterBreak) l.spaces.push_back(id);
@@ -1041,13 +1090,6 @@ private:
           put(pieces[k], prose(l));
         }
       }
-    }
-    // Spaces at the very end are kept, as they were in the \text{}.
-    beforeProse(l);
-    endProse(l);
-    if (l.rows != nullptr) {
-      l.rows->checkDimensions();
-      f._root = l.rows->getAsVRow();
     }
   }
 
