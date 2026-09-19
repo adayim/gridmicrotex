@@ -214,6 +214,13 @@ MacroInfo* MacroInfo::get(const std::string& name) {
   return it->second;
 }
 
+std::vector<std::string> MacroInfo::names() {
+  std::vector<std::string> out;
+  out.reserve(_commands.size());
+  for (const auto& kv : _commands) out.push_back(kv.first);
+  return out;
+}
+
 void MacroInfo::_free_() {
   for (const auto& i : _commands) delete i.second;
   _commands.clear();

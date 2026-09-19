@@ -92,6 +92,11 @@ public:
    */
   static sptr<Formula> get(const std::string& name);
 
+  /** Whether `name` is a predefined Formula, without parsing it. */
+  static bool isPredefined(const std::string& name) {
+    return _predefFormulaStrs.count(name) != 0;
+  }
+
   virtual ~Formula() = default;
 };
 

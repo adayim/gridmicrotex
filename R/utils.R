@@ -1,29 +1,18 @@
-# Authoritative list: every environment MicroTeX registers in
-# src/MicroTeX/lib/macro/macro_def.cpp env(...) calls, plus the
-# starred variants (amsmath's no-equation-numbering forms) that users
-# commonly type and that MicroTeX accepts without separate registration.
-# Hand-synced to the C++ registrations -- a gap here corrupts mixed-mode
-# input, so update both together.
-.MATH_ENVS <- c(
-  # array family
-  "array", "tabular", "tabular*",
-  # matrix family
-  "matrix", "smallmatrix",
-  "pmatrix", "bmatrix", "Bmatrix", "vmatrix", "Vmatrix",
-  # equation / display
-  "equation", "equation*", "math", "displaymath",
-  # amsmath alignments
-  "align", "align*", "flalign", "flalign*",
-  "alignat", "alignat*", "aligned",
-  "alignedat", "alignedat*",
-  "eqnarray", "eqnarray*",
-  "multline", "multline*",
-  # paragraph-like
-  "gather", "gather*", "gathered",
-  "split", "cases", "rcases",
-  # list environments
-  "itemize", "enumerate"
-)
+# Every environment the engine knows, and its starred form (amsmath's
+# no-numbering variants; the star changes nothing here). Read from the C++
+# front end's own tables -- the environments it builds and those its
+# prelude defines in LaTeX -- so this can no longer fall out of step with
+# them. Asked once, on first use: the DLL is not loaded when this file is.
+.math_envs <- local({
+  envs <- NULL
+  function() {
+    if (is.null(envs)) {
+      names <- math_env_names_cpp()
+      envs <<- c(names, paste0(names, "*"))
+    }
+    envs
+  }
+})
 
 # Find \end{env} matching \begin{env}, honoring nesting of the same env.
 # `from` is the index just past the opening \begin{env}; the return value
@@ -57,7 +46,7 @@
 #
 # Walks `tex` once and returns its maximal math regions: `$...$`,
 # `$$...$$`, `\(...\)`, `\[...\]`, and `\begin{env}...\end{env}` for
-# every environment in .MATH_ENVS. Any character not covered by a
+# every environment in .math_envs(). Any character not covered by a
 # returned span is prose.
 #
 # Both latex_wrap() (which wraps the prose in \text{}) and
@@ -143,7 +132,7 @@
         paste(chars[i:(i + 5L)], collapse = "") == "\\begin") {
       rest <- paste(chars[i:min(i + 64L, n)], collapse = "")
       m <- regmatches(rest, regexec("^\\\\begin\\{([^}]+)\\}", rest))[[1]]
-      if (length(m) == 2 && m[2] %in% .MATH_ENVS) {
+      if (length(m) == 2 && m[2] %in% .math_envs()) {
         env <- m[2]
         start_inner <- i + nchar(m[1])
         j <- .find_env_close(chars, n, start_inner, env)

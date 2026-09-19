@@ -55,6 +55,20 @@ struct ExpanderOptions {
   /** TeX stops runaway recursion with its capacity limits; these are ours. */
   std::size_t maxExpansions = 10000;
   std::size_t maxExpandedBytes = std::size_t{16} << 20;
+  /** Expand the prelude: the commands and environments the engine defines
+   *  in LaTeX (\dfrac, pmatrix, ...; front/prelude.cpp). The old parser
+   *  expands those itself, so only the new one wants this. */
+  bool prelude = false;
+  /** See the define_macro() macros (setPersistentMacro). */
+  bool persistent = true;
+};
+
+/** A token after expansion, with the source text it came from: the
+ *  whitespace and comments before it, and its own text. */
+struct ExpandedToken {
+  Token tok;
+  std::string lead;
+  std::string text;
 };
 
 /**
@@ -88,10 +102,26 @@ public:
    *  removed. */
   std::string expandToText();
 
+  /** The next token after expansion; an `end` token at the end, every
+   *  time. Use either this or expandToText(), not both. */
+  ExpandedToken next();
+
+  /** Change a catcode from the next token on, for every source being read
+   *  (the parser reads a URL with `%` as a character this way). */
+  void setCatcode(c32 ch, Cat cat);
+  Cat catcode(c32 ch) const;
+
 private:
   struct Impl;
   std::unique_ptr<Impl> _impl;
+
+  friend std::vector<std::string> preludeCommandNames();
+  friend std::vector<std::string> preludeEnvironmentNames();
 };
+
+/** The names the prelude defines, for checking it against the engine. */
+std::vector<std::string> preludeCommandNames();
+std::vector<std::string> preludeEnvironmentNames();
 
 /**
  * Macros that outlive a parse: those made with define_macro(). Zero

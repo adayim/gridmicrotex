@@ -80,10 +80,11 @@ test_that("redefinition follows LaTeX's rules", {
   expect_error(ex("\\def{notacs}{body}"), "expected")
 })
 
-test_that("user environments expand at \\begin and \\end", {
+test_that("user environments expand at \\begin and \\end, as a group", {
+  # The braces make the environment one atom, as the old parser made it.
   expect_equal(ex("\\newenvironment{pm}{\\begin{pmatrix}}{\\end{pmatrix}}\\begin{pm}a\\end{pm}"),
-               "\\begin{pmatrix}a\\end{pmatrix}")
-  expect_equal(ex("\\newenvironment{bx}[1]{[#1:}{]}\\begin{bx}{t}x\\end{bx}"), "[t:x]")
+               "{\\begin{pmatrix}a\\end{pmatrix}}")
+  expect_equal(ex("\\newenvironment{bx}[1]{[#1:}{]}\\begin{bx}{t}x\\end{bx}"), "{[t:x]}")
   expect_error(ex("\\newenvironment{matrix}{}{}"), "already exists")
 })
 

@@ -1,0 +1,212 @@
+#include "front/spec.h"
+
+#include <initializer_list>
+#include <unordered_map>
+
+namespace microtex::front {
+
+namespace {
+
+/**
+ * Arguments in source order, one letter each:
+ *   m math   t text   c current mode   r raw   d dimension   l delimiter
+ *   u url
+ * An upper-case letter is an optional `[...]` argument of that kind.
+ *
+ * The kinds follow what each engine command does with its argument (see
+ * lib/macro/): most parse it as math even inside \text, some in the mode
+ * they are used in, and a few as text.
+ */
+std::vector<ArgSpec> parseArgs(const char* code) {
+  std::vector<ArgSpec> args;
+  for (const char* p = code; *p != '\0'; ++p) {
+    const char c = *p;
+    const bool optional = c >= 'A' && c <= 'Z';
+    ArgKind kind = ArgKind::raw;
+    switch (optional ? static_cast<char>(c - 'A' + 'a') : c) {
+      case 'm': kind = ArgKind::math; break;
+      case 't': kind = ArgKind::text; break;
+      case 'c': kind = ArgKind::current; break;
+      case 'r': kind = ArgKind::raw; break;
+      case 'd': kind = ArgKind::dimen; break;
+      case 'l': kind = ArgKind::delim; break;
+      case 'u': kind = ArgKind::url; break;
+      default: break;
+    }
+    args.push_back({kind, optional});
+  }
+  return args;
+}
+
+struct Table {
+  std::unordered_map<std::string, CommandSpec> commands;
+  std::unordered_map<std::string, EnvSpec> envs;
+
+  void add(std::initializer_list<const char*> names, const char* args,
+           Shape shape = Shape::prefix, Bare bare = Bare::none, bool special = false) {
+    CommandSpec spec;
+    spec.shape = shape;
+    spec.args = parseArgs(args);
+    spec.bare = bare;
+    spec.special = special;
+    for (const char* name : names) commands[name] = spec;
+  }
+
+  void env(std::initializer_list<const char*> names, const char* args, EnvBody body) {
+    EnvSpec spec;
+    spec.args = parseArgs(args);
+    spec.body = body;
+    for (const char* name : names) envs[name] = spec;
+  }
+
+  Table() {
+    // --- in the order of lib/macro/macro_def.cpp -------------------------
+    add({"rule"}, "Ddd");
+    add({"includegraphics"}, "Ru");
+    add({"cfrac"}, "Rmm");
+    add({"xleftarrow", "xrightarrow", "xleftrightarrow", "xRightarrow", "xLeftarrow",
+         "xLeftrightarrow", "xhookleftarrow", "xhookrightarrow", "xmapsto",
+         "xrightharpoondown", "xrightharpoonup", "xleftharpoondown", "xleftharpoonup",
+         "xrightleftharpoons", "xleftrightharpoons"},
+        "Cc");
+    add({"sqrt"}, "Mm");
+    add({"smash"}, "Rm");
+    add({"hdotsfor"}, "Rr");
+    add({"stackbin", "stackrel"}, "Mmm");
+    add({"rotatebox"}, "Rrm");
+    add({"scalebox"}, "rRc");
+    add({"raisebox"}, "dDDc");
+    add({"mathversion"}, "Rr");
+    add({"fatalIfCmdConflict", "breakEverywhere"}, "r");
+    add({"makeatletter", "makeatother"}, "");
+    add({"multicolumn", "multirow"}, "rrm");
+    // Rules end the row they are in, as they did in the old parser.
+    add({"hline", "thickhline"}, "", Shape::prefix, Bare::none, true);
+    add({"cline"}, "r", Shape::prefix, Bare::none, true);
+    add({"rowcolor", "columncolor", "arrayrulecolor", "cellcolor"}, "r");
+    add({"newcolumntype"}, "rr");
+    add({"color"}, "r", Shape::groupDeclaration);
+    add({"shoveright", "shoveleft"}, "m");
+    add({"DeclareMathSizes"}, "rrrr");
+    add({"magnification"}, "r");
+    add({"tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large",
+         "LARGE", "huge", "Huge"},
+        "", Shape::declaration);
+    add({"big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl", "bigr", "Bigr",
+         "biggr", "Biggr"},
+        "l");
+    add({"frac", "binom"}, "mm");
+    add({"genfrac"}, "rrrrmm");
+    add({"over", "atop", "choose", "brace", "brack", "bangle"}, "", Shape::infix);
+    add({"above"}, "", Shape::infix, Bare::dimen);
+    add({"overwithdelims", "atopwithdelims"}, "ll", Shape::infix);
+    add({"abovewithdelims"}, "ll", Shape::infix, Bare::dimen);
+    add({"sideset", "prescript"}, "mmm");
+    add({"overrightarrow", "overleftarrow", "overleftrightarrow", "underrightarrow",
+         "underleftarrow", "underleftrightarrow", "overbrace", "overbracket", "overparen",
+         "underbrace", "underbracket", "underparen", "overline", "underline", "Braket",
+         "Set"},
+        "m");
+    // \( and \[ open math; \left, \middle and \right delimit a group.
+    add({"(", "["}, "", Shape::prefix, Bare::none, true);
+    add({"left", "middle", "right"}, "l", Shape::prefix, Bare::none, true);
+    add({"mathop", "mathpunct", "mathord", "mathrel", "mathinner", "mathbin", "mathopen",
+         "mathclose"},
+        "m");
+    add({"bf", "it", "rm", "sf", "tt"}, "", Shape::declaration);
+    add({"cal", "frak", "oldstylenums"}, "t");
+    add({"mathnormal", "mathrm", "mathbf", "mathit", "mathcal", "mathscr", "mathfrak",
+         "mathbb", "mathsf", "mathtt", "mathbfit", "mathbfcal", "mathbffrak", "mathsfbf",
+         "mathbfsf", "mathsfit", "mathsfbfit", "mathbfsfit", "Bbb", "mathds", "bold",
+         "boldsymbol", "bm", "pmb"},
+        "c");
+    add({"addfont"}, "rr");
+    add({"mbox", "text", "textit", "textbf", "textsf", "texttt", "textrm"}, "t");
+    // \intertext ends the row it is in, as a rule does.
+    add({"intertext"}, "t", Shape::prefix, Bare::none, true);
+    add({"^", "'", "\"", "`", "=", ".", "~", "t", "u", "v", "r"}, "m");
+    add({"not", "hat", "widehat", "check", "tilde", "widetilde", "acute", "grave", "dot",
+         "ddot", "dddot", "ddddot", "breve", "bar", "vec", "mathring", "undertilde"},
+        "m");
+    // The first argument names an accent (`\underaccent{\dot}{x}`): a
+    // command used without its argument, so it is kept as text.
+    add({"accentset", "underaccent"}, "rm");
+    add({"overset", "underset"}, "mm");
+    add({"displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle"}, "",
+        Shape::declaration);
+    add({"everymath"}, "r");
+    add({"dnomstyle", "numstyle", "substyle", "supstyle"}, "m");
+    add({"definecolor"}, "rrr");
+    add({"fgcolor", "bgcolor", "textcolor", "colorbox"}, "rc");
+    add({"fcolorbox"}, "rrc");
+    add({",", ":", ";", "thinspace", "medspace", "thickspace", "!", "negthinspace",
+         "negmedspace", "negthickspace", "quad"},
+        "");
+    add({"reflectbox", "shadowbox", "ovalbox", "doublebox", "fbox", "boxed"}, "m");
+    add({"resizebox"}, "rrm");
+    add({"cornersize"}, "r");
+    add({"llap", "rlap", "clap", "mathllap", "mathrlap", "mathclap"}, "m");
+    add({"nolimits", "limits", "normal"}, "", Shape::postfix);
+    add({"kern"}, "", Shape::prefix, Bare::dimen);
+    add({"char"}, "", Shape::prefix, Bare::number);
+    add({"roman", "Roman"}, "r");
+    add({"surd", "lmoustache", "rmoustache", "-", "nbsp", "joinrel", "underscore",
+         "sp@breve", "nokern"},
+        "");
+    add({"st"}, "c");
+    add({"longdiv"}, "rr");
+    add({"cancel", "bcancel", "xcancel", "sout", "sqrtsign", "phantom", "hphantom",
+         "vphantom"},
+        "m");
+    add({"stackinset"}, "rdrdmm");
+    // Row ends, and a line break outside an array.
+    add({"cr", "\\"}, "", Shape::prefix, Bare::none, true);
+    add({"hspace", "vspace"}, "d");
+    // --- our own (lib/atom/) ----------------------------------------------
+    add({"gmfontfamily"}, "rt");
+    add({"mark"}, "r");
+    add({"gmgraphics"}, "rrr");
+    // \begin and \end are read by the parser; the environment decides.
+    add({"begin", "end"}, "r", Shape::prefix, Bare::none, true);
+
+    // --- environments the engine builds (the @@env ones in macro_def.cpp) --
+    env({"matrix", "smallmatrix", "align", "flalign", "aligned", "multline", "gather",
+         "gathered"},
+        "", EnvBody::alignment);
+    env({"array", "alignat", "alignedat"}, "r", EnvBody::alignment);
+    env({"itemize", "enumerate"}, "", EnvBody::raw);
+  }
+};
+
+const Table& table() {
+  static const Table t;
+  return t;
+}
+
+}  // namespace
+
+const CommandSpec* findCommand(const std::string& name) {
+  const auto& c = table().commands;
+  const auto it = c.find(name);
+  return it == c.end() ? nullptr : &it->second;
+}
+
+const EnvSpec* findEnvironment(const std::string& name) {
+  const auto& e = table().envs;
+  const auto it = e.find(name);
+  return it == e.end() ? nullptr : &it->second;
+}
+
+std::vector<std::string> commandNames() {
+  std::vector<std::string> names;
+  for (const auto& kv : table().commands) names.push_back(kv.first);
+  return names;
+}
+
+std::vector<std::string> environmentNames() {
+  std::vector<std::string> names;
+  for (const auto& kv : table().envs) names.push_back(kv.first);
+  return names;
+}
+
+}  // namespace microtex::front

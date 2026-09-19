@@ -5,6 +5,8 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "front/prelude.h"
+#include "front/spec.h"
 #include "utils/exceptions.h"
 
 namespace microtex::front {
@@ -93,11 +95,31 @@ std::uint64_t& generation() {
   return value;
 }
 
+/** Macros and environments defined once and shared by every parse. */
+struct Definitions {
+  std::unordered_map<std::string, MacroDef> macros;
+  std::unordered_map<std::string, MacroDef> envs;
+};
+
 }  // namespace
 
 struct Expander::Impl {
+  /** The prelude's definitions, made by expanding its LaTeX once. */
+  static const Definitions& prelude() {
+    static const Definitions defs = [] {
+      Diagnostics ignored;
+      ExpanderOptions o;
+      o.persistent = false;
+      Impl impl(std::string(preludeSource()), std::move(o), ignored);
+      impl.run();
+      return Definitions{std::move(impl.macros), std::move(impl.envs)};
+    }();
+    return defs;
+  }
+
   ExpanderOptions opts;
   Diagnostics& diags;
+  const Definitions* shared = nullptr;
   /** Re-lexing text that was already lexed once would repeat its warnings. */
   Diagnostics quiet;
   CatcodeTable cats;
@@ -116,11 +138,14 @@ struct Expander::Impl {
       : opts(std::move(options)), diags(diagnostics) {
     buffers.push_back(std::move(input));
     frames.push_back({buffers.back(), std::make_unique<Lexer>(buffers.back(), opts.lex, diags, cats), true, {}, {}});
-    for (const auto& [name, body] : persistentTable()) {
-      MacroDef def;
-      def.body = literal(body);
-      macros[name] = std::move(def);
+    if (opts.persistent) {
+      for (const auto& [name, body] : persistentTable()) {
+        MacroDef def;
+        def.body = literal(body);
+        macros[name] = std::move(def);
+      }
     }
+    if (opts.prelude) shared = &prelude();
   }
 
   // --- reading -----------------------------------------------------------
@@ -185,9 +210,14 @@ struct Expander::Impl {
     }
   }
 
-  /** An undelimited argument, as TeX reads one: spaces are skipped, then
-   *  one braced group (without its braces) or one token. */
-  std::string readArg(const std::string& who) {
+  /** An undelimited argument: spaces are skipped, then one braced group
+   *  (without its braces) or one token.
+   *
+   *  With `greedy`, a command given as the argument brings its own
+   *  arguments with it -- `\sq\frac12` passes `\frac12` -- as it does for
+   *  the engine's commands and always did for macros here. TeX would pass
+   *  the bare `\frac` and fail. */
+  std::string readArg(const std::string& who, bool greedy = true) {
     ExpToken t = nextNonSpace();
     if (t.tok.kind == TokKind::end || t.tok.kind == TokKind::par) {
       diags.error(t.tok.span, "missing argument for " + who);
@@ -200,7 +230,34 @@ struct Expander::Impl {
       return {};
     }
     if (t.tok.isChar(Cat::beginGroup)) return readGroupContent(t);
-    return std::string(t.text);
+    std::string s(t.text);
+    if (greedy && t.tok.isControl()) appendOwnArgs(t.tok.text, s);
+    return s;
+  }
+
+  /** Read the arguments of command `name` -- an engine command or a macro
+   *  -- onto `s`, in source form. */
+  void appendOwnArgs(const std::string& name, std::string& s) {
+    const auto group = [&](const std::string& who) { s += "{" + readArg(who) + "}"; };
+    const auto option = [&]() {
+      if (const auto o = readOptional()) s += "[" + *o + "]";
+    };
+    if (const MacroDef* def = lookup(name)) {
+      if (def->alias || !def->delimiters.empty()) return;
+      int i = 0;
+      if (def->hasOptional && def->nparams > 0) option(), i = 1;
+      for (; i < def->nparams; i++) group("\\" + name);
+      return;
+    }
+    const CommandSpec* spec = findCommand(name);
+    if (spec == nullptr || spec->special || spec->shape != Shape::prefix) return;
+    for (const ArgSpec& a : spec->args) {
+      if (a.optional) {
+        option();
+      } else {
+        group("\\" + name);
+      }
+    }
   }
 
   /** `[...]` if one comes next (after spaces), with braces protecting a `]`. */
@@ -487,12 +544,25 @@ struct Expander::Impl {
   }
 
   bool isDefined(const std::string& name) const {
-    return macros.count(name) != 0 || (opts.isBuiltinCommand && opts.isBuiltinCommand(name));
+    return lookup(name) != nullptr || (opts.isBuiltinCommand && opts.isBuiltinCommand(name));
   }
 
+  /** A macro: defined in this parse (define_macro()'s are copied in),
+   *  else in the prelude. */
   const MacroDef* lookup(const std::string& name) const {
     const auto it = macros.find(name);
-    return it == macros.end() ? nullptr : &it->second;
+    if (it != macros.end()) return &it->second;
+    if (shared == nullptr) return nullptr;
+    const auto p = shared->macros.find(name);
+    return p == shared->macros.end() ? nullptr : &p->second;
+  }
+
+  const MacroDef* lookupEnv(const std::string& name) const {
+    const auto it = envs.find(name);
+    if (it != envs.end()) return &it->second;
+    if (shared == nullptr) return nullptr;
+    const auto p = shared->envs.find(name);
+    return p == shared->envs.end() ? nullptr : &p->second;
   }
 
   bool takeStar() {
@@ -520,16 +590,28 @@ struct Expander::Impl {
 
     const std::string who = "\\" + name;
     if (def->alias) {
-      emitLead(e.lead);
-      const std::string& target = def->body.front().text;
-      emitText(target, target.size() > 1 && target[0] == '\\' &&
-                         cats.get(static_cast<unsigned char>(target[1])) == Cat::letter);
+      unread(aliasToken(def->body.front().text, e.tok.span));
       return true;
     }
     std::vector<std::string> args = readArgs(*def, who);
     pushExpansion(substitute(def->body, args), e.tok.span);
-    emitLead(e.lead);
     return true;
+  }
+
+  /** The one token a \let alias stands for, marked so that it is never
+   *  expanded again: it means what its name meant when \let ran. */
+  ExpToken aliasToken(const std::string& target, const SourceSpan& at) {
+    buffers.push_back(target);
+    const std::string& buf = buffers.back();
+    LexOptions lo = opts.lex;
+    lo.startMidLine = true;
+    Lexer lx(buf, lo, quiet, cats);
+    ExpToken t;
+    t.tok = lx.next();
+    t.text = std::string_view(buf).substr(t.tok.span.offset, t.tok.span.length);
+    t.tok.span = at;
+    t.tok.noexpand = true;
+    return t;
   }
 
   bool environment(const ExpToken& e, bool begin) {
@@ -556,20 +638,21 @@ struct Expander::Impl {
       if (close) break;
     }
     name = trim(name);
-    const auto it = envs.find(name);
-    if (it == envs.end()) {
-      emit(e);
-      for (const auto& t : consumed) emit(t);
-      return true;
+    const MacroDef* def = lookupEnv(name);
+    if (def == nullptr) {
+      // Not ours: hand `\begin{name}` on as it came. The name is read
+      // again, and expanded, if it holds a macro (`\begin{\env}`).
+      for (auto it = consumed.rbegin(); it != consumed.rend(); ++it) unread(std::move(*it));
+      return false;
     }
-    const MacroDef& def = it->second;
+    // An environment is a group, and the old parser made its expansion a
+    // braced one -- an ordinary atom in math -- which spacing depends on.
     if (begin) {
-      std::vector<std::string> args = readArgs(def, "\\begin{" + name + "}");
-      pushExpansion(substitute(def.body, args), e.tok.span);
+      std::vector<std::string> args = readArgs(*def, "\\begin{" + name + "}");
+      pushExpansion("{" + substitute(def->body, args), e.tok.span);
     } else {
-      pushExpansion(substitute(def.endBody, {}), e.tok.span);
+      pushExpansion(substitute(def->endBody, {}) + "}", e.tok.span);
     }
-    emitLead(e.lead);
     return true;
   }
 
@@ -584,7 +667,7 @@ struct Expander::Impl {
       def.hasOptional = true;
       def.optionalDefault = *d;
     }
-    const std::string body = readArg("\\" + kind);
+    const std::string body = readArg("\\" + kind, false);
     def.body = splitBody(body, def.nparams, "\\" + name, e.tok.span);
 
     const bool exists = isDefined(name);
@@ -595,10 +678,9 @@ struct Expander::Impl {
       fail(kind, "Command " + name + " is no defined! Use newcommand instead!");
     }
     if (!(kind == "providecommand" && exists)) macros[name] = std::move(def);
-    emitLead(e.lead);
   }
 
-  void declareOperator(const ExpToken& e) {
+  void declareOperator() {
     const bool star = takeStar();
     const std::string name = readCsName("newcommand");
     const std::string text = readArg("\\DeclareMathOperator");
@@ -608,7 +690,6 @@ struct Expander::Impl {
     MacroDef def;
     def.body = literal("\\mathop{\\mathrm{" + text + "}}" + (star ? "\\limits" : "\\nolimits"));
     macros[name] = std::move(def);
-    emitLead(e.lead);
   }
 
   void defineDef(const ExpToken& e) {
@@ -649,10 +730,9 @@ struct Expander::Impl {
     if (!delimited) def.delimiters.clear();
     def.body = splitBody(body, def.nparams, "\\" + name, e.tok.span);
     macros[name] = std::move(def);
-    emitLead(e.lead);
   }
 
-  void defineLet(const ExpToken& e) {
+  void defineLet() {
     ExpToken n = raw();
     if (!n.tok.isControl()) fail("let", "\\let: expected a control sequence after \\let");
     const std::string name = n.tok.text;
@@ -671,7 +751,6 @@ struct Expander::Impl {
       def.body = literal(std::string(t.text));
     }
     macros[name] = std::move(def);
-    emitLead(e.lead);
   }
 
   void defineEnvironment(const ExpToken& e, const std::string& kind) {
@@ -684,12 +763,12 @@ struct Expander::Impl {
       def.hasOptional = true;
       def.optionalDefault = *d;
     }
-    const std::string begin = readArg("\\" + kind);
-    const std::string end = readArg("\\" + kind);
+    const std::string begin = readArg("\\" + kind, false);
+    const std::string end = readArg("\\" + kind, false);
     def.body = splitBody(begin, def.nparams, "\\begin{" + *name + "}", e.tok.span);
     def.endBody = splitBody(end, 0, "\\end{" + *name + "}", e.tok.span);
 
-    const bool exists = envs.count(*name) != 0 ||
+    const bool exists = lookupEnv(*name) != nullptr ||
                         (opts.isBuiltinEnvironment && opts.isBuiltinEnvironment(*name));
     if (kind == "newenvironment" && exists) {
       fail(kind, "Command " + *name + "@env already exists! Use renewcommand instead!");
@@ -698,11 +777,12 @@ struct Expander::Impl {
       fail(kind, "Environment " + *name + " is not defined! Use newenvironment instead!");
     }
     envs[*name] = std::move(def);
-    emitLead(e.lead);
   }
 
   /** Handle a control sequence that is a definition, an environment or a
-   *  macro. False when it is none of these and passes through. */
+   *  macro: true when it was consumed, false when it passes through. What
+   *  it consumed puts nothing in the output but its leading whitespace,
+   *  which the caller carries on to the next token. */
   bool process(const ExpToken& e) {
     const std::string& name = e.tok.text;
     if (e.tok.kind == TokKind::controlWord) {
@@ -711,7 +791,7 @@ struct Expander::Impl {
         return true;
       }
       if (name == "DeclareMathOperator") {
-        declareOperator(e);
+        declareOperator();
         return true;
       }
       if (name == "def" || name == "gdef") {
@@ -719,7 +799,7 @@ struct Expander::Impl {
         return true;
       }
       if (name == "let") {
-        defineLet(e);
+        defineLet();
         return true;
       }
       if (name == "newenvironment" || name == "renewenvironment") {
@@ -727,10 +807,10 @@ struct Expander::Impl {
         return true;
       }
       if (name == "makeatletter" || name == "makeatother") {
+        // Passed on too: the old parser keeps its own count.
         atLetter += name == "makeatletter" ? 1 : -1;
         cats.set('@', atLetter > 0 ? Cat::letter : Cat::other);
-        emit(e);
-        return true;
+        return false;
       }
       if ((name == "begin" || name == "end") && !macros.count(name)) {
         return environment(e, name == "begin");
@@ -739,14 +819,32 @@ struct Expander::Impl {
     return expandMacro(e);
   }
 
-  std::string run() {
+  /** Leading whitespace of consumed tokens, owed to the next token out. */
+  std::string carry;
+
+  /** The next token after expansion. */
+  ExpToken nextExpanded() {
     while (true) {
       ExpToken e = raw();
+      if (e.tok.kind != TokKind::end && e.tok.isControl() && !e.tok.noexpand && process(e)) {
+        carry += e.lead;
+        continue;
+      }
+      if (!carry.empty()) {
+        e.lead = carry + e.lead;
+        carry.clear();
+      }
+      return e;
+    }
+  }
+
+  std::string run() {
+    while (true) {
+      ExpToken e = nextExpanded();
       if (e.tok.kind == TokKind::end) {
         emitLead(e.lead);
         break;
       }
-      if (e.tok.isControl() && !e.tok.noexpand && process(e)) continue;
       emit(e);
     }
     return std::move(out);
@@ -760,6 +858,31 @@ Expander::~Expander() = default;
 
 std::string Expander::expandToText() {
   return _impl->run();
+}
+
+std::vector<std::string> preludeCommandNames() {
+  std::vector<std::string> names;
+  for (const auto& kv : Expander::Impl::prelude().macros) names.push_back(kv.first);
+  return names;
+}
+
+std::vector<std::string> preludeEnvironmentNames() {
+  std::vector<std::string> names;
+  for (const auto& kv : Expander::Impl::prelude().envs) names.push_back(kv.first);
+  return names;
+}
+
+ExpandedToken Expander::next() {
+  ExpToken e = _impl->nextExpanded();
+  return {std::move(e.tok), std::move(e.lead), std::string(e.text)};
+}
+
+void Expander::setCatcode(c32 ch, Cat cat) {
+  _impl->cats.set(ch, cat);
+}
+
+Cat Expander::catcode(c32 ch) const {
+  return _impl->cats.get(ch);
 }
 
 void setPersistentMacro(const std::string& name, const std::string& body) {

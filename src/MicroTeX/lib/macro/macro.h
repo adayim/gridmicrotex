@@ -137,6 +137,10 @@ public:
   /** Get the macro info from given name, return nullptr if not found. */
   static MacroInfo* get(const std::string& name);
 
+  /** Every registered name, for checking the new front end's command
+   *  table against this one. */
+  static std::vector<std::string> names();
+
   /** Remove and delete the macro info entry for the given name. No-op
    *  if the name is not registered. */
   static void remove(const std::string& name);

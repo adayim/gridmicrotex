@@ -136,6 +136,38 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// parse_ast_cpp
+Rcpp::DataFrame parse_ast_cpp(std::string tex, std::string mode);
+RcppExport SEXP _gridmicrotex_parse_ast_cpp(SEXP texSEXP, SEXP modeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
+    Rcpp::traits::input_parameter< std::string >::type mode(modeSEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_ast_cpp(tex, mode));
+    return rcpp_result_gen;
+END_RCPP
+}
+// command_tables_cpp
+Rcpp::List command_tables_cpp();
+RcppExport SEXP _gridmicrotex_command_tables_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(command_tables_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
+// math_env_names_cpp
+std::vector<std::string> math_env_names_cpp();
+RcppExport SEXP _gridmicrotex_math_env_names_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(math_env_names_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
 // register_text_measurer
 void register_text_measurer(SEXP fn);
 RcppExport SEXP _gridmicrotex_register_text_measurer(SEXP fnSEXP) {
@@ -340,6 +372,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_persistent_macro_clear_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_clear_cpp, 0},
     {"_gridmicrotex_persistent_macro_list_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_list_cpp, 0},
     {"_gridmicrotex_persistent_macro_generation_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_generation_cpp, 0},
+    {"_gridmicrotex_parse_ast_cpp", (DL_FUNC) &_gridmicrotex_parse_ast_cpp, 2},
+    {"_gridmicrotex_command_tables_cpp", (DL_FUNC) &_gridmicrotex_command_tables_cpp, 0},
+    {"_gridmicrotex_math_env_names_cpp", (DL_FUNC) &_gridmicrotex_math_env_names_cpp, 0},
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
     {"_gridmicrotex_microtex_init", (DL_FUNC) &_gridmicrotex_microtex_init, 2},

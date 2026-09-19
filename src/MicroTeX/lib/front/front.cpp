@@ -1,8 +1,12 @@
 #include "front/front.h"
 
+#include "core/formula.h"
 #include "front/diagnostics.h"
 #include "front/expander.h"
+#include "front/parser.h"
+#include "front/spec.h"
 #include "macro/macro.h"
+#include "unimath/uni_symbol.h"
 
 namespace microtex::front {
 
@@ -36,6 +40,25 @@ std::string prepareForLegacyParser(const std::string& latex) {
   };
   Diagnostics diags;
   return Expander(latex, std::move(opts), diags).expandToText();
+}
+
+Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics) {
+  ExpanderOptions eo;
+  eo.prelude = true;
+  eo.lex.blankLineIsPar = false;
+  eo.isBuiltinCommand = [](const std::string& name) { return findCommand(name) != nullptr; };
+  eo.isBuiltinEnvironment = [](const std::string& name) {
+    return findEnvironment(name) != nullptr;
+  };
+  Expander expander(latex, std::move(eo), diagnostics);
+  ParserOptions po;
+  po.startMode = mode;
+  po.isKnownName = [](const std::string& name) {
+    return Symbol::get(name.c_str()) != nullptr || Formula::isPredefined(name);
+  };
+  Ast ast;
+  Parser(expander, ast, diagnostics, std::move(po)).parse();
+  return ast;
 }
 
 }  // namespace microtex::front

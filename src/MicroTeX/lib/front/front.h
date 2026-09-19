@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <string>
 
+#include "front/ast.h"
+#include "front/diagnostics.h"
+
 namespace microtex::front {
 
 /**
@@ -26,6 +29,14 @@ void setFrontEnd(FrontEnd which);
  * legacy front end, `latex` unchanged.
  */
 std::string prepareForLegacyParser(const std::string& latex);
+
+/**
+ * The syntax tree of `latex` read by the new front end: the prelude, user
+ * macros and define_macro() macros expanded, then parsed from `mode`.
+ * Problems go to `diagnostics`; errors the expander still raises (a
+ * redefinition, runaway recursion) are thrown as ex_parse.
+ */
+Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics);
 
 }  // namespace microtex::front
 

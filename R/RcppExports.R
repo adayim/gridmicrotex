@@ -49,6 +49,18 @@ persistent_macro_generation_cpp <- function() {
     .Call(`_gridmicrotex_persistent_macro_generation_cpp`)
 }
 
+parse_ast_cpp <- function(tex, mode = "math") {
+    .Call(`_gridmicrotex_parse_ast_cpp`, tex, mode)
+}
+
+command_tables_cpp <- function() {
+    .Call(`_gridmicrotex_command_tables_cpp`)
+}
+
+math_env_names_cpp <- function() {
+    .Call(`_gridmicrotex_math_env_names_cpp`)
+}
+
 register_text_measurer <- function(fn) {
     invisible(.Call(`_gridmicrotex_register_text_measurer`, fn))
 }
