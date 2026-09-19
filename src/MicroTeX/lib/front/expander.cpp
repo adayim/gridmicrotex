@@ -723,6 +723,9 @@ struct Expander::Impl {
       std::vector<std::string> args = readArgs(*def, "\\begin{" + name + "}");
       if (opts.recover) openEnvs.push_back({name, e.tok.span, depth});
       pushExpansion("{" + substitute(def->body, args), e.tok.span);
+      ExpToken open = rawUntaped();
+      open.tok.environment = true;
+      frames.back().pushback.push_back(std::move(open));
       return true;
     }
     if (opts.recover) {

@@ -1,8 +1,12 @@
 #ifndef MICROTEX_ATOM_VROW_H
 #define MICROTEX_ATOM_VROW_H
 
+#include <cstddef>
+#include <map>
+
 #include "atom/atom.h"
 #include "atom/atom_space.h"
+#include "env/units.h"
 
 namespace microtex {
 
@@ -12,6 +16,8 @@ private:
   std::vector<sptr<Atom>> _elements;
   sptr<SpaceAtom> _raise;
   bool _addInterline;
+  /** Extra space below an element, by its index: `\\[len]`. */
+  std::map<std::size_t, Dimen> _gaps;
 
 public:
   Alignment _valign = Alignment::none;
@@ -38,6 +44,9 @@ public:
 
   /** Add an atom at the tail */
   void append(const sptr<Atom>& el);
+
+  /** Extra space below the last atom added, before the next one. */
+  void addGapAfterLast(const Dimen& gap);
 
   sptr<Box> createBox(Env& env) override;
 };

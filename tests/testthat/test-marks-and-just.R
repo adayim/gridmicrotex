@@ -1,22 +1,22 @@
 test_that("string hjust/vjust resolve to the expected viewport just values", {
-  g <- latex_grob("x^2", hjust = "left", vjust = "top")
+  g <- latex_grob("$x^2$", hjust = "left", vjust = "top")
   expect_equal(g$hjust, 0)
   expect_equal(g$vjust, 1)
 
-  g <- latex_grob("x^2", hjust = "centre", vjust = "middle")
+  g <- latex_grob("$x^2$", hjust = "centre", vjust = "middle")
   expect_equal(g$hjust, 0.5)
   expect_equal(g$vjust, 0.5)
 
-  g <- latex_grob("x^2", hjust = "bbright", vjust = "bottom")
+  g <- latex_grob("$x^2$", hjust = "bbright", vjust = "bottom")
   expect_equal(g$hjust, 1)
   expect_equal(g$vjust, 0)
 })
 
 test_that("vjust = 'baseline' aligns at bbox_bl_bp / bbox_h", {
-  g <- latex_grob("x^2", vjust = "baseline")
+  g <- latex_grob("$x^2$", vjust = "baseline")
   expect_equal(g$vjust, g$bbox_bl_bp / g$bbox_h)
   # baseline should sit below center for an expression with descent (e.g. \sum)
-  g2 <- latex_grob(r"(\sum_{i=1}^n i)", vjust = "baseline")
+  g2 <- latex_grob(r"($\sum_{i=1}^n i$)", vjust = "baseline")
   expect_gt(g2$vjust, 0)
   expect_lt(g2$vjust, 1)
 })
@@ -55,7 +55,7 @@ test_that("multiple marks are stored in source order", {
 })
 
 test_that("editGrob() preserves string-valued vjust across reparse", {
-  g <- latex_grob("x^2", vjust = "baseline", gp = grid::gpar(fontsize = 12))
+  g <- latex_grob("$x^2$", vjust = "baseline", gp = grid::gpar(fontsize = 12))
   bl1 <- g$vjust
   g2 <- grid::editGrob(g, gp = grid::gpar(fontsize = 24))
   # bbox changes, but vjust should still resolve "baseline" against the new bbox
@@ -151,7 +151,7 @@ test_that("grobX/grobY cardinal points hit the bbox edges (rot = 0)", {
   on.exit(grDevices::dev.off(), add = TRUE)
   grid::grid.newpage()
 
-  g <- latex_grob("x^2", x = grid::unit(2, "in"), y = grid::unit(1.5, "in"),
+  g <- latex_grob("$x^2$", x = grid::unit(2, "in"), y = grid::unit(1.5, "in"),
                   hjust = 0, vjust = 0, gp = grid::gpar(fontsize = 20))
   w <- grid::convertWidth(grid::grobWidth(g), "inches", valueOnly = TRUE)
   h <- grid::convertHeight(grid::grobHeight(g), "inches", valueOnly = TRUE)
@@ -211,10 +211,10 @@ test_that("grobX/grobY on a rotated grob match a rectGrob in the same viewport",
   on.exit(grDevices::dev.off(), add = TRUE)
   grid::grid.newpage()
 
-  dims <- latex_dims("x^2", gp = grid::gpar(fontsize = 20))
+  dims <- latex_dims("$x^2$", gp = grid::gpar(fontsize = 20))
 
   for (rot in c(37, 90, 180)) {
-    g <- latex_grob("x^2", x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
+    g <- latex_grob("$x^2$", x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
                     hjust = 0, vjust = 0, rot = rot, gp = grid::gpar(fontsize = 20))
     # grid's reference behaviour for a grob whose rotation comes from its
     # viewport: theta is measured in the grob's own (rotated) frame.

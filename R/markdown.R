@@ -123,14 +123,14 @@
   # does -- so `lm(y ~ x)` in a code block drew its tilde up at cap
   # height, and prose `~5` did the same.
   #
-  # `^` needs nothing at all: inside \text{}, and inside a text command
-  # such as \textbf{}, MicroTeX already draws it flat on the baseline.
-  # `~` cannot be left bare, because LaTeX reads it as a non-breaking
-  # space and MicroTeX duly draws a space, losing the character. Neither
-  # \textasciitilde nor \textasciicircum exists -- like \textbackslash
-  # they typeset their own letters. \char126 is the spelling that works,
-  # and the empty group is required: \char126b swallows the `b`.
+  # Neither can be left bare either: `~` is a non-breaking space in LaTeX,
+  # so the character was lost, and `^` in text is drawn but warned about,
+  # as TeX refuses it there. Neither \textasciitilde nor \textasciicircum
+  # exists -- like \textbackslash they typeset their own letters.
+  # \char126 and \char94 are the spellings that work, and the empty group
+  # is required: \char126b swallows the `b`.
   s <- gsub("~", "\\\\char126{}", s)
+  s <- gsub("^", "\\char94{}", s, fixed = TRUE)
   # MicroTeX has no \textbackslash -- it would typeset those 13 letters
   # literally. \backslash is the spelling that works; the empty group
   # stops it gluing onto a following letter (\backslashx).

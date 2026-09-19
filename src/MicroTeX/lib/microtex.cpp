@@ -179,14 +179,14 @@ bool MicroTeX::isRenderGlyphUsePath() {
 Render* MicroTeX::parse(
   const string& latex, float width, float textSize, float lineSpace, color fg,
   bool fillWidth, const OverrideTeXStyle& overrideTeXStyle,
-  const string& mathFontName, const string& mainFontFamily
+  const string& mathFontName, const string& mainFontFamily, InputMode mode
 ) {
   // The new front end throughout, or (to compare against) the old parser
   // behind the new macro expander, or the old parser alone.
   std::unique_ptr<Formula> built;
   if (front::frontEnd() == front::FrontEnd::modern) {
     built = std::make_unique<Formula>();
-    front::buildModern(latex, front::Mode::math, *built);
+    front::buildModern(latex, mode, *built);
   } else {
     built = std::make_unique<Formula>(front::prepareForLegacyParser(latex));
   }
@@ -205,7 +205,10 @@ Render* MicroTeX::parse(
   // to the backend whole and still ordered internally by it; this orders
   // the runs around it.
   RowAtom::_levelled = microtex::bidi_assign_levels(formula._root);
-  const auto isInline = !startsWith(latex, "$$") && !startsWith(latex, "\\[");
+  // A formula that opens with display math is set as a display. A label
+  // is prose, whatever it opens with.
+  const auto isInline = mode != InputMode::math ||
+                        (!startsWith(latex, "$$") && !startsWith(latex, "\\["));
   const auto align = isInline ? Alignment::left : Alignment::center;
   TexStyle style = isInline ? TexStyle::text : TexStyle::display;
   if (overrideTeXStyle.enable) {

@@ -26,6 +26,16 @@ std::string trim(const std::string& s) {
   return s.substr(first, last - first + 1);
 }
 
+/** Sets a flag for a scope, and puts it back after. */
+struct Scoped {
+  bool& flag;
+  bool was;
+  Scoped(bool& f, bool value) : flag(f), was(f) { flag = value; }
+  ~Scoped() { flag = was; }
+  Scoped(const Scoped&) = delete;
+  Scoped& operator=(const Scoped&) = delete;
+};
+
 char kindCode(ArgKind kind) {
   switch (kind) {
     case ArgKind::math: return 'm';
@@ -121,6 +131,8 @@ bool Parser::atStop(const ExpandedToken& t, const Stop& stop) const {
       (k.isChar(Cat::alignTab) || k.isCs("\\") || k.isCs("cr"))) {
     return true;
   }
+  // A line end in mixed-mode prose is a `\\`, and stops where one does.
+  if (stop.overArg && _prose && k.lineEnds > 0) return true;
   if (stop.cell && k.isCs("end")) return true;
   if (stop.right && (k.isCs("right") || k.isCs("middle"))) return true;
   if ((stop.dollar || stop.displayDollar) && k.isChar(Cat::mathShift)) return true;
@@ -136,6 +148,15 @@ NodeId Parser::emptyList(const SourceSpan& at, Mode mode) {
   n.mode = mode;
   n.span = at;
   return _ast.add(std::move(n), {});
+}
+
+NodeId Parser::lineBreak(const SourceSpan& at, Mode mode) {
+  Node n;
+  n.kind = NodeKind::command;
+  n.mode = mode;
+  n.span = at;
+  n.text = "\\";
+  return _ast.add(std::move(n), {absentArgument(at, mode)});
 }
 
 NodeId Parser::absentArgument(const SourceSpan& at, Mode mode) {
@@ -158,6 +179,7 @@ NodeId Parser::character(const ExpandedToken& t, Mode mode) {
 }
 
 NodeId Parser::parse() {
+  _prose = _opts.lineEndsBreak && _opts.startMode == Mode::text;
   _ast.root = parseList(_opts.startMode, Stop{}, SourceSpan{});
   // Anything left over is after a stray closing token at the top level.
   while (true) {
@@ -170,6 +192,8 @@ NodeId Parser::parse() {
 
 NodeId Parser::parseList(Mode mode, const Stop& stop, const SourceSpan& at) {
   std::vector<NodeId> items;
+  // Math is not prose, and neither is text inside it (\text{} in a formula).
+  const Scoped prose(_prose, _prose && mode == Mode::text);
   if (_depth >= kMaxDepth) {
     // Too deep to recurse: skip to where this list would have ended.
     _diags.error(at, "Input nested too deeply");
@@ -228,6 +252,13 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
   ExpandedToken t = next();
   const Token& k = t.tok;
 
+  // A line end in mixed-mode prose breaks the line: the space that holds
+  // it, or one TeX dropped before this token (after a control word).
+  if (_prose && k.lineEnds > 0 && k.kind != TokKind::end) {
+    items.push_back(lineBreak(k.span, mode));
+    if (k.kind == TokKind::space || k.kind == TokKind::par) return true;
+  }
+
   switch (k.kind) {
     case TokKind::end:
       unread(std::move(t));
@@ -277,11 +308,13 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
       items.push_back(character(t, mode));
       return true;
     case Cat::param:
-      // In text a `#` is drawn, as it always was (markdown headings in
-      // labels); in math it is a macro parameter out of place.
-      if (mode == Mode::math) {
-        _diags.warn(k.span, "macro parameter # outside a definition is drawn as a character");
-      }
+      _diags.warn(k.span, "macro parameter # outside a definition is drawn as a character");
+      items.push_back(character(t, mode));
+      return true;
+    case Cat::superscript:
+    case Cat::subscript:
+      // Only text reaches here: in math the list reads them as scripts.
+      _diags.warn(k.span, t.text + " outside math is drawn as a character");
       items.push_back(character(t, mode));
       return true;
     case Cat::active: {
@@ -313,6 +346,7 @@ NodeId Parser::parseGroupAfterOpen(const ExpandedToken& open, Mode mode) {
   g.kind = NodeKind::group;
   g.mode = mode;
   g.span = open.tok.span;
+  g.aux = open.tok.environment ? 1 : 0;  // an environment's expansion
   return _ast.add(std::move(g), {list});
 }
 
@@ -440,6 +474,40 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     if (name == "left") return parseLeftRight(t, mode);
     if (name == "begin") return parseEnvironment(t, mode);
     if (name == "(") return parseMath(t, false, ")", stop.group);
+    if (name == "ensuremath" && mode == Mode::math) {
+      // In math it is not there, as in LaTeX: its argument is read on as
+      // part of this list, so `90\degree` is 90^\circ.
+      ExpandedToken open = nextNonSpace();
+      if (!open.tok.isChar(Cat::beginGroup)) {
+        unread(std::move(open));
+        return kNoNode;
+      }
+      std::vector<ExpandedToken> inner;
+      int depth = 0;
+      while (true) {
+        ExpandedToken u = next();
+        if (u.tok.kind == TokKind::end) {
+          _diags.warn(open.tok.span, "missing } inserted");
+          unread(std::move(u));
+          break;
+        }
+        if (u.tok.isChar(Cat::beginGroup)) depth++;
+        if (u.tok.isChar(Cat::endGroup) && depth-- == 0) break;
+        inner.push_back(std::move(u));
+      }
+      for (auto it = inner.rbegin(); it != inner.rend(); ++it) _ahead.push_back({std::move(*it), true});
+      return kNoNode;
+    }
+    if (name == "ensuremath") {
+      // In text, a formula: what `$...$` would be, but safe inside one.
+      const NodeId arg = parseArgument(spec->args[0], mode, who);
+      const NodeId list = _ast.childCount(arg) > 0 ? _ast.child(arg, 0) : emptyList(at, Mode::math);
+      Node m;
+      m.kind = NodeKind::math;
+      m.mode = Mode::math;
+      m.span = at;
+      return _ast.add(std::move(m), {list});
+    }
     if (name == "[") return parseMath(t, true, "]", stop.group);
     if (name == "right") {
       _diags.warn(at, "\\right without \\left: drawn as its name");
@@ -845,6 +913,8 @@ std::string Parser::readGroupName() {
 
 NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
   const SourceSpan at = begin.tok.span;
+  // An environment's line ends are its own business, as in TeX.
+  const Scoped prose(_prose, false);
   const std::string name = readGroupName();
   const EnvSpec* spec = findEnvironment(name);
   Node n;

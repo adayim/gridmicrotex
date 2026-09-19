@@ -159,8 +159,10 @@ int ArrayFormula::cols() const {
 sptr<VRowAtom> ArrayFormula::getAsVRow() {
   auto vr = sptrOf<VRowAtom>();
   vr->setAddInterline(true);
-  for (auto& c : _array) {
-    for (auto& j : c) vr->append(j);
+  for (std::size_t r = 0; r < _array.size(); r++) {
+    for (auto& j : _array[r]) vr->append(j);
+    const auto gap = _rowGaps.find(static_cast<int>(r));
+    if (gap != _rowGaps.end()) vr->addGapAfterLast(gap->second);
   }
   return vr;
 }

@@ -44,7 +44,7 @@ std::string prepareForLegacyParser(const std::string& latex) {
   return Expander(latex, std::move(opts), diags).expandToText();
 }
 
-Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics) {
+Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bool lineBreaks) {
   ExpanderOptions eo;
   eo.prelude = true;
   eo.recover = true;
@@ -56,6 +56,7 @@ Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics) {
   Expander expander(latex, std::move(eo), diagnostics);
   ParserOptions po;
   po.startMode = mode;
+  po.lineEndsBreak = lineBreaks;
   po.isKnownName = [](const std::string& name) {
     return Symbol::get(name.c_str()) != nullptr || Formula::isPredefined(name);
   };
@@ -73,13 +74,14 @@ Diagnostics& lastStore() {
 
 }  // namespace
 
-void buildModern(const std::string& latex, Mode mode, Formula& formula) {
+void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
   lastStore() = Diagnostics();
   Diagnostics diags;
-  const Ast ast = parseLatex(latex, mode, diags);
+  const bool mixed = mode == InputMode::mixed;
+  const Ast ast = parseLatex(latex, mixed ? Mode::text : Mode::math, diags, mixed);
   // A capacity ran out: what was read is not what the input means.
   if (const Diagnostic* e = diags.firstError()) throw ex_parse(e->message);
-  lowerInto(ast, formula, diags);
+  lowerInto(ast, formula, diags, mixed);
   lastStore() = std::move(diags);
 }
 

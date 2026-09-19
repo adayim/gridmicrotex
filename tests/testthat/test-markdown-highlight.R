@@ -152,7 +152,7 @@ test_that("nothing in a code block is interpreted as math or LaTeX", {
   }
   # The content itself is intact, not replaced by a sentinel index.
   expect_match(box_tex("~~~\n# see $E = mc^2$ here\n~~~\n"),
-               "E = mc^2", fixed = TRUE)
+               "E = mc\\char94{}2", fixed = TRUE)
   # And with a language, so the classifier sees the real source too --
   # the dollars are escaped, which is what stops them opening math.
   expect_match(box_tex("~~~r\nx <- \"$a$\"\n~~~\n"), "\\$a\\$", fixed = TRUE)

@@ -1,5 +1,7 @@
 #include "front/lower.h"
 
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -76,13 +78,20 @@ class Lowerer {
 public:
   Lowerer(const Ast& ast, Diagnostics& diags) : _ast(ast), _diags(diags) {}
 
-  void run(Formula& f) {
-    if (_ast.root != kNoNode) lowerList(_ast.root, f, 0);
+  void run(Formula& f, bool lines) {
+    if (_ast.root == kNoNode) return;
+    if (lines) {
+      runLines(f);
+    } else {
+      lowerList(_ast.root, f, 0);
+    }
   }
 
 private:
   const Ast& _ast;
   Diagnostics& _diags;
+  /** Per node, whether a line break is in it: 0 not known yet, 1 no, 2 yes. */
+  std::vector<std::int8_t> _breaks;
 
   const Node& node(NodeId id) const { return _ast.node(id); }
   NodeId child(NodeId id, std::uint32_t i) const { return _ast.child(id, i); }
@@ -126,14 +135,14 @@ private:
       const Node& x = node(id);
       if (x.kind == NodeKind::command && !x.flag && (x.text == "\\" || x.text == "cr")) {
         if (f.isArrayMode()) {
-          static_cast<ArrayFormula&>(f).addRow();
+          endRow(static_cast<ArrayFormula&>(f), id);
           continue;
         }
         // A line break outside an alignment: what came before is the first
         // row, and the rest of the list the rows after it.
         ArrayFormula arr;
         arr.add(f._root);
-        arr.addRow();
+        endRow(arr, id);
         lowerList(list, arr, i + 1);
         arr.checkDimensions();
         f._root = arr.getAsVRow();
@@ -141,6 +150,13 @@ private:
       }
       lowerItem(id, f);
     }
+  }
+
+  /** The row a `\\` ends, with the space its `[len]` asks for below it. */
+  void endRow(ArrayFormula& arr, NodeId brk) {
+    const std::string gap = count(brk) > 0 ? rawOf(child(brk, 0)) : std::string();
+    if (!gap.empty()) arr.addRowGap(Units::getDimen(gap));
+    arr.addRow();
   }
 
   /** A list built in a formula of its own; its root. */
@@ -300,6 +316,11 @@ private:
     const std::string& name = x.text;
     const CommandSpec* spec = x.flag ? nullptr : findCommand(name);
     if (spec == nullptr) {
+      // \# \$ \% \& \_ in text are characters of the text, as in TeX, not
+      // the math font's symbols.
+      if (x.mode == Mode::text && name.size() == 1 && std::string("#$%&_").find(name[0]) != std::string::npos) {
+        return singleChar(static_cast<c32>(name[0]), false);
+      }
       if (!x.flag) {
         if (Formula::isPredefined(name)) return Formula::get(name)->_root;
         if (auto s = SymbolAtom::get(name)) return s;
@@ -357,7 +378,15 @@ private:
     }
 
     sptr<Atom> formula(std::size_t i, bool math, bool) override {
-      return _lx.argumentFormula(i < _nodes.size() ? _nodes[i] : kNoNode, text(i), math);
+      const NodeId arg = i < _nodes.size() ? _nodes[i] : kNoNode;
+      if (arg != kNoNode && arg == _replaced) return _replacement;
+      return _lx.argumentFormula(arg, text(i), math);
+    }
+
+    /** The argument `arg` is `atom` instead: one line's part of it. */
+    void replace(NodeId arg, sptr<Atom> atom) {
+      _replaced = arg;
+      _replacement = std::move(atom);
     }
 
     bool isMathMode() const override { return _math; }
@@ -390,6 +419,8 @@ private:
     std::vector<std::string> _texts;
     std::vector<NodeId> _nodes;
     Formula* _here;
+    NodeId _replaced = kNoNode;
+    sptr<Atom> _replacement;
   };
 
   /** LaTeX not from the input -- a raw argument read as a formula, text a
@@ -421,8 +452,9 @@ private:
 
   /** Build a command with its engine handler, its arguments laid out as the
    *  old parser laid them out: mandatory ones from 1, optional ones after
-   *  them. */
-  sptr<Atom> bridge(NodeId id, const std::string& name, const CommandSpec* spec, Formula& f) {
+   *  them. The argument `replaced`, if any, is `replacement` instead. */
+  sptr<Atom> bridge(NodeId id, const std::string& name, const CommandSpec* spec, Formula& f,
+                    NodeId replaced = kNoNode, const sptr<Atom>& replacement = nullptr) {
     MacroInfo* mac = MacroInfo::get(name);
     if (mac == nullptr) return unknownAtom(name);
     std::vector<std::string> args(static_cast<std::size_t>(mac->argc) + 12);
@@ -446,6 +478,7 @@ private:
     // the old parser only (definitions, \over and kin, ...).
     if (cm == nullptr) return unknownAtom(name);
     TreeArgs a(*this, node(id).mode == Mode::math, std::move(args), std::move(nodes), &f);
+    if (replaced != kNoNode) a.replace(replaced, replacement);
     try {
       return cm->call(a);
     } catch (const std::exception& e) {
@@ -613,30 +646,40 @@ private:
   // --- declarations ----------------------------------------------------------
 
   void declaration(NodeId id, Formula& f) {
+    const NodeId body = child(id, count(id) - 1);
+    f.add(declarationAtom(id, [&] { return build(body); }));
+  }
+
+  /** A declaration applied to its body, which `body` builds; null when it
+   *  fails, with a warning. */
+  sptr<Atom> declarationAtom(NodeId id, const std::function<sptr<Atom>()>& body) {
     const Node& x = node(id);
     const std::string& name = x.text;
-    const NodeId body = child(id, count(id) - 1);
     const bool math = x.mode == Mode::math;
     try {
       if (isTextFont(name)) {
-        const auto atom = build(body);
-        f.add(sptrOf<FontStyleAtom>(FontContext::mainFontStyleOf(name), math, atom));
-      } else if (name == "cal" || name == "frak") {
+        const auto atom = body();
+        return sptrOf<FontStyleAtom>(FontContext::mainFontStyleOf(name), math, atom);
+      }
+      if (name == "cal" || name == "frak") {
         // TeX's old switches for \mathcal and \mathfrak.
         const auto style = FontContext::mathFontStyleOf(name == "cal" ? "mathcal" : "mathfrak");
-        f.add(sptrOf<FontStyleAtom>(style, true, build(body)));
-      } else if (isSize(name)) {
-        auto a = build(body);
-        f.add(sptrOf<ScaleAtom>(a == nullptr ? sptrOf<EmptyAtom>() : a, sizeFactor(name)));
-      } else if (name == "color") {
-        const color c = ColorAtom::getColor(rawOf(child(id, 0)));
-        f.add(sptrOf<ColorAtom>(build(body), TRANSPARENT, c));
-      } else {  // \displaystyle and kin
-        auto g = build(body);
-        f.add(sptrOf<StyleAtom>(texStyleOf(name), g == nullptr ? sptrOf<EmptyAtom>() : g));
+        return sptrOf<FontStyleAtom>(style, true, body());
       }
+      if (isSize(name)) {
+        auto a = body();
+        return sptrOf<ScaleAtom>(a == nullptr ? sptrOf<EmptyAtom>() : a, sizeFactor(name));
+      }
+      if (name == "color") {
+        const color c = ColorAtom::getColor(rawOf(child(id, 0)));
+        return sptrOf<ColorAtom>(body(), TRANSPARENT, c);
+      }
+      // \displaystyle and kin
+      auto g = body();
+      return sptrOf<StyleAtom>(texStyleOf(name), g == nullptr ? sptrOf<EmptyAtom>() : g);
     } catch (const std::exception& e) {
       _diags.warn(x.span, "\\" + name + ": " + clean(e.what()));
+      return nullptr;
     }
   }
 
@@ -721,6 +764,293 @@ private:
     return ra;
   }
 
+  // --- mixed mode: a label's lines ------------------------------------------
+
+  static bool isBreakNode(const Node& x) {
+    return x.kind == NodeKind::command && !x.flag && (x.text == "\\" || x.text == "cr");
+  }
+
+  /** Whether a line break is in `id`, where it ends a line of the label:
+   *  in prose, through groups, text arguments and declarations, but not in
+   *  math or an environment. */
+  bool hasBreak(NodeId id) {
+    if (_breaks.empty()) _breaks.assign(_ast.size(), 0);
+    if (_breaks[id] != 0) return _breaks[id] == 2;
+    const Node& x = node(id);
+    bool found = false;
+    if (isBreakNode(x)) {
+      found = true;
+    } else if (x.kind == NodeKind::list) {
+      for (std::uint32_t i = 0; i < count(id) && !found; i++) found = hasBreak(child(id, i));
+    } else if (x.kind == NodeKind::group) {
+      found = hasBreak(child(id, 0));
+    } else if (x.kind == NodeKind::declaration) {
+      const NodeId body = child(id, count(id) - 1);
+      found = node(body).mode == Mode::text && hasBreak(body);
+    } else if (x.kind == NodeKind::command) {
+      found = textArgumentWithBreak(id) != kNoNode;
+    }
+    _breaks[id] = found ? 2 : 1;
+    return found;
+  }
+
+  /** The text argument of command `id` that holds a line break, if any. */
+  NodeId textArgumentWithBreak(NodeId id) {
+    for (std::uint32_t i = 0; i < count(id); i++) {
+      const NodeId arg = child(id, i);
+      const Node& a = node(arg);
+      if (a.kind == NodeKind::argument && a.flag && a.mode == Mode::text && count(arg) == 1 &&
+          hasBreak(child(arg, 0))) {
+        return arg;
+      }
+    }
+    return kNoNode;
+  }
+
+  /** One line's part of something a line break runs through: a group's
+   *  content (made a group where it goes), or an atom. */
+  struct Piece {
+    sptr<Atom> atom;
+    bool group = false;
+  };
+
+  void put(const Piece& p, Formula& f) {
+    if (!p.group) {
+      f.add(p.atom);
+      return;
+    }
+    auto atom = groupAtom(p.atom, f);
+    if (atom != nullptr) atom->_type = AtomType::ordinary;
+    f.add(atom);
+  }
+
+  /** Something with a line break in it, once per line it runs over, as
+   *  TeX would carry it across the break: `\textbf{a\\b}` is
+   *  `\textbf{a}` on one line and `\textbf{b}` on the next, and a group
+   *  or a declaration likewise. A null atom is a line it has nothing on. */
+  std::vector<Piece> piecesOf(NodeId id) {
+    const Node& x = node(id);
+    std::vector<Piece> out;
+    if (x.kind == NodeKind::group) {
+      for (const auto& line : linesOf(child(id, 0))) out.push_back({line->_root, true});
+      return out;
+    }
+    if (x.kind == NodeKind::declaration) {
+      for (const auto& line : linesOf(child(id, count(id) - 1))) {
+        const sptr<Atom> body = line->_root;
+        out.push_back({body == nullptr ? nullptr : declarationAtom(id, [&] { return body; })});
+      }
+      return out;
+    }
+    const NodeId arg = textArgumentWithBreak(id);
+    const CommandSpec* spec = findCommand(x.text);
+    for (const auto& line : linesOf(child(arg, 0))) {
+      if (line->_root == nullptr || spec == nullptr) {
+        out.push_back({});
+        continue;
+      }
+      Formula here;
+      out.push_back({bridge(id, x.text, spec, here, arg, line->_root)});
+    }
+    return out;
+  }
+
+  /** A text list cut at its line breaks, each line's part in a formula of
+   *  its own. Spaces either side of a break go with it, and a run of
+   *  breaks is one; a break at either end leaves an empty part there, so
+   *  the list's owner still ends its line. */
+  std::vector<std::unique_ptr<Formula>> linesOf(NodeId list) {
+    std::vector<std::unique_ptr<Formula>> lines;
+    lines.push_back(std::make_unique<Formula>());
+    bool broken = false;
+    std::vector<NodeId> spaces;
+    const auto content = [&] {
+      if (broken) {
+        lines.push_back(std::make_unique<Formula>());
+        broken = false;
+      }
+      for (const NodeId s : spaces) lowerItem(s, *lines.back());
+      spaces.clear();
+    };
+    for (std::uint32_t i = 0; i < count(list); i++) {
+      const NodeId id = child(list, i);
+      const Node& x = node(id);
+      if (isBreakNode(x)) {
+        spaces.clear();
+        broken = true;
+      } else if (isSpace(x)) {
+        if (!broken) spaces.push_back(id);
+      } else if (!hasBreak(id)) {
+        content();
+        lowerItem(id, *lines.back());
+      } else {
+        const auto pieces = piecesOf(id);
+        for (std::size_t k = 0; k < pieces.size(); k++) {
+          if (k > 0) {
+            spaces.clear();
+            broken = true;
+          }
+          if (pieces[k].atom == nullptr) continue;
+          content();
+          put(pieces[k], *lines.back());
+        }
+      }
+    }
+    if (broken) {
+      lines.push_back(std::make_unique<Formula>());
+    } else {
+      for (const NodeId s : spaces) lowerItem(s, *lines.back());
+    }
+    return lines;
+  }
+
+  /** The label being built: its lines, the current one's prose. */
+  struct Label {
+    explicit Label(Formula& f) : top(&f), line(&f) {}
+    Formula* top;
+    /** Where the current line goes: `top` until a second line starts. */
+    Formula* line;
+    std::unique_ptr<ArrayFormula> rows;
+    /** The current stretch of prose, one \text{} when it ends. */
+    std::unique_ptr<Formula> prose;
+    /** Spaces not placed yet: they go with a break that follows them. */
+    std::vector<NodeId> spaces;
+    /** A line break since the last thing drawn. */
+    bool broken = false;
+    /** The `[len]` of that break: space below the line it ends. */
+    std::string gap;
+    /** Nothing placed since a line break: a space here goes with it. */
+    bool afterBreak = false;
+    /** Anything drawn at all: a break before that is none. */
+    bool drawn = false;
+  };
+
+  Formula& prose(Label& l) {
+    if (l.prose == nullptr) l.prose = std::make_unique<Formula>();
+    return *l.prose;
+  }
+
+  /** The line a break asked for, now that something goes on it. A line
+   *  with nothing drawn on it -- only \newcolumntype, say -- is none. */
+  void startLine(Label& l) {
+    if (!l.broken) return;
+    l.broken = false;
+    if (l.rows == nullptr) {
+      // As a `\\` in a formula makes it: the first line is one row.
+      l.rows = std::make_unique<ArrayFormula>();
+      l.rows->add(l.top->_root);
+      l.line = l.rows.get();
+    }
+    if (!l.gap.empty()) l.rows->addRowGap(Units::getDimen(l.gap));
+    l.gap.clear();
+    l.rows->addRow();
+  }
+
+  /** The prose so far, as one \text{} on its line. */
+  void endProse(Label& l) {
+    if (l.prose != nullptr && l.prose->_root != nullptr) {
+      startLine(l);
+      l.line->add(sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root));
+      l.drawn = true;
+    }
+    l.prose.reset();
+  }
+
+  /** Before prose: the spaces before it join it. */
+  void beforeProse(Label& l) {
+    l.afterBreak = false;
+    for (const NodeId s : l.spaces) lowerItem(s, prose(l));
+    l.spaces.clear();
+  }
+
+  /** Before math or an environment, which go into the line itself. */
+  void beforeLine(Label& l) {
+    beforeProse(l);
+    endProse(l);
+    startLine(l);
+    l.drawn = true;
+  }
+
+  void lineBreak(Label& l, NodeId brk = kNoNode) {
+    l.spaces.clear();
+    endProse(l);
+    if (l.drawn) {
+      l.broken = true;
+      const std::string gap = brk != kNoNode && count(brk) > 0 ? rawOf(child(brk, 0)) : std::string();
+      if (!gap.empty()) l.gap = gap;
+    }
+    l.afterBreak = true;
+  }
+
+  /** The expansion of an environment the prelude or the user defines
+   *  (tabular, pmatrix, cases, ...), which the expander wraps in a group:
+   *  an environment all the same, not prose. */
+  bool isEnvironmentGroup(NodeId id) const {
+    return node(id).kind == NodeKind::group && node(id).aux == 1;
+  }
+
+  /** A space a break takes with it: not `~`, which TeX never drops. */
+  bool isSpace(const Node& x) const { return x.kind == NodeKind::space && x.aux != 1; }
+
+  /** Mixed mode: a label of prose with math in it, broken into lines at
+   *  `\\` and at line ends in the prose (the parser made those `\\`
+   *  too). Built as the R wrapper that used to turn a label into a formula
+   *  built it: each stretch of prose on a line is one \text{}, inline
+   *  math goes into the line itself, and the lines are the rows of the
+   *  formula. A break before everything or after it is none. */
+  void runLines(Formula& f) {
+    Label l(f);
+    const NodeId root = _ast.root;
+    for (std::uint32_t i = 0; i < count(root); i++) {
+      const NodeId id = child(root, i);
+      const Node& x = node(id);
+      if (isBreakNode(x)) {
+        lineBreak(l, id);
+      } else if (isSpace(x)) {
+        if (!l.afterBreak) l.spaces.push_back(id);
+      } else if (x.kind == NodeKind::math) {
+        const NodeId list = child(id, 0);
+        if (x.flag) {
+          // Display style for the display math alone.
+          beforeLine(l);
+          auto g = build(list);
+          l.line->add(sptrOf<StyleAtom>(TexStyle::display, g == nullptr ? sptrOf<EmptyAtom>() : g));
+          continue;
+        }
+        for (std::uint32_t j = 0; j < count(list); j++) {
+          const NodeId m = child(list, j);
+          if (isBreakNode(node(m))) {
+            lineBreak(l, m);
+            continue;
+          }
+          beforeLine(l);
+          lowerItem(m, *l.line);
+        }
+      } else if (x.kind == NodeKind::environment || isEnvironmentGroup(id)) {
+        beforeLine(l);
+        lowerItem(id, *l.line);
+      } else if (!hasBreak(id)) {
+        beforeProse(l);
+        lowerItem(id, prose(l));
+      } else {
+        const auto pieces = piecesOf(id);
+        for (std::size_t k = 0; k < pieces.size(); k++) {
+          if (k > 0) lineBreak(l);
+          if (pieces[k].atom == nullptr) continue;
+          beforeProse(l);
+          put(pieces[k], prose(l));
+        }
+      }
+    }
+    // Spaces at the very end are kept, as they were in the \text{}.
+    beforeProse(l);
+    endProse(l);
+    if (l.rows != nullptr) {
+      l.rows->checkDimensions();
+      f._root = l.rows->getAsVRow();
+    }
+  }
+
   // --- environments ----------------------------------------------------------
 
   /** Built by the engine's environment handler from its source text, as
@@ -779,8 +1109,8 @@ private:
 
 }  // namespace
 
-void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics) {
-  Lowerer(ast, diagnostics).run(formula);
+void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines) {
+  Lowerer(ast, diagnostics).run(formula, lines);
 }
 
 }  // namespace microtex::front

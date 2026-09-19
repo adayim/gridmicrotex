@@ -91,7 +91,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            bool use_path = true,
                            std::string tex_style = "",
                            bool justify = false,
-                           bool optimal_break = false) {
+                           bool optimal_break = false,
+                           std::string input_mode = "math") {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
@@ -140,7 +141,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
             true,                                   // fillWidth
             resolve_tex_style(tex_style),           // overrideTeXStyle
             math_font,                              // mathFontName
-            main_font                               // mainFontFamily
+            main_font,                              // mainFontFamily
+            input_mode == "mixed" ? InputMode::mixed : InputMode::math
         ));
     } catch (const std::exception& e) {
         Rcpp::stop(std::string("LaTeX parse error: ") + e.what());

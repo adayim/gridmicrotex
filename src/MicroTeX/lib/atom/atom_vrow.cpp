@@ -47,9 +47,18 @@ void VRowAtom::append(const sptr<Atom>& el) {
   if (el != nullptr) _elements.push_back(el);
 }
 
+void VRowAtom::addGapAfterLast(const Dimen& gap) {
+  if (!_elements.empty()) _gaps[_elements.size() - 1] = gap;
+}
+
 sptr<Box> VRowAtom::createBox(Env& env) {
   auto vb = sptrOf<VBox>();
   auto lineSpace = sptrOf<StrutBox>(0.f, env.lineSpace(), 0.f, 0.f);
+  // `\\[len]`: extra space below an element that has one.
+  const auto gapAfter = [&](size_t i) {
+    const auto it = _gaps.find(i);
+    if (it != _gaps.end()) vb->add(sptrOf<StrutBox>(0.f, Units::fsize(it->second, env), 0.f, 0.f));
+  };
 
   if (_halign != Alignment::none) {
     float maxWidth = F_MIN;
@@ -66,6 +75,7 @@ sptr<Box> VRowAtom::createBox(Env& env) {
       auto box = boxes[i];
       auto hb = sptrOf<HBox>(box, maxWidth, _halign);
       vb->add(hb);
+      if (i < size - 1) gapAfter(i);
       if (_addInterline && i < size - 1) vb->add(lineSpace);
     }
   } else {
@@ -73,6 +83,7 @@ sptr<Box> VRowAtom::createBox(Env& env) {
     const size_t size = _elements.size();
     for (int i = 0; i < size; i++) {
       vb->add(_elements[i]->createBox(env));
+      if (i < size - 1) gapAfter(i);
       if (_addInterline && i < size - 1) vb->add(lineSpace);
     }
   }

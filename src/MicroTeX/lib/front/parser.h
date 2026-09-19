@@ -19,6 +19,11 @@ struct ParserOptions {
    *  symbols (\alpha) and predefined formulas (\sin). Anything else not in
    *  the spec is reported as unknown. */
   std::function<bool(const std::string&)> isKnownName;
+  /** Mixed mode: a line end in the prose is a line break, a `\\` of its
+   *  own -- the one place a label departs from TeX, for R's "\n". Prose is
+   *  text reached from the top without passing through math or an
+   *  environment. */
+  bool lineEndsBreak = false;
 };
 
 /**
@@ -100,6 +105,8 @@ private:
   bool _listDone = false;
   /** Set when a rule or \intertext ended the row of the cell being read. */
   bool _rowEnded = false;
+  /** In the prose of a mixed-mode input, where a line end breaks the line. */
+  bool _prose = false;
 
   ExpandedToken next();
   void unread(ExpandedToken t);
@@ -135,6 +142,8 @@ private:
   std::string readGroupName();
 
   NodeId emptyList(const SourceSpan& at, Mode mode);
+  /** A `\\` with no gap, for a line end in the prose. */
+  NodeId lineBreak(const SourceSpan& at, Mode mode);
   NodeId character(const ExpandedToken& t, Mode mode);
   NodeId absentArgument(const SourceSpan& at, Mode mode);
 };

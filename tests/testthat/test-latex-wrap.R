@@ -403,19 +403,24 @@ test_that("links are styled, following LaTeX's convention not HTML's", {
   expect_equal(strip("\\href{only-one-group}"), "\\href{only-one-group}")
 })
 
-test_that("an ampersand in prose is a literal, not an alignment tab", {
+test_that("an ampersand in prose is drawn, with TeX's warning", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # MicroTeX reads a bare `&` as an alignment tab even inside \text{} and
-  # drops everything after it, so "Treatment & Control" rendered as
-  # "Treatment " -- half the label gone, with no error. `&` cannot mean
-  # alignment in prose: math spans and tabular environments are passed
-  # through verbatim by the scanner and never reach the prose escaper.
+  # MicroTeX once read a bare `&` as an alignment tab even inside \text{}
+  # and dropped everything after it, so "Treatment & Control" rendered as
+  # "Treatment ". Now the whole label is drawn, `&` as a character of the
+  # text, and TeX's refusal is a warning at its position. `\&` is the
+  # same character, and says so on purpose.
   drawn <- function(s) {
     d <- latex_grob(s, gp = grid::gpar(fontsize = 14))$layout_df
     paste(d$text[d$type == "text" & !is.na(d$text)], collapse = "")
   }
-  expect_equal(drawn("Treatment & Control"), "Treatment  Control")
-  expect_equal(drawn("Cats & Dogs & Mice"), "Cats  Dogs  Mice")
+  expect_warning(out <- drawn("Treatment & Control"),
+                 "1:11: & outside an alignment is drawn as a character")
+  expect_equal(out, "Treatment & Control")
+  expect_warning(out <- drawn("Cats & Dogs & Mice"), "1:6: .*\n.*1:13: ")
+  expect_equal(out, "Cats & Dogs & Mice")
+  expect_no_warning(out <- drawn("Treatment \\& Control"))
+  expect_equal(out, "Treatment & Control")
 
   # An ampersand the user already escaped must not be escaped twice.
   expect_equal(latex_wrap("a \\& b"), "\\text{a \\& b}")

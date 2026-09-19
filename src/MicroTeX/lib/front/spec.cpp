@@ -109,6 +109,7 @@ struct Table {
         "m");
     // \( and \[ open math; \left, \middle and \right delimit a group.
     add({"(", "["}, "", Shape::prefix, Bare::none, true);
+    add({"ensuremath"}, "m", Shape::prefix, Bare::none, true);
     add({"left", "middle", "right"}, "l", Shape::prefix, Bare::none, true);
     add({"mathop", "mathpunct", "mathord", "mathrel", "mathinner", "mathbin", "mathopen",
          "mathclose"},

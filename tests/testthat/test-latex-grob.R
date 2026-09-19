@@ -8,8 +8,8 @@ test_that("latex_grob creates valid grob and returns correct dimensions", {
   expect_true(g$bbox_w > 0)
 
   # render_mode stored correctly
-  g_path <- latex_grob("x^2", render_mode = "path")
-  g_type <- latex_grob("x^2", render_mode = "typeface")
+  g_path <- latex_grob("$x^2$", render_mode = "path")
+  g_type <- latex_grob("$x^2$", render_mode = "typeface")
   expect_equal(g_path$render_mode, "path")
   expect_null(g_path$path_layout_df)
   expect_s3_class(g_type$path_layout_df, "data.frame")
@@ -17,9 +17,9 @@ test_that("latex_grob creates valid grob and returns correct dimensions", {
   # latex_dims with fontsize scaling
   dims <- latex_dims("\\frac{a}{b}", render_mode = "path")
   expect_true(grid::convertWidth(dims$width, "points", valueOnly = TRUE) > 0)
-  w_small <- grid::convertWidth(latex_dims("x^2", gp = grid::gpar(fontsize = 10))$width,
+  w_small <- grid::convertWidth(latex_dims("$x^2$", gp = grid::gpar(fontsize = 10))$width,
                                 "bigpts", valueOnly = TRUE)
-  w_large <- grid::convertWidth(latex_dims("x^2", gp = grid::gpar(fontsize = 40))$width,
+  w_large <- grid::convertWidth(latex_dims("$x^2$", gp = grid::gpar(fontsize = 40))$width,
                                 "bigpts", valueOnly = TRUE)
   expect_true(w_large > w_small)
 })
@@ -29,10 +29,10 @@ test_that("latex_grob creates valid grob and returns correct dimensions", {
 test_that("latex_grob parameters work correctly", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # Rotation
-  expect_equal(latex_grob("x^2", rot = 45)$vp$angle, 45)
+  expect_equal(latex_grob("$x^2$", rot = 45)$vp$angle, 45)
 
   # max_width
-  g_mw <- latex_grob("x^2 + y^2 = z^2", max_width = 50, render_mode = "path")
+  g_mw <- latex_grob("$x^2 + y^2 = z^2$", max_width = 50, render_mode = "path")
   expect_true(grid::convertWidth(grid::grobWidth(g_mw), "bigpts", valueOnly = TRUE) > 0)
 
   # makeContent builds children
@@ -106,8 +106,8 @@ test_that("an unknown command is set as its own name, not dropped, and warns", {
 
 test_that("editGrob re-parses when tex changes", {
   g <- latex_grob("x", render_mode = "path")
-  g2 <- grid::editGrob(g, tex = "x^{2} + y^{2} + z^{2}")
-  expect_equal(g2$tex, "x^{2} + y^{2} + z^{2}")
+  g2 <- grid::editGrob(g, tex = "$x^{2} + y^{2} + z^{2}$")
+  expect_equal(g2$tex, "$x^{2} + y^{2} + z^{2}$")
   expect_true(g2$bbox_w > g$bbox_w)
   # That the layout is genuinely rebuilt, without assuming how many
   # records a given string produces -- consecutive text is drawn as one
@@ -121,7 +121,7 @@ test_that("editGrob re-parses when tex changes", {
 })
 
 test_that("editGrob re-parses when gp (fontsize) changes", {
-  g20 <- latex_grob("x^2", render_mode = "path", gp = grid::gpar(fontsize = 20))
+  g20 <- latex_grob("$x^2$", render_mode = "path", gp = grid::gpar(fontsize = 20))
   g40 <- grid::editGrob(g20, gp = grid::gpar(fontsize = 40))
   expect_equal(g40$fontsize, 40)
   # 2x font -> ~2x bbox
@@ -135,11 +135,11 @@ test_that("editGrob re-parses when math_font / tex_style / render_mode change", 
   g2 <- grid::editGrob(g, math_font = "stix")
   expect_false(identical(g$layout_df, g2$layout_df))
 
-  g3 <- latex_grob("\\sum_{i=1}^{n} i", render_mode = "path", tex_style = "text")
+  g3 <- latex_grob("$\\sum_{i=1}^{n} i$", render_mode = "path", tex_style = "text")
   g4 <- grid::editGrob(g3, tex_style = "display")
   expect_true(g4$bbox_h > g3$bbox_h)  # display makes \sum taller
 
-  g5 <- latex_grob("x^2", render_mode = "path")
+  g5 <- latex_grob("$x^2$", render_mode = "path")
   g6 <- grid::editGrob(g5, render_mode = "typeface")
   expect_equal(g6$render_mode, "typeface")
   expect_s3_class(g6$path_layout_df, "data.frame")  # fallback layout generated
@@ -368,17 +368,17 @@ test_that("the fallback is reported only when typeface was asked for", {
 
   # asked for it explicitly -> told once
   expect_length(on_ps(function()
-    grid.latex("x^2", render_mode = "typeface", gp = grid::gpar(fontsize = 20))), 1L)
+    grid.latex("$x^2$", render_mode = "typeface", gp = grid::gpar(fontsize = 20))), 1L)
 
   # inherited the default -> silent
   expect_length(on_ps(function()
-    grid.latex("x^2", gp = grid::gpar(fontsize = 20))), 0L)
+    grid.latex("$x^2$", gp = grid::gpar(fontsize = 20))), 0L)
 
   # set globally via latex_options() counts as asking
   old <- latex_options(render_mode = "typeface")
   on.exit(reset_latex_options(), add = TRUE)
   expect_length(on_ps(function()
-    grid.latex("x^2", gp = grid::gpar(fontsize = 20))), 1L)
+    grid.latex("$x^2$", gp = grid::gpar(fontsize = 20))), 1L)
 })
 
 test_that("a macro that expands to itself is a parse error, not a hang", {

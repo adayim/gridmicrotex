@@ -22,7 +22,7 @@ namespace microtex::front {
  * An error a handler raises is recorded as a diagnostic at the command, and
  * the command is drawn as its name in red, as an unknown one is.
  */
-void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics);
+void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines = false);
 
 }  // namespace microtex::front
 

@@ -6,6 +6,7 @@
 
 #include "front/ast.h"
 #include "front/diagnostics.h"
+#include "front/input_mode.h"
 
 namespace microtex {
 class Formula;
@@ -38,16 +39,18 @@ std::string prepareForLegacyParser(const std::string& latex);
 /**
  * The syntax tree of `latex` read by the new front end: the prelude, user
  * macros and define_macro() macros expanded, then parsed from `mode`.
- * Problems go to `diagnostics`; errors the expander still raises (a
- * redefinition, runaway recursion) are thrown as ex_parse.
+ * `lineBreaks`: a line end in text is a line break (mixed mode). Problems
+ * go to `diagnostics`; errors the expander still raises (a redefinition,
+ * runaway recursion) are thrown as ex_parse.
  */
-Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics);
+Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics,
+               bool lineBreaks = false);
 
 /**
- * The atoms of `latex`, read by the new front end in `mode`, into
+ * The atoms of `latex`, read by the new front end as `mode` says, into
  * `formula`. The problems found replace lastDiagnostics().
  */
-void buildModern(const std::string& latex, Mode mode, Formula& formula);
+void buildModern(const std::string& latex, InputMode mode, Formula& formula);
 
 /** The diagnostics of the last buildModern(), for the host to report. */
 const Diagnostics& lastDiagnostics();

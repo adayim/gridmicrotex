@@ -504,10 +504,6 @@ grobMark <- function(grob, name) {
   tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
   tex <- .strip_document_wrappers(tex)
   tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
-  # The user-facing `tex` stays as this source so that editDetails() can
-  # re-parse without doubling up the \text{} wrap.
-  # `parse_input` is the actual string handed to the MicroTeX parser.
-  parse_input <- latex_wrap(tex, input_mode = input_mode)
   math_font <- resolve_math_font(math_font)
 
   fg_color <- if (!is.null(gp$col)) {
@@ -551,11 +547,11 @@ grobMark <- function(grob, name) {
   text_family <- text_gp$fontfamily %||% ""
 
   layout <- .parse_latex_cached(
-    tex = parse_input, text_size = fontsize, line_space = line_space,
+    tex = tex, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
     tex_style = tex_style, text_family = text_family, justify = justify,
-    optimal_break = identical(line_break, "optimal")
+    optimal_break = identical(line_break, "optimal"), input_mode = input_mode
   )
   # Read off the layout rather than the parse, so a cached one says it too.
   for (p in attr(layout, "unresolved_images")) .image_unresolved(p)
@@ -564,11 +560,11 @@ grobMark <- function(grob, name) {
   path_layout <- NULL
   if (with_path_fallback && render_mode == "typeface") {
     path_layout <- .parse_latex_cached(
-      tex = parse_input, text_size = fontsize, line_space = line_space,
+      tex = tex, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style,
       text_family = text_family, justify = justify,
-      optimal_break = identical(line_break, "optimal")
+      optimal_break = identical(line_break, "optimal"), input_mode = input_mode
     )
   }
 

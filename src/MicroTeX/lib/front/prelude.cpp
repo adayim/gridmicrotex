@@ -39,11 +39,11 @@ std::string_view preludeSource() {
 \newcommand{\|}{\Vert}
 \newcommand{\Bra}[1]{\left\langle{#1}\right\vert}
 \newcommand{\Ket}[1]{\left\vert{#1}\right\rangle}
-\newcommand{\textsuperscript}[1]{{}^{\text{#1}}}
-\newcommand{\textsubscript}[1]{{}_{\text{#1}}}
+\newcommand{\textsuperscript}[1]{\ensuremath{{}^{\text{#1}}}}
+\newcommand{\textsubscript}[1]{\ensuremath{{}_{\text{#1}}}}
 \newcommand{\overbrack}[1]{\overbracket{#1}}
 \newcommand{\underbrack}[1]{\underbracket{#1}}
-\newcommand{\degree}{^\circ}
+\newcommand{\degree}{\ensuremath{^\circ}}
 \newcommand{\with}{\mathbin{\&}}
 \newcommand{\parr}{\mathbin{\rotatebox[origin=c]{180}{\&}}}
 \newcommand{\sfrac}[2]{\scalebox{.8}{\raisebox{.5ex}{\raisebox{.45ex}{\numstyle{#1}}\kern-.4ex\nokern\mathslash\nokern\kern-.4ex\raisebox{-.45ex}{\dnomstyle{#2}}}}}

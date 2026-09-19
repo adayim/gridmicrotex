@@ -13,7 +13,7 @@ layer_grobs <- function(p, i = 1L) ggplot2::layer_grob(p, i)[[1]]
 
 test_that("geom_latex contributes one rendered grob per row", {
   df <- data.frame(x = 1:3, y = 1:3,
-                   eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
+                   eq = c("$x^2$", "\\frac{a}{b}", "$\\sum_{i=1}^n x_i$"))
   gs <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
                       geom_latex())
   expect_length(gs, 3L)
@@ -24,7 +24,7 @@ test_that("geom_latex contributes one rendered grob per row", {
 })
 
 test_that("geom_latex passes colour and size down to the grob", {
-  df <- data.frame(x = 1, y = 1, eq = "x^2")
+  df <- data.frame(x = 1, y = 1, eq = "$x^2$")
   base <- ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq))
 
   red <- layer_grobs(base + geom_latex(colour = "red"))[[1]]
@@ -32,14 +32,15 @@ test_that("geom_latex passes colour and size down to the grob", {
 
   big   <- layer_grobs(base + geom_latex(fontsize = 20))[[1]]
   small <- layer_grobs(base + geom_latex(fontsize = 8))[[1]]
-  expect_equal(unique(big$layout_df$font_size), 20)
-  expect_equal(unique(small$layout_df$font_size), 8)
+  # The base size; the exponent is set smaller.
+  expect_equal(max(big$layout_df$font_size), 20)
+  expect_equal(max(small$layout_df$font_size), 8)
   expect_gt(big$bbox_w, small$bbox_w)
 })
 
 test_that("geom_latex treats a missing alpha as opaque", {
   # A mapped alpha can be NA, and `NA < 1` made the layer fail to build.
-  df <- data.frame(x = 1, y = 1, eq = "x^2", a = NA_real_)
+  df <- data.frame(x = 1, y = 1, eq = "$x^2$", a = NA_real_)
   g <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq, alpha = a)) +
                      geom_latex(colour = "red"))[[1]]
   expect_equal(g$gp$col, "red")
@@ -48,21 +49,21 @@ test_that("geom_latex treats a missing alpha as opaque", {
 test_that("geom_latex draws nothing for an empty or missing label", {
   # Without the guard in draw_panel these render the literal "NA", or an
   # empty formula that still reserves space.
-  df <- data.frame(x = 1:2, y = 1:2, eq = c("x^2", ""))
+  df <- data.frame(x = 1:2, y = 1:2, eq = c("$x^2$", ""))
   gs <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
                       geom_latex())
   expect_s3_class(gs[[1]], "latexgrob")
   expect_s3_class(gs[[2]], "null")
 
   # na.rm drops the row before it ever reaches us.
-  df_na <- data.frame(x = 1:2, y = 1:2, eq = c("x^2", NA))
+  df_na <- data.frame(x = 1:2, y = 1:2, eq = c("$x^2$", NA))
   gs_na <- layer_grobs(ggplot2::ggplot(df_na, ggplot2::aes(x, y, label = eq)) +
                          geom_latex(na.rm = TRUE))
   expect_length(gs_na, 1L)
 })
 
 test_that("geom_latex fontsize parameter sets size when the aesthetic is unmapped", {
-  df <- data.frame(x = 1, y = 1, eq = "x^2")
+  df <- data.frame(x = 1, y = 1, eq = "$x^2$")
 
   # fontsize parameter fills the size column
   p20 <- ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
@@ -83,7 +84,7 @@ test_that("annotate('latex') adds a rendered layer of its own", {
   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
     ggplot2::geom_point() +
     ggplot2::annotate("latex", x = 4, y = 30,
-                      label = "\\hat{y} = \\beta_0 + \\beta_1 x",
+                      label = "$\\hat{y} = \\beta_0 + \\beta_1 x$",
                       size = 12, colour = "red")
   # Layer 2 is the annotation; the geom has to be reachable by name for
   # annotate() to find it at all.
@@ -141,6 +142,6 @@ test_that(".element_grob_latex handles edge cases and multiple labels", {
 
   # Multiple labels with NA/empty skipped
   result_multi <- gridmicrotex:::.element_grob_latex(
-    element_latex(), label = c("x_1", NA, "", "x_4"))
+    element_latex(), label = c("$x_1$", NA, "", "$x_4$"))
   expect_equal(length(result_multi$children), 2)
 })

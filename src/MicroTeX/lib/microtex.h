@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "front/input_mode.h"
 #include "microtexconfig.h"
 #include "microtexexport.h"
 #include "render/render.h"
@@ -203,6 +204,8 @@ public:
    * @param mainFontFamily the main font family name, empty to use the preset (the
    * font passed in method [setDefaultMainFont] or math font if not given) main
    * font family.
+   * @param mode how the input is read: a formula, or a label of prose with
+   * math in it (see InputMode).
    */
   static Render* parse(
     const std::string& tex,
@@ -213,7 +216,8 @@ public:
     bool fillWidth = true,
     const OverrideTeXStyle& overrideTeXStyle = {false, TexStyle::text},
     const std::string& mathFontName = "",
-    const std::string& mainFontFamily = ""
+    const std::string& mainFontFamily = "",
+    InputMode mode = InputMode::math
   );
 
   /** Release the MicroTeX context */
