@@ -103,43 +103,45 @@ inline cmdmacro(gatheredATATenv) {
   return sptrOf<MultlineAtom>(args.isPartial(), arr, MultiLineType::gathered);
 }
 
-inline macro(multicolumn) {
-  if (!tp.isArrayMode()) throw ex_parse("Command 'multicolumn' only available in array mode!");
+inline cmdmacro(multicolumn) {
+  ArrayFormula* arr = args.alignmentHere();
+  if (arr == nullptr) throw ex_parse("Command 'multicolumn' only available in array mode!");
   int n = 0;
-  valueOf(args[1], n);
-  tp.addAtom(sptrOf<MulticolumnAtom>(n, args[2], Formula(tp, args[3])._root));
-  ((ArrayFormula*)tp._formula)->addCol(n);
+  valueOf(args.text(1), n);
+  arr->add(sptrOf<MulticolumnAtom>(n, args.text(2), args.formula(3, true, true)));
+  arr->addCol(n);
   return nullptr;
 }
 
-inline macro(hdotsfor) {
-  if (!tp.isArrayMode()) throw ex_parse("Command 'hdotsfor' only available in array mode!");
+inline cmdmacro(hdotsfor) {
+  ArrayFormula* arr = args.alignmentHere();
+  if (arr == nullptr) throw ex_parse("Command 'hdotsfor' only available in array mode!");
   int n = 0;
-  valueOf(args[1], n);
+  valueOf(args.text(1), n);
   float f = 1.f;
-  if (!args[2].empty()) valueOf(args[2], f);
-  tp.addAtom(sptrOf<HdotsforAtom>(n, f));
-  ((ArrayFormula*)tp._formula)->addCol(n);
+  if (!args.text(2).empty()) valueOf(args.text(2), f);
+  arr->add(sptrOf<HdotsforAtom>(n, f));
+  arr->addCol(n);
   return nullptr;
 }
 
-inline macro(hline) {
-  if (!tp.isArrayMode()) throw ex_parse("The macro \\hline only available in array mode!");
+inline cmdmacro(hline) {
+  if (args.alignmentHere() == nullptr) throw ex_parse("The macro \\hline only available in array mode!");
   return sptrOf<HlineAtom>();
 }
 
-inline macro(thickhline) {
-  if (!tp.isArrayMode())
+inline cmdmacro(thickhline) {
+  if (args.alignmentHere() == nullptr)
     throw ex_parse("The macro \\thickhline only available in array mode!");
   auto a = sptrOf<HlineAtom>();
   a->setThicknessScale(2.f);
   return a;
 }
 
-inline macro(cline) {
-  if (!tp.isArrayMode())
+inline cmdmacro(cline) {
+  if (args.alignmentHere() == nullptr)
     throw ex_parse("The macro \\cline only available in array mode!");
-  const std::string& spec = args[1];
+  const std::string& spec = args.text(1);
   int a = 0, b = 0;
   const auto dash = spec.find('-');
   if (dash == std::string::npos) {
@@ -155,19 +157,20 @@ inline macro(cline) {
   return at;
 }
 
-inline macro(multirow) {
-  if (!tp.isArrayMode()) throw ex_parse("Command \\multirow must used in array environment!");
+inline cmdmacro(multirow) {
+  ArrayFormula* arr = args.alignmentHere();
+  if (arr == nullptr) throw ex_parse("Command \\multirow must used in array environment!");
   int n = 0;
-  valueOf(args[1], n);
-  tp.addAtom(sptrOf<MultiRowAtom>(n, args[2], Formula(tp, args[3])._root));
+  valueOf(args.text(1), n);
+  arr->add(sptrOf<MultiRowAtom>(n, args.text(2), args.formula(3, true, true)));
   return nullptr;
 }
 
-inline macro(cellcolor) {
-  if (!tp.isArrayMode()) throw ex_parse("Command \\cellcolor must used in array environment!");
-  color c = ColorAtom::getColor(args[1]);
-  auto atom = sptrOf<CellColorAtom>(c);
-  ((ArrayFormula*)tp._formula)->addCellSpecifier(atom);
+inline cmdmacro(cellcolor) {
+  ArrayFormula* arr = args.alignmentHere();
+  if (arr == nullptr) throw ex_parse("Command \\cellcolor must used in array environment!");
+  color c = ColorAtom::getColor(args.text(1));
+  arr->addCellSpecifier(sptrOf<CellColorAtom>(c));
   return nullptr;
 }
 
@@ -203,11 +206,11 @@ inline cmdmacro(columnbg) {
   return sptrOf<CellColorAtom>(c);
 }
 
-inline macro(rowcolor) {
-  if (!tp.isArrayMode()) throw ex_parse("Command \\rowcolor must used in array environment!");
-  color c = ColorAtom::getColor(args[1]);
-  auto spe = sptrOf<CellColorAtom>(c);
-  ((ArrayFormula*)tp._formula)->addRowSpecifier(spe);
+inline cmdmacro(rowcolor) {
+  ArrayFormula* arr = args.alignmentHere();
+  if (arr == nullptr) throw ex_parse("Command \\rowcolor must used in array environment!");
+  color c = ColorAtom::getColor(args.text(1));
+  arr->addRowSpecifier(sptrOf<CellColorAtom>(c));
   return nullptr;
 }
 
@@ -357,7 +360,7 @@ inline std::string listFormatLabel(const std::string& tmpl, int n) {
 // Lay a list body out as a single left-aligned column, one row per item,
 // each row prefixed with `marker(index)`.
 inline sptr<Atom> listBuild(
-  Parser& tp,
+  CommandArgs& args,
   const std::vector<std::string>& items,
   const std::function<std::string(int)>& marker
 ) {
@@ -367,25 +370,23 @@ inline sptr<Atom> listBuild(
     if (i > 0) s += "\\\\";
     s += marker((int)i + 1) + "\\quad{}" + items[i];
   }
-  const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(tp.isPartial(), s, arr.get(), false);
-  parser.parse();
+  const auto arr = args.alignmentOfText(s);
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, "l", false);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, "l", false);
 }
 
-inline macro(itemizeATATenv) {
-  std::string body = args[1];
+inline cmdmacro(itemizeATATenv) {
+  std::string body = args.text(1);
   const std::string opt = listPeelOptional(body);
   const std::string mark = opt.empty() ? "\\bullet" : opt;
-  return listBuild(tp, listSplitItems(body), [&](int) { return mark; });
+  return listBuild(args, listSplitItems(body), [&](int) { return mark; });
 }
 
-inline macro(enumerateATATenv) {
-  std::string body = args[1];
+inline cmdmacro(enumerateATATenv) {
+  std::string body = args.text(1);
   std::string opt = listPeelOptional(body);
   if (opt.empty()) opt = "\\arabic*.";
-  return listBuild(tp, listSplitItems(body), [&](int n) {
+  return listBuild(args, listSplitItems(body), [&](int n) {
     return "\\mathrm{" + listFormatLabel(opt, n) + "}";
   });
 }

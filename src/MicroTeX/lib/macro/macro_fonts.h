@@ -14,6 +14,13 @@ inline cmdmacro(text) {
   return sptrOf<FontStyleAtom>(FontStyle::rm, false, atom);
 }
 
+// \oldstylenums{digits}: the digits as text. Old-style figures are a font
+// feature the engine does not select, so they are the font's own figures;
+// the \textfont handler it shared with \cal lost them altogether.
+inline cmdmacro(oldstylenums) {
+  return sptrOf<FontStyleAtom>(FontStyle::rm, false, args.formula(1, false));
+}
+
 inline macro(textfont) {
   tp.skipWhiteSpace(1);
   const auto atom = Formula(tp, tp.getOverArgument(), false, tp.isMathMode())._root;
@@ -67,7 +74,7 @@ inline cmdmacro(bold) {
   return _mathfont(args, FontStyle::bf);
 }
 
-macro(intertext);
+cmdmacro(intertext);
 
 cmdmacro(addfont);
 

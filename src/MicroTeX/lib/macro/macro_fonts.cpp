@@ -6,18 +6,19 @@
 
 namespace microtex {
 
-macro(intertext) {
-  if (!tp.isArrayMode()) throw ex_parse("Command \\intertext must used in array environment!");
+cmdmacro(intertext) {
+  ArrayFormula* arr = args.alignmentHere();
+  if (arr == nullptr) throw ex_parse("Command \\intertext must used in array environment!");
 
-  std::string str(args[1]);
+  std::string str(args.text(1));
   replaceAll(str, "^{\\prime}", "\'");
   replaceAll(str, "^{\\prime\\prime}", "\'\'");
 
-  auto a = Formula(tp, str, false, false)._root;
+  auto a = args.formulaOf(str, false);
   sptr<Atom> ra = sptrOf<FontStyleAtom>(FontStyle::rm, false, a);
   ra->_type = AtomType::interText;
-  tp.addAtom(ra);
-  tp.addRow();
+  arr->add(ra);
+  arr->addRow();
 
   return nullptr;
 }

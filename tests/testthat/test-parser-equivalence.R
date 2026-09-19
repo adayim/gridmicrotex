@@ -73,6 +73,16 @@ test_that("\\middle takes a delimiter by name, as \\left and \\right do", {
   ))
 })
 
+test_that("\\cal and \\frak switch the math alphabet for the rest of the group", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # TeX's old declarations; their argument was lost.
+  expect_same_layout(c(
+    "{\\cal x} y"          = "\\mathcal{x} y",
+    "{\\frak x} y"         = "\\mathfrak{x} y",
+    "\\oldstylenums{123}"  = "\\text{123}"
+  ))
+})
+
 test_that("\\| is \\Vert, as in LaTeX", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # The engine's symbol table had it as a single bar.

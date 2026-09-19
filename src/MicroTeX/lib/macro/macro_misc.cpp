@@ -192,14 +192,15 @@ cmdmacro(raisebox) {
   return sptrOf<RaiseAtom>(args.formula(2, args.isMathMode()), -r, h, d);
 }
 
-macro(romannumeral) {
+cmdmacro(romannumeral) {
   static const int numbers[] = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
   static const string letters[] =
     {"M", "CM", "D", "CD", "C", "XC", "", "XL", "X", "IX", "V", "IV", "I"};
   string roman;
 
   int num;
-  valueOf(trim(args[1]), num);
+  std::string text = args.text(1);
+  valueOf(trim(text), num);
   for (int i = 0; i < 13; i++) {
     while (num >= numbers[i]) {
       roman += letters[i];
@@ -207,14 +208,14 @@ macro(romannumeral) {
     }
   }
 
-  if (args[0][0] == 'r') {
+  if (args.text(0)[0] == 'r') {
     toLower(roman);
   }
 
   return sptrOf<FontStyleAtom>(
     FontStyle::rm,
-    tp.isMathMode(),
-    Formula(tp, roman, false, tp.isMathMode())._root
+    args.isMathMode(),
+    args.formulaOf(roman, args.isMathMode())
   );
 }
 

@@ -114,7 +114,10 @@ struct Table {
          "mathclose"},
         "m");
     add({"bf", "it", "rm", "sf", "tt"}, "", Shape::declaration);
-    add({"cal", "frak", "oldstylenums"}, "t");
+    // TeX's old font switches: \cal and \frak are \mathcal and \mathfrak
+    // for the rest of the group.
+    add({"cal", "frak"}, "", Shape::declaration);
+    add({"oldstylenums"}, "t");
     add({"mathnormal", "mathrm", "mathbf", "mathit", "mathcal", "mathscr", "mathfrak",
          "mathbb", "mathsf", "mathtt", "mathbfit", "mathbfcal", "mathbffrak", "mathsfbf",
          "mathbfsf", "mathsfit", "mathsfbfit", "mathbfsfit", "Bbb", "mathds", "bold",

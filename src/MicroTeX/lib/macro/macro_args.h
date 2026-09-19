@@ -39,6 +39,17 @@ public:
    *  formula of its own, which the caller finishes (checkDimensions()). */
   virtual sptr<ArrayFormula> alignment(std::size_t i) = 0;
 
+  /** LaTeX a handler put together itself, read as a formula. */
+  virtual sptr<Atom> formulaOf(const std::string& latex, bool math = true) = 0;
+
+  /** LaTeX a handler put together itself, read as the body of an
+   *  alignment (rows at `\\`, cells at `&`). */
+  virtual sptr<ArrayFormula> alignmentOfText(const std::string& latex) = 0;
+
+  /** The alignment the command is in, which a rule or \multicolumn works
+   *  on; nullptr outside one. */
+  virtual ArrayFormula* alignmentHere() = 0;
+
   /** Whether the command itself was read in math mode. */
   virtual bool isMathMode() const = 0;
 

@@ -35,16 +35,16 @@ inline cmdmacro(underline) {
   return sptrOf<OverUnderBar>(args.formula(1), false);
 }
 
-inline macro(Braket) {
-  std::string str(args[1]);
+inline cmdmacro(Braket) {
+  std::string str(args.text(1));
   replaceAll(str, "\\|", "\\middle\\vert ");
-  return Formula(tp, "\\left\\langle " + str + "\\right\\rangle")._root;
+  return args.formulaOf("\\left\\langle " + str + "\\right\\rangle");
 }
 
-inline macro(Set) {
-  std::string str(args[1]);
+inline cmdmacro(Set) {
+  std::string str(args.text(1));
   replaceFirst(str, "\\|", "\\middle\\vert ");
-  return Formula(tp, "\\left\\{" + str + "\\right\\}")._root;
+  return args.formulaOf("\\left\\{" + str + "\\right\\}");
 }
 
 inline macro(leftparenthesis) {

@@ -198,7 +198,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(0, macro_textfont, "tt"),
   mac(1, macro_textfont, "cal"),
   mac(1, macro_textfont, "frak"),
-  mac(1, macro_textfont, "oldstylenums"),
+  mac(1, macro_oldstylenums, "oldstylenums"),
   mac(1, macro_mathfont, "mathnormal"),
   mac(1, macro_mathfont, "mathrm"),
   mac(1, macro_mathfont, "mathbf"),

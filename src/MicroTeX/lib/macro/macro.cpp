@@ -254,11 +254,21 @@ public:
     return Formula(_tp, _args[i], preprocess, math)._root;
   }
 
-  sptr<ArrayFormula> alignment(size_t i) override {
+  sptr<ArrayFormula> alignment(size_t i) override { return alignmentOfText(_args[i]); }
+
+  sptr<Atom> formulaOf(const string& latex, bool math) override {
+    return Formula(_tp, latex, true, math)._root;
+  }
+
+  sptr<ArrayFormula> alignmentOfText(const string& latex) override {
     auto arr = sptrOf<ArrayFormula>();
-    Parser parser(_tp.isPartial(), _args[i], arr.get(), false);
+    Parser parser(_tp.isPartial(), latex, arr.get(), false);
     parser.parse();
     return arr;
+  }
+
+  ArrayFormula* alignmentHere() override {
+    return _tp.isArrayMode() ? static_cast<ArrayFormula*>(_tp._formula) : nullptr;
   }
 
   bool isMathMode() const override { return _tp.isMathMode(); }

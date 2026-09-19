@@ -201,7 +201,7 @@ macro(def);
 
 cmdmacro(raisebox);
 
-macro(romannumeral);
+cmdmacro(romannumeral);
 
 cmdmacro(zstack);
 

@@ -10,6 +10,7 @@
 #include "atom/atom_fence.h"
 #include "atom/atom_font.h"
 #include "atom/atom_frac.h"
+#include "atom/atom_matrix.h"
 #include "atom/atom_misc.h"
 #include "atom/atom_operator.h"
 #include "atom/atom_row.h"
@@ -17,7 +18,6 @@
 #include "atom/atom_space.h"
 #include "atom/atom_text.h"
 #include "box/box_factory.h"
-#include "core/parser.h"
 #include "env/units.h"
 #include "front/front.h"
 #include "front/spec.h"
@@ -246,20 +246,27 @@ private:
     return a.flag ? a.raw : std::string();
   }
 
-  /** Text for an engine handler, which parses it without preprocessing:
-   *  the old parser had already rewritten every `\begin{name}` in the whole
-   *  input as `\name@env{...}`, and dropped every `%` comment, before any
-   *  handler ran. The recorded text keeps comments (they are part of the
-   *  whitespace before a token), so without this they were drawn. */
-  static std::string legacyText(const std::string& raw) {
-    if (raw.find("\\begin") == std::string::npos && raw.find('%') == std::string::npos) return raw;
-    try {
-      Formula scratch;
-      const microtex::Parser tp(true, raw, &scratch, true);
-      return tp.latex();
-    } catch (const std::exception&) {
-      return raw;
+  /** An argument's text for a handler that reads it as text (a length, a
+   *  colour, a name). The recorded text keeps `%` comments -- they are part
+   *  of the whitespace before a token -- and a handler would read them as
+   *  characters. A comment runs to its line end, which stays. */
+  static std::string stripComments(const std::string& raw) {
+    if (raw.find('%') == std::string::npos) return raw;
+    std::string out;
+    for (std::size_t i = 0; i < raw.size(); i++) {
+      const char c = raw[i];
+      if (c == '\\' && i + 1 < raw.size()) {
+        out += c;
+        out += raw[++i];
+        continue;
+      }
+      if (c == '%') {
+        while (i + 1 < raw.size() && raw[i + 1] != '\n') i++;
+        continue;
+      }
+      out += c;
     }
+    return out;
   }
 
   void command(NodeId id, Formula& f) {
@@ -309,6 +316,10 @@ private:
       middle(child(id, 0), g);
       return g._root;
     }
+    // At the top of a cell, \color colours the cell rather than what follows.
+    if (name == "color" && f.isArrayMode()) {
+      return sptrOf<CellForegroundAtom>(ColorAtom::getColor(stripComments(rawOf(child(id, 0)))));
+    }
     // In an alignment, a rule or \intertext is its handler's, which works
     // on the alignment's rows.
     if (f.isArrayMode() && (isRule(name) || name == "intertext")) return bridge(id, name, spec, f);
@@ -336,8 +347,9 @@ private:
    *  rather than parsed again from its text. */
   class TreeArgs : public CommandArgs {
   public:
-    TreeArgs(Lowerer& lx, bool math, std::vector<std::string> texts, std::vector<NodeId> nodes)
-        : _lx(lx), _math(math), _texts(std::move(texts)), _nodes(std::move(nodes)) {}
+    TreeArgs(Lowerer& lx, bool math, std::vector<std::string> texts, std::vector<NodeId> nodes,
+             Formula* here)
+        : _lx(lx), _math(math), _texts(std::move(texts)), _nodes(std::move(nodes)), _here(here) {}
 
     const std::string& text(std::size_t i) const override {
       static const std::string none;
@@ -356,12 +368,42 @@ private:
       return _lx.alignmentOf(i < _nodes.size() ? _nodes[i] : kNoNode);
     }
 
+    sptr<Atom> formulaOf(const std::string& latex, bool math) override {
+      return fragment(latex, math);
+    }
+
+    sptr<ArrayFormula> alignmentOfText(const std::string& latex) override {
+      Diagnostics unreported;
+      const Ast ast = parseLatex("\\begin{matrix}" + latex + "\\end{matrix}", Mode::math, unreported);
+      const NodeId env = ast.root != kNoNode && ast.childCount(ast.root) > 0
+                           ? ast.child(ast.root, 0) : kNoNode;
+      return Lowerer(ast, unreported).alignmentOf(env);
+    }
+
+    ArrayFormula* alignmentHere() override {
+      return _here != nullptr && _here->isArrayMode() ? static_cast<ArrayFormula*>(_here) : nullptr;
+    }
+
   private:
     Lowerer& _lx;
     bool _math;
     std::vector<std::string> _texts;
     std::vector<NodeId> _nodes;
+    Formula* _here;
   };
+
+  /** LaTeX not from the input -- a raw argument read as a formula, text a
+   *  handler put together -- read by the front end as a piece of input of
+   *  its own. Its problems are not reported: they are not the user's. */
+  static sptr<Atom> fragment(const std::string& latex, bool math) {
+    if (latex.empty()) return nullptr;
+    Diagnostics unreported;
+    const Ast ast = parseLatex(latex, math ? Mode::math : Mode::text, unreported);
+    if (ast.root == kNoNode) return nullptr;
+    Formula g;
+    Lowerer(ast, unreported).lowerList(ast.root, g, 0);
+    return g._root;
+  }
 
   /** An argument read as a formula in the mode asked for. The tree has it
    *  when the argument was parsed in that mode; otherwise (a raw argument
@@ -374,13 +416,7 @@ private:
     const Node& a = node(arg);
     const Mode want = math ? Mode::math : Mode::text;
     if (count(arg) == 1 && a.mode == want) return build(child(arg, 0));
-    if (text.empty()) return nullptr;
-    Diagnostics unreported;
-    const Ast fragment = parseLatex(text, want, unreported);
-    if (fragment.root == kNoNode) return nullptr;
-    Formula g;
-    Lowerer(fragment, unreported).lowerList(fragment.root, g, 0);
-    return g._root;
+    return fragment(text, math);
   }
 
   /** Build a command with its engine handler, its arguments laid out as the
@@ -398,34 +434,23 @@ private:
     for (std::uint32_t i = 0; i < n && i < spec->args.size(); i++) {
       // A URL's `%` is a character, as the lexer read it there.
       const std::string raw = spec->args[i].kind == ArgKind::url ? rawOf(child(id, i))
-                                                                 : legacyText(rawOf(child(id, i)));
+                                                                 : stripComments(rawOf(child(id, i)));
       std::size_t& at = spec->args[i].optional ? optional : mandatory;
       if (at < args.size()) {
         nodes[at] = child(id, i);
         args[at++] = raw;
       }
     }
-    if (auto* cm = dynamic_cast<CommandMacro*>(mac)) {
-      TreeArgs a(*this, node(id).mode == Mode::math, std::move(args), std::move(nodes));
-      try {
-        return cm->call(a);
-      } catch (const std::exception& e) {
-        _diags.warn(node(id).span, "\\" + name + ": " + clean(e.what()) + "; drawn as its name");
-        return unknownAtom(name);
-      }
-    }
-    return invoke(mac, args, node(id), f);
-  }
-
-  /** An old handler, given a stand-in parser on `f`, the formula the atom
-   *  goes into, as the old parser gave it its own. */
-  sptr<Atom> invoke(MacroInfo* mac, std::vector<std::string>& args, const Node& at, Formula& f) {
-    microtex::Parser tp(true, "", &f, false, at.mode == Mode::math);
+    auto* cm = dynamic_cast<CommandMacro*>(mac);
+    // Every handler the front end reaches reads CommandArgs; the rest serve
+    // the old parser only (definitions, \over and kin, ...).
+    if (cm == nullptr) return unknownAtom(name);
+    TreeArgs a(*this, node(id).mode == Mode::math, std::move(args), std::move(nodes), &f);
     try {
-      return mac->invoke(tp, args);
+      return cm->call(a);
     } catch (const std::exception& e) {
-      _diags.warn(at.span, "\\" + at.text + ": " + clean(e.what()) + "; drawn as its name");
-      return unknownAtom(at.text);
+      _diags.warn(node(id).span, "\\" + name + ": " + clean(e.what()) + "; drawn as its name");
+      return unknownAtom(name);
     }
   }
 
@@ -625,6 +650,10 @@ private:
       if (isTextFont(name)) {
         const auto atom = build(body);
         f.add(sptrOf<FontStyleAtom>(FontContext::mainFontStyleOf(name), math, atom));
+      } else if (name == "cal" || name == "frak") {
+        // TeX's old switches for \mathcal and \mathfrak.
+        const auto style = FontContext::mathFontStyleOf(name == "cal" ? "mathcal" : "mathfrak");
+        f.add(sptrOf<FontStyleAtom>(style, true, build(body)));
       } else if (isSize(name)) {
         auto a = build(body);
         f.add(sptrOf<ScaleAtom>(a == nullptr ? sptrOf<EmptyAtom>() : a, sizeFactor(name)));
@@ -643,9 +672,7 @@ private:
   // --- \left \middle \right ----------------------------------------------------
 
   sptr<Atom> delimiter(const std::string& raw) {
-    Formula scratch;
-    microtex::Parser tp(true, "", &scratch, false, true);
-    auto atom = Formula(tp, raw, false)._root;
+    auto atom = fragment(raw, true);
     if (auto* big = dynamic_cast<BigSymbolAtom*>(atom.get())) atom = big->_delim;
     return atom;
   }
@@ -742,22 +769,20 @@ private:
       if (k < args.size()) args[k++] = rawOf(c);
     }
     // The old template put the body between spaces.
-    if (k < args.size()) args[k] = " " + legacyText(x.raw) + " ";
+    if (k < args.size()) args[k] = " " + stripComments(x.raw) + " ";
     Node at = x;
     at.text = "begin{" + x.text + "}";
-    if (auto* cm = dynamic_cast<CommandMacro*>(mac)) {
-      std::vector<NodeId> nodes(args.size(), kNoNode);
-      if (k < nodes.size()) nodes[k] = id;
-      TreeArgs a(*this, true, std::move(args), std::move(nodes));
-      try {
-        return cm->call(a);
-      } catch (const std::exception& e) {
-        _diags.warn(at.span, "\\" + at.text + ": " + clean(e.what()) + "; drawn as its name");
-        return unknownAtom(at.text);
-      }
+    auto* cm = dynamic_cast<CommandMacro*>(mac);
+    if (cm == nullptr) return unknownAtom(at.text);
+    std::vector<NodeId> nodes(args.size(), kNoNode);
+    if (k < nodes.size()) nodes[k] = id;
+    TreeArgs a(*this, true, std::move(args), std::move(nodes), nullptr);
+    try {
+      return cm->call(a);
+    } catch (const std::exception& e) {
+      _diags.warn(at.span, "\\" + at.text + ": " + clean(e.what()) + "; drawn as its name");
+      return unknownAtom(at.text);
     }
-    Formula scratch;
-    return invoke(mac, args, at, scratch);
   }
 
   /** An alignment's body, from its rows and cells, in the order the old
