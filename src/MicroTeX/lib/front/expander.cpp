@@ -153,7 +153,7 @@ struct Expander::Impl {
   // Set after runaway expansion in recover mode: the input ends there.
   bool halted = false;
   // Set when a delimited macro's use does not fit its definition: the
-  // call is dropped (see readUntil()).
+  // call is dropped (see readDelimitedArgs()).
   bool abandoned = false;
   // Tokens read by delimited arguments that were then abandoned.
   std::size_t runawayTokens = 0;
@@ -176,9 +176,20 @@ struct Expander::Impl {
 
   // --- reading -----------------------------------------------------------
 
+  /** While set, every token read is kept here, and one put back is dropped
+   *  from it again: a delimited macro's call that is abandoned puts back
+   *  everything it read, not only its last argument. */
+  std::vector<ExpToken>* tape = nullptr;
+
   /** The next token, unexpanded. The end of an expansion is not a token:
    *  reading carries on in the source around it. */
   ExpToken raw() {
+    ExpToken t = rawUntaped();
+    if (tape != nullptr) tape->push_back(t);
+    return t;
+  }
+
+  ExpToken rawUntaped() {
     if (halted) {
       ExpToken e;
       e.tok.kind = TokKind::end;
@@ -209,7 +220,10 @@ struct Expander::Impl {
     }
   }
 
-  void unread(ExpToken t) { frames.back().pushback.push_back(std::move(t)); }
+  void unread(ExpToken t) {
+    if (tape != nullptr && !tape->empty()) tape->pop_back();
+    frames.back().pushback.push_back(std::move(t));
+  }
 
   ExpToken nextNonSpace() {
     ExpToken t = raw();
@@ -369,11 +383,13 @@ struct Expander::Impl {
     return trim(readGroupContent(t));
   }
 
-  int readParamCount(const std::optional<std::string>& text, const std::string& command) {
+  /** A definition's `[n]`. When it is not a number the definition is
+   *  dropped whole: its default and its `groups` groups go with it. */
+  int readParamCount(const std::optional<std::string>& text, const std::string& command, int groups) {
     if (!text) return 0;
     const std::string n = trim(*text);
     if (n.size() != 1 || n[0] < '0' || n[0] > '9') {
-      fail(command, "the number of arguments must be 0 to 9, not '" + n + "'");
+      failDefinition(command, "the number of arguments must be 0 to 9, not '" + n + "'", groups, true);
     }
     return n[0] - '0';
   }
@@ -463,21 +479,39 @@ struct Expander::Impl {
     return args;
   }
 
+  /** A delimited macro's arguments. A use that does not fit the definition
+   *  is abandoned, as after TeX's error, and everything the call read is
+   *  read again as ordinary input. */
   std::vector<std::string> readDelimitedArgs(const MacroDef& def, const std::string& who) {
     std::vector<std::string> args(static_cast<std::size_t>(def.nparams));
+    std::vector<ExpToken> taken;
+    tape = &taken;
+    struct Untape {
+      std::vector<ExpToken>*& t;
+      ~Untape() { t = nullptr; }
+    } untape{tape};
     for (const Token& d : def.delimiters[0]) {
-      ExpToken t = raw();
+      const ExpToken t = raw();
       if (!sameToken(t.tok, d)) {
         diags.warn(t.tok.span, "use of " + who + " does not match its definition; it is left out");
-        unread(std::move(t));
         abandoned = true;
-        return args;
+        break;
       }
     }
-    for (int i = 1; i <= def.nparams; i++) {
+    for (int i = 1; i <= def.nparams && !abandoned; i++) {
       const auto& delim = def.delimiters[static_cast<std::size_t>(i)];
       args[static_cast<std::size_t>(i) - 1] = delim.empty() ? readArg(who) : readUntil(delim, who);
-      if (abandoned) break;
+    }
+    tape = nullptr;
+    if (abandoned) {
+      // Each abandoned call re-reads what it puts back, so one in a loop
+      // reads the rest of the input once per turn: a capacity, like the
+      // expansion caps.
+      runawayTokens += taken.size();
+      if (runawayTokens > opts.maxExpandedBytes) {
+        throw ExpansionLimit("Too many runaway arguments: is a macro missing its delimiter?");
+      }
+      for (auto it = taken.rbegin(); it != taken.rend(); ++it) unread(std::move(*it));
     }
     return args;
   }
@@ -485,10 +519,9 @@ struct Expander::Impl {
   /** A delimited argument: everything up to the delimiter at brace depth
    *  0. One pair of braces around the whole argument is removed. When the
    *  delimiter never comes -- the input or the group ends first -- the
-   *  call is abandoned, as after TeX's runaway-argument error, and what was
-   *  read is read again as ordinary input. Taking it all as the argument
-   *  instead let a macro that calls itself copy the rest of the input into
-   *  every expansion. */
+   *  call is abandoned (see readDelimitedArgs()). Taking it all as the
+   *  argument instead let a macro that calls itself copy the rest of the
+   *  input into every expansion. */
   std::string readUntil(const std::vector<Token>& delim, const std::string& who) {
     std::vector<ExpToken> got;
     int depth = 0;
@@ -498,15 +531,6 @@ struct Expander::Impl {
       if (end || (t.tok.isChar(Cat::endGroup) && depth == 0)) {
         diags.warn(t.tok.span, end ? "runaway argument: " + who + " is missing its delimiter; it is left out"
                                    : "argument of " + who + " has an extra }; it is left out");
-        // Each abandoned call re-reads what it put back, so one in a loop
-        // reads the rest of the input once per turn: a capacity, like the
-        // expansion caps.
-        runawayTokens += got.size() + 1;
-        if (runawayTokens > opts.maxExpandedBytes) {
-          throw ExpansionLimit("Too many runaway arguments: is a macro missing its delimiter?");
-        }
-        unread(std::move(t));
-        for (auto it = got.rbegin(); it != got.rend(); ++it) unread(std::move(*it));
         abandoned = true;
         return {};
       }
@@ -697,7 +721,7 @@ struct Expander::Impl {
     // braced one -- an ordinary atom in math -- which spacing depends on.
     if (begin) {
       std::vector<std::string> args = readArgs(*def, "\\begin{" + name + "}");
-      if (opts.recover) openEnvs.push_back({name, e.tok.span});
+      if (opts.recover) openEnvs.push_back({name, e.tok.span, depth});
       pushExpansion("{" + substitute(def->body, args), e.tok.span);
       return true;
     }
@@ -718,16 +742,24 @@ struct Expander::Impl {
     pushExpansion(substitute(lookupEnv(name)->endBody, {}) + "}", at);
   }
 
-  /** In recover mode, the environments of ours begun and not yet ended:
-   *  the input's end closes them. */
+  /** In recover mode, the environments of ours begun and not yet ended,
+   *  each with the brace depth it began at: the end of the group around it,
+   *  or of the input, closes it. */
   struct OpenEnv {
     std::string name;
     SourceSpan at;
+    int depth;
   };
   std::vector<OpenEnv> openEnvs;
 
-  /** At the end of the input, the end of the innermost environment left
-   *  open, if any: true when there was one. */
+  /** The brace depth of the tokens handed out so far. An environment's
+   *  expansion opens a group of its own, so a `}` that would close the
+   *  group around an environment still open is one its \end should have
+   *  come before. */
+  int depth = 0;
+
+  /** The end of the innermost environment left open, if any: true when
+   *  there was one. */
   bool closeOpenEnvironment() {
     if (openEnvs.empty() || halted) return false;
     const OpenEnv o = openEnvs.back();
@@ -776,7 +808,7 @@ struct Expander::Impl {
       failDefinition(kind, cleanMessage(x.what()), 1, true);
     }
     MacroDef def;
-    def.nparams = readParamCount(readOptional(), kind);
+    def.nparams = readParamCount(readOptional(), kind, 1);
     if (const auto d = readOptional()) {
       def.hasOptional = true;
       def.optionalDefault = *d;
@@ -874,7 +906,7 @@ struct Expander::Impl {
     const auto name = readGroupText();
     if (!name || name->empty()) failDefinition(kind, "\\" + kind + ": missing the environment name", 2, true);
     MacroDef def;
-    def.nparams = readParamCount(readOptional(), kind);
+    def.nparams = readParamCount(readOptional(), kind, 2);
     if (const auto d = readOptional()) {
       def.hasOptional = true;
       def.optionalDefault = *d;
@@ -971,6 +1003,16 @@ struct Expander::Impl {
         if (closeOpenEnvironment()) continue;
         e = raw();
       }
+      if (e.tok.isChar(Cat::endGroup) && !openEnvs.empty() && !halted &&
+          depth == openEnvs.back().depth + 1) {
+        // This `}` closes the group the environment began in: the
+        // environment ends first, and the `}` is read again after it.
+        unread(std::move(e));
+        closeOpenEnvironment();
+        continue;
+      }
+      if (e.tok.isChar(Cat::beginGroup)) depth++;
+      if (e.tok.isChar(Cat::endGroup)) depth--;
       if (!carry.empty()) {
         e.lead = carry + e.lead;
         carry.clear();

@@ -276,9 +276,11 @@ private:
 
   /** Text for an engine handler, which parses it without preprocessing:
    *  the old parser had already rewritten every `\begin{name}` in the whole
-   *  input as `\name@env{...}` before any handler ran. */
+   *  input as `\name@env{...}`, and dropped every `%` comment, before any
+   *  handler ran. The recorded text keeps comments (they are part of the
+   *  whitespace before a token), so without this they were drawn. */
   static std::string legacyText(const std::string& raw) {
-    if (raw.find("\\begin") == std::string::npos) return raw;
+    if (raw.find("\\begin") == std::string::npos && raw.find('%') == std::string::npos) return raw;
     try {
       Formula scratch;
       const microtex::Parser tp(true, raw, &scratch, true);
@@ -355,7 +357,9 @@ private:
     std::size_t optional = static_cast<std::size_t>(mac->argc) + 1;
     const std::uint32_t n = count(id);
     for (std::uint32_t i = 0; i < n && i < spec->args.size(); i++) {
-      const std::string raw = legacyText(rawOf(child(id, i)));
+      // A URL's `%` is a character, as the lexer read it there.
+      const std::string raw = spec->args[i].kind == ArgKind::url ? rawOf(child(id, i))
+                                                                 : legacyText(rawOf(child(id, i)));
       if (spec->args[i].optional) {
         if (optional < args.size()) args[optional++] = raw;
       } else if (mandatory < args.size()) {

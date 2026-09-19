@@ -828,11 +828,24 @@ std::string Parser::readGroupName() {
     unread(std::move(t));
     return "";
   }
-  const NodeId raw = [&] {
-    unread(std::move(t));
-    return parseRawArgument({ArgKind::raw, false}, "\\begin");
-  }();
-  return trim(_ast.node(raw).raw);
+  // Built from the tokens, not from the recorded source: tokens read a
+  // second time (an optional argument's) are not recorded again, so the
+  // name of an environment in `\sqrt[...]` came out empty.
+  std::string name;
+  int depth = 0;
+  while (true) {
+    ExpandedToken u = next();
+    if (u.tok.kind == TokKind::end) {
+      _diags.warn(t.tok.span, "missing } inserted");
+      unread(std::move(u));
+      break;
+    }
+    if (u.tok.isChar(Cat::beginGroup)) depth++;
+    if (u.tok.isChar(Cat::endGroup) && depth-- == 0) break;
+    name += u.lead;
+    name += u.text;
+  }
+  return trim(name);
 }
 
 NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {

@@ -107,6 +107,46 @@ test_that("a delimited macro whose delimiter never comes is left out", {
   expect_identical(layout_quietly("\\def\\q[#1]{<#1>}\\q x"), layout_quietly("x"))
 })
 
+test_that("an abandoned call puts back what every argument read", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # #1 found its `.`, #2 never found its `!`: all of `x.y z` is read again,
+  # not only what #2 read.
+  tex <- "\\def\\a#1.#2!{[#1|#2]} \\a x.y z"
+  expect_warning(latex_grob(tex, input_mode = "math"), "missing its delimiter", fixed = TRUE)
+  expect_identical(layout_quietly(tex), layout_quietly("x.y z"))
+})
+
+test_that("an environment left open inside a group ends with the group", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Its expansion opened a group of its own, which took the `}` meant for
+  # the argument and put every brace after it out by one.
+  env <- "\\newenvironment{gmp}{\\left(}{\\right)}"
+  tex <- paste0(env, "\\frac{\\begin{gmp} a}{b} c")
+  expect_warning(latex_grob(tex, input_mode = "math"), "missing \\end{gmp} inserted",
+                 fixed = TRUE)
+  expect_identical(layout_quietly(tex),
+                   layout_quietly(paste0(env, "\\frac{\\begin{gmp} a\\end{gmp}}{b} c")))
+})
+
+test_that("an environment in an optional argument keeps its name", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_no_warning(latex_grob("\\sqrt[\\begin{matrix}3\\end{matrix}]{x}", input_mode = "math"))
+})
+
+test_that("a comment inside an argument is not drawn", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # parse_latex_cpp() directly: R's own passes strip comments first, but
+  # the engine does not rely on them.
+  drawn <- function(tex) {
+    r <- gridmicrotex:::parse_latex_cpp(tex, use_path = TRUE)
+    attr(r, "diagnostics") <- NULL
+    r
+  }
+  expect_identical(drawn("\\text{a % c\nb}"), drawn("\\text{a \nb}"))
+  expect_identical(drawn("\\frac{a % c\n}{b}"), drawn("\\frac{a\n}{b}"))
+  expect_identical(drawn("\\sqrt{a % }\n}"), drawn("\\sqrt{a\n}"))
+})
+
 test_that("a runaway argument in a loop is an error, not a slow render", {
   # Each abandoned call reads the rest of the input again; in a macro that
   # calls itself that was once per turn, 18 s for a 200-byte input.
@@ -133,7 +173,8 @@ test_that("a delimiter that is not one is left out, with a warning", {
 
 test_that("a definition that cannot be made is dropped whole", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  for (tex in c("\\newcommand{x}[1]{y}z", "\\def{x}{y}z", "\\newenvironment{}{a}{b}z")) {
+  for (tex in c("\\newcommand{x}[1]{y}z", "\\def{x}{y}z", "\\newenvironment{}{a}{b}z",
+                "\\newcommand{\\gmfoo}[x]{BODY}z", "\\newenvironment{gme}[x]{B}{E}z")) {
     expect_warning(g <- latex_grob(tex, input_mode = "math"), label = tex)
     expect_identical(layout_quietly(tex), layout_quietly("z"), info = tex)
   }
