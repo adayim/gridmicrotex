@@ -772,6 +772,42 @@ struct Expander::Impl {
    *  come before. */
   int depth = 0;
 
+  /** What a name meant before something defined it inside a group, to be
+   *  put back when that group ends: a definition is local in TeX, unless
+   *  \gdef makes it global. */
+  struct Undo {
+    std::string name;
+    bool environment;
+    bool had;
+    MacroDef previous;
+    int depth;
+  };
+  std::vector<Undo> undoStack;
+
+  /** About to define `name` here: note what it means now, so the end of
+   *  the group it is defined in puts that back. */
+  void defineLocally(const std::string& name, bool environment = false) {
+    if (depth <= 0) return;
+    const auto& table = environment ? envs : macros;
+    const auto it = table.find(name);
+    undoStack.push_back(
+      {name, environment, it != table.end(), it != table.end() ? it->second : MacroDef(), depth});
+  }
+
+  /** A group has just ended: what it defined goes with it. */
+  void endLocalGroup() {
+    while (!undoStack.empty() && undoStack.back().depth > depth) {
+      const Undo u = std::move(undoStack.back());
+      undoStack.pop_back();
+      auto& table = u.environment ? envs : macros;
+      if (u.had) {
+        table[u.name] = u.previous;
+      } else {
+        table.erase(u.name);
+      }
+    }
+  }
+
   /** The end of the innermost environment left open, if any: true when
    *  there was one. */
   bool closeOpenEnvironment() {
@@ -839,7 +875,10 @@ struct Expander::Impl {
       if (!opts.recover) fail(kind, "Command " + name + " is no defined! Use newcommand instead!");
       diags.warn(e.tok.span, "\\renewcommand: \\" + name + " was not defined; defined now");
     }
-    if (!(kind == "providecommand" && exists)) macros[name] = std::move(def);
+    if (!(kind == "providecommand" && exists)) {
+      defineLocally(name);
+      macros[name] = std::move(def);
+    }
   }
 
   void declareOperator() {
@@ -851,6 +890,7 @@ struct Expander::Impl {
     }
     MacroDef def;
     def.body = literal("\\mathop{\\mathrm{" + text + "}}" + (star ? "\\limits" : "\\nolimits"));
+    defineLocally(name);
     macros[name] = std::move(def);
   }
 
@@ -891,6 +931,8 @@ struct Expander::Impl {
     for (const auto& d : def.delimiters) delimited = delimited || !d.empty();
     if (!delimited) def.delimiters.clear();
     def.body = splitBody(body, def.nparams, "\\" + name, e.tok.span);
+    // \gdef defines globally; \def, like everything else, in its group.
+    if (e.tok.text != "gdef") defineLocally(name);
     macros[name] = std::move(def);
   }
 
@@ -912,6 +954,7 @@ struct Expander::Impl {
       def.alias = true;
       def.body = literal(std::string(t.text));
     }
+    defineLocally(name);
     macros[name] = std::move(def);
   }
 
@@ -938,6 +981,7 @@ struct Expander::Impl {
     if (kind == "renewenvironment" && !exists) {
       fail(kind, "Environment " + *name + " is not defined! Use newenvironment instead!");
     }
+    defineLocally(*name, true);
     envs[*name] = std::move(def);
   }
 
@@ -1026,7 +1070,10 @@ struct Expander::Impl {
         continue;
       }
       if (e.tok.isChar(Cat::beginGroup)) depth++;
-      if (e.tok.isChar(Cat::endGroup)) depth--;
+      if (e.tok.isChar(Cat::endGroup)) {
+        depth--;
+        endLocalGroup();
+      }
       if (!carry.empty()) {
         e.lead = carry + e.lead;
         carry.clear();

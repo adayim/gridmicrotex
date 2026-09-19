@@ -88,6 +88,22 @@ test_that("user environments expand at \\begin and \\end, as a group", {
   expect_error(ex("\\newenvironment{matrix}{}{}"), "already exists")
 })
 
+test_that("a definition made in a group ends with it, as in TeX", {
+  # Local: outside the group the name means what it meant before, and
+  # nothing when it meant nothing.
+  expect_equal(ex("{\\newcommand{\\aa}{x}\\aa}\\aa"), "{x}\\aa")
+  expect_equal(ex("\\newcommand{\\q}{a}{\\renewcommand{\\q}{b}\\q}\\q"), "{b}a")
+  expect_equal(ex("\\def\\x{1}{\\def\\x{2}\\x}\\x"), "{2}1")
+  # \gdef defines globally, as in TeX; \def does not.
+  expect_equal(ex("{\\gdef\\g{1}\\def\\d{2}}\\g\\d"), "{}1\\d")
+  # A definition at the top level outlives a group that ends after it.
+  expect_equal(ex("\\def\\t{4}{x}\\t"), "{x}4")
+  # An environment is a group too, including its own.
+  expect_equal(ex("\\newenvironment{e}{}{}\\begin{e}\\def\\h{3}\\h\\end{e}\\h"), "{3}\\h")
+  expect_equal(ex("{\\newenvironment{f}{[}{]}\\begin{f}x\\end{f}}\\begin{f}y\\end{f}"),
+               "{{[x]}}\\begin{f}y\\end{f}")
+})
+
 test_that("two tokens that were apart do not run together", {
   expect_equal(ex("\\newcommand{\\x}[1]{#1\\beta}\\x{a}c"), "a\\beta c")
   expect_equal(ex("\\makeatletter\\def\\a@b{Q}\\a@b\\makeatother"),
