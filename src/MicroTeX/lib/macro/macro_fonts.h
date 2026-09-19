@@ -9,8 +9,8 @@
 
 namespace microtex {
 
-inline macro(text) {
-  const auto atom = Formula(tp, args[1], false, false)._root;
+inline cmdmacro(text) {
+  const auto atom = args.formula(1, false);
   return sptrOf<FontStyleAtom>(FontStyle::rm, false, atom);
 }
 
@@ -21,57 +21,57 @@ inline macro(textfont) {
   return sptrOf<FontStyleAtom>(style, tp.isMathMode(), atom);
 }
 
-inline sptr<Atom> _textfontnested(Parser& tp, Args& args, FontStyle style) {
-  const auto atom = Formula(tp, args[1], false, false)._root;
+inline sptr<Atom> _textfontnested(CommandArgs& args, FontStyle style) {
+  const auto atom = args.formula(1, false);
   return sptrOf<FontStyleAtom>(style, false, atom, true);
 }
 
-inline macro(textit) {
-  return _textfontnested(tp, args, FontStyle::it);
+inline cmdmacro(textit) {
+  return _textfontnested(args, FontStyle::it);
 }
 
-inline macro(textbf) {
-  return _textfontnested(tp, args, FontStyle::bf);
+inline cmdmacro(textbf) {
+  return _textfontnested(args, FontStyle::bf);
 }
 
-inline macro(textsf) {
-  return _textfontnested(tp, args, FontStyle::sf);
+inline cmdmacro(textsf) {
+  return _textfontnested(args, FontStyle::sf);
 }
 
-inline macro(texttt) {
-  return _textfontnested(tp, args, FontStyle::tt);
+inline cmdmacro(texttt) {
+  return _textfontnested(args, FontStyle::tt);
 }
 
-inline macro(textrm) {
-  return _textfontnested(tp, args, FontStyle::rm);
+inline cmdmacro(textrm) {
+  return _textfontnested(args, FontStyle::rm);
 }
 
-inline sptr<Atom> _mathfont(Parser& tp, Args& args, FontStyle style) {
-  const auto atom = Formula(tp, args[1], false, tp.isMathMode())._root;
+inline sptr<Atom> _mathfont(CommandArgs& args, FontStyle style) {
+  const auto atom = args.formula(1, args.isMathMode());
   return sptrOf<FontStyleAtom>(style, true, atom);
 }
 
-inline macro(mathfont) {
-  return _mathfont(tp, args, FontContext::mathFontStyleOf(args[0]));
+inline cmdmacro(mathfont) {
+  return _mathfont(args, FontContext::mathFontStyleOf(args.text(0)));
 }
 
-inline macro(Bbb) {
-  return _mathfont(tp, args, FontStyle::bb);
+inline cmdmacro(Bbb) {
+  return _mathfont(args, FontStyle::bb);
 }
 
-inline macro(mathds) {
-  return _mathfont(tp, args, FontStyle::bb);
+inline cmdmacro(mathds) {
+  return _mathfont(args, FontStyle::bb);
 }
 
-inline macro(bold) {
-  return _mathfont(tp, args, FontStyle::bf);
+inline cmdmacro(bold) {
+  return _mathfont(args, FontStyle::bf);
 }
 
 macro(intertext);
 
-macro(addfont);
+cmdmacro(addfont);
 
-macro(mathversion);
+cmdmacro(mathversion);
 
 }  // namespace microtex
 

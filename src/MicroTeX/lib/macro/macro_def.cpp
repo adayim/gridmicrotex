@@ -30,6 +30,15 @@ inline auto defMac(const char* code, int argc, MacroDelegate del) {
   return std::make_pair(code, new PreDefMacro(argc, del));
 }
 
+// Handlers that read their arguments through CommandArgs (macro_args.h).
+inline auto defMac(const char* code, int argc, int posOpts, CommandDelegate del) {
+  return std::make_pair(code, new CommandMacro(argc, posOpts, del));
+}
+
+inline auto defMac(const char* code, int argc, CommandDelegate del) {
+  return std::make_pair(code, new CommandMacro(argc, del));
+}
+
 }  // namespace microtex
 
 map<string, MacroInfo*> MacroInfo::_commands{

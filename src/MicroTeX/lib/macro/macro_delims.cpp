@@ -7,12 +7,12 @@ namespace microtex {
 
 using namespace std;
 
-macro(xarrow) {
-  const auto& name = args[0].substr(1);
+cmdmacro(xarrow) {
+  const auto& name = args.text(0).substr(1);
   const auto& over =
-    StackArgs::autoSpace(Formula(tp, args[1], false, tp.isMathMode())._root, false);
+    StackArgs::autoSpace(args.formula(1, args.isMathMode()), false);
   const auto& under =
-    StackArgs::autoSpace(Formula(tp, args[2], false, tp.isMathMode())._root, false);
+    StackArgs::autoSpace(args.formula(2, args.isMathMode()), false);
   const auto stack = new StackAtom(nullptr, over, under);
   const auto& arrow = sptrOf<ExtensibleAtom>(
     name,

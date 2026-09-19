@@ -12,11 +12,11 @@ using namespace std;
 
 namespace microtex {
 
-macro(longdiv) {
+cmdmacro(longdiv) {
   long dividend = 0;
-  valueOf(args[1], dividend);
+  valueOf(args.text(1), dividend);
   long divisor = 0;
-  valueOf(args[2], divisor);
+  valueOf(args.text(2), divisor);
   if (divisor == 0) throw ex_parse("Divisor must not be 0.");
   return sptrOf<LongDivAtom>(divisor, dividend);
 }
@@ -65,16 +65,16 @@ macro(kern) {
   return sptrOf<SpaceAtom>(unit, value, 0.f, 0.f);
 }
 
-macro(hvspace) {
-  auto [value, unit] = Units::getDimen(args[1]);
-  return args[0][0] == 'h' ? sptrOf<SpaceAtom>(unit, value, 0.f, 0.f)
+cmdmacro(hvspace) {
+  auto [value, unit] = Units::getDimen(args.text(1));
+  return args.text(0)[0] == 'h' ? sptrOf<SpaceAtom>(unit, value, 0.f, 0.f)
                            : sptrOf<SpaceAtom>(unit, 0.f, value, 0.f);
 }
 
-macro(rule) {
-  auto w = Units::getDimen(args[1]);
-  auto h = Units::getDimen(args[2]);
-  auto r = Units::getDimen(args[3]);
+cmdmacro(rule) {
+  auto w = Units::getDimen(args.text(1));
+  auto h = Units::getDimen(args.text(2));
+  auto r = Units::getDimen(args.text(3));
 
   return sptrOf<RuleAtom>(w, h, -r);
 }
@@ -185,11 +185,11 @@ macro(def) {
   return nullptr;
 }
 
-macro(raisebox) {
-  auto r = Units::getDimen(args[1]);
-  auto h = Units::getDimen(args[3]);
-  auto d = Units::getDimen(args[4]);
-  return sptrOf<RaiseAtom>(Formula(tp, args[2], false, tp.isMathMode())._root, -r, h, d);
+cmdmacro(raisebox) {
+  auto r = Units::getDimen(args.text(1));
+  auto h = Units::getDimen(args.text(3));
+  auto d = Units::getDimen(args.text(4));
+  return sptrOf<RaiseAtom>(args.formula(2, args.isMathMode()), -r, h, d);
 }
 
 macro(romannumeral) {
@@ -218,9 +218,9 @@ macro(romannumeral) {
   );
 }
 
-macro(debug) {
+cmdmacro(debug) {
   auto& config = DebugConfig::INSTANCE;
-  const auto& options = parseOption(args[1]);
+  const auto& options = parseOption(args.text(1));
   config.enable = true;
   const auto& showOnlyChar = options.find("showonlychar");
   if (showOnlyChar != options.end()) {
@@ -237,35 +237,35 @@ macro(debug) {
   return nullptr;
 }
 
-macro(undebug) {
+cmdmacro(undebug) {
   auto& config = DebugConfig::INSTANCE;
   config.enable = false;
   return nullptr;
 }
 
-macro(zstack) {
+cmdmacro(zstack) {
   auto halign = Alignment::left;
-  if (args[1] == "c") {
+  if (args.text(1) == "c") {
     halign = Alignment::center;
-  } else if (args[1] == "r") {
+  } else if (args.text(1) == "r") {
     halign = Alignment::right;
   }
-  const auto& h = Units::getDimen(args[2]);
+  const auto& h = Units::getDimen(args.text(2));
   const ZStackArgs hargs{halign, h};
 
   auto valign = Alignment::top;
-  if (args[3] == "c") {
+  if (args.text(3) == "c") {
     valign = Alignment::center;
-  } else if (args[3] == "b") {
+  } else if (args.text(3) == "b") {
     valign = Alignment::bottom;
-  } else if (args[3] == "B") {
+  } else if (args.text(3) == "B") {
     valign = Alignment::none;
   }
-  const auto& v = Units::getDimen(args[4]);
+  const auto& v = Units::getDimen(args.text(4));
   const ZStackArgs& vargs{valign, v};
 
-  const auto atom = Formula(tp, args[5], false)._root;
-  const auto anchor = Formula(tp, args[6], false)._root;
+  const auto atom = args.formula(5);
+  const auto anchor = args.formula(6);
 
   return sptrOf<ZStackAtom>(hargs, vargs, atom, anchor);
 }

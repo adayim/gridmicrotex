@@ -4,6 +4,7 @@
 #include "atom/atom.h"
 #include "core/formula.h"
 #include "core/parser.h"
+#include "macro/macro_args.h"
 
 namespace microtex {
 

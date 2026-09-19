@@ -11,11 +11,11 @@ namespace microtex {
 
 TexStyle texStyleOf(const std::string& str);
 
-macro(everymath);
+cmdmacro(everymath);
 
 macro(texstyle);
 
-macro(atexstyle);
+cmdmacro(atexstyle);
 
 }  // namespace microtex
 

@@ -19,9 +19,11 @@
 #include "box/box_factory.h"
 #include "core/parser.h"
 #include "env/units.h"
+#include "front/front.h"
 #include "front/spec.h"
 #include "graphic/graphic.h"
 #include "macro/macro.h"
+#include "macro/macro_args.h"
 #include "macro/macro_styles.h"
 #include "unimath/uni_font.h"
 #include "utils/exceptions.h"
@@ -345,13 +347,62 @@ private:
     return singleChar(static_cast<c32>(n), math);
   }
 
-  /** Build a command with its engine handler, from its arguments' source
-   *  text laid out as the old parser laid them out: mandatory ones from 1,
-   *  optional ones after them. */
+  /** A command's arguments as the tree holds them, for a handler written
+   *  against CommandArgs: each is lowered here, with the rest of the input,
+   *  rather than parsed again from its text. */
+  class TreeArgs : public CommandArgs {
+  public:
+    TreeArgs(Lowerer& lx, bool math, std::vector<std::string> texts, std::vector<NodeId> nodes)
+        : _lx(lx), _math(math), _texts(std::move(texts)), _nodes(std::move(nodes)) {}
+
+    const std::string& text(std::size_t i) const override {
+      static const std::string none;
+      return i < _texts.size() ? _texts[i] : none;
+    }
+
+    sptr<Atom> formula(std::size_t i, bool math, bool) override {
+      return _lx.argumentFormula(i < _nodes.size() ? _nodes[i] : kNoNode, text(i), math);
+    }
+
+    bool isMathMode() const override { return _math; }
+
+    bool isPartial() const override { return true; }
+
+  private:
+    Lowerer& _lx;
+    bool _math;
+    std::vector<std::string> _texts;
+    std::vector<NodeId> _nodes;
+  };
+
+  /** An argument read as a formula in the mode asked for. The tree has it
+   *  when the argument was parsed in that mode; otherwise (a raw argument
+   *  that a handler reads as a formula) its text is read now, as a piece of
+   *  input of its own. Its problems are not reported: such an argument is
+   *  raw because it is not a formula to check -- `\underaccent{\dot}{x}`
+   *  gives an accent command without its argument, and means to. */
+  sptr<Atom> argumentFormula(NodeId arg, const std::string& text, bool math) {
+    if (arg == kNoNode || !node(arg).flag) return nullptr;
+    const Node& a = node(arg);
+    const Mode want = math ? Mode::math : Mode::text;
+    if (count(arg) == 1 && a.mode == want) return build(child(arg, 0));
+    if (text.empty()) return nullptr;
+    Diagnostics unreported;
+    const Ast fragment = parseLatex(text, want, unreported);
+    if (fragment.root == kNoNode) return nullptr;
+    Formula g;
+    Lowerer(fragment, unreported, _opts).lowerList(fragment.root, g, 0);
+    return g._root;
+  }
+
+  /** Build a command with its engine handler, its arguments laid out as the
+   *  old parser laid them out: mandatory ones from 1, optional ones after
+   *  them. */
   sptr<Atom> bridge(NodeId id, const std::string& name, const CommandSpec* spec) {
     MacroInfo* mac = MacroInfo::get(name);
     if (mac == nullptr) return unknownAtom(name);
     std::vector<std::string> args(static_cast<std::size_t>(mac->argc) + 12);
+    std::vector<NodeId> nodes(args.size(), kNoNode);
     args[0] = name;
     std::size_t mandatory = 1;
     std::size_t optional = static_cast<std::size_t>(mac->argc) + 1;
@@ -360,10 +411,19 @@ private:
       // A URL's `%` is a character, as the lexer read it there.
       const std::string raw = spec->args[i].kind == ArgKind::url ? rawOf(child(id, i))
                                                                  : legacyText(rawOf(child(id, i)));
-      if (spec->args[i].optional) {
-        if (optional < args.size()) args[optional++] = raw;
-      } else if (mandatory < args.size()) {
-        args[mandatory++] = raw;
+      std::size_t& at = spec->args[i].optional ? optional : mandatory;
+      if (at < args.size()) {
+        nodes[at] = child(id, i);
+        args[at++] = raw;
+      }
+    }
+    if (auto* cm = dynamic_cast<CommandMacro*>(mac)) {
+      TreeArgs a(*this, node(id).mode == Mode::math, std::move(args), std::move(nodes));
+      try {
+        return cm->call(a);
+      } catch (const std::exception& e) {
+        _diags.warn(node(id).span, "\\" + name + ": " + clean(e.what()) + "; drawn as its name");
+        return unknownAtom(name);
       }
     }
     return invoke(mac, args, node(id));

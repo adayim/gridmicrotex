@@ -798,7 +798,9 @@ NodeId Parser::parseLeftRight(const ExpandedToken& left, Mode mode) {
   Stop inner;
   inner.right = true;
   while (true) {
-    kids.push_back(parseList(mode, inner, left.tok.span));
+    // Math even in text: \left exists only in math, and the old parser
+    // read what it encloses as math wherever it met it.
+    kids.push_back(parseList(Mode::math, inner, left.tok.span));
     ExpandedToken t = next();
     if (t.tok.isCs("middle")) {
       kids.push_back(parseDelimiter("\\middle"));

@@ -5,14 +5,14 @@
 
 namespace microtex {
 
-macro(definecolor) {
+cmdmacro(definecolor) {
   color c = TRANSPARENT;
-  const auto& cs = args[3];
-  if (args[2] == "gray") {
+  const auto& cs = args.text(3);
+  if (args.text(2) == "gray") {
     float f = 0;
-    valueOf(args[3], f);
+    valueOf(args.text(3), f);
     c = rgb(f, f, f);
-  } else if (args[2] == "rgb") {
+  } else if (args.text(2) == "rgb") {
     StrTokenizer stok(cs, ":,");
     if (stok.count() != 3) throw ex_parse("RGB color must have three components!");
     float r, g, b;
@@ -21,7 +21,7 @@ macro(definecolor) {
     valueOf(trim(G), g);
     valueOf(trim(B), b);
     c = rgb(r, g, b);
-  } else if (args[2] == "cmyk") {
+  } else if (args.text(2) == "cmyk") {
     StrTokenizer stok(cs, ":,");
     if (stok.count() != 4) throw ex_parse("CMYK color must have four components!");
     float cmyk[4];
@@ -35,7 +35,7 @@ macro(definecolor) {
     throw ex_parse("Invalid color model!");
   }
 
-  ColorAtom::defineColor(args[1], c);
+  ColorAtom::defineColor(args.text(1), c);
   return nullptr;
 }
 

@@ -22,17 +22,17 @@ macro(intertext) {
   return nullptr;
 }
 
-macro(addfont) {
+cmdmacro(addfont) {
   if (MicroTeX::isPrivilegedEnvironment())
-    MicroTeX::addFont(FontSrcFile(args[1], args[2]));
+    MicroTeX::addFont(FontSrcFile(args.text(1), args.text(2)));
   else
     throw ex_unprivileged("\\addfont may only be called in privileged environments");
   return nullptr;
 }
 
-macro(mathversion) {
+cmdmacro(mathversion) {
   auto mathStyle = MathStyle::TeX;
-  const auto& options = parseOption(args[2]);
+  const auto& options = parseOption(args.text(2));
   const auto it = options.find("math-style");
   if (it != options.end()) {
     const auto& value = it->second;
@@ -46,8 +46,8 @@ macro(mathversion) {
       mathStyle = MathStyle::upright;
     }
   }
-  MicroTeX::setDefaultMathFont(args[1]);
-  return sptrOf<MathFontAtom>(mathStyle, args[1]);
+  MicroTeX::setDefaultMathFont(args.text(1));
+  return sptrOf<MathFontAtom>(mathStyle, args.text(1));
 }
 
 }  // namespace microtex

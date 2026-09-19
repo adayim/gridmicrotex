@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 
+#include "core/formula.h"
+#include "core/parser.h"
+#include "macro/macro_args.h"
 #include "macro/macro_misc.h"
 
 using namespace std;
@@ -229,6 +232,39 @@ void MacroInfo::_free_() {
 sptr<Atom> PreDefMacro::invoke(Parser& tp, vector<string>& args) {
   try {
     return _delegate(tp, args);
+  } catch (ex_parse& e) {
+    throw ex_parse("Problem with command: " + args[0] + "\n caused by: " + e.what());
+  }
+}
+
+namespace {
+
+// The old parser's arguments: their text, parsed again when asked for.
+class ParsedAgain : public CommandArgs {
+private:
+  Parser& _tp;
+  vector<string>& _args;
+
+public:
+  ParsedAgain(Parser& tp, vector<string>& args) : _tp(tp), _args(args) {}
+
+  const string& text(size_t i) const override { return _args[i]; }
+
+  sptr<Atom> formula(size_t i, bool math, bool preprocess) override {
+    return Formula(_tp, _args[i], preprocess, math)._root;
+  }
+
+  bool isMathMode() const override { return _tp.isMathMode(); }
+
+  bool isPartial() const override { return _tp.isPartial(); }
+};
+
+}  // namespace
+
+sptr<Atom> CommandMacro::invoke(Parser& tp, vector<string>& args) {
+  ParsedAgain a(tp, args);
+  try {
+    return _delegate(a);
   } catch (ex_parse& e) {
     throw ex_parse("Problem with command: " + args[0] + "\n caused by: " + e.what());
   }

@@ -18,66 +18,66 @@
 
 namespace microtex {
 
-inline macro(fatalIfCmdConflict) {
-  NewCommandMacro::_errIfConflict = args[1] == "true";
+inline cmdmacro(fatalIfCmdConflict) {
+  NewCommandMacro::_errIfConflict = args.text(1) == "true";
   return nullptr;
 }
 
-inline macro(breakEverywhere) {
-  RowAtom::_breakEverywhere = args[1] == "true";
+inline cmdmacro(breakEverywhere) {
+  RowAtom::_breakEverywhere = args.text(1) == "true";
   return nullptr;
 }
 
-inline macro(st) {
-  auto base = Formula(tp, args[1], false, tp.isMathMode())._root;
+inline cmdmacro(st) {
+  auto base = args.formula(1, args.isMathMode());
   return sptrOf<StrikeThroughAtom>(base);
 }
 
-inline macro(spATbreve) {
+inline cmdmacro(spATbreve) {
   auto* vra = new VRowAtom(Formula("\\displaystyle\\!\\breve{}")._root);
   vra->setRaise(UnitType::ex, 0.6f);
   return sptrOf<SmashedAtom>(sptr<Atom>(vra), "");
 }
 
-inline macro(clrlap) {
-  return sptrOf<LapedAtom>(Formula(tp, args[1])._root, args[0][0]);
+inline cmdmacro(clrlap) {
+  return sptrOf<LapedAtom>(args.formula(1, true, true), args.text(0)[0]);
 }
 
-inline macro(mathclrlap) {
-  return sptrOf<LapedAtom>(Formula(tp, args[1])._root, args[0][4]);
+inline cmdmacro(mathclrlap) {
+  return sptrOf<LapedAtom>(args.formula(1, true, true), args.text(0)[4]);
 }
 
-inline sptr<Atom> _cancel(int cancelType, Parser& tp, std::vector<std::string>& args) {
-  auto base = Formula(tp, args[1], false)._root;
+inline sptr<Atom> _cancel(int cancelType, CommandArgs& args) {
+  auto base = args.formula(1);
   if (base == nullptr) throw ex_parse("Cancel content must not be empty!");
   return sptrOf<CancelAtom>(base, cancelType);
 }
 
-inline macro(cancel) {
-  return _cancel(CancelAtom::SLASH, tp, args);
+inline cmdmacro(cancel) {
+  return _cancel(CancelAtom::SLASH, args);
 }
 
-inline macro(bcancel) {
-  return _cancel(CancelAtom::BACKSLASH, tp, args);
+inline cmdmacro(bcancel) {
+  return _cancel(CancelAtom::BACKSLASH, args);
 }
 
-inline macro(xcancel) {
-  return _cancel(CancelAtom::CROSS, tp, args);
+inline cmdmacro(xcancel) {
+  return _cancel(CancelAtom::CROSS, args);
 }
 
-inline macro(sout) {
-  return _cancel(CancelAtom::HORIZONTAL, tp, args);
+inline cmdmacro(sout) {
+  return _cancel(CancelAtom::HORIZONTAL, args);
 }
 
-inline macro(underscore) {
+inline cmdmacro(underscore) {
   return SymbolAtom::get("_");
 }
 
-inline macro(nbsp) {
+inline cmdmacro(nbsp) {
   return sptrOf<SpaceAtom>();
 }
 
-inline macro(joinrel) {
+inline cmdmacro(joinrel) {
   return sptrOf<TypedAtom>(
     AtomType::relation,
     AtomType::relation,
@@ -85,8 +85,8 @@ inline macro(joinrel) {
   );
 }
 
-inline macro(smash) {
-  return sptrOf<SmashedAtom>(Formula(tp, args[1], false)._root, args[2]);
+inline cmdmacro(smash) {
+  return sptrOf<SmashedAtom>(args.formula(1), args.text(2));
 }
 
 inline macro(makeatletter) {
@@ -99,60 +99,60 @@ inline macro(makeatother) {
   return nullptr;
 }
 
-inline macro(newenvironment) {
+inline cmdmacro(newenvironment) {
   int opt = 0;
-  if (!args[4].empty()) valueOf(args[4], opt);
+  if (!args.text(4).empty()) valueOf(args.text(4), opt);
 
-  NewEnvironmentMacro::addNewEnvironment(args[1], args[2], args[3], opt);
+  NewEnvironmentMacro::addNewEnvironment(args.text(1), args.text(2), args.text(3), opt);
   return nullptr;
 }
 
-inline macro(renewenvironment) {
+inline cmdmacro(renewenvironment) {
   int opt = 0;
-  if (!args[4].empty()) valueOf(args[4], opt);
+  if (!args.text(4).empty()) valueOf(args.text(4), opt);
 
-  NewEnvironmentMacro::addRenewEnvironment(args[1], args[2], args[3], opt);
+  NewEnvironmentMacro::addRenewEnvironment(args.text(1), args.text(2), args.text(3), opt);
   return nullptr;
 }
 
-inline macro(hphantom) {
-  return sptrOf<PhantomAtom>(Formula(tp, args[1], false)._root, true, false, false);
+inline cmdmacro(hphantom) {
+  return sptrOf<PhantomAtom>(args.formula(1), true, false, false);
 }
 
-inline macro(vphantom) {
-  return sptrOf<PhantomAtom>(Formula(tp, args[1], false)._root, false, true, true);
+inline cmdmacro(vphantom) {
+  return sptrOf<PhantomAtom>(args.formula(1), false, true, true);
 }
 
-inline macro(phantom) {
-  return sptr<Atom>(new PhantomAtom(Formula(tp, args[1], false)._root, true, true, true));
+inline cmdmacro(phantom) {
+  return sptr<Atom>(new PhantomAtom(args.formula(1), true, true, true));
 }
 
-inline macro(surd) {
+inline cmdmacro(surd) {
   return sptrOf<VCenterAtom>(SymbolAtom::get("surdsign"));
 }
 
-inline macro(lmoustache) {
+inline cmdmacro(lmoustache) {
   auto* s = new SymbolAtom(*(SymbolAtom::get("lmoustache")));
   auto b = sptrOf<BigSymbolAtom>(sptr<SymbolAtom>(s), 1);
   b->_type = AtomType::opening;
   return b;
 }
 
-inline macro(rmoustache) {
+inline cmdmacro(rmoustache) {
   auto* s = new SymbolAtom(*(SymbolAtom::get("rmoustache")));
   auto b = sptrOf<BigSymbolAtom>(sptr<SymbolAtom>(s), 1);
   b->_type = AtomType::closing;
   return b;
 }
 
-inline macro(breakmark) {
+inline cmdmacro(breakmark) {
   // `\-` is TeX's discretionary hyphen: it offers a break and draws a
   // hyphen if that break is taken. It used to offer the break and draw
   // nothing, which is worse than not breaking at all.
   return sptrOf<HyphenMarkAtom>();
 }
 
-inline macro(nokern) {
+inline cmdmacro(nokern) {
   return sptrOf<NokernAtom>();
 }
 
@@ -179,7 +179,7 @@ inline macro(normal) {
 
 /***************************************** implement at .cpp **************************************/
 
-macro(longdiv);
+cmdmacro(longdiv);
 
 macro(char);
 
@@ -187,9 +187,9 @@ macro(cr);
 
 macro(kern);
 
-macro(hvspace);
+cmdmacro(hvspace);
 
-macro(rule);
+cmdmacro(rule);
 
 macro(newcommand);
 
@@ -199,17 +199,17 @@ macro(providecommand);
 
 macro(def);
 
-macro(raisebox);
+cmdmacro(raisebox);
 
 macro(romannumeral);
 
-macro(zstack);
+cmdmacro(zstack);
 
 #ifdef GRAPHICS_DEBUG
 
-macro(debug);
+cmdmacro(debug);
 
-macro(undebug);
+cmdmacro(undebug);
 
 #endif  // GRAPHICS_DEBUG
 
@@ -219,7 +219,7 @@ inline macro(backslashcr) {
 
 /**************************************** not implemented *****************************************/
 
-inline macro(includegraphics) {
+inline cmdmacro(includegraphics) {
   return nullptr;
 }
 

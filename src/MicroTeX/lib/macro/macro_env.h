@@ -16,83 +16,83 @@
 
 namespace microtex {
 
-inline macro(smallmatrixATATenv) {
+inline cmdmacro(smallmatrixATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(tp.isPartial(), args[1], arr.get(), false);
+  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::smallMatrix);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::smallMatrix);
 }
 
-inline macro(matrixATATenv) {
+inline cmdmacro(matrixATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(tp.isPartial(), args[1], arr.get(), false);
+  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::matrix);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::matrix);
 }
 
-inline macro(arrayATATenv) {
+inline cmdmacro(arrayATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(tp.isPartial(), args[2], arr.get(), false);
+  Parser parser(args.isPartial(), args.text(2), arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, args[1], true);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
 }
 
-inline macro(alignATATenv) {
+inline cmdmacro(alignATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(tp.isPartial(), args[1], arr.get(), false);
+  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::align);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::align);
 }
 
-inline macro(flalignATATenv) {
+inline cmdmacro(flalignATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser parser(tp.isPartial(), args[1], arr.get(), false);
+  Parser parser(args.isPartial(), args.text(1), arr.get(), false);
   parser.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::flAlign);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::flAlign);
 }
 
-inline macro(alignatATATenv) {
+inline cmdmacro(alignatATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser par(tp.isPartial(), args[2], arr.get(), false);
+  Parser par(args.isPartial(), args.text(2), arr.get(), false);
   par.parse();
   arr->checkDimensions();
   size_t n = 0;
-  valueOf(args[1], n);
+  valueOf(args.text(1), n);
   if (arr->cols() != 2 * n) throw ex_parse("Bad number of equations in alignat environment!");
 
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::alignAt);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::alignAt);
 }
 
-inline macro(alignedATATenv) {
+inline cmdmacro(alignedATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser p(tp.isPartial(), args[1], arr.get(), false);
+  Parser p(args.isPartial(), args.text(1), arr.get(), false);
   p.parse();
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::aligned);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::aligned);
 }
 
-inline macro(alignedatATATenv) {
+inline cmdmacro(alignedatATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser p(tp.isPartial(), args[2], arr.get(), false);
+  Parser p(args.isPartial(), args.text(2), arr.get(), false);
   p.parse();
   arr->checkDimensions();
   size_t n = 0;
-  valueOf(args[1], n);
+  valueOf(args.text(1), n);
   if (arr->cols() != 2 * n) {
     throw ex_parse("Bad number of equations in alignedat environment!");
   }
 
-  return sptrOf<MatrixAtom>(tp.isPartial(), arr, MatrixType::alignedAt);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::alignedAt);
 }
 
-inline macro(multlineATATenv) {
+inline cmdmacro(multlineATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser p(tp.isPartial(), args[1], arr.get(), false);
+  Parser p(args.isPartial(), args.text(1), arr.get(), false);
   p.parse();
   arr->checkDimensions();
   if (arr->cols() > 1) {
@@ -100,29 +100,29 @@ inline macro(multlineATATenv) {
   }
   if (arr->cols() == 0) return nullptr;
 
-  return sptrOf<MultlineAtom>(tp.isPartial(), arr, MultiLineType::multiline);
+  return sptrOf<MultlineAtom>(args.isPartial(), arr, MultiLineType::multiline);
 }
 
-inline macro(gatherATATenv) {
+inline cmdmacro(gatherATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser p(tp.isPartial(), args[1], arr.get(), false);
+  Parser p(args.isPartial(), args.text(1), arr.get(), false);
   p.parse();
   arr->checkDimensions();
   if (arr->cols() > 1) throw ex_parse("Requires exact one column in gather environment!");
   if (arr->cols() == 0) return nullptr;
 
-  return sptrOf<MultlineAtom>(tp.isPartial(), arr, MultiLineType::gather);
+  return sptrOf<MultlineAtom>(args.isPartial(), arr, MultiLineType::gather);
 }
 
-inline macro(gatheredATATenv) {
+inline cmdmacro(gatheredATATenv) {
   const auto arr = sptrOf<ArrayFormula>();
-  Parser p(tp.isPartial(), args[1], arr.get(), false);
+  Parser p(args.isPartial(), args.text(1), arr.get(), false);
   p.parse();
   arr->checkDimensions();
   if (arr->cols() > 1) throw ex_parse("Requires exact one column in gathered environment!");
   if (arr->cols() == 0) return nullptr;
 
-  return sptrOf<MultlineAtom>(tp.isPartial(), arr, MultiLineType::gathered);
+  return sptrOf<MultlineAtom>(args.isPartial(), arr, MultiLineType::gathered);
 }
 
 inline macro(multicolumn) {
@@ -209,19 +209,19 @@ inline macro(color) {
   return sptrOf<ColorAtom>(a, TRANSPARENT, ColorAtom::getColor(args[1]));
 }
 
-inline macro(newcolumntype) {
-  MatrixAtom::defineColumnSpecifier(args[1], args[2]);
+inline cmdmacro(newcolumntype) {
+  MatrixAtom::defineColumnSpecifier(args.text(1), args.text(2));
   return nullptr;
 }
 
-inline macro(arrayrulecolor) {
-  color c = ColorAtom::getColor(args[1]);
+inline cmdmacro(arrayrulecolor) {
+  color c = ColorAtom::getColor(args.text(1));
   MatrixAtom::LINE_COLOR = c;
   return nullptr;
 }
 
-inline macro(columnbg) {
-  color c = ColorAtom::getColor(args[1]);
+inline cmdmacro(columnbg) {
+  color c = ColorAtom::getColor(args.text(1));
   return sptrOf<CellColorAtom>(c);
 }
 
@@ -233,14 +233,14 @@ inline macro(rowcolor) {
   return nullptr;
 }
 
-inline macro(shoveright) {
-  auto a = Formula(tp, args[1])._root;
+inline cmdmacro(shoveright) {
+  auto a = args.formula(1, true, true);
   a->_alignment = Alignment::right;
   return a;
 }
 
-inline macro(shoveleft) {
-  auto a = Formula(tp, args[1])._root;
+inline cmdmacro(shoveleft) {
+  auto a = args.formula(1, true, true);
   a->_alignment = Alignment::left;
   return a;
 }

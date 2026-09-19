@@ -7,7 +7,7 @@
 
 namespace microtex {
 
-macro(binom);
+cmdmacro(binom);
 
 sptr<Atom> _choose(const std::string& left, const std::string& right, Parser& tp, Args& args);
 
@@ -27,7 +27,7 @@ inline macro(brace) {
   return _choose("lbrace", "rbrace", tp, args);
 }
 
-macro(frac);
+cmdmacro(frac);
 
 macro(above);
 
@@ -41,9 +41,9 @@ macro(atopwithdelims);
 
 macro(overwithdelims);
 
-macro(cfrac);
+cmdmacro(cfrac);
 
-macro(genfrac);
+cmdmacro(genfrac);
 
 }  // namespace microtex
 

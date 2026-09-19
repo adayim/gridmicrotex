@@ -7,10 +7,10 @@ namespace microtex {
 
 using namespace std;
 
-macro(sideset) {
-  auto l = Formula(tp, args[1])._root;
-  auto r = Formula(tp, args[2])._root;
-  auto op = Formula(tp, args[3])._root;
+cmdmacro(sideset) {
+  auto l = args.formula(1, true, true);
+  auto r = args.formula(2, true, true);
+  auto op = args.formula(3, true, true);
   if (op == nullptr) {
     auto in = sptrOf<CharAtom>('M', FontStyle::rm, true);
     op = sptrOf<PhantomAtom>(in, false, true, true);
@@ -24,9 +24,9 @@ macro(sideset) {
   return sptrOf<SideSetsAtom>(op, l, r);
 }
 
-macro(prescript) {
-  auto base = Formula(tp, args[3])._root;
-  return sptrOf<ScriptsAtom>(base, Formula(tp, args[2])._root, Formula(tp, args[1])._root, false);
+cmdmacro(prescript) {
+  auto base = args.formula(3, true, true);
+  return sptrOf<ScriptsAtom>(base, args.formula(2, true, true), args.formula(1, true, true), false);
 }
 
 }  // namespace microtex
