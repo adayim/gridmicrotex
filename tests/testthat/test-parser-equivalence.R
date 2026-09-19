@@ -104,6 +104,18 @@ test_that("a prime is the superscript \\prime, as in TeX", {
   ))
 })
 
+test_that("` and \" in math are characters, not primes, as in TeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_same_layout(c(
+    "f`"  = "f{`}",
+    "f\"" = "f{\"}",
+    "f'`" = "f^{\\prime}{`}"
+  ))
+  # On the baseline with the f, not raised as a script.
+  r <- latex_tree("f`\"", input_mode = "math", render_mode = "typeface")$records
+  expect_length(unique(r$y), 1)
+})
+
 test_that("scripts attach the same in either order", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_same_layout(c(

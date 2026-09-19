@@ -199,7 +199,7 @@ NodeId Parser::parseList(Mode mode, const Stop& stop, const SourceSpan& at) {
     if (atStop(t, stop)) break;
     const Token& k = t.tok;
     if (mode == Mode::math && (k.isChar(Cat::superscript) || k.isChar(Cat::subscript) ||
-                               isOther(k, '\'') || isOther(k, '"') || isOther(k, '`'))) {
+                               isOther(k, '\''))) {
       // Scripts belong to the item before them, as in the old parser.
       NodeId base = kNoNode;
       if (!items.empty()) {
@@ -325,7 +325,7 @@ NodeId Parser::parseScripts(NodeId base, Mode mode, const SourceSpan& at) {
   while (true) {
     ExpandedToken t = next();
     const Token& k = t.tok;
-    if (isOther(k, '\'') || isOther(k, '"') || isOther(k, '`')) {
+    if (isOther(k, '\'')) {
       if (sup != kNoNode) {
         unread(std::move(t));
         break;
@@ -337,10 +337,9 @@ NodeId Parser::parseScripts(NodeId base, Mode mode, const SourceSpan& at) {
         unread(std::move(t));
         break;
       }
-      // Each prime is kept as written: the engine builds one atom per run
-      // of the same character, and `"` as a double prime of its own.
-      primes += isOther(k, '"') ? 2 : 1;
-      order += static_cast<char>(k.cp);
+      // Only `'` is a prime, as in TeX: ` and " are characters.
+      primes++;
+      order += '\'';
       continue;
     }
     if (k.isChar(Cat::superscript)) {

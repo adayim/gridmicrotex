@@ -478,9 +478,8 @@ private:
     const std::string& order = x.text;
     // TeX's prime: `'` is `^{\prime}`, and primes with a `^` after them are
     // one superscript -- f''^2 is f^{\prime\prime 2} -- so f' draws as
-    // f^{\prime} does. (` and " are the engine's own backprime and double
-    // prime, with no meaning in TeX; they are kept as it drew them.)
-    if (order.find('\'') != std::string::npos && order.find_first_of("`\"") == std::string::npos) {
+    // f^{\prime} does.
+    if (order.find('\'') != std::string::npos) {
       Formula primed;
       for (const char c : order) {
         if (c == '\'') primed.add(SymbolAtom::get("prime"));
@@ -494,18 +493,6 @@ private:
     std::size_t i = 0;
     while (i < order.size()) {
       const char c = order[i];
-      if (c == '\'' || c == '`') {
-        std::size_t j = i;
-        while (j < order.size() && order[j] == c) j++;
-        f.add(sptrOf<CumulativeScriptsAtom>(popBack(f), nullptr, primes(c == '\'', j - i)));
-        i = j;
-        continue;
-      }
-      if (c == '"') {
-        f.add(sptrOf<CumulativeScriptsAtom>(popBack(f), nullptr, sptrOf<CharAtom>(0x02033, true)));
-        i++;
-        continue;
-      }
       sptr<Atom> subAtom, supAtom;
       const bool pair = i + 1 < order.size() && (order[i + 1] == '^' || order[i + 1] == '_') &&
                         order[i + 1] != c;
@@ -521,17 +508,6 @@ private:
     }
   }
 
-  static sptr<Atom> primes(bool prime, std::size_t count) {
-    static const c32 primeChars[] = {0x02032, 0x02033, 0x02034, 0x02057};
-    static const c32 backChars[] = {0x02035, 0x02036, 0x02037};
-    const c32* arr = prime ? primeChars : backChars;
-    const std::size_t max = prime ? 4 : 3;
-    if (count <= max) return sptrOf<CharAtom>(arr[count - 1], true);
-    auto row = sptrOf<RowAtom>();
-    for (std::size_t i = 0; i < count; i++) row->add(sptrOf<CharAtom>(arr[0], true));
-    return row;
-  }
-
   static sptr<Atom> attach(Formula& f, const sptr<Atom>& sub, const sptr<Atom>& sup) {
     if (f._root == nullptr) return sptrOf<ScriptsAtom>(nullptr, sub, sup);
     sptr<Atom> atom;
@@ -540,11 +516,6 @@ private:
     } else {
       atom = f._root;
       f._root = nullptr;
-    }
-    if (auto* ca = dynamic_cast<CumulativeScriptsAtom*>(atom.get())) {
-      ca->addSubscript(sub);
-      ca->addSuperscript(sup);
-      return atom;
     }
     if (atom->rightType() == AtomType::bigOperator) return sptrOf<OperatorAtom>(atom, sub, sup);
     return sptrOf<ScriptsAtom>(atom, sub, sup);
