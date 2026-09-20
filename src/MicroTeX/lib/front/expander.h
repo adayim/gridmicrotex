@@ -55,9 +55,19 @@ struct ExpanderOptions {
   /** TeX stops runaway recursion with its capacity limits; these are ours.
    *  The bytes are all the expansions of one parse together, and reading
    *  and parsing them is the cost, about 0.8 s per MB -- and all of it
-   *  wasted, since a runaway is an error. Real input stays in the hundreds
-   *  of KB (the count cap times a few dozen bytes each). */
-  std::size_t maxExpansions = 10000;
+   *  wasted, since a runaway is an error.
+   *
+   *  The byte cap is what bounds the time; the count is a second net, for
+   *  a recursion that expands to nothing (`\def\a{\a}`) and so never
+   *  reaches the byte cap. 10,000 was too tight for a document: a
+   *  book-length body of ordinary prose reached it at about 16,000
+   *  expansions (970 KB of source, 0.25 s in), while a runaway that
+   *  produces no bytes still stops in well under a millisecond at
+   *  100,000. The byte cap stays where it was: nothing real has reached
+   *  it (that same body expanded to about 220 KB), and raising it would
+   *  buy nothing while making every runaway proportionally slower to
+   *  stop. */
+  std::size_t maxExpansions = 100000;
   std::size_t maxExpandedBytes = std::size_t{1} << 20;
   /** Expand the prelude: the commands and environments the engine defines
    *  in LaTeX (\dfrac, pmatrix, ...; front/prelude.cpp). The old parser
