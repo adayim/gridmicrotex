@@ -258,7 +258,7 @@ latex_grob <- function(tex,
                        math_font = "",
                        max_width = 0,
                        tex_style = "",
-                       input_mode = c("mixed", "math"),
+                       input_mode = c("mixed", "math", "document"),
                        render_mode = c("typeface", "path"),
                        justify = FALSE,
                        line_break = c("greedy", "optimal"),
@@ -488,7 +488,7 @@ grobMark <- function(grob, name) {
   # Patterns are registered on first use, not at load.
   .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
-  input_mode <- match.arg(input_mode, c("math", "mixed"))
+  input_mode <- match.arg(input_mode, c("math", "mixed", "document"))
   if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
 
   # Font size is needed before anything else now, because `em`/`ex` in an
@@ -873,7 +873,7 @@ grid.latex <- function(tex, ...) {
 #' latex_dims("\\frac{a}{b}")
 latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
-                       input_mode = c("mixed", "math"),
+                       input_mode = c("mixed", "math", "document"),
                        render_mode = c("typeface", "path"),
                        justify = FALSE,
                        line_break = c("greedy", "optimal"),

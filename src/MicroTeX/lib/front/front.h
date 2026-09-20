@@ -39,12 +39,13 @@ std::string prepareForLegacyParser(const std::string& latex);
 /**
  * The syntax tree of `latex` read by the new front end: the prelude, user
  * macros and define_macro() macros expanded, then parsed from `mode`.
- * `lineBreaks`: a line end in text is a line break (mixed mode). Problems
- * go to `diagnostics`; errors the expander still raises (a redefinition,
- * runaway recursion) are thrown as ex_parse.
+ * `lineBreaks`: a line end in text is a line break (mixed mode).
+ * `paragraphs`: a blank line is a `\par`, which starts a paragraph
+ * (document mode). Problems go to `diagnostics`; errors the expander still
+ * raises (a redefinition, runaway recursion) are thrown as ex_parse.
  */
 Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics,
-               bool lineBreaks = false);
+               bool lineBreaks = false, bool paragraphs = false);
 
 /**
  * The atoms of `latex`, read by the new front end as `mode` says, into

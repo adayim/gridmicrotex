@@ -217,7 +217,7 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
   }
   if (!missing(input_mode)) {
     if (!is.null(input_mode)) {
-      input_mode <- match.arg(input_mode, c("math", "mixed"))
+      input_mode <- match.arg(input_mode, c("math", "mixed", "document"))
     }
     record("input_mode", input_mode)
   }

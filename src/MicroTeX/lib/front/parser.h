@@ -24,6 +24,10 @@ struct ParserOptions {
    *  text reached from the top without passing through math or an
    *  environment. */
   bool lineEndsBreak = false;
+  /** Document mode: a blank line (the lexer's `par` token) in the prose
+   *  starts a paragraph. A line end on its own is only a space, as TeX
+   *  reads it. */
+  bool parBreaks = false;
 };
 
 /**
@@ -148,8 +152,9 @@ private:
   std::string readGroupName();
 
   NodeId emptyList(SourceSpan at, Mode mode);
-  /** A `\\` with no gap, for a line end in the prose. */
-  NodeId lineBreak(SourceSpan at, Mode mode);
+  /** A `\\` with no gap, for a line end in the prose. `paragraph` marks the
+   *  break that starts a paragraph, which the lowering sets apart. */
+  NodeId lineBreak(SourceSpan at, Mode mode, bool paragraph = false);
   NodeId character(const ExpandedToken& t, Mode mode);
   NodeId absentArgument(SourceSpan at, Mode mode);
 };

@@ -81,7 +81,6 @@ std::string_view preludeSource() {
 \newcommand{\vfill}{\vspace{1em}}
 \newcommand{\emph}[1]{\textit{#1}}
 \newcommand{\textnormal}[1]{\text{#1}}
-\newcommand{\par}{\\}
 \newcommand{\newline}{\\}
 \newcommand{\toprule}{\thickhline}
 \newcommand{\bottomrule}{\thickhline}

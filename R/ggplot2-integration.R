@@ -67,7 +67,7 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
                        position = "identity", ...,
                        fontsize = 11, math_font = "",
                        lineheight = 1.2, max_width = 0,
-                       input_mode = c("mixed", "math"),
+                       input_mode = c("mixed", "math", "document"),
                        render_mode = c("typeface", "path"),
                        na.rm = FALSE, show.legend = NA,
                        inherit.aes = TRUE) {
@@ -150,7 +150,7 @@ GeomLatex <- NULL
 #' }
 element_latex <- function(math_font = "", fontsize = NULL,
                          lineheight = 1.2, max_width = 0,
-                         input_mode = c("mixed", "math"),
+                         input_mode = c("mixed", "math", "document"),
                          render_mode = c("typeface", "path"), ...) {
   .apply_opts("math_font", "render_mode", "input_mode")
   render_mode <- match.arg(render_mode)

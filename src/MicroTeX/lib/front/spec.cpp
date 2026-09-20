@@ -178,6 +178,9 @@ struct Table {
     add({"stackinset"}, "rdrdmm");
     // Row ends, and a line break outside an array.
     add({"cr", "\\"}, "", Shape::prefix, Bare::none, true);
+    // A paragraph in document mode, a line break anywhere else, as the
+    // prelude used to define it. The parser reads it: only it knows the mode.
+    add({"par"}, "", Shape::prefix, Bare::none, true);
     add({"hspace", "vspace"}, "d");
     // --- our own (lib/atom/) ----------------------------------------------
     add({"gmfontfamily"}, "rt");

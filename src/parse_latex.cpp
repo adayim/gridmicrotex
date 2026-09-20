@@ -140,7 +140,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
             resolve_tex_style(tex_style),           // overrideTeXStyle
             math_font,                              // mathFontName
             main_font,                              // mainFontFamily
-            input_mode == "mixed" ? InputMode::mixed : InputMode::math
+            input_mode == "mixed"      ? InputMode::mixed
+            : input_mode == "document" ? InputMode::document
+                                       : InputMode::math
         ));
     } catch (const std::exception& e) {
         Rcpp::stop(std::string("LaTeX parse error: ") + e.what());

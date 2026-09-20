@@ -45,11 +45,12 @@ std::string prepareForLegacyParser(const std::string& latex) {
   return Expander(latex, std::move(opts), diags).expandToText();
 }
 
-Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bool lineBreaks) {
+Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bool lineBreaks,
+               bool paragraphs) {
   ExpanderOptions eo;
   eo.prelude = true;
   eo.recover = true;
-  eo.lex.blankLineIsPar = false;
+  eo.lex.blankLineIsPar = paragraphs;
   eo.isBuiltinCommand = [](const std::string& name) { return findCommand(name) != nullptr; };
   eo.isBuiltinEnvironment = [](const std::string& name) {
     return findEnvironment(name) != nullptr;
@@ -58,6 +59,7 @@ Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bo
   ParserOptions po;
   po.startMode = mode;
   po.lineEndsBreak = lineBreaks;
+  po.parBreaks = paragraphs;
   po.isKnownName = [](const std::string& name) {
     return Symbol::get(name.c_str()) != nullptr || Formula::isPredefined(name);
   };
@@ -79,10 +81,15 @@ void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
   lastStore() = Diagnostics();
   Diagnostics diags;
   const bool mixed = mode == InputMode::mixed;
-  const Ast ast = parseLatex(latex, mixed ? Mode::text : Mode::math, diags, mixed);
+  const bool document = mode == InputMode::document;
+  // Both prose modes start in text and are laid out as rows; they differ in
+  // what breaks a row -- a line end in mixed, a blank line in a document.
+  const bool prose = mixed || document;
+  const Ast ast =
+    parseLatex(latex, prose ? Mode::text : Mode::math, diags, mixed, document);
   // A capacity ran out: what was read is not what the input means.
   if (const Diagnostic* e = diags.firstError()) throw ex_parse(e->message);
-  lowerInto(ast, formula, diags, mixed);
+  lowerInto(ast, formula, diags, prose, document);
   lastStore() = std::move(diags);
 }
 

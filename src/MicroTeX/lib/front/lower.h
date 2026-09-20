@@ -22,7 +22,13 @@ namespace microtex::front {
  * An error a handler raises is recorded as a diagnostic at the command, and
  * the command is drawn as its name in red, as an unknown one is.
  */
-void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines = false);
+/**
+ * `lines`: build the tree as the rows of a label (mixed and document mode)
+ * rather than as one formula. `paragraphs`: those rows are paragraphs, so
+ * the first one is indented as TeX indents it.
+ */
+void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines = false,
+               bool paragraphs = false);
 
 }  // namespace microtex::front
 

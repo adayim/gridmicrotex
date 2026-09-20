@@ -156,12 +156,15 @@ NodeId Parser::emptyList(SourceSpan at, Mode mode) {
   return _ast.add(std::move(n), {});
 }
 
-NodeId Parser::lineBreak(SourceSpan at, Mode mode) {
+NodeId Parser::lineBreak(SourceSpan at, Mode mode, bool paragraph) {
   Node n;
   n.kind = NodeKind::command;
   n.mode = mode;
   n.span = at;
   n.text = "\\";
+  // A paragraph is a line break that also carries the space between
+  // paragraphs, and indents what follows it.
+  n.aux = paragraph ? 1 : 0;
   return _ast.add(std::move(n), {absentArgument(at, mode)});
 }
 
@@ -185,7 +188,7 @@ NodeId Parser::character(const ExpandedToken& t, Mode mode) {
 }
 
 NodeId Parser::parse() {
-  _prose = _opts.lineEndsBreak && _opts.startMode == Mode::text;
+  _prose = (_opts.lineEndsBreak || _opts.parBreaks) && _opts.startMode == Mode::text;
   _ast.root = parseList(_opts.startMode, Stop{}, SourceSpan{});
   // Anything left over is after a stray closing token at the top level.
   while (true) {
@@ -258,9 +261,16 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
   ExpandedToken t = next();
   const Token& k = t.tok;
 
+  // A blank line in document-mode prose starts a paragraph. It is read
+  // before the line-end rule below, which mixed mode uses instead.
+  if (_prose && _opts.parBreaks && k.kind == TokKind::par) {
+    items.push_back(lineBreak(k.span, mode, true));
+    return true;
+  }
+
   // A line end in mixed-mode prose breaks the line: the space that holds
   // it, or one TeX dropped before this token (after a control word).
-  if (_prose && k.lineEnds > 0 && k.kind != TokKind::end) {
+  if (_prose && _opts.lineEndsBreak && k.lineEnds > 0 && k.kind != TokKind::end) {
     items.push_back(lineBreak(k.span, mode));
     if (k.kind == TokKind::space || k.kind == TokKind::par) return true;
   }
@@ -527,6 +537,11 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     }
     if (name == "middle") {
       return _ast.add(std::move(n), {parseDelimiter(who)});
+    }
+    if (name == "par") {
+      // TeX's own paragraph break. Where there are no paragraphs (a label,
+      // a formula) it is the line break the prelude used to define.
+      return lineBreak(at, mode, _opts.parBreaks);
     }
     if (name == "\\" || name == "cr") {
       // A line break outside an alignment (in one, it ends the row and is

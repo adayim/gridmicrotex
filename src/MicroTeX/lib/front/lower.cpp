@@ -79,10 +79,10 @@ class Lowerer {
 public:
   Lowerer(const Ast& ast, Diagnostics& diags) : _ast(ast), _diags(diags) {}
 
-  void run(Formula& f, bool lines) {
+  void run(Formula& f, bool lines, bool paragraphs) {
     if (_ast.root == kNoNode) return;
     if (lines) {
-      runLines(f);
+      runLines(f, paragraphs);
     } else {
       lowerList(_ast.root, f, 0);
     }
@@ -1011,7 +1011,23 @@ private:
     bool afterBreak = false;
     /** Anything drawn at all: a break before that is none. */
     bool drawn = false;
+    /** A paragraph starts here: its first line is indented, as in TeX. */
+    bool indentNext = false;
   };
+
+  /** TeX's \parindent: 15pt at a 10pt font, so 1.5em, which follows the
+   *  size a grob is drawn at. There is no \parskip: LaTeX separates
+   *  paragraphs by this indent, not by space between them. */
+  static sptr<Atom> parIndent() {
+    return sptrOf<SpaceAtom>(UnitType::em, 1.5f, 0.f, 0.f);
+  }
+
+  /** The indent a paragraph opens with, once something goes on its line. */
+  void indentIfNeeded(Label& l) {
+    if (!l.indentNext) return;
+    l.indentNext = false;
+    l.line->add(parIndent());
+  }
 
   Formula& prose(Label& l) {
     if (l.prose == nullptr) l.prose = std::make_unique<Formula>();
@@ -1038,6 +1054,7 @@ private:
   void endProse(Label& l) {
     if (l.prose != nullptr && l.prose->_root != nullptr) {
       startLine(l);
+      indentIfNeeded(l);
       l.line->add(sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root));
       l.drawn = true;
     }
@@ -1056,6 +1073,7 @@ private:
     beforeProse(l);
     endProse(l);
     startLine(l);
+    indentIfNeeded(l);
     l.drawn = true;
   }
 
@@ -1067,6 +1085,9 @@ private:
       const std::string gap = brk != kNoNode && count(brk) > 0 ? rawOf(child(brk, 0)) : std::string();
       if (!gap.empty()) l.gap = gap;
     }
+    // A paragraph indents its first line, whether or not the break before
+    // it drew anything (the first paragraph of all opens one too).
+    if (brk != kNoNode && node(brk).aux == 1) l.indentNext = true;
     l.afterBreak = true;
   }
 
@@ -1092,8 +1113,10 @@ private:
    *  built it: each stretch of prose on a line is one \text{}, inline
    *  math goes into the line itself, and the lines are the rows of the
    *  formula. A break before everything or after it is none. */
-  void runLines(Formula& f) {
+  void runLines(Formula& f, bool paragraphs) {
     Label l(f);
+    // A document opens a paragraph, so its first line is indented too.
+    l.indentNext = paragraphs;
     feedLines(l, _ast.root);
     // Spaces at the very end are kept, as they were in the \text{}.
     beforeProse(l);
@@ -1209,8 +1232,9 @@ private:
 
 }  // namespace
 
-void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines) {
-  Lowerer(ast, diagnostics).run(formula, lines);
+void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines,
+               bool paragraphs) {
+  Lowerer(ast, diagnostics).run(formula, lines, paragraphs);
 }
 
 }  // namespace microtex::front
