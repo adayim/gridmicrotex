@@ -125,11 +125,15 @@ private:
 
   friend std::vector<std::string> preludeCommandNames();
   friend std::vector<std::string> preludeEnvironmentNames();
+  friend std::vector<std::string> preludeTransparentEnvironmentNames();
 };
 
 /** The names the prelude defines, for checking it against the engine. */
 std::vector<std::string> preludeCommandNames();
 std::vector<std::string> preludeEnvironmentNames();
+/** Those of them that expand to nothing at either end (`document`, `table`,
+ *  `figure`): they wrap content rather than make any of it math. */
+std::vector<std::string> preludeTransparentEnvironmentNames();
 
 /**
  * Macros that outlive a parse: those made with define_macro(). Zero

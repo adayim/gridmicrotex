@@ -75,6 +75,13 @@ test_that("the math environments R scans for come from the C++ tables", {
            "eqnarray", "eqnarray*", "multline", "multline*", "gather", "gather*",
            "gathered", "split", "cases", "rcases", "itemize", "enumerate")
   expect_identical(setdiff(old, gridmicrotex:::.math_envs()), character(0))
+  # But an environment that only wraps content is not math: its body is
+  # prose. R masks a math span from CommonMark, so counting `document` as
+  # one hid a whole markdown document from the parser that reads it.
+  expect_identical(
+    intersect(gridmicrotex:::.math_envs(),
+              c("document", "table", "table*", "figure", "figure*")),
+    character(0))
 })
 
 test_that("an argument without braces is one character, or one command with its arguments", {
@@ -179,6 +186,16 @@ test_that("problems are reported where they are, and parsing goes on", {
   expect_identical(tree("\\frac{1}{2"), "[\\frac(<1> <2>)]")
   expect_match(diags("a } b")$message, "extra \\} ignored")
   expect_match(diags("a & b")$message, "& outside an alignment")
+})
+
+test_that("a scripts node keeps the position of its own operator", {
+  # The span was taken by reference from a peeked token, which the first
+  # read inside the scripts pops; a later put-back refilled that slot, so
+  # the node ended up with some other token's position.
+  s <- function(tex) { d <- ast(tex); d[d$kind == "scripts", c("line", "col")] }
+  expect_identical(unlist(s("x^2"), use.names = FALSE), c(1L, 2L))
+  expect_identical(unlist(s("f'"), use.names = FALSE), c(1L, 2L))
+  expect_identical(unlist(s("ab\ncd_{x}"), use.names = FALSE), c(2L, 3L))
 })
 
 test_that("the tree is a tree: every node has one parent", {

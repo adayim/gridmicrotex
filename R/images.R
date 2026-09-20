@@ -568,6 +568,11 @@
     close <- .find_close_brace(out, i + 1L)
     if (is.na(close)) break
     path <- gsub("\\\\([{}])", "\\1", trimws(substr(out, i + 1L, close - 1L)))
+    # `#1` is a macro parameter in a \newcommand or \def body, not a file.
+    # This check reads the source as written, before anything is expanded;
+    # the parser meets the expansion later and asks the resolver about the
+    # real path then.
+    if (grepl("#[0-9]", path)) { from <- close + 1L; next }
     .image_check(.image_find(path, gp$dirs), path)
     from <- close + 1L
   }

@@ -148,7 +148,7 @@ bool Parser::atStop(const ExpandedToken& t, const Stop& stop) const {
   return false;
 }
 
-NodeId Parser::emptyList(const SourceSpan& at, Mode mode) {
+NodeId Parser::emptyList(SourceSpan at, Mode mode) {
   Node n;
   n.kind = NodeKind::list;
   n.mode = mode;
@@ -156,7 +156,7 @@ NodeId Parser::emptyList(const SourceSpan& at, Mode mode) {
   return _ast.add(std::move(n), {});
 }
 
-NodeId Parser::lineBreak(const SourceSpan& at, Mode mode) {
+NodeId Parser::lineBreak(SourceSpan at, Mode mode) {
   Node n;
   n.kind = NodeKind::command;
   n.mode = mode;
@@ -165,7 +165,7 @@ NodeId Parser::lineBreak(const SourceSpan& at, Mode mode) {
   return _ast.add(std::move(n), {absentArgument(at, mode)});
 }
 
-NodeId Parser::absentArgument(const SourceSpan& at, Mode mode) {
+NodeId Parser::absentArgument(SourceSpan at, Mode mode) {
   Node n;
   n.kind = NodeKind::argument;
   n.mode = mode;
@@ -196,7 +196,7 @@ NodeId Parser::parse() {
   return _ast.root;
 }
 
-NodeId Parser::parseList(Mode mode, const Stop& stop, const SourceSpan& at) {
+NodeId Parser::parseList(Mode mode, const Stop& stop, SourceSpan at) {
   std::vector<NodeId> items;
   // Math is not prose, and neither is text inside it (\text{} in a formula).
   const Scoped prose(_prose, _prose && mode == Mode::text);
@@ -358,7 +358,7 @@ NodeId Parser::parseGroupAfterOpen(const ExpandedToken& open, Mode mode) {
 
 // --- scripts -----------------------------------------------------------------
 
-NodeId Parser::parseScripts(NodeId base, Mode mode, const SourceSpan& at) {
+NodeId Parser::parseScripts(NodeId base, Mode mode, SourceSpan at) {
   NodeId sub = kNoNode, sup = kNoNode;
   int primes = 0;
   std::string order;
@@ -424,7 +424,7 @@ NodeId Parser::parseScripts(NodeId base, Mode mode, const SourceSpan& at) {
   return _ast.add(std::move(n), {base, sub, sup});
 }
 
-NodeId Parser::parseScriptArgument(Mode mode, const SourceSpan& at) {
+NodeId Parser::parseScriptArgument(Mode mode, SourceSpan at) {
   ExpandedToken t = nextNonSpace();
   const Token& k = t.tok;
   if (k.kind == TokKind::end || k.isChar(Cat::endGroup) || k.isChar(Cat::alignTab) ||
@@ -830,7 +830,7 @@ std::vector<ExpandedToken> Parser::collectBracketed(const std::string& who) {
   return toks;
 }
 
-NodeId Parser::parseTokens(std::vector<ExpandedToken> tokens, Mode mode, const SourceSpan& at) {
+NodeId Parser::parseTokens(std::vector<ExpandedToken> tokens, Mode mode, SourceSpan at) {
   // Read the tokens again, then an `end` that stops the list, then carry on
   // with whatever was waiting before.
   std::vector<Pending> saved = std::move(_ahead);

@@ -73,6 +73,26 @@ test_that("\\middle takes a delimiter by name, as \\left and \\right do", {
   ))
 })
 
+test_that("a \\right the parser inserts is TeX's null delimiter", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # `\left(x` warns "missing \right. inserted" and must then draw what
+  # `\left(x\right.` draws. It used to fall back to a plain row instead, so
+  # the fence did not stretch: `\left(\frac{a}{b}` came out 25bp tall
+  # against 32bp for the same input spelled out.
+  drawn <- function(tex) {
+    t <- suppressWarnings(latex_tree(tex, input_mode = "math", render_mode = "path"))
+    # The warning itself is the one intended difference between the pair.
+    attr(t$records, "diagnostics") <- NULL
+    list(records = t$records, bbox = t$bbox)
+  }
+  for (tex in c("\\left(\\frac{a}{b}",
+                "\\left[\\begin{matrix}a\\\\b\\end{matrix}",
+                "\\left\\{x^{y^z}")) {
+    expect_identical(drawn(tex), drawn(paste0(tex, "\\right.")), info = tex)
+  }
+  expect_warning(latex_dims("\\left(\\frac{a}{b}"), "missing \\\\right\\. inserted")
+})
+
 test_that("\\cal and \\frak switch the math alphabet for the rest of the group", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # TeX's old declarations; their argument was lost.

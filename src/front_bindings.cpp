@@ -252,12 +252,17 @@ Rcpp::List command_tables_cpp() {
     Rcpp::Named("prelude_environments") = preludeEnvironmentNames());
 }
 
-// Every environment the new front end knows: those it builds and those its
-// prelude defines. R's scan for math spans in mixed input reads this.
+// Every environment the new front end knows whose body is math: those it
+// builds and those its prelude defines, less the ones that only wrap content
+// (`document`, `table`, `figure`), whose body is prose. R's scan for math
+// spans in mixed input reads this, and masks what it finds from CommonMark.
 // [[Rcpp::export]]
 std::vector<std::string> math_env_names_cpp() {
   std::vector<std::string> names = environmentNames();
-  for (const std::string& n : preludeEnvironmentNames()) names.push_back(n);
+  const std::vector<std::string> wrappers = preludeTransparentEnvironmentNames();
+  for (const std::string& n : preludeEnvironmentNames()) {
+    if (std::find(wrappers.begin(), wrappers.end(), n) == wrappers.end()) names.push_back(n);
+  }
   std::sort(names.begin(), names.end());
   return names;
 }

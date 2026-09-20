@@ -805,18 +805,24 @@ private:
    *  the fence; a \right's goes after the fence, into `after`. */
   sptr<Atom> leftRight(NodeId id, sptr<Atom>& after) {
     const std::uint32_t n = count(id);
-    auto left = delimiter(rawOf(child(id, 0)));
-    auto right = delimiter(rawOf(child(id, n - 1)));
+    const NodeId leftArg = child(id, 0), rightArg = child(id, n - 1);
+    auto left = delimiter(rawOf(leftArg));
+    auto right = delimiter(rawOf(rightArg));
     auto sl = std::dynamic_pointer_cast<CharSymbol>(left);
     auto sr = std::dynamic_pointer_cast<CharSymbol>(right);
-    const bool fenced = sl != nullptr && sr != nullptr;
+    // A delimiter the parser had to insert (nothing was there) is TeX's null
+    // delimiter, as `\right.` is: `\left(\frac{a}{b}` stretches its `(` just
+    // as `\left(\frac{a}{b}\right.` does. Only a delimiter that is there and
+    // is not a symbol at all (`\left\frac12`) falls back to a plain row.
+    const bool fenced = (sl != nullptr || rawOf(leftArg).empty()) &&
+                        (sr != nullptr || rawOf(rightArg).empty());
     Formula tf;
     std::string leftName, rightName;
     if (fenced) {
-      leftName = delimiterName(left, child(id, 0), "\\left", "inside the fence");
-      rightName = delimiterName(right, child(id, n - 1), "\\right", "after the fence");
-      if (!isDelimiter(left)) tf.add(left);
-      if (!isDelimiter(right)) after = right;
+      leftName = delimiterName(left, leftArg, "\\left", "inside the fence");
+      rightName = delimiterName(right, rightArg, "\\right", "after the fence");
+      if (left != nullptr && !isDelimiter(left)) tf.add(left);
+      if (right != nullptr && !isDelimiter(right)) after = right;
     }
     for (std::uint32_t i = 1; i + 1 < n; i++) {
       const NodeId c = child(id, i);

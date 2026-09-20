@@ -122,17 +122,21 @@ private:
 
   bool atStop(const ExpandedToken& t, const Stop& stop) const;
 
-  NodeId parseList(Mode mode, const Stop& stop, const SourceSpan& at);
+  // A span is taken by value throughout: `peek()` hands back a reference into
+  // `_ahead`, which the next `next()` pops and a later `unread()` refills, so a
+  // `const SourceSpan&` taken from a peeked token would name another token's
+  // position by the time it is read.
+  NodeId parseList(Mode mode, const Stop& stop, SourceSpan at);
   /** One item, appended to `items`. False at a stop token. */
   bool parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items);
   NodeId parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
                       std::vector<NodeId>& items, bool& consumedRest);
   NodeId parseArgument(const ArgSpec& spec, Mode mode, const std::string& who);
   NodeId parseRawArgument(const ArgSpec& spec, const std::string& who);
-  NodeId parseTokens(std::vector<ExpandedToken> tokens, Mode mode, const SourceSpan& at);
+  NodeId parseTokens(std::vector<ExpandedToken> tokens, Mode mode, SourceSpan at);
   NodeId parseGroupAfterOpen(const ExpandedToken& open, Mode mode);
-  NodeId parseScripts(NodeId base, Mode mode, const SourceSpan& at);
-  NodeId parseScriptArgument(Mode mode, const SourceSpan& at);
+  NodeId parseScripts(NodeId base, Mode mode, SourceSpan at);
+  NodeId parseScriptArgument(Mode mode, SourceSpan at);
   NodeId parseLeftRight(const ExpandedToken& left, Mode mode);
   NodeId parseDelimiter(const std::string& who);
   NodeId parseEnvironment(const ExpandedToken& begin, Mode mode);
@@ -143,11 +147,11 @@ private:
   std::vector<ExpandedToken> collectBracketed(const std::string& who);
   std::string readGroupName();
 
-  NodeId emptyList(const SourceSpan& at, Mode mode);
+  NodeId emptyList(SourceSpan at, Mode mode);
   /** A `\\` with no gap, for a line end in the prose. */
-  NodeId lineBreak(const SourceSpan& at, Mode mode);
+  NodeId lineBreak(SourceSpan at, Mode mode);
   NodeId character(const ExpandedToken& t, Mode mode);
-  NodeId absentArgument(const SourceSpan& at, Mode mode);
+  NodeId absentArgument(SourceSpan at, Mode mode);
 };
 
 }  // namespace microtex::front

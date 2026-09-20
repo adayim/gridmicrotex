@@ -61,9 +61,9 @@ test_that("a file reference survives the pipeline that would mangle a path", {
   enc <- gridmicrotex:::.image_ref_encode
   dec <- gridmicrotex:::.image_ref_decode
   # Hex, because every one of these breaks a raw path: backslashes are
-  # LaTeX escapes, `%` starts a comment that .strip_document_wrappers()
-  # would run to end of line, and the macro expander would rewrite `\Users`
-  # for anyone who had defined a macro of that name.
+  # LaTeX escapes, `%` starts a comment that runs to the end of the line,
+  # and the macro expander would rewrite `\Users` for anyone who had
+  # defined a macro of that name.
   for (p in c("C:\\Users\\a\\my fig.png", "a/b/100%plot.png",
               "with space_and_under.png", "plain.png")) {
     expect_equal(dec(enc(p)), p, info = p)
@@ -400,6 +400,18 @@ test_that("markdown that names an image it cannot draw is an error", {
   # Code is literal: an \includegraphics shown there names no figure.
   expect_match(gridmicrotex:::.md_to_tex("`$\\includegraphics{nope.png}$`"),
                "\\texttt{", fixed = TRUE)
+})
+
+test_that("a macro parameter in an image path is not checked as a file name", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # `#1` is a parameter of the definition, not a path. The build-time check
+  # reads the source as written, before anything is expanded, so it has to
+  # skip one -- it used to refuse the whole grob with "Cannot draw image
+  # '#1'". What the macro is *used* with is still an image like any other.
+  def <- "$\\newcommand{\\fig}[1]{\\includegraphics[width=1in]{#1}}$"
+  expect_true("image" %in% markdown_grob(paste0(def, " $\\fig{", mk_png(), "}$"))$layout_df$type)
+  expect_error(markdown_grob(paste0(def, " $\\fig{nope.png}$")), "file not found")
 })
 
 test_that("markdown reads an image's path the way HTML and CommonMark do", {
