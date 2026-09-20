@@ -111,6 +111,8 @@ private:
   bool _rowEnded = false;
   /** In the prose of a mixed-mode input, where a line end breaks the line. */
   bool _prose = false;
+  /** Inside a typewriter argument (\texttt), whose font has no ligatures. */
+  bool _monospace = false;
 
   ExpandedToken next();
   void unread(ExpandedToken t);
@@ -156,6 +158,9 @@ private:
    *  break that starts a paragraph, which the lowering sets apart. */
   NodeId lineBreak(SourceSpan at, Mode mode, bool paragraph = false);
   NodeId character(const ExpandedToken& t, Mode mode);
+  /** A text ligature (`--`, `---`, ``` `` ```, `''`) starting at `first`,
+   *  or kNoNode when it is not one. */
+  NodeId ligature(const ExpandedToken& first, Mode mode);
   NodeId absentArgument(SourceSpan at, Mode mode);
 };
 

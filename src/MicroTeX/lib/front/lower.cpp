@@ -350,6 +350,17 @@ private:
     // Only the lines of a label have indents to suppress; elsewhere it is
     // what it was when the prelude dropped it.
     if (name == "noindent") return nullptr;
+    // What LaTeX draws for a reference it cannot resolve.
+    if (name == "ref" || name == "pageref") return literalText("??");
+    if (name == "eqref") return literalText("(?\?)");  // `??)` is a trigraph
+    if (name == "cite") {
+      // What LaTeX draws for a citation it cannot resolve: the key itself,
+      // in brackets. Its optional note has nothing to be a note on. The key
+      // is set as written -- a `_` or `:` in one is not LaTeX here.
+      return literalText("[" + rawOf(child(id, 1)) + "]");
+    }
+    // No page to put the note on, so its text is set where it was written.
+    if (name == "footnote") return argumentFormula(child(id, 0), rawOf(child(id, 0)), false);
     if (name == "url" || name == "href") return link(id, f);
     if (name == "includegraphics") return image(id);
     if (name == "graphicspath") {
@@ -396,7 +407,9 @@ private:
     const std::string raw = rawOf(child(id, 0));
     for (std::size_t i = 0; i < raw.size(); i++) {
       const char c = raw[i];
-      if (std::string("\\{}$&#_%~^").find(c) != std::string::npos) {
+      // `- ` ' as well: a URL is verbatim, and read again as text they
+      // would form TeX's dash and quote ligatures.
+      if (std::string("\\{}$&#_%~^-`'").find(c) != std::string::npos) {
         chars += "\\char" + std::to_string(static_cast<unsigned char>(c)) + "{}";
       } else {
         chars += c;
@@ -421,16 +434,7 @@ private:
     // The name without its directory, character by character, so that a
     // `_` or `%` in it is itself. Either separator: it may be a Windows path.
     const auto cut = path.find_last_of("/\\");
-    const std::string name = cut == std::string::npos ? path : path.substr(cut + 1);
-    auto text = sptrOf<TextAtom>(false);
-    for (int i = 0, n = static_cast<int>(name.size()); i < n;) {
-      int len = 0;
-      const c32 c = nextUnicode(name, i, len);
-      if (len <= 0) break;
-      text->append(c);
-      i += len;
-    }
-    return text;
+    return literalText(cut == std::string::npos ? path : path.substr(cut + 1));
   }
 
   /** \graphicspath{{dir/}{dir/}}: the directories, in place of the last. */
@@ -522,6 +526,20 @@ private:
   /** LaTeX not from the input -- a raw argument read as a formula, text a
    *  handler put together -- read by the front end as a piece of input of
    *  its own. Its problems are not reported: they are not the user's. */
+  /** A run of characters set as they are written, with nothing in it read
+   *  as LaTeX: a file's name, a citation key. */
+  static sptr<Atom> literalText(const std::string& s) {
+    auto text = sptrOf<TextAtom>(false);
+    for (int i = 0, n = static_cast<int>(s.size()); i < n;) {
+      int len = 0;
+      const c32 c = nextUnicode(s, i, len);
+      if (len <= 0) break;
+      text->append(c);
+      i += len;
+    }
+    return text;
+  }
+
   static sptr<Atom> fragment(const std::string& latex, bool math) {
     if (latex.empty()) return nullptr;
     Diagnostics unreported;

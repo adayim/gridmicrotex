@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "utils/utf.h"
+
 namespace microtex::front {
 
 namespace {
@@ -344,9 +346,58 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
       return true;
     }
     default:
+      if (mode == Mode::text && !_monospace) {
+        const NodeId lig = ligature(t, mode);
+        if (lig != kNoNode) {
+          items.push_back(lig);
+          return true;
+        }
+      }
       items.push_back(character(t, mode));
       return true;
   }
+}
+
+/** TeX's text ligatures: `--` and `---` are the dashes, `` and '' the
+ *  double quotes. Only in text, and only where the characters are written
+ *  next to each other; in math `''` is a double prime, and a lone `-` is a
+ *  hyphen as it always was. Returns kNoNode when this is not one, having
+ *  read nothing. */
+NodeId Parser::ligature(const ExpandedToken& first, Mode mode) {
+  const char c = isOther(first.tok, '-')    ? '-'
+                 : isOther(first.tok, '`')  ? '`'
+                 : isOther(first.tok, '\'') ? '\''
+                                            : '\0';
+  if (c == '\0') return kNoNode;
+  const int most = c == '-' ? 3 : 2;
+  std::vector<ExpandedToken> taken;
+  while (static_cast<int>(taken.size()) + 1 < most) {
+    ExpandedToken u = next();
+    if (u.lead.empty() && isOther(u.tok, c)) {
+      taken.push_back(std::move(u));
+      continue;
+    }
+    unread(std::move(u));
+    break;
+  }
+  const std::size_t n = taken.size() + 1;
+  c32 cp = 0;
+  if (c == '-' && n == 2) cp = 0x2013;        // en dash
+  if (c == '-' && n == 3) cp = 0x2014;        // em dash
+  if (c == '`' && n == 2) cp = 0x201C;        // opening double quote
+  if (c == '\'' && n == 2) cp = 0x201D;       // closing double quote
+  if (cp == 0) {
+    // Not a ligature after all: put back what was read beyond the first.
+    for (auto it = taken.rbegin(); it != taken.rend(); ++it) unread(std::move(*it));
+    return kNoNode;
+  }
+  Node n2;
+  n2.kind = NodeKind::character;
+  n2.mode = mode;
+  n2.span = first.tok.span;
+  n2.cp = cp;
+  appendToUtf8(n2.text, cp);
+  return _ast.add(std::move(n2), {});
 }
 
 NodeId Parser::parseGroupAfterOpen(const ExpandedToken& open, Mode mode) {
@@ -551,6 +602,22 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
       return _ast.add(std::move(n), {parseArgument(spec->args[0], Mode::text, who)});
     }
     if (name == "noindent") return _ast.add(std::move(n), {});
+    if (name == "ref" || name == "pageref" || name == "eqref" || name == "cite" ||
+        name == "footnote") {
+      std::vector<NodeId> args;
+      for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
+      const std::string key = trim(_ast.node(args.back()).raw);
+      if (name == "footnote") {
+        _diags.warn(at, "\\footnote has no page to put a note on: its text is drawn here");
+      } else if (name == "cite") {
+        _diags.warn(at, "citation `" + key + "' is undefined: drawn as [" + key + "]");
+      } else {
+        // `?\?)` so that `??)` is not read as a trigraph.
+        _diags.warn(at, "reference `" + key + "' is undefined: drawn as " +
+                          (name == "eqref" ? "(?\?)" : "??"));
+      }
+      return _ast.add(std::move(n), args);
+    }
     if (name == "par") {
       // TeX's own paragraph break. Where there are no paragraphs (a label,
       // a formula) it is the line break the prelude used to define.
@@ -619,8 +686,15 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
   }
 
   std::vector<NodeId> args;
-  for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
-  if (spec->bare != Bare::none) args.push_back(parseBare(spec->bare, who));
+  {
+    // A typewriter font has no ligatures in TeX, so `--v` in \texttt is two
+    // hyphens, not a dash. It is the font that decides there; naming the
+    // commands is the closest the parser can come to it.
+    const Scoped verbatim(_monospace,
+                          _monospace || name == "texttt" || name == "tt" || name == "mathtt");
+    for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
+    if (spec->bare != Bare::none) args.push_back(parseBare(spec->bare, who));
+  }
 
   if (spec->shape == Shape::infix && !single) {
     // The numerator is everything before it in this list; the denominator

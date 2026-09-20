@@ -187,6 +187,13 @@ struct Table {
     add({"section", "subsection", "subsubsection", "paragraph"}, "t", Shape::prefix, Bare::none,
         true);
     add({"noindent"}, "", Shape::prefix, Bare::none, true);
+    // Commands a single grob cannot carry out: there is no bibliography to
+    // cite, no counter to refer to and no page to put a note on. Each is
+    // read so that it warns and draws what LaTeX draws when it cannot
+    // resolve one, instead of coming out red as an unknown command.
+    add({"ref", "pageref", "eqref"}, "r", Shape::prefix, Bare::none, true);
+    add({"cite"}, "Rr", Shape::prefix, Bare::none, true);
+    add({"footnote"}, "t", Shape::prefix, Bare::none, true);
     add({"hspace", "vspace"}, "d");
     // --- our own (lib/atom/) ----------------------------------------------
     add({"gmfontfamily"}, "rt");
