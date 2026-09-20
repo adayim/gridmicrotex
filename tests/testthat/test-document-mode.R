@@ -56,6 +56,54 @@ test_that("math and environments are read in a document as anywhere else", {
   expect_identical(length(ys), 3L)
 })
 
+test_that("a heading is numbered as LaTeX numbers it", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  d <- runs("\\section{A}\n\n\\subsection{B}\n\n\\subsubsection{C}")
+  expect_identical(d$text, c("1", "A", "1.1", "B", "1.1.1", "C"))
+  # A counter carries on, and a lower one restarts under it.
+  d <- runs("\\section{A}\n\n\\subsection{B}\n\n\\section{C}\n\n\\subsection{D}")
+  expect_identical(d$text[d$text %in% c("1", "1.1", "2", "2.1")], c("1", "1.1", "2", "2.1"))
+  # A starred heading has no number and does not advance the counter, and
+  # \paragraph is below article's secnumdepth, so it has none either.
+  expect_identical(runs("\\section*{A}\n\n\\section{B}")$text, c("A", "1", "B"))
+  # The space after the run-in heading is the one written after its `}`.
+  expect_identical(runs("\\paragraph{P} text")$text, c("P", " text"))
+})
+
+test_that("a heading is bold, sized and on a line of its own", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  t <- latex_tree("\\section{A}\n\n\\subsection{B}\n\n\\subsubsection{C}\n\nbody",
+                  input_mode = "document")
+  r <- t$records[t$records$type == "text", ]
+  body <- r$font_size[r$text == "body"]
+  # LaTeX's own sizes: \Large, \large, then the body size.
+  expect_equal(r$font_size[r$text == "A"] / body, 1.4, tolerance = 1e-6)
+  expect_equal(r$font_size[r$text == "B"] / body, 1.2, tolerance = 1e-6)
+  expect_equal(r$font_size[r$text == "C"] / body, 1.0, tolerance = 1e-6)
+  # Each heading has a row to itself, and is never indented: its row opens
+  # with the number, flush left.
+  expect_identical(length(unique(r$y)), 4L)
+  expect_identical(r$x[r$text == "1"], 0)
+  # \paragraph is the exception: LaTeX runs it into its paragraph.
+  p <- runs("\\paragraph{P} text")
+  expect_identical(p$y[1], p$y[2])
+})
+
+test_that("the paragraph after a heading is not indented, as in LaTeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  indent <- as.numeric(latex_dims("\\kern1.5em")$width)
+  # However it is separated from the heading -- a line end or a blank line
+  # -- the first paragraph is flush, and the one after it is indented.
+  for (tex in c("\\section{H}\nfirst\n\nsecond", "\\section{H}\n\nfirst\n\nsecond")) {
+    d <- runs(tex)
+    expect_identical(d$x[d$text == "first"], 0, info = tex)
+    expect_equal(d$x[d$text == "second"], indent, tolerance = 1e-5, info = tex)
+  }
+  # \noindent says so for any paragraph.
+  d <- runs("one\n\n\\noindent two")
+  expect_equal(d$x, c(indent, 0), tolerance = 1e-5)
+})
+
 test_that("latex_options and the grob functions accept the document mode", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   on.exit(reset_latex_options(), add = TRUE)

@@ -335,6 +335,21 @@ private:
       return sptrOf<SpaceAtom>(unit, value, 0.f, 0.f);
     }
     if (name == "char") return charCode(rawOf(child(id, 0)), x.mode == Mode::math);
+    if (isHeading(name)) {
+      auto h = heading(id);
+      if (!isHeadingLine(name)) {
+        // \paragraph runs into its paragraph: the text follows it on the
+        // same line, a quad after it.
+        auto row = sptrOf<RowAtom>();
+        row->add(h);
+        row->add(sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f));
+        return row;
+      }
+      return h;
+    }
+    // Only the lines of a label have indents to suppress; elsewhere it is
+    // what it was when the prelude dropped it.
+    if (name == "noindent") return nullptr;
     if (name == "url" || name == "href") return link(id, f);
     if (name == "includegraphics") return image(id);
     if (name == "graphicspath") {
@@ -1013,6 +1028,10 @@ private:
     bool drawn = false;
     /** A paragraph starts here: its first line is indented, as in TeX. */
     bool indentNext = false;
+    /** Nothing has been set since a heading. LaTeX leaves the paragraph
+     *  that follows one unindented, whether it comes straight after the
+     *  heading or after a blank line. */
+    bool afterHeading = false;
   };
 
   /** TeX's \parindent: 15pt at a 10pt font, so 1.5em, which follows the
@@ -1020,6 +1039,50 @@ private:
    *  paragraphs by this indent, not by space between them. */
   static sptr<Atom> parIndent() {
     return sptrOf<SpaceAtom>(UnitType::em, 1.5f, 0.f, 0.f);
+  }
+
+  // --- headings --------------------------------------------------------------
+
+  /** The counters behind \thesection: one per numbered level. */
+  int _section[3] = {0, 0, 0};
+
+  /** LaTeX's own sizes: \Large for \section, \large for \subsection, and
+   *  the body size below that. */
+  static float headingSize(int level) {
+    if (level == 0) return sizeFactor("Large");
+    if (level == 1) return sizeFactor("large");
+    return 1.f;
+  }
+
+  /** "1.2.3" for the heading being set, and nothing for a starred one or
+   *  for \paragraph: article numbers three levels (secnumdepth 3). */
+  std::string headingNumber(int level, bool starred) {
+    if (starred || level > 2) return "";
+    _section[level]++;
+    for (int i = level + 1; i < 3; i++) _section[i] = 0;
+    std::string s;
+    for (int i = 0; i <= level; i++) {
+      if (i > 0) s += '.';
+      s += std::to_string(_section[i]);
+    }
+    return s;
+  }
+
+  /** A heading: its number, a quad, then its title, bold and sized. */
+  sptr<Atom> heading(NodeId id) {
+    const Node& x = node(id);
+    const int level = headingLevel(x.text);
+    auto row = sptrOf<RowAtom>();
+    const std::string number = headingNumber(level, x.star);
+    if (!number.empty()) {
+      row->add(sptrOf<TextAtom>(number, false));
+      row->add(sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f));
+    }
+    row->add(argumentFormula(child(id, 0), rawOf(child(id, 0)), false));
+    auto bold = sptrOf<FontStyleAtom>(FontStyle::bf, false, row);
+    const float size = headingSize(level);
+    if (size == 1.f) return bold;
+    return sptrOf<ScaleAtom>(bold, size);
   }
 
   /** The indent a paragraph opens with, once something goes on its line. */
@@ -1057,6 +1120,7 @@ private:
       indentIfNeeded(l);
       l.line->add(sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root));
       l.drawn = true;
+      l.afterHeading = false;
     }
     l.prose.reset();
   }
@@ -1075,6 +1139,7 @@ private:
     startLine(l);
     indentIfNeeded(l);
     l.drawn = true;
+    l.afterHeading = false;
   }
 
   void lineBreak(Label& l, NodeId brk = kNoNode) {
@@ -1086,8 +1151,12 @@ private:
       if (!gap.empty()) l.gap = gap;
     }
     // A paragraph indents its first line, whether or not the break before
-    // it drew anything (the first paragraph of all opens one too).
-    if (brk != kNoNode && node(brk).aux == 1) l.indentNext = true;
+    // it drew anything (the first paragraph of all opens one too) -- except
+    // the one that follows a heading, which LaTeX leaves flush.
+    if (brk != kNoNode && node(brk).aux == 1) {
+      l.indentNext = !l.afterHeading;
+      l.afterHeading = false;
+    }
     l.afterBreak = true;
   }
 
@@ -1127,6 +1196,22 @@ private:
     }
   }
 
+  /** A heading on a line of its own, with the space LaTeX leaves around
+   *  it: \section's 3.5ex above and 2.3ex below, in em (1ex is about half
+   *  an em). The paragraph after a heading is not indented, as in LaTeX. */
+  void headingLine(Label& l, NodeId id) {
+    lineBreak(l);
+    if (l.drawn) l.gap = "1.75em";
+    // A heading is never indented, whatever paragraph it interrupts.
+    l.indentNext = false;
+    beforeLine(l);
+    l.line->add(heading(id));
+    lineBreak(l);
+    l.gap = "1.15em";
+    l.indentNext = false;
+    l.afterHeading = true;
+  }
+
   /** The items of `list` onto the label's lines. */
   void feedLines(Label& l, NodeId list) {
     for (std::uint32_t i = 0; i < count(list); i++) {
@@ -1136,6 +1221,11 @@ private:
         feedLines(l, child(id, 0));
       } else if (isBreakNode(x)) {
         lineBreak(l, id);
+      } else if (x.kind == NodeKind::command && !x.flag && x.text == "noindent") {
+        // LaTeX's one way to say this paragraph is not indented.
+        l.indentNext = false;
+      } else if (x.kind == NodeKind::command && !x.flag && isHeadingLine(x.text)) {
+        headingLine(l, id);
       } else if (isSpace(x)) {
         if (!l.afterBreak) l.spaces.push_back(id);
       } else if (x.kind == NodeKind::math) {

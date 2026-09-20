@@ -538,6 +538,19 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     if (name == "middle") {
       return _ast.add(std::move(n), {parseDelimiter(who)});
     }
+    if (isHeading(name)) {
+      // `\section*` is the same heading without its number. The star is a
+      // character to the lexer, so it is read here, where the spec says
+      // which names have a starred form.
+      const ExpandedToken& p = peek();
+      if (isOther(p.tok, '*') && p.lead.empty()) {
+        next();
+        n.star = true;
+      }
+      // A heading is set as text, whatever mode it was met in.
+      return _ast.add(std::move(n), {parseArgument(spec->args[0], Mode::text, who)});
+    }
+    if (name == "noindent") return _ast.add(std::move(n), {});
     if (name == "par") {
       // TeX's own paragraph break. Where there are no paragraphs (a label,
       // a formula) it is the line break the prelude used to define.

@@ -72,7 +72,6 @@ std::string_view preludeSource() {
 \newcommand{\raggedleft}{}
 \newcommand{\flushleft}{}
 \newcommand{\flushright}{}
-\newcommand{\noindent}{}
 \newcommand{\relax}{}
 \newcommand{\smallskip}{\vspace{0.25em}}
 \newcommand{\medskip}{\vspace{0.5em}}

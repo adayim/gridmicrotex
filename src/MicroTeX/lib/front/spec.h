@@ -90,6 +90,15 @@ const EnvSpec* findEnvironment(const std::string& name);
 std::vector<std::string> commandNames();
 std::vector<std::string> environmentNames();
 
+/** A sectioning command set on a line of its own (\section and below).
+ *  \paragraph is a heading too, but LaTeX runs it into its paragraph, so
+ *  it is not one of these. */
+bool isHeadingLine(const std::string& name);
+/** Any sectioning command, \paragraph included. */
+bool isHeading(const std::string& name);
+/** How deep it sits: 0 for \section ... 3 for \paragraph. */
+int headingLevel(const std::string& name);
+
 }  // namespace microtex::front
 
 #endif

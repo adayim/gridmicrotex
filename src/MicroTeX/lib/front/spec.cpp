@@ -181,6 +181,12 @@ struct Table {
     // A paragraph in document mode, a line break anywhere else, as the
     // prelude used to define it. The parser reads it: only it knows the mode.
     add({"par"}, "", Shape::prefix, Bare::none, true);
+    // Headings, and the one command that says a paragraph is not indented.
+    // The parser reads the headings: each takes a `*` that turns off its
+    // number, which the old parser would have taken for an argument.
+    add({"section", "subsection", "subsubsection", "paragraph"}, "t", Shape::prefix, Bare::none,
+        true);
+    add({"noindent"}, "", Shape::prefix, Bare::none, true);
     add({"hspace", "vspace"}, "d");
     // --- our own (lib/atom/) ----------------------------------------------
     add({"gmfontfamily"}, "rt");
@@ -204,6 +210,23 @@ const Table& table() {
 }
 
 }  // namespace
+
+int headingLevel(const std::string& name) {
+  if (name == "section") return 0;
+  if (name == "subsection") return 1;
+  if (name == "subsubsection") return 2;
+  if (name == "paragraph") return 3;
+  return -1;
+}
+
+bool isHeading(const std::string& name) {
+  return headingLevel(name) >= 0;
+}
+
+bool isHeadingLine(const std::string& name) {
+  const int level = headingLevel(name);
+  return level >= 0 && level < 3;
+}
 
 const CommandSpec* findCommand(const std::string& name) {
   const auto& c = table().commands;
