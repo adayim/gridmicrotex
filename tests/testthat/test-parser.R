@@ -48,24 +48,32 @@ tree <- function(tex, mode = "math") {
 
 diags <- function(tex, mode = "math") attr(ast(tex, mode), "diagnostics")
 
-test_that("the command table and the prelude cover every command the engine defines", {
+test_that("every command is read by the front end or has a handler, and no handler is orphaned", {
   t <- gridmicrotex:::command_tables_cpp()
-  # Definition commands are the expander's; `name@env` / `name@@env` are the
-  # old parser's internal environment builders.
-  expander <- c("newcommand", "renewcommand", "providecommand", "def",
-                "newenvironment", "renewenvironment", "DeclareMathOperator")
-  engine <- t$engine_commands[!grepl("@@?env$", t$engine_commands)]
-  expect_identical(sort(setdiff(engine, c(t$spec_commands, t$prelude_commands, expander))),
+  # The engine's registry holds the handlers the lowering dispatches to.
+  # Each is named in the spec (or prelude): a handler nothing can reach is
+  # dead code. `name@@env` are the environment builders.
+  engine <- t$engine_commands[!grepl("@@env$", t$engine_commands)]
+  expect_identical(sort(setdiff(engine, c(t$spec_commands, t$prelude_commands))),
                    character(0))
-  # Every environment the old parser knew is in the spec or the prelude.
-  envs <- sub("@@?env$", "", grep("@@?env$", t$engine_commands, value = TRUE))
+  envs <- sub("@@env$", "", grep("@@env$", t$engine_commands, value = TRUE))
   expect_identical(sort(setdiff(envs, c(t$spec_environments, t$prelude_environments))),
                    character(0))
-  # Read by the parser, not registered as commands in the old one.
-  expect_identical(sort(setdiff(t$spec_commands, t$engine_commands)),
-                   c("begin", "cite", "cmidrule", "end", "ensuremath", "eqref", "footnote",
-                     "graphicspath", "href", "noindent", "pageref", "par", "paragraph", "ref",
-                     "right", "section", "subsection", "subsubsection", "url"))
+  # And a spec command with no handler has to be one the parser or the
+  # lowering reads itself; any other would be drawn in red as unknown.
+  # Checked against the legacy build when the old parser went: each of
+  # these draws as it did there.
+  expect_setequal(setdiff(t$spec_commands, t$engine_commands),
+                  c("(", "[", "\\", "above", "abovewithdelims", "atop", "atopwithdelims",
+                     "bangle", "begin", "bf", "brace", "brack", "cal", "char", "choose",
+                     "cite", "cmidrule", "color", "cr", "displaystyle", "end", "ensuremath",
+                     "eqref", "footnote", "footnotesize", "frak", "graphicspath",
+                     "href", "huge", "Huge", "it", "kern", "large", "Large", "LARGE",
+                     "left", "limits", "makeatletter", "makeatother", "noindent",
+                     "nolimits", "normal", "normalsize", "over", "overwithdelims",
+                     "pageref", "par", "paragraph", "ref", "right", "rm", "scriptscriptstyle",
+                     "scriptsize", "scriptstyle", "section", "sf", "small", "subsection",
+                     "subsubsection", "textstyle", "tiny", "tt", "url"))
 })
 
 test_that("the math environments R scans for come from the C++ tables", {

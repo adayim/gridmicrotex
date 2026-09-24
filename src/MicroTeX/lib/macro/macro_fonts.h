@@ -21,13 +21,6 @@ inline cmdmacro(oldstylenums) {
   return sptrOf<FontStyleAtom>(FontStyle::rm, false, args.formula(1, false));
 }
 
-inline macro(textfont) {
-  tp.skipWhiteSpace(1);
-  const auto atom = Formula(tp, tp.getOverArgument(), false, tp.isMathMode())._root;
-  const auto style = FontContext::mainFontStyleOf(args[0]);
-  return sptrOf<FontStyleAtom>(style, tp.isMathMode(), atom);
-}
-
 inline sptr<Atom> _textfontnested(CommandArgs& args, FontStyle style) {
   const auto atom = args.formula(1, false);
   return sptrOf<FontStyleAtom>(style, false, atom, true);

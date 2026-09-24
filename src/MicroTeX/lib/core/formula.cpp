@@ -4,6 +4,8 @@
 #include "atom/atom_char.h"
 #include "atom/atom_fence.h"
 #include "atom/atom_vrow.h"
+#include "front/front.h"
+#include "front/lower.h"
 #include "utils/string_utils.h"
 #include "utils/utf.h"
 
@@ -11,29 +13,6 @@ using namespace std;
 using namespace microtex;
 
 map<string, sptr<Formula>> Formula::_predefFormulas;
-
-Formula::Formula() : _parser("", this, false) {}
-
-// A command's argument (\text{...}, \frac{..}{..}, ...) is parsed here.
-// Upstream swallowed any error in it when the parser was partial -- as ours
-// always is, since that is what draws an unknown command in red -- and kept
-// only what came before the error: \text{a <bad array> b} drew "a", and a
-// fraction lost its denominator, with nothing said. The error now
-// propagates, as the same input does at the top level. What partial mode is
-// for is untouched: an unknown command still comes out red.
-Formula::Formula(const Parser& tp, const string& latex, bool preprocess, bool isMathMode)
-    : _parser(tp.isPartial(), latex, this, preprocess, isMathMode) {
-  _parser.parse();
-}
-
-Formula::Formula(const string& latex, bool preprocess) : _parser(latex, this, preprocess) {
-  _parser.parse();
-}
-
-void Formula::setLaTeX(const string& latex) {
-  _parser.reset(latex);
-  if (!latex.empty()) _parser.parse();
-}
 
 const std::vector<sptr<MiddleAtom>>& Formula::middle() {
   return _middle;
@@ -73,7 +52,12 @@ sptr<Formula> Formula::get(const string& name) {
   auto i = _predefFormulaStrs.find(name);
   if (i == _predefFormulaStrs.end()) return nullptr;
 
-  auto tf = sptrOf<Formula>(i->second);
+  // Read by the front end like any input, as math. The definitions are
+  // ours and read cleanly, so there is nothing in them to report.
+  front::Diagnostics unreported;
+  const front::Ast ast = front::parseLatex(i->second, front::Mode::math, unreported);
+  auto tf = sptrOf<Formula>();
+  front::lowerInto(ast, *tf, unreported);
   auto* ra = dynamic_cast<RowAtom*>(tf->_root.get());
   if (ra == nullptr) {
     _predefFormulas[name] = tf;

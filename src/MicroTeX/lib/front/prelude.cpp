@@ -2,9 +2,8 @@
 
 namespace microtex::front {
 
-// The engine's commands and environments that are written in LaTeX, taken
-// from NewCommandMacro::_init_() in lib/macro/macro_def.cpp. The old parser
-// expands those itself; the new front end expands these. Environments built
+// The engine's commands and environments that are written in LaTeX (they
+// were string macros in the old parser's macro_def.cpp). Environments built
 // in C++ (matrix, array, align, ...) are not here: the parser reads them.
 // `\|` is LaTeX's \Vert (‖); the engine's symbol table has it as a single bar.
 //

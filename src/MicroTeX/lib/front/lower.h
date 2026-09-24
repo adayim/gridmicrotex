@@ -30,6 +30,14 @@ namespace microtex::front {
 void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines = false,
                bool paragraphs = false);
 
+/**
+ * `latex` read as a piece of input of its own, in math or text mode, and
+ * its atom; nullptr when it is empty. For LaTeX the engine writes itself --
+ * the digits of a long division, a command's name drawn in red -- which
+ * reads cleanly, so its problems are not reported.
+ */
+sptr<Atom> buildFragment(const std::string& latex, bool math = true);
+
 }  // namespace microtex::front
 
 #endif

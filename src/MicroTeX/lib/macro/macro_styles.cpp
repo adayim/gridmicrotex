@@ -30,13 +30,6 @@ cmdmacro(everymath) {
   return nullptr;
 }
 
-macro(texstyle) {
-  auto g = Formula(tp, tp.getOverArgument(), false)._root;
-  g = g == nullptr ? sptrOf<EmptyAtom>() : g;
-  TexStyle style = texStyleOf(args[0]);
-  return sptrOf<StyleAtom>(style, g);
-}
-
 cmdmacro(atexstyle) {
   auto g = args.formula(1);
   return sptrOf<AStyleAtom>(args.text(0), g);

@@ -20,6 +20,7 @@
 #include "atom/atom_space.h"
 #include "atom/atom_text.h"
 #include "box/box_factory.h"
+#include "core/localized_num.h"
 #include "env/units.h"
 #include "front/front.h"
 #include "front/hooks.h"
@@ -254,8 +255,8 @@ private:
   // --- commands --------------------------------------------------------------
 
   static sptr<Atom> unknownAtom(const std::string& name) {
-    auto rm = sptrOf<FontStyleAtom>(
-      FontStyle::tt, false, Formula("\\mathtt{{\\backslash}" + name + "}")._root);
+    auto rm =
+      sptrOf<FontStyleAtom>(FontStyle::tt, false, fragment("\\mathtt{{\\backslash}" + name + "}", true));
     return sptrOf<ColorAtom>(rm, TRANSPARENT, RED);
   }
 
@@ -541,13 +542,7 @@ private:
   }
 
   static sptr<Atom> fragment(const std::string& latex, bool math) {
-    if (latex.empty()) return nullptr;
-    Diagnostics unreported;
-    const Ast ast = parseLatex(latex, math ? Mode::math : Mode::text, unreported);
-    if (ast.root == kNoNode) return nullptr;
-    Formula g;
-    Lowerer(ast, unreported).lowerList(ast.root, g, 0);
-    return g._root;
+    return buildFragment(latex, math);
   }
 
   /** An argument read as a formula in the mode asked for. The tree has it
@@ -1343,6 +1338,16 @@ private:
 void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines,
                bool paragraphs) {
   Lowerer(ast, diagnostics).run(formula, lines, paragraphs);
+}
+
+sptr<Atom> buildFragment(const std::string& latex, bool math) {
+  if (latex.empty()) return nullptr;
+  Diagnostics unreported;
+  const Ast ast = parseLatex(latex, math ? Mode::math : Mode::text, unreported);
+  if (ast.root == kNoNode) return nullptr;
+  Formula g;
+  Lowerer(ast, unreported).run(g, false, false);
+  return g._root;
 }
 
 }  // namespace microtex::front

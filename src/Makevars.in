@@ -34,7 +34,6 @@ MICROTEX_SOURCES = \
 	$(MICROTEX_DIR)/core/formula_def.cpp \
 	$(MICROTEX_DIR)/core/glue.cpp \
 	$(MICROTEX_DIR)/core/localized_num.cpp \
-	$(MICROTEX_DIR)/core/parser.cpp \
 	$(MICROTEX_DIR)/core/debug_config.cpp \
 	$(MICROTEX_DIR)/macro/macro.cpp \
 	$(MICROTEX_DIR)/macro/macro_def.cpp \

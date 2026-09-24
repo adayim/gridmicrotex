@@ -448,14 +448,13 @@ void gm_register_unload_hook(DllInfo* dll) {
 void microtex_release() {
     if (!s_initialized) return;
     // Deliberately NOT MicroTeX::release(). That is final teardown, and
-    // the registries it empties are only ever repopulated from inside
-    // MicroTeX::init(). An in-process release is not paired with a
-    // re-init -- the next parse goes straight through -- so clearing them
-    // here would leave the parser without \frac, \mark, \gmfontfamily and
-    // the rest until the shared object itself was reloaded. Drop only
-    // what is genuinely per-session; R_unload_gridmicrotex above does the
-    // real teardown, where losing the registries costs nothing.
-    NewCommandMacro::clearUserMacros();
+    // the registry it empties is only ever repopulated at static
+    // initialisation. An in-process release is not paired with a reload
+    // -- the next parse goes straight through -- so clearing it here would
+    // leave the front end without \frac, \mark, \gmfontfamily and the rest
+    // until the shared object itself was reloaded. Drop only what is
+    // genuinely per-session; R_unload_gridmicrotex above does the real
+    // teardown, where losing the registry costs nothing.
     microtex::g_font_id_cache.clear();
     // The built-in registry survives, so our macros are still there and
     // their registration guards must stay set.

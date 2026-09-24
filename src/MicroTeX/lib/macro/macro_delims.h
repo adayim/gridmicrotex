@@ -47,16 +47,6 @@ inline cmdmacro(Set) {
   return args.formulaOf("\\left\\{" + str + "\\right\\}");
 }
 
-inline macro(leftparenthesis) {
-  std::string grp = tp.getGroup("\\(", "\\)");
-  return sptrOf<MathAtom>(Formula(tp, grp, false)._root, TexStyle::text);
-}
-
-inline macro(leftbracket) {
-  std::string grp = tp.getGroup("\\[", "\\]");
-  return sptrOf<MathAtom>(Formula(tp, grp, false)._root, TexStyle::display);
-}
-
 inline cmdmacro(middle) {
   return sptrOf<MiddleAtom>(args.text(1));
 }
@@ -65,8 +55,6 @@ inline cmdmacro(sqrt) {
   if (args.text(2).empty()) return sptrOf<NthRoot>(args.formula(1), nullptr);
   return sptrOf<NthRoot>(args.formula(1), args.formula(2));
 }
-
-macro(left);
 
 }  // namespace microtex
 

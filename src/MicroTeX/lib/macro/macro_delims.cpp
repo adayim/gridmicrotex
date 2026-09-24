@@ -27,30 +27,4 @@ cmdmacro(xarrow) {
   return sptr<StackAtom>(stack);
 }
 
-macro(left) {
-  const string& grep = tp.getGroup("\\left", "\\right");
-
-  auto left = Formula(tp, args[1], false)._root;
-  auto* big = dynamic_cast<BigSymbolAtom*>(left.get());
-  if (big != nullptr) left = big->_delim;
-
-  auto right = tp.getArgument();
-  big = dynamic_cast<BigSymbolAtom*>(right.get());
-  if (big != nullptr) right = big->_delim;
-
-  auto sl = dynamic_pointer_cast<CharSymbol>(left);
-  auto sr = dynamic_pointer_cast<CharSymbol>(right);
-  if (sl != nullptr && sr != nullptr) {
-    Formula tf(tp, grep, false);
-    return sptrOf<FencedAtom>(tf._root, sl->name(), sr->name(), tf.middle());
-  }
-
-  auto ra = sptrOf<RowAtom>();
-  ra->add(left);
-  ra->add(Formula(tp, grep, false)._root);
-  ra->add(right);
-
-  return ra;
-}
-
 }  // namespace microtex

@@ -5,6 +5,7 @@
 #include <Rcpp.h>
 
 #include <algorithm>
+#include <set>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -101,17 +102,26 @@ Rcpp::DataFrame lex_latex_cpp(std::string tex, bool blank_line_is_par = false) {
   return out;
 }
 
-// `tex` with its user macros expanded, as the old parser receives it, with
-// the problems found attached as the "diagnostics" attribute. Errors the old
-// parser also raised (redefinition, runaway recursion) are R errors.
+// `tex` with its user macros expanded, as text, with the problems found
+// attached as the "diagnostics" attribute; runaway recursion is an R error.
+// The prelude is left unexpanded so that what a user macro became can be
+// read, but its names count as built in, as they do in a real parse.
 // [[Rcpp::export]]
 Rcpp::CharacterVector expand_latex_cpp(std::string tex) {
+  static const std::set<std::string> preludeCommands = [] {
+    const auto v = preludeCommandNames();
+    return std::set<std::string>(v.begin(), v.end());
+  }();
+  static const std::set<std::string> preludeEnvs = [] {
+    const auto v = preludeEnvironmentNames();
+    return std::set<std::string>(v.begin(), v.end());
+  }();
   ExpanderOptions opts;
   opts.isBuiltinCommand = [](const std::string& name) {
-    return microtex::MacroInfo::get(name) != nullptr || microtex::NewCommandMacro::isMacro(name);
+    return findCommand(name) != nullptr || preludeCommands.count(name) != 0;
   };
   opts.isBuiltinEnvironment = [](const std::string& name) {
-    return microtex::NewCommandMacro::isMacro(name + "@env");
+    return findEnvironment(name) != nullptr || preludeEnvs.count(name) != 0;
   };
   Diagnostics diags;
   std::string out;
@@ -125,26 +135,6 @@ Rcpp::CharacterVector expand_latex_cpp(std::string tex) {
   return res;
 }
 
-// Switch the front end: "legacy" (MicroTeX's parser alone), "expander" (the
-// new expander before the old parser) or "modern" (the new front end).
-// Returns the previous one, so a caller can put it back.
-// [[Rcpp::export]]
-std::string set_frontend_cpp(std::string which) {
-  const FrontEnd now = frontEnd();
-  const std::string previous = now == FrontEnd::legacy     ? "legacy"
-                               : now == FrontEnd::expander ? "expander"
-                                                           : "modern";
-  if (which == "legacy") {
-    setFrontEnd(FrontEnd::legacy);
-  } else if (which == "expander") {
-    setFrontEnd(FrontEnd::expander);
-  } else if (which == "modern") {
-    setFrontEnd(FrontEnd::modern);
-  } else {
-    Rcpp::stop("Unknown front end: " + which);
-  }
-  return previous;
-}
 
 // The macros made with define_macro(), which outlive a parse.
 // [[Rcpp::export]]

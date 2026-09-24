@@ -25,10 +25,6 @@ expand_latex_cpp <- function(tex) {
     .Call(`_gridmicrotex_expand_latex_cpp`, tex)
 }
 
-set_frontend_cpp <- function(which) {
-    .Call(`_gridmicrotex_set_frontend_cpp`, which)
-}
-
 persistent_macro_set_cpp <- function(name, body) {
     invisible(.Call(`_gridmicrotex_persistent_macro_set_cpp`, name, body))
 }

@@ -77,7 +77,6 @@ FontMeta MicroTeX::init(const Init& init) {
   _config->defaultMathFontName = meta.name;
   _config->isInited = true;
   _config->isPrivilegedEnvironment = false;
-  NewCommandMacro::_init_();
   return meta;
 }
 
@@ -93,7 +92,6 @@ FontMeta MicroTeX::init(const FontSrc& mathFontSrc) {
   _config->defaultMathFontName = meta.name;
   _config->isInited = true;
   _config->isPrivilegedEnvironment = false;
-  NewCommandMacro::_init_();
   return meta;
 }
 
@@ -103,7 +101,6 @@ bool MicroTeX::isInited() {
 
 void MicroTeX::release() {
   MacroInfo::_free_();
-  NewCommandMacro::_free_();
 }
 
 bool MicroTeX::isPrivilegedEnvironment() {
@@ -181,15 +178,8 @@ Render* MicroTeX::parse(
   bool fillWidth, const OverrideTeXStyle& overrideTeXStyle,
   const string& mathFontName, const string& mainFontFamily, InputMode mode
 ) {
-  // The new front end throughout, or (to compare against) the old parser
-  // behind the new macro expander, or the old parser alone.
-  std::unique_ptr<Formula> built;
-  if (front::frontEnd() == front::FrontEnd::modern) {
-    built = std::make_unique<Formula>();
-    front::buildModern(latex, mode, *built);
-  } else {
-    built = std::make_unique<Formula>(front::prepareForLegacyParser(latex));
-  }
+  auto built = std::make_unique<Formula>();
+  front::buildModern(latex, mode, *built);
   Formula& formula = *built;
   // Bidirectional levels, resolved once over the whole formula while the
   // atoms still hold their text -- a box keeps only an opaque layout. It

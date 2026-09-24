@@ -7,7 +7,6 @@
 #include "atom/atom_misc.h"
 #include "atom/atom_sideset.h"
 #include "core/formula.h"
-#include "core/parser.h"
 #include "core/split.h"
 #include "graphic/graphic.h"
 #include "macro/macro.h"
@@ -18,8 +17,10 @@
 
 namespace microtex {
 
+// MicroTeX's switch for its old parser's definition checks. The front end
+// follows LaTeX's rules whatever it says (\newcommand of a defined name
+// warns), so it is read and does nothing; Stage 8 decides whether it stays.
 inline cmdmacro(fatalIfCmdConflict) {
-  NewCommandMacro::_errIfConflict = args.text(1) == "true";
   return nullptr;
 }
 
@@ -34,7 +35,7 @@ inline cmdmacro(st) {
 }
 
 inline cmdmacro(spATbreve) {
-  auto* vra = new VRowAtom(Formula("\\displaystyle\\!\\breve{}")._root);
+  auto* vra = new VRowAtom(args.formulaOf("\\displaystyle\\!\\breve{}"));
   vra->setRaise(UnitType::ex, 0.6f);
   return sptrOf<SmashedAtom>(sptr<Atom>(vra), "");
 }
@@ -89,32 +90,6 @@ inline cmdmacro(smash) {
   return sptrOf<SmashedAtom>(args.formula(1), args.text(2));
 }
 
-inline macro(makeatletter) {
-  tp.makeAtLetter();
-  return nullptr;
-}
-
-inline macro(makeatother) {
-  tp.makeAtOther();
-  return nullptr;
-}
-
-inline cmdmacro(newenvironment) {
-  int opt = 0;
-  if (!args.text(4).empty()) valueOf(args.text(4), opt);
-
-  NewEnvironmentMacro::addNewEnvironment(args.text(1), args.text(2), args.text(3), opt);
-  return nullptr;
-}
-
-inline cmdmacro(renewenvironment) {
-  int opt = 0;
-  if (!args.text(4).empty()) valueOf(args.text(4), opt);
-
-  NewEnvironmentMacro::addRenewEnvironment(args.text(1), args.text(2), args.text(3), opt);
-  return nullptr;
-}
-
 inline cmdmacro(hphantom) {
   return sptrOf<PhantomAtom>(args.formula(1), true, false, false);
 }
@@ -158,46 +133,13 @@ inline cmdmacro(nokern) {
 
 /**************************************** limits macros *******************************************/
 
-inline sptr<Atom> _limits_type(Parser& tp, Args& args, LimitsType type) {
-  auto atom = tp.popBack();
-  if (atom != nullptr)
-    atom->_limitsType = type;
-  return atom;
-}
-
-inline macro(nolimits) {
-  return _limits_type(tp, args, LimitsType::noLimits);
-}
-
-inline macro(limits) {
-  return _limits_type(tp, args, LimitsType::limits);
-}
-
-inline macro(normal) {
-  return _limits_type(tp, args, LimitsType::normal);
-}
-
 /***************************************** implement at .cpp **************************************/
 
 cmdmacro(longdiv);
 
-macro(char);
-
-macro(cr);
-
-macro(kern);
-
 cmdmacro(hvspace);
 
 cmdmacro(rule);
-
-macro(newcommand);
-
-macro(renewcommand);
-
-macro(providecommand);
-
-macro(def);
 
 cmdmacro(raisebox);
 
@@ -212,10 +154,6 @@ cmdmacro(debug);
 cmdmacro(undebug);
 
 #endif  // GRAPHICS_DEBUG
-
-inline macro(backslashcr) {
-  return macro_cr(tp, args);
-}
 
 /**************************************** not implemented *****************************************/
 

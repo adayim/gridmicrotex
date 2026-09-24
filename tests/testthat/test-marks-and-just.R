@@ -87,10 +87,9 @@ test_that("plain-TeX \\def with parameterised body expands to its body", {
 
 test_that("\\newcommand survives the typeface mode double-parse", {
   # The typeface mode parses twice (once for glyph layout, once for path
-  # fallback). Before clearUserMacros() landed in parse_latex_cpp, the
-  # second internal parse hit "Command already exists!" because
-  # MicroTeX's static _codes map persisted the registration from the
-  # first parse.
+  # fallback). The old parser kept a label's definitions in a static map,
+  # so the second parse once hit "Command already exists!"; the front end
+  # keeps them in a layer made new for each parse.
   expands_to(r"(\newcommand{\xyznorm}[1]{\lVert #1 \rVert} \xyznorm{v})",
              r"(\lVert v \rVert)", render_mode = "typeface",
              input_mode = "math")

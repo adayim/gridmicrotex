@@ -13,12 +13,11 @@
 using namespace microtex;
 using namespace Rcpp;
 
-// The new front end's diagnostics for the parse just done, one row each:
-// line, col, severity, message. Empty for the old parser.
+// The front end's diagnostics for the parse just done, one row each:
+// line, col, severity, message.
 static Rcpp::DataFrame diagnostics_of_last_parse() {
-    const bool modern = front::frontEnd() == front::FrontEnd::modern;
     const auto& items = front::lastDiagnostics().items();
-    const R_xlen_t n = modern ? static_cast<R_xlen_t>(items.size()) : 0;
+    const R_xlen_t n = static_cast<R_xlen_t>(items.size());
     Rcpp::IntegerVector line(n), col(n);
     Rcpp::CharacterVector severity(n), message(n);
     for (R_xlen_t i = 0; i < n; i++) {
@@ -32,7 +31,7 @@ static Rcpp::DataFrame diagnostics_of_last_parse() {
         Rcpp::Named("line") = line, Rcpp::Named("col") = col,
         Rcpp::Named("severity") = severity, Rcpp::Named("message") = message,
         Rcpp::Named("stringsAsFactors") = false);
-    const std::size_t dropped = modern ? front::lastDiagnostics().dropped() : 0;
+    const std::size_t dropped = front::lastDiagnostics().dropped();
     out.attr("dropped") = static_cast<double>(dropped);
     return out;
 }
@@ -98,13 +97,10 @@ Rcpp::List parse_latex_cpp(std::string tex,
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
     }
 
-    // Each parse starts from a clean slate of user-defined macros so that
-    // (a) \newcommand/\def in one R call doesn't leak into the next and
-    // (b) the typeface mode's automatic path-fallback parse doesn't fail
-    // with "Command already exists!" when re-processing the same input.
-    NewCommandMacro::clearUserMacros();
-    // The \gmfontfamily registry is per-parse too: indices are only
-    // meaningful against the names collected during this parse.
+    // A label's own \newcommand and \def need no clearing: they live in the
+    // front end's per-parse layer, made new for every parse. The
+    // \gmfontfamily registry is per-parse too, but lives here: its indices
+    // are only meaningful against the names collected during this parse.
     clear_font_families();
 
     // Toggle glyph rendering mode (guard restores default on any exit)

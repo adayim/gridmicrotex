@@ -19,76 +19,12 @@ cmdmacro(binom) {
   return sptrOf<FencedAtom>(f, "lparen", "rparen");
 }
 
-sptr<Atom> _choose(
-  const std::string& left,
-  const std::string& right,
-  Parser& tp,
-  std::vector<std::string>& args
-) {
-  auto num = tp.popFormulaAtom();
-  auto den = Formula(tp, tp.getOverArgument(), false)._root;
-  if (num == nullptr || den == nullptr)
-    throw ex_parse("Both numerator and denominator of choose can't be empty!");
-  auto f = sptrOf<FracAtom>(num, den, false);
-  return sptrOf<FencedAtom>(f, left, right);
-}
-
 cmdmacro(frac) {
   const auto num = args.formula(1);
   const auto den = args.formula(2);
   if (num == nullptr || den == nullptr)
     throw ex_parse("Both numerator and denominator of a fraction can't be empty!");
   return sptrOf<FracAtom>(num, den, true);
-}
-
-macro(above) {
-  auto num = tp.popFormulaAtom();
-  const auto& thick = tp.getDimen();
-  auto den = Formula(tp, tp.getOverArgument(), false)._root;
-  if (num == nullptr || den == nullptr) {
-    throw ex_parse("Both numerator and denominator of a fraction can't be empty!");
-  }
-  return sptrOf<FracAtom>(num, den, true, thick);
-}
-
-macro(atop) {
-  auto num = tp.popFormulaAtom();
-  auto den = Formula(tp, tp.getOverArgument(), false)._root;
-  if (num == nullptr || den == nullptr)
-    throw ex_parse("Both numerator and denominator of a fraction can't be empty!");
-  return sptrOf<FracAtom>(num, den, false);
-}
-
-macro(over) {
-  auto num = tp.popFormulaAtom();
-  auto den = Formula(tp, tp.getOverArgument(), false)._root;
-  if (num == nullptr || den == nullptr)
-    throw ex_parse("Both numerator and denominator of a fraction can't be empty!");
-  return sptrOf<FracAtom>(num, den, true);
-}
-
-sptr<Atom> _frac_with_delims(Parser& tp, Args& args, bool rule, bool hasLength) {
-  auto num = tp.popFormulaAtom();
-  const auto& l = hasLength ? tp.getDimen() : Dimen();
-  auto den = Formula(tp, tp.getOverArgument(), false)._root;
-
-  if (num == nullptr || den == nullptr)
-    throw ex_parse("Both numerator and denominator of a fraction can't be empty!");
-
-  auto f = (hasLength ? sptrOf<FracAtom>(num, den, rule, l) : sptrOf<FracAtom>(num, den, rule));
-  return sptrOf<FencedAtom>(f, args[1], args[2]);
-}
-
-macro(overwithdelims) {
-  return _frac_with_delims(tp, args, true, false);
-}
-
-macro(atopwithdelims) {
-  return _frac_with_delims(tp, args, false, false);
-}
-
-macro(abovewithdelims) {
-  return _frac_with_delims(tp, args, true, true);
 }
 
 cmdmacro(cfrac) {

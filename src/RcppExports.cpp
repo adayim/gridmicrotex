@@ -74,17 +74,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// set_frontend_cpp
-std::string set_frontend_cpp(std::string which);
-RcppExport SEXP _gridmicrotex_set_frontend_cpp(SEXP whichSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type which(whichSEXP);
-    rcpp_result_gen = Rcpp::wrap(set_frontend_cpp(which));
-    return rcpp_result_gen;
-END_RCPP
-}
 // persistent_macro_set_cpp
 void persistent_macro_set_cpp(std::string name, std::string body);
 RcppExport SEXP _gridmicrotex_persistent_macro_set_cpp(SEXP nameSEXP, SEXP bodySEXP) {
@@ -386,7 +375,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_gm_base_armed_count", (DL_FUNC) &_gridmicrotex_gm_base_armed_count, 0},
     {"_gridmicrotex_lex_latex_cpp", (DL_FUNC) &_gridmicrotex_lex_latex_cpp, 2},
     {"_gridmicrotex_expand_latex_cpp", (DL_FUNC) &_gridmicrotex_expand_latex_cpp, 1},
-    {"_gridmicrotex_set_frontend_cpp", (DL_FUNC) &_gridmicrotex_set_frontend_cpp, 1},
     {"_gridmicrotex_persistent_macro_set_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_set_cpp, 2},
     {"_gridmicrotex_persistent_macro_remove_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_remove_cpp, 1},
     {"_gridmicrotex_persistent_macro_clear_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_clear_cpp, 0},
