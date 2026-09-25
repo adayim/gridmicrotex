@@ -37,6 +37,7 @@
 - Bug fix: a macro defined in terms of itself hung R; it is now an error.
 - Bug fix: a layout measured on one device was reused on a device of the same kind at a different resolution.
 - Bug fix: `geom_latex()` and `geom_markdown()` failed when a mapped `alpha` was `NA`.
+- Bug fix: `annotate("latex")` and `annotate("markdown")` ignored `latex_options()`: a label was drawn in the default input mode, math font and render mode.
 - Bug fix: CSS `border: none` or `border: 0` still drew a frame or table rule, and a `body` border with no colour was not drawn.
 - Bug fix: `clear_macros()` given a number removed an unrelated macro.
 - Bug fix: Ctrl-C was ignored while text in a formula was being measured.

@@ -291,10 +291,16 @@ element_markdown <- function(math_font = "", fontsize = NULL,
     },
 
     draw_panel = function(data, panel_params, coord, fontsize = 11,
-                          math_font = "", lineheight = 1.2, max_width = 0,
-                          render_mode = "typeface", justify = FALSE,
+                          math_font = NULL, lineheight = 1.2, max_width = 0,
+                          render_mode = NULL, justify = NULL,
                           style = NULL, na.rm = FALSE) {
       coords <- coord$transform(data, panel_params)
+      # As GeomLatex: unset for annotate("markdown") and the like, so that
+      # markdown_grob() takes them from latex_options(), as geom_markdown()
+      # does when it makes the layer.
+      set <- Filter(Negate(is.null), list(math_font = math_font,
+                                          render_mode = render_mode,
+                                          justify = justify))
 
       grobs <- lapply(seq_len(nrow(coords)), function(i) {
         row <- coords[i, ]
@@ -308,21 +314,18 @@ element_markdown <- function(math_font = "", fontsize = NULL,
           row$colour
         }
 
-        markdown_grob(
+        do.call(markdown_grob, c(list(
           md = row$label,
           x = grid::unit(row$x, "npc"),
           y = grid::unit(row$y, "npc"),
           hjust = row$hjust,
           vjust = row$vjust,
           rot = row$angle %||% 0,
-          math_font = math_font,
           max_width = max_width,
-          render_mode = render_mode,
-          justify = justify,
           style = style,
           gp = grid::gpar(col = col, fontsize = row$size,
                           lineheight = lineheight)
-        )
+        ), set))
       })
 
       do.call(grid::gList, grobs)

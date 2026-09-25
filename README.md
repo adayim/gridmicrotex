@@ -236,13 +236,13 @@ Use `geom_latex()` to place LaTeX labels at data coordinates, and
 ``` r
 library(ggplot2)
 # Add a LaTeX table as an annotation
-tab_str <- r"(\begin{tabular}{c|c} A & $B^2$ \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
+tab_str <- r"(\begin{tabular}{c|c} \text{A} & B^2 \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 
 df <- data.frame(x = 1:3, y = 1:3,
                  eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
 ggplot(df, aes(x, y, label = eq)) + 
   geom_latex() +
-  annotate("latex", x = 1.15, y = 2.7, label = tab_str, size = 12) +
+  annotate("latex", x = 1, y = 2.7, label = tab_str, size = 12) +
   labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
   theme(axis.title.x = element_latex())
 ```

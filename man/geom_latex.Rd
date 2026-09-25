@@ -155,7 +155,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
   library(ggplot2)
   df <- data.frame(
     x = 1:3, y = 1:3,
-    eq = c("x^2", "\\\\frac{a}{b}", "\\\\sum_{i=1}^n x_i")
+    eq = c("$x^2$", "$\\\\frac{a}{b}$", "$\\\\sum_{i=1}^n x_i$")
   )
   ggplot(df, aes(x, y, label = eq)) + geom_latex()
 

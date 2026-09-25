@@ -53,7 +53,7 @@
 #'   library(ggplot2)
 #'   df <- data.frame(
 #'     x = 1:3, y = 1:3,
-#'     eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i")
+#'     eq = c("$x^2$", "$\\frac{a}{b}$", "$\\sum_{i=1}^n x_i$")
 #'   )
 #'   ggplot(df, aes(x, y, label = eq)) + geom_latex()
 #'
@@ -215,11 +215,17 @@ element_latex <- function(math_font = "", fontsize = NULL,
     },
 
     draw_panel = function(data, panel_params, coord, fontsize = 11,
-                          math_font = "", lineheight = 1.2, max_width = 0,
-                          input_mode = "mixed",
-                          render_mode = "typeface",
+                          math_font = NULL, lineheight = 1.2, max_width = 0,
+                          input_mode = NULL, render_mode = NULL,
                           na.rm = FALSE) {
       coords <- coord$transform(data, panel_params)
+      # geom_latex() fills these from latex_options() when it makes the
+      # layer. A layer made any other way -- annotate("latex"), a stat's
+      # geom = "latex" -- leaves them unset, and latex_grob() fills them
+      # from the options itself; a default here would override them.
+      set <- Filter(Negate(is.null), list(math_font = math_font,
+                                          input_mode = input_mode,
+                                          render_mode = render_mode))
 
       grobs <- lapply(seq_len(nrow(coords)), function(i) {
         row <- coords[i, ]
@@ -234,19 +240,16 @@ element_latex <- function(math_font = "", fontsize = NULL,
           row$colour
         }
 
-        latex_grob(
+        do.call(latex_grob, c(list(
           tex = row$label,
           x = grid::unit(row$x, "npc"),
           y = grid::unit(row$y, "npc"),
           hjust = row$hjust,
           vjust = row$vjust,
           rot = row$angle %||% 0,
-          math_font = math_font,
           max_width = max_width,
-          input_mode = input_mode,
-          render_mode = render_mode,
           gp = grid::gpar(col = col, fontsize = fs, lineheight = lineheight)
-        )
+        ), set))
       })
 
       do.call(grid::gList, grobs)

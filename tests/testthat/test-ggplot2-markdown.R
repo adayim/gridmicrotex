@@ -78,6 +78,19 @@ test_that("geom_markdown treats a missing alpha as opaque", {
   expect_equal(g$gp$col, "red")
 })
 
+test_that("annotate('markdown') follows latex_options(), as geom_markdown() does", {
+  # As annotate('latex'): the layer's own defaults used to win.
+  on.exit(reset_latex_options(), add = TRUE)
+  latex_options(math_font = "stix")
+  base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
+  grob_of <- function(layer) ggplot2::layer_grob(base + layer)[[1]][[1]]
+  geom <- grob_of(geom_markdown(ggplot2::aes(label = "*b* $x^2$")))
+  ann <- grob_of(ggplot2::annotate("markdown", x = 1, y = 1, label = "*b* $x^2$"))
+  expect_identical(ann$layout_df, geom$layout_df)
+  fonts <- ann$layout_df$font_file[ann$layout_df$type == "glyph"]
+  expect_true(length(fonts) > 0 && all(grepl("STIX", fonts)))
+})
+
 test_that("element_markdown installs our grob as the axis titles", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   df <- data.frame(x = 1:3, y = 1:3)

@@ -94,6 +94,25 @@ test_that("annotate('latex') adds a rendered layer of its own", {
   expect_equal(g$gp$col, "red")
 })
 
+test_that("annotate('latex') follows latex_options(), as geom_latex() does", {
+  # annotate() never calls geom_latex(), so the layer's own defaults were
+  # what it got: a mixed label in the default font, whatever the options.
+  on.exit(reset_latex_options(), add = TRUE)
+  latex_options(input_mode = "math", math_font = "stix")
+  base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
+  geom <- layer_grobs(base + geom_latex(ggplot2::aes(label = "x^2")))[[1]]
+  ann <- layer_grobs(base + ggplot2::annotate("latex", x = 1, y = 1, label = "x^2"))[[1]]
+  # The same formula in the same font, not the text "x^2".
+  expect_identical(ann$layout_df, geom$layout_df)
+  expect_true(all(grepl("STIX", ann$layout_df$font_file)))
+  # An argument given to annotate() still wins over the options.
+  expect_warning(
+    mixed <- layer_grobs(base + ggplot2::annotate("latex", x = 1, y = 1, label = "x^2",
+                                                  input_mode = "mixed"))[[1]],
+    "outside math")
+  expect_identical(mixed$layout_df$text, "x^2")
+})
+
 # --- element_latex() ---
 
 test_that("element_latex is an element_text subclass that merges", {
