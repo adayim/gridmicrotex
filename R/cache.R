@@ -170,12 +170,16 @@ latex_cache_info <- function() {
   used <- new.env(parent = emptyenv())
   register_image_resolver(.image_resolver(text_size, max_width, used))
   on.exit(clear_image_resolver(), add = TRUE)
-  layout <- parse_latex_cpp(
+  parse <- function() parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = use_path, tex_style = tex_style,
     justify = justify, optimal_break = optimal_break, input_mode = input_mode
   )
+  # One figure that cannot be drawn -- a PDF, say, as most papers' are --
+  # must not cost a whole document: it warns and draws the file's name.
+  # A label, where the figure is the point, still stops.
+  layout <- if (identical(input_mode, "document")) .images_lenient(parse()) else parse()
   if (length(used$stamps)) attr(layout, "images") <- used$stamps
   .cache_put(key, layout)
   layout

@@ -48,36 +48,62 @@ test_that("latex_grob parameters work correctly", {
 # --- device support and typeface rendering ---
 
 test_that("device support detection and typeface fallback work", {
-  # pdf reports glyphs=TRUE
-  tf_pdf <- tempfile(fileext = ".pdf")
-  grDevices::pdf(tf_pdf)
+  kinds <- function(g) {
+    kids <- suppressMessages(grid::makeContent(g))$children
+    vapply(kids, function(k) class(k)[1], "")
+  }
+  frac <- function() latex_grob("\\frac{a}{b}", render_mode = "typeface",
+                                gp = grid::gpar(fontsize = 20))
+
+  # pdf() and postscript() fall back with a message. pdf() reports glyphs
+  # (R >= 4.3) but does not embed the font, which garbled the math in any
+  # viewer without it; postscript() has no glyphs at all.
+  for (dev in c("pdf", "postscript")) {
+    tf <- tempfile()
+    get(dev, asNamespace("grDevices"))(tf)
+    gridmicrotex:::.clear_typeface_noted()
+    expect_false(gridmicrotex:::.device_supports_typeface_glyphs(), info = dev)
+    expect_message({
+      g <- frac()
+      grid::grid.newpage()
+      grid::grid.draw(g)
+    }, "falling back to path mode", info = dev)
+    # The fallback has to substitute the path layout, not merely warn: the
+    # children it draws must be outlines, not glyphs the device cannot set.
+    expect_true("pathgrob" %in% kinds(g), info = dev)
+    expect_false("glyphgrob" %in% kinds(g), info = dev)
+    grDevices::dev.off()
+    unlink(tf)
+  }
+
+  # cairo_pdf() embeds the font, so the math stays text.
+  skip_if_not(capabilities("cairo"))
+  tf <- tempfile(fileext = ".pdf")
+  grDevices::cairo_pdf(tf)
+  on.exit({ grDevices::dev.off(); unlink(tf) }, add = TRUE)
   expect_true(gridmicrotex:::.device_supports_typeface_glyphs())
+  expect_true("glyphgrob" %in% kinds(frac()))
+})
 
-  # PDF: renders without fallback warning
-  expect_no_warning({
-    g <- latex_grob("\\frac{a}{b}", render_mode = "typeface", gp = grid::gpar(fontsize = 20))
-    grid::grid.newpage()
-    grid::grid.draw(g)
-  })
-  grDevices::dev.off()
-  unlink(tf_pdf)
-
-  # Postscript: falls back with warning
-  tf_ps <- tempfile(fileext = ".ps")
-  grDevices::postscript(tf_ps)
-  gridmicrotex:::.clear_typeface_noted()
-  on.exit({ grDevices::dev.off(); unlink(tf_ps) }, add = TRUE)
-  expect_false(gridmicrotex:::.device_supports_typeface_glyphs())
-  expect_message({
-    g <- latex_grob("\\frac{a}{b}", render_mode = "typeface",
-                    gp = grid::gpar(fontsize = 20))
-    grid::grid.newpage()
-    grid::grid.draw(g)
-  }, "falling back to path mode")
-  # The fallback has to substitute the path layout, not merely warn: the
-  # children it draws must be outlines, not glyphs the device cannot set.
-  kids <- suppressMessages(grid::makeContent(g))$children
-  expect_true("pathgrob" %in% vapply(kids, function(k) class(k)[1], ""))
+test_that("the text measurer's ascent and descent are the device's own", {
+  # It reads them off per-character caches -- R's own rule for one line
+  # (GEStrMetric) -- so they must equal measuring the whole string. The
+  # engine hands its text over marked "unknown", which once split an emoji
+  # into an extra, empty piece.
+  skip_if(getRversion() < "4.4.0")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  m <- .make_text_measurer(grid::gpar())
+  for (s in c("Transformer", "gy", "a b", "é", intToUtf8(c(0x1F916, 0xFE0F)),
+              intToUtf8(0x1D4B6))) {
+    x <- s
+    Encoding(x) <- "unknown"
+    tg <- grid::textGrob(s, gp = grid::gpar(fontsize = 72))
+    asc <- suppressWarnings(grid::convertHeight(grid::grobAscent(tg), "bigpts", valueOnly = TRUE))
+    dsc <- suppressWarnings(grid::convertHeight(grid::grobDescent(tg), "bigpts", valueOnly = TRUE))
+    got <- suppressWarnings(m(x, 0L, ""))
+    expect_equal(got[2] * 72, asc, info = s)
+    expect_equal((got[3] - got[2]) * 72, dsc, info = s)
+  }
 })
 
 # --- edge cases: empty and invalid input ---

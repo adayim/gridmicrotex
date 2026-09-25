@@ -234,6 +234,22 @@ test_that("an image that cannot be drawn is an error saying why", {
   }
 })
 
+test_that("a figure that cannot be drawn does not cost a whole document", {
+  # Most papers' figures are PDFs. In a label the figure is the point, so
+  # it stops; in a pasted paper one PDF used to fail every page.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  .image_reset_warnings()
+  f <- tempfile(fileext = ".pdf"); writeBin(as.raw(1:20), f)
+  on.exit(unlink(f), add = TRUE)
+  tex <- sprintf("Before \\includegraphics{%s} after", f)
+  expect_error(latex_grob(tex), "not a PNG, JPEG or SVG file", fixed = TRUE)
+  expect_warning(g <- latex_grob(tex, input_mode = "document"),
+                 "not a PNG, JPEG or SVG file; drawing the file name instead",
+                 fixed = TRUE)
+  expect_true(any(grepl(basename(f), g$layout_df$text, fixed = TRUE)))
+  expect_false("image" %in% g$layout_df$type)
+})
+
 test_that("a commented-out \\includegraphics is not read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # Commenting out a figure is routine LaTeX; the missing draft figure

@@ -233,13 +233,15 @@
 # Read a PNG or JPEG, or fail with the reader's own error. The inline and
 # block paths share this one loader. png and jpeg stay Suggests, needed
 # only by a figure in their format; when one is missing, `::` says which.
+# A nativeRaster (packed integers), which rasterGrob draws as it is: ten
+# times faster to read than as.raster()'s one colour string per pixel.
 .image_raster <- function(path) {
   key <- paste0("ras\x1f", .image_stamp(path))
   hit <- .image_cache[[key]]
   if (!is.null(hit)) return(hit)
-  ras <- if (.image_ext(path) == "png") png::readPNG(path) else jpeg::readJPEG(path)
-  out <- list(raster = grDevices::as.raster(ras),
-              w_px = dim(ras)[2], h_px = dim(ras)[1])
+  ras <- if (.image_ext(path) == "png") png::readPNG(path, native = TRUE)
+         else jpeg::readJPEG(path, native = TRUE)
+  out <- list(raster = ras, w_px = dim(ras)[2], h_px = dim(ras)[1])
   .image_cache[[key]] <- out
   out
 }
@@ -371,12 +373,13 @@
   .image_warn_once(key, paste0(msg, "; drawing the file name instead."))
 }
 
-# Two callers need an image that cannot be drawn to warn instead, because
+# Three callers need an image that cannot be drawn to warn instead, because
 # an error there does more harm than the missing figure: base graphics,
 # where a device callback turns any error into the whole label drawn as
-# literal text, and a markdown box laying out as it is drawn, where an
-# error leaves half a page. A box's images were all checked when it was
-# built, so only a file gone since then reaches this.
+# literal text, a markdown box laying out as it is drawn, where an error
+# leaves half a page, and a document, where one PDF figure would cost a
+# whole pasted paper. A box's images were all checked when it was built,
+# so only a file gone since then reaches this.
 .image_state <- new.env(parent = emptyenv())
 .image_state$strict <- TRUE
 

@@ -47,7 +47,8 @@
 #'   are read directly from their OTF files: no system-wide font
 #'   install is required.
 #'   Falls back to path mode automatically on devices that lack the
-#'   R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
+#'   R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
+#'   \code{postscript()}, which cannot embed the math font.
 #'   For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 #'   \code{"path"} renders math symbols as filled vector paths (works on
 #'   all devices but text is not selectable in PDF/SVG).
@@ -217,7 +218,9 @@
 #'   instead.
 #' * The file must be local; a URL is not downloaded. A file that cannot
 #'   be drawn -- missing, a URL, an unsupported format, or unreadable --
-#'   is an error saying why. Each format needs its reader, all
+#'   is an error saying why; in a document (`input_mode = "document"`) it
+#'   warns and draws the file's name, so that one figure does not cost the
+#'   whole document. Each format needs its reader, all
 #'   *Suggests*: `png` for PNG, `jpeg` for JPEG and `rsvg` for SVG; the
 #'   error names the one to install.
 #' * The file is read when the parser meets the command, after macros are
@@ -563,6 +566,13 @@ grobMark <- function(grob, name) {
 
   main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
 
+  # Measuring needs a device. With none open, one pdf(NULL) serves the
+  # whole parse, where the measurer used to open and close its own for
+  # every word it measured. The layout cache keys it as "pdf@72" either way.
+  if (grDevices::dev.cur() == 1L) {
+    grDevices::pdf(NULL)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
   measurer <- .make_text_measurer(text_gp)
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
@@ -618,13 +628,20 @@ grobMark <- function(grob, name) {
 }
 
 
-# Check whether the current graphics device supports rendering glyphGrob
-# objects via the dev->glyph() graphics engine interface (R >= 4.3).
-# Uses dev.capabilities()$glyphs when a device is open; returns TRUE
-# when no device is open (layout-only / measurement context).
+# Check whether the current graphics device can set glyphGrob objects as
+# text via the dev->glyph() graphics engine interface (R >= 4.3). Uses
+# dev.capabilities()$glyphs when a device is open; returns TRUE when no
+# device is open (layout-only / measurement context).
+#
+# Base pdf() and postscript() are refused by name. pdf() does report
+# glyphs, but it names the font in the file without embedding it, so the
+# math is garbled in any viewer that lacks the font -- nearly all of them,
+# as the math fonts are bundled rather than installed ("FFN(x)" read as
+# "DDL&..."). Outlines draw right everywhere; cairo_pdf() embeds.
 .device_supports_typeface_glyphs <- function() {
   cur <- grDevices::dev.cur()
   if (cur == 1L) return(TRUE)  # null device (no drawing)
+  if (names(cur) %in% c("pdf", "postscript")) return(FALSE)
 
   caps <- grDevices::dev.capabilities()
   isTRUE(caps[["glyphs"]])
@@ -656,7 +673,7 @@ grobMark <- function(grob, name) {
   # done the sensible thing. A warning would also be escalated to an error
   # under options(warn = 2), which some CI setups use.
   message(
-    "Current graphics device does not support glyph rendering; falling ",
+    "Current graphics device cannot set the math font as text; falling ",
     "back to path mode, so math is drawn as outlines rather than text. ",
     "On a vector device -- svglite::svglite() or grDevices::cairo_pdf() ",
     "-- it stays selectable."
@@ -978,6 +995,70 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
   # repeated span.
   cache <- new.env(parent = emptyenv())
 
+  # A layout measures each distinct word of its prose once (the engine
+  # caches the rest), so a paper's vocabulary is some two thousand calls
+  # and each one's cost is what a long document waits on. What does not
+  # depend on the word is kept per font (style x family): the gpar, a grob
+  # to carry it, and each character's ascent and descent.
+  fonts <- new.env(parent = emptyenv())
+  font_for <- function(style, family) {
+    fkey <- paste0(style, "\x1f", family)
+    f <- fonts[[fkey]]
+    if (!is.null(f)) return(f)
+    gp <- grid::gpar(fontsize = ref_size, fontface = .resolve_text_face(style))
+    fam <- .resolve_text_family(style, text_gp$fontfamily, family)
+    if (!is.null(fam)) {
+      gp$fontfamily <- fam
+    }
+    f <- new.env(parent = emptyenv())
+    # Carry the font settings on a throwaway textGrob rather than pushing a
+    # viewport. pushViewport() writes to the device's display list (6
+    # records per push/pop), which makes a caller's device look like it
+    # holds a plot: knitr then snapshots that page as a spurious blank
+    # figure before the real plot's grid.newpage(). grob* queries below
+    # only read metrics. Its label is set per call.
+    f$grob <- grid::textGrob("", gp = gp)
+    f$chars <- new.env(parent = emptyenv())
+    fonts[[fkey]] <- f
+    f
+  }
+  if (has_ascent_fn) {
+    grob_ascent <- get("grobAscent", envir = asNamespace("grid"))
+    grob_descent <- get("grobDescent", envir = asNamespace("grid"))
+  }
+  # A one-line string's ascent and descent are the largest of its
+  # characters' -- the rule R's own GEStrMetric() applies -- so each
+  # character is measured once per font and the word's are read off.
+  # NULL when the device cannot answer, and the caller measures the whole
+  # string instead.
+  char_extent <- function(f, text) {
+    # By code point, not strsplit(): the engine hands over its text marked
+    # "unknown", and on Windows strsplit() then cut a character outside the
+    # BMP (an emoji, a mathematical script letter) into an extra, empty
+    # piece.
+    cps <- utf8ToInt(text)
+    if (anyNA(cps)) return(NULL)
+    cps <- unique(cps)
+    if (!length(cps)) return(c(0, 0))
+    keys <- as.character(cps)
+    ext <- matrix(NA_real_, 2L, length(cps))
+    for (i in seq_along(cps)) {
+      ad <- f$chars[[keys[i]]]
+      if (is.null(ad)) {
+        tg <- f$grob
+        tg$label <- intToUtf8(cps[i])
+        ad <- tryCatch(c(
+          grid::convertHeight(grob_ascent(tg), "bigpts", valueOnly = TRUE),
+          grid::convertHeight(grob_descent(tg), "bigpts", valueOnly = TRUE)
+        ), error = function(e) NULL)
+        if (length(ad) != 2L || anyNA(ad)) return(NULL)
+        f$chars[[keys[i]]] <- ad
+      }
+      ext[, i] <- ad
+    }
+    c(max(ext[1, ]), max(ext[2, ]))
+  }
+
   measure <- function(text, font_style, font_family) {
     key <- paste0(as.integer(font_style), "\x1f", font_family, "\x1f", text)
     # The key becomes a variable name, which R caps at 10000 bytes, so a
@@ -998,53 +1079,43 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
       return(result)
     }
 
-    face <- .resolve_text_face(as.integer(font_style))
-
-    gp <- grid::gpar(fontsize = ref_size, fontface = face)
-    fam <- .resolve_text_family(as.integer(font_style), text_gp$fontfamily,
-                                font_family)
-    if (!is.null(fam)) {
-      gp$fontfamily <- fam
-    }
-
-    # Ensure a graphics device is available for measurement
+    # Ensure a graphics device is available for measurement. A parse opens
+    # one for its whole length (.parse_from_gp()), so this is a safety net.
     needs_dev <- grDevices::dev.cur() == 1L
     if (needs_dev) {
       grDevices::pdf(NULL)
       on.exit(grDevices::dev.off(), add = TRUE)
     }
 
-    # Carry the font settings on a throwaway textGrob rather than pushing a
-    # viewport. pushViewport() writes to the device's display list (6 records
-    # per push/pop), which makes a caller's device look like it holds a plot:
-    # knitr then snapshots that page as a spurious blank figure before the
-    # real plot's grid.newpage(). grob* queries below only read metrics.
-    tg <- grid::textGrob(text, gp = gp)
+    f <- font_for(as.integer(font_style), font_family)
+    tg <- f$grob
+    tg$label <- text
 
     # Measuring is per *character*, so a device that cannot resolve the
     # family -- base pdf() has no named families, only what pdfFonts()
     # declares -- would warn dozens of times for one label. Stay quiet
     # here: the same device warns again when the text is actually drawn,
     # which is the once-per-run, user-actionable copy of the message.
+    # The width is the whole string's, which kerning makes other than
+    # the sum of its characters'.
     w <- suppressWarnings(.measure_text_bigpts(tg, text, em = ref_size))
 
     # Measure ascent and descent (with Windows/CJK locale fallback)
     ad <- suppressWarnings(tryCatch({
       if (has_ascent_fn) {
-        asc <- grid::convertHeight(
-          get("grobAscent", envir = asNamespace("grid"))(tg),
-          "bigpts", valueOnly = TRUE
-        )
-        desc <- grid::convertHeight(
-          get("grobDescent", envir = asNamespace("grid"))(tg),
-          "bigpts", valueOnly = TRUE
+        # Characters, except in a string of several lines, where
+        # GEStrMetric() reads the first line's ascent and the last's
+        # descent instead.
+        per_char <- if (!grepl("\n", text, fixed = TRUE)) char_extent(f, text)
+        per_char %||% c(
+          grid::convertHeight(grob_ascent(tg), "bigpts", valueOnly = TRUE),
+          grid::convertHeight(grob_descent(tg), "bigpts", valueOnly = TRUE)
         )
       } else {
         h <- grid::convertHeight(grid::grobHeight(tg), "bigpts", valueOnly = TRUE)
         asc <- h * 0.8
-        desc <- h - asc
+        c(asc, h - asc)
       }
-      c(asc, desc)
     }, error = function(e) {
       # Approximate: 80% of font size for ascent, 20% for descent
       c(ref_size * 0.8, ref_size * 0.2)

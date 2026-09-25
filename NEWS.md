@@ -1,11 +1,12 @@
 # gridmicrotex 0.2.0
 
 - LaTeX is read by a new parser that follows TeX's rules, and long input is several times faster to read.
+- PNG and JPEG figures load about ten times faster, and text is measured about twice as fast.
 - New `input_mode = "document"` reads a LaTeX document body: a line end is a space, a blank line or `\par` starts an indented paragraph, `\section` to `\paragraph` are numbered headings, display math is centred on a line of its own, and lists and floats are set apart from the text. See `vignette("documents")`.
 - Malformed LaTeX no longer stops a label: the rest is drawn, with one warning listing each problem at its line:col.
 - New `latex_options(device_math = TRUE)` renders `$…$` math in labels drawn to the graphics device, so **base** graphics gets real LaTeX — `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()` — with no other change to your code. It intercepts the device, so grid, ggplot2 and lattice text is covered too.
 - `latex_options()` now resets an option passed as `NULL`, as `options()` does, so the list it returns can be passed back with `do.call()` to restore those settings.
-- An image that cannot be drawn is now an error saying why, and names the package to install when a reader is missing. This covers a missing file, a URL, an unsupported format or an unreadable file, in `\includegraphics`, markdown `![]()` and `<img>`. It used to draw the file name or the alt text. Base-graphics labels are unchanged.
+- An image that cannot be drawn is now an error saying why, and names the package to install when a reader is missing. This covers a missing file, a URL, an unsupported format or an unreadable file, in `\includegraphics`, markdown `![]()` and `<img>`. It used to draw the file name or the alt text. Base-graphics labels are unchanged, and a document (`input_mode = "document"`) warns and draws the file name, so that one figure does not cost the whole document.
 - A space after a command is dropped, as in TeX: `\LaTeX is` draws "LaTeXis"; write `\LaTeX{} is` or `\LaTeX\ is`. A run of spaces is one space.
 - In labels, `_`, `^`, `#` and `&` outside math are drawn with a warning, as LaTeX refuses them there: write `$x^2$`, or `\_`, `\#`, `\&` for the character.
 - The items of `itemize` and `enumerate` and the cells of `tabular` are text, as in LaTeX: put math in them between `$…$`. With `input_mode = "math"` they are math, as before.
@@ -16,6 +17,7 @@
 - A definition inside `{…}` ends with the group, as in TeX; `\gdef` is global.
 - An unknown environment draws its body instead of its name in red: as text in prose, as LaTeX does, and as an array in math. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
 - Starred forms work (`\operatorname*`, `\newcommand*`, `\DeclareMathOperator*`, `\hspace*`, `\\*`), as do `\def` with delimited parameters, `\let`, `\providecommand`, `\newenvironment` with arguments, and `\ensuremath`.
+- Bug fix: math drawn to base `pdf()` used a font the file did not embed, so it was garbled in any viewer without that font; `pdf()` and `postscript()` now draw it as outlines. Use `cairo_pdf()` for selectable math.
 - Bug fix: an argument without braces took one byte rather than one character, garbling `\frac αβ` and `\hat é`.
 - Bug fix: a macro argument's own `#2` was replaced by the macro's second argument.
 - Bug fix: a `define_macro("RR", …)` macro also replaced the `\RR` in `\\RR`.
