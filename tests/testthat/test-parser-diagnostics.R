@@ -73,6 +73,32 @@ test_that("an unknown environment draws its body, with a warning", {
                    layout_quietly("\\begin{matrix}hello\\end{matrix}"))
 })
 
+test_that("an unknown environment met in text is text, as in LaTeX", {
+  # LaTeX's recovery from "Environment ... undefined" sets the body as
+  # ordinary text in a group. Read as an array (math), a pasted abstract
+  # lost every space between its words.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  quiet <- function(tex, mode) {
+    records <- suppressWarnings(latex_grob(tex, input_mode = mode))$layout_df
+    attr(records, "diagnostics") <- NULL
+    records
+  }
+  for (mode in c("document", "mixed")) {
+    expect_warning(latex_grob("\\begin{abstract}One two.\\end{abstract}", input_mode = mode),
+                   "unknown environment abstract: its body is set as text", fixed = TRUE)
+    body <- quiet("a \\begin{foo}\\bf b c\\end{foo} d", mode)
+    expect_identical(body, quiet("a {\\bf b c} d", mode), info = mode)
+    expect_identical(body$text[!is.na(body$text)], c("a ", "b c", " d"), info = mode)
+  }
+  # A line end inside it is still a line break in a label; the text runs
+  # join across it, as if the environment were not there.
+  expect_identical(quiet("x \\begin{foo}one\ntwo\\end{foo} y", "mixed"),
+                   quiet("x one\ntwo y", "mixed"))
+  # In math it is an array, as before.
+  expect_identical(quiet("$\\begin{foo}a & b\\end{foo}$", "mixed"),
+                   quiet("$\\begin{matrix}a & b\\end{matrix}$", "mixed"))
+})
+
 test_that("an environment inside an argument or a list is read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # Arguments are handed to the engine's commands as text, which the old

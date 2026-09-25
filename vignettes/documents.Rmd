@@ -124,7 +124,7 @@ page from:
 ```{r pdf, eval = FALSE}
 d <- latex_dims(body, input_mode = "document", max_width = 5.5 * 72,
                 gp = gpar(fontsize = 11))
-height <- as.numeric(d$height + d$depth) / 72 + 1   # inches, with margins
+height <- as.numeric(d$height) / 72 + 1   # inches, with margins
 
 cairo_pdf("methods.pdf", width = 6.5, height = height)
 grid.latex(body, input_mode = "document", max_width = 5.5 * 72,

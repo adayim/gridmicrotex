@@ -143,7 +143,7 @@ bool Parser::atStop(const ExpandedToken& t, const Stop& stop) const {
   // a document it is a space, and a paragraph break does not end a
   // declaration either: \small lasts to the end of its group, as in TeX.
   if (stop.overArg && _prose && _opts.lineEndsBreak && k.lineEnds > 0) return true;
-  if (stop.cell && k.isCs("end")) return true;
+  if ((stop.cell || stop.end) && k.isCs("end")) return true;
   if (stop.right && (k.isCs("right") || k.isCs("middle"))) return true;
   if ((stop.dollar || stop.displayDollar) && k.isChar(Cat::mathShift)) return true;
   if (!stop.closeSymbol.empty() && k.kind == TokKind::controlSymbol && k.text == stop.closeSymbol) {
@@ -1084,6 +1084,35 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
     // numbering, and nothing is numbered here.
     spec = findEnvironment(name.substr(0, name.size() - 1));
     if (spec != nullptr) n.text = name.substr(0, name.size() - 1);
+  }
+  if (spec == nullptr && mode == Mode::text) {
+    // LaTeX's own recovery: after "Environment ... undefined" the body is
+    // set as ordinary text, in a group -- a paragraph of an abstract is a
+    // paragraph, with its spaces, not a row of math.
+    _diags.warn(at, "unknown environment " + name + ": its body is set as text");
+    // Text as around it, line ends included.
+    const Scoped text(_prose, prose.was);
+    Stop body;
+    body.end = true;
+    const NodeId list = parseList(Mode::text, body, at);
+    ExpandedToken t = next();
+    if (t.tok.isCs("end")) {
+      const std::string closing = readGroupName();
+      if (closing != name) {
+        _diags.warn(t.tok.span, "\\end{" + closing + "} ends \\begin{" + name + "}");
+      }
+    } else {
+      _diags.warn(at, "missing \\end{" + name + "} inserted");
+      unread(std::move(t));
+    }
+    // Transparent, as document's expansion is: its content is set as if
+    // the environment were not there.
+    Node g;
+    g.kind = NodeKind::group;
+    g.mode = Mode::text;
+    g.span = at;
+    g.aux = 2;
+    return _ast.add(std::move(g), {list});
   }
   if (spec == nullptr) {
     _diags.warn(at, "unknown environment " + name + ": read as an array");

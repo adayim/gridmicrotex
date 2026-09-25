@@ -61,6 +61,8 @@ private:
     bool cell = false;
     /** This list is the cell itself, not something nested in it. */
     bool cellTop = false;
+    /** At `\end` only: the body of an unknown environment met in text. */
+    bool end = false;
     /** At `\\` and `\cr` even outside an alignment, and at `&`: the reach
      *  of a declaration such as \bf. */
     bool overArg = false;

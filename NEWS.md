@@ -14,7 +14,7 @@
 - `\|` is ‖, as in LaTeX, so `Vmatrix` has double bars.
 - `\ref`, `\eqref`, `\pageref`, `\cite` and `\footnote` warn and draw what LaTeX draws when it cannot resolve them (a bold `??` or `[?]`, the note's text), instead of their names in red.
 - A definition inside `{…}` ends with the group, as in TeX; `\gdef` is global.
-- An unknown environment draws its body instead of its name in red. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
+- An unknown environment draws its body instead of its name in red: as text in prose, as LaTeX does, and as an array in math. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
 - Starred forms work (`\operatorname*`, `\newcommand*`, `\DeclareMathOperator*`, `\hspace*`, `\\*`), as do `\def` with delimited parameters, `\let`, `\providecommand`, `\newenvironment` with arguments, and `\ensuremath`.
 - Bug fix: an argument without braces took one byte rather than one character, garbling `\frac αβ` and `\hat é`.
 - Bug fix: a macro argument's own `#2` was replaced by the macro's second argument.
