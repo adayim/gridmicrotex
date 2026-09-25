@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,7 @@
 #include "atom/atom_scripts.h"
 #include "atom/atom_space.h"
 #include "atom/atom_text.h"
+#include "atom/atom_vrow.h"
 #include "box/box_factory.h"
 #include "core/localized_num.h"
 #include "env/units.h"
@@ -503,11 +505,23 @@ private:
     }
 
     sptr<ArrayFormula> alignmentOfText(const std::string& latex) override {
-      Diagnostics unreported;
-      const Ast ast = parseLatex("\\begin{matrix}" + latex + "\\end{matrix}", Mode::math, unreported);
+      Diagnostics found;
+      const Ast ast = parseLatex("\\begin{matrix}" + latex + "\\end{matrix}", Mode::math, found);
       const NodeId env = ast.root != kNoNode && ast.childCount(ast.root) > 0
                            ? ast.child(ast.root, 0) : kNoNode;
-      return Lowerer(ast, unreported).alignmentOf(env);
+      auto arr = Lowerer(ast, found).alignmentOf(env);
+      // The text is the user's (a list's items): its problems are reported
+      // where the list begins, as its own positions are not the input's.
+      if (!_who.empty()) {
+        for (const Diagnostic& d : found.items()) _lx._diags.warn(_at, _who + ": " + d.message);
+      }
+      return arr;
+    }
+
+    /** Report what alignmentOfText() finds at `at`, as `who`'s. */
+    void reportAt(SourceSpan at, std::string who) {
+      _at = at;
+      _who = std::move(who);
     }
 
     ArrayFormula* alignmentHere() override {
@@ -522,6 +536,8 @@ private:
     Formula* _here;
     NodeId _replaced = kNoNode;
     sptr<Atom> _replacement;
+    SourceSpan _at;
+    std::string _who;
   };
 
   /** LaTeX not from the input -- a raw argument read as a formula, text a
@@ -1045,6 +1061,8 @@ private:
      *  that follows one unindented, whether it comes straight after the
      *  heading or after a blank line. */
     bool afterHeading = false;
+    /** A document, not a label: its displays go on lines of their own. */
+    bool document = false;
   };
 
   /** TeX's \parindent: 15pt at a 10pt font, so 1.5em, which follows the
@@ -1177,7 +1195,16 @@ private:
    *  (tabular, pmatrix, cases, ...), which the expander wraps in a group:
    *  an environment all the same, not prose. */
   bool isEnvironmentGroup(NodeId id) const {
-    return node(id).kind == NodeKind::group && node(id).aux == 1;
+    return node(id).kind == NodeKind::group && (node(id).aux == 1 || node(id).aux == 3);
+  }
+
+  /** `$$...$$`, `\[...\]`, or an environment LaTeX sets as a display
+   *  (equation, align, ...). */
+  bool isDisplay(NodeId id) const {
+    const Node& x = node(id);
+    if (x.kind == NodeKind::math) return x.flag;
+    if (x.kind == NodeKind::environment) return isDisplayEnvironment(x.text);
+    return x.kind == NodeKind::group && x.aux == 3;
   }
 
   /** The expansion of document, table or figure: nothing of their own, so
@@ -1197,6 +1224,7 @@ private:
    *  formula. A break before everything or after it is none. */
   void runLines(Formula& f, bool paragraphs) {
     Label l(f);
+    l.document = paragraphs;
     // A document opens a paragraph, so its first line is indented too.
     l.indentNext = paragraphs;
     feedLines(l, _ast.root);
@@ -1225,6 +1253,28 @@ private:
     l.afterHeading = true;
   }
 
+  /** A display on a line of its own, centred, with TeX's 10pt
+   *  \abovedisplayskip and \belowdisplayskip (1em at a 10pt font) around
+   *  it. A display interrupts a paragraph without ending it, so what
+   *  follows goes on unindented, as in TeX. */
+  void displayLine(Label& l, NodeId id) {
+    lineBreak(l);
+    if (l.drawn) l.gap = "1em";
+    l.indentNext = false;
+    beforeLine(l);
+    Formula g;
+    if (node(id).kind == NodeKind::math) {
+      auto m = build(child(id, 0));
+      g.add(sptrOf<StyleAtom>(TexStyle::display, m == nullptr ? sptrOf<EmptyAtom>() : m));
+    } else {
+      lowerItem(id, g);
+    }
+    l.line->add(sptrOf<DisplayAtom>(g._root == nullptr ? sptrOf<EmptyAtom>() : g._root));
+    lineBreak(l);
+    l.gap = "1em";
+    l.indentNext = false;
+  }
+
   /** The items of `list` onto the label's lines. */
   void feedLines(Label& l, NodeId list) {
     for (std::uint32_t i = 0; i < count(list); i++) {
@@ -1232,6 +1282,8 @@ private:
       const Node& x = node(id);
       if (isTransparentGroup(id)) {
         feedLines(l, child(id, 0));
+      } else if (l.document && isDisplay(id)) {
+        displayLine(l, id);
       } else if (isBreakNode(x)) {
         lineBreak(l, id);
       } else if (x.kind == NodeKind::command && !x.flag && x.text == "noindent") {
@@ -1303,7 +1355,9 @@ private:
     if (cm == nullptr) return unknownAtom(at.text);
     std::vector<NodeId> nodes(args.size(), kNoNode);
     if (k < nodes.size()) nodes[k] = id;
-    TreeArgs a(*this, true, std::move(args), std::move(nodes), nullptr);
+    // Math, unless its cells or items are text: a list's handler asks.
+    TreeArgs a(*this, !x.flag, std::move(args), std::move(nodes), nullptr);
+    a.reportAt(x.span, "\\" + at.text);
     try {
       return cm->call(a);
     } catch (const std::exception& e) {
@@ -1318,18 +1372,59 @@ private:
   sptr<ArrayFormula> alignmentOf(NodeId env) {
     auto arr = sptrOf<ArrayFormula>();
     if (env == kNoNode || node(env).kind != NodeKind::environment) return arr;
+    const bool text = node(env).flag;
     for (std::uint32_t r = 0; r < count(env); r++) {
       const NodeId row = child(env, r);
       if (node(row).kind != NodeKind::row) continue;
       for (std::uint32_t c = 0; c < count(row); c++) {
         if (c > 0) arr->addCol();
-        lowerList(child(child(row, c), 0), *arr, 0);
+        if (text) {
+          textCell(child(child(row, c), 0), *arr);
+        } else {
+          lowerList(child(child(row, c), 0), *arr, 0);
+        }
       }
       const std::string& end = node(row).text;
       if (!node(row).raw.empty()) arr->addRowGap(Units::getDimen(node(row).raw));
       if (end == "\\" || end == "cr") arr->addRow();
     }
     return arr;
+  }
+
+  /** A command that works on the alignment it is in, not on the cell's
+   *  content: a rule, \intertext, \multicolumn, \cellcolor ... */
+  static bool actsOnAlignment(const Node& x) {
+    static const std::set<std::string> names = {"intertext", "multicolumn", "multirow",
+                                                "hdotsfor", "cellcolor", "rowcolor"};
+    return x.kind == NodeKind::command && !x.flag && (isRule(x.text) || names.count(x.text) > 0);
+  }
+
+  /** A cell of a table met in text: text, as LaTeX sets a tabular's, less
+   *  the spaces at either end (LaTeX's column template drops them). What
+   *  works on the alignment itself goes into it as in any cell, and the
+   *  text either side of it is one \text{} each. */
+  void textCell(NodeId list, ArrayFormula& arr) {
+    std::uint32_t from = 0, to = count(list);
+    while (from < to && isSpace(node(child(list, from)))) from++;
+    while (to > from && isSpace(node(child(list, to - 1)))) to--;
+    std::unique_ptr<Formula> text;
+    const auto flush = [&] {
+      if (text != nullptr && text->_root != nullptr) {
+        arr.add(sptrOf<FontStyleAtom>(FontStyle::rm, false, text->_root));
+      }
+      text.reset();
+    };
+    for (std::uint32_t i = from; i < to; i++) {
+      const NodeId id = child(list, i);
+      if (actsOnAlignment(node(id))) {
+        flush();
+        lowerItem(id, arr);
+        continue;
+      }
+      if (text == nullptr) text = std::make_unique<Formula>();
+      lowerItem(id, *text);
+    }
+    flush();
   }
 };
 

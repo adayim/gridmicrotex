@@ -978,7 +978,12 @@ NodeId Parser::parseBare(Bare bare, const std::string& who) {
     t = next();
     if (!t.lead.empty()) break;
   }
-  unread(std::move(t));
+  // TeX takes one optional space after a number or a dimension as part of
+  // it (`\kern3pt x`) -- but a line end in a label still breaks the line,
+  // as one after a control word does.
+  const bool optionalSpace = !arg.raw.empty() && t.tok.kind == TokKind::space &&
+                             !(_prose && _opts.lineEndsBreak && t.tok.lineEnds > 0);
+  if (!optionalSpace) unread(std::move(t));
   if (arg.raw.empty()) _diags.warn(arg.span, "missing value after " + who);
   return _ast.add(std::move(arg), {});
 }
@@ -1067,6 +1072,9 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
   if (spec == nullptr) {
     _diags.warn(at, "unknown environment " + name + ": read as an array");
   }
+  // A table or list met in text has text cells or items, as in LaTeX.
+  n.flag = spec != nullptr && spec->textInText && mode == Mode::text;
+  const Mode cellMode = n.flag ? Mode::text : Mode::math;
   std::vector<NodeId> kids;
   if (spec != nullptr) {
     for (const ArgSpec& a : spec->args) kids.push_back(parseArgument(a, mode, "\\begin{" + name + "}"));
@@ -1123,7 +1131,7 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
     std::vector<NodeId> cells;
     Node row;
     row.kind = NodeKind::row;
-    row.mode = Mode::math;
+    row.mode = cellMode;
     bool firstCell = true;
     while (true) {
       Stop cellStop;
@@ -1132,10 +1140,10 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
       const SourceSpan cellAt = peek().tok.span;
       if (firstCell) row.span = cellAt;
       firstCell = false;
-      const NodeId list = parseList(Mode::math, cellStop, cellAt);
+      const NodeId list = parseList(cellMode, cellStop, cellAt);
       Node cell;
       cell.kind = NodeKind::cell;
-      cell.mode = Mode::math;
+      cell.mode = cellMode;
       cell.span = cellAt;
       cells.push_back(_ast.add(std::move(cell), {list}));
       if (_rowEnded) {

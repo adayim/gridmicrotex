@@ -62,6 +62,25 @@ test_that("p{} does not disturb ordinary tables or leak between parses", {
   expect_equal(plain(), before)
 })
 
+test_that("a tabular met in text has text cells, as in LaTeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  cells <- function(tex, ...) {
+    r <- latex_tree(tex, ...)$records
+    r$text[r$type == "text"]
+  }
+  tab <- "\\begin{tabular}{lr} Term & Estimate \\\\ \\hline Intercept & $\\beta_1$ \\end{tabular}"
+  # A cell's words are one run of text, the spaces at either end of it
+  # dropped; its math is math, between $...$.
+  expect_identical(cells(tab), c("Term", "Estimate", "Intercept"))
+  expect_true(any(latex_tree(tab)$records$type == "glyph"))
+  expect_identical(cells(tab, input_mode = "document"), c("Term", "Estimate", "Intercept"))
+  # What \multicolumn spans is a cell too.
+  expect_identical(cells("\\begin{tabular}{ll}\\multicolumn{2}{c}{Both columns}\\end{tabular}"),
+                   "Both columns")
+  # Met in math, a tabular is an array, as it always was.
+  expect_length(cells("\\begin{tabular}{l}ab\\end{tabular}", input_mode = "math"), 0L)
+})
+
 # The release / re-init half of this lives in test-zz-release-cycle.R:
 # tearing MicroTeX down mid-suite strands the font registry that
 # test-text-font-auto.R depends on.

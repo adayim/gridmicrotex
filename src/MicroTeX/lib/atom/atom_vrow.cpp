@@ -81,8 +81,18 @@ sptr<Box> VRowAtom::createBox(Env& env) {
   } else {
     // convert atoms to boxes and add to the vertical box
     const size_t size = _elements.size();
-    for (int i = 0; i < size; i++) {
-      vb->add(_elements[i]->createBox(env));
+    vector<sptr<Box>> boxes;
+    float widest = 0;
+    for (auto& atom : _elements) {
+      boxes.push_back(atom->createBox(env));
+      widest = std::max(widest, boxes.back()->_width);
+    }
+    for (size_t i = 0; i < size; i++) {
+      // A display with no text width to centre in centres on the widest line.
+      if (env.textWidth() == POS_INF && dynamic_cast<DisplayAtom*>(_elements[i].get()) != nullptr) {
+        boxes[i] = sptrOf<HBox>(boxes[i], widest, Alignment::center);
+      }
+      vb->add(boxes[i]);
       if (i < size - 1) gapAfter(i);
       if (_addInterline && i < size - 1) vb->add(lineSpace);
     }
@@ -104,4 +114,12 @@ sptr<Box> VRowAtom::createBox(Env& env) {
     vb->_depth = t;
   }
   return vb;
+}
+
+sptr<Box> DisplayAtom::createBox(Env& env) {
+  auto box = _base->createBox(env);
+  const float width = env.textWidth();
+  // Too wide to centre: left as it is, like any line that overruns.
+  if (width == POS_INF || box->_width >= width) return box;
+  return sptrOf<HBox>(box, width, Alignment::center);
 }

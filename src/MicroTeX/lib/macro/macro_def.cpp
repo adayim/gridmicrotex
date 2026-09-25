@@ -72,6 +72,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_smallmatrixATATenv, "smallmatrix@@env"),
   mac(1, macro_matrixATATenv, "matrix@@env"),
   mac(2, macro_arrayATATenv, "array@@env"),
+  mac(2, macro_arrayATATenv, "tabular@@env"),
   mac(2, macro_alignATATenv, "align@@env"),
   mac(2, macro_alignedATATenv, "aligned@@env"),
   mac(2, macro_flalignATATenv, "flalign@@env"),

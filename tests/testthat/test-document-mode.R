@@ -56,6 +56,49 @@ test_that("math and environments are read in a document as anywhere else", {
   expect_identical(length(ys), 3L)
 })
 
+test_that("a display is centred on a line of its own, as in LaTeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  at <- function(tex, ...) {
+    t <- latex_tree(tex, input_mode = "document", ...)
+    min(t$records$x[t$records$type == "glyph"])
+  }
+  width <- function(...) as.numeric(latex_dims(...)$width)
+  tex <- "Before\n\\[ x^2 + y^2 \\]\nafter."
+  # Centred in the text width, which the grob then fills: a text width 100
+  # wider moves it 50 to the right. (Dimensions are whole bp, positions are
+  # not, so the rest compares positions.)
+  expect_equal(at(tex, max_width = 400) - at(tex, max_width = 300), 50, tolerance = 1e-6)
+  expect_equal(width(tex, input_mode = "document", max_width = 300), 300)
+  dw <- width(r"(\displaystyle x^2 + y^2)", input_mode = "math")
+  expect_lt(abs(at(tex, max_width = 300) - (300 - dw) / 2), 1)
+  # With no text width, on the widest line: a widest line 100 longer moves
+  # it 50 too.
+  expect_equal(at(paste0("\\kern100bp ", tex)) - at(tex), 50, tolerance = 1e-6)
+  # Each display LaTeX has sits between the text around it, starred or not.
+  for (d in c(r"(\[x\])", r"($$x$$)", r"(\begin{equation}x\end{equation})",
+              r"(\begin{equation*}x\end{equation*})", r"(\begin{align*}x\end{align*})",
+              r"(\begin{gather}x\end{gather})", r"(\begin{displaymath}x\end{displaymath})")) {
+    t <- latex_tree(paste0("Before ", d, " after."), input_mode = "document")
+    y <- tapply(t$records$y, t$records$type, max)
+    txt <- t$records$y[t$records$type == "text"]
+    expect_identical(length(unique(txt)), 2L, info = d)
+    expect_true(y[["glyph"]] > min(txt) && y[["glyph"]] < max(txt), info = d)
+  }
+  # In a label, display math stays in its line.
+  expect_identical(length(unique(runs("a $$x$$ b", mode = "mixed")$y)), 1L)
+})
+
+test_that("a display interrupts its paragraph without ending it", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  indent <- as.numeric(latex_dims("\\kern1.5em")$width)
+  # What follows the display goes on unindented, as in TeX ...
+  d <- runs("Before\n\\[ x \\]\nafter.")
+  expect_equal(d$x, c(indent, 0), tolerance = 1e-5)
+  # ... unless a blank line starts a new paragraph.
+  d <- runs("Before\n\\[ x \\]\n\nNew.")
+  expect_equal(d$x, c(indent, indent), tolerance = 1e-5)
+})
+
 test_that("a heading is numbered as LaTeX numbers it", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   d <- runs("\\section{A}\n\n\\subsection{B}\n\n\\subsubsection{C}")

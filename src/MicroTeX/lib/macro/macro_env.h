@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "atom/atom_basic.h"
+#include "atom/atom_font.h"
 #include "atom/atom_matrix.h"
 #include "core/formula.h"
 #include "macro/macro.h"
@@ -102,12 +103,19 @@ inline cmdmacro(gatheredATATenv) {
   return sptrOf<MultlineAtom>(args.isPartial(), arr, MultiLineType::gathered);
 }
 
+// What a \multicolumn or \multirow spans is a cell: math in an array, text
+// in a tabular met in text.
+inline sptr<Atom> cellContent(CommandArgs& args, std::size_t i) {
+  if (args.isMathMode()) return args.formula(i, true, true);
+  return sptrOf<FontStyleAtom>(FontStyle::rm, false, args.formula(i, false));
+}
+
 inline cmdmacro(multicolumn) {
   ArrayFormula* arr = args.alignmentHere();
   if (arr == nullptr) throw ex_parse("Command 'multicolumn' only available in array mode!");
   int n = 0;
   valueOf(args.text(1), n);
-  arr->add(sptrOf<MulticolumnAtom>(n, args.text(2), args.formula(3, true, true)));
+  arr->add(sptrOf<MulticolumnAtom>(n, args.text(2), cellContent(args, 3)));
   arr->addCol(n);
   return nullptr;
 }
@@ -161,7 +169,7 @@ inline cmdmacro(multirow) {
   if (arr == nullptr) throw ex_parse("Command \\multirow must used in array environment!");
   int n = 0;
   valueOf(args.text(1), n);
-  arr->add(sptrOf<MultiRowAtom>(n, args.text(2), args.formula(3, true, true)));
+  arr->add(sptrOf<MultiRowAtom>(n, args.text(2), cellContent(args, 3)));
   return nullptr;
 }
 
@@ -340,6 +348,15 @@ inline std::string listFormatLabel(const std::string& tmpl, int n) {
   return tmpl;
 }
 
+// An item of a list met in text is text, as in LaTeX, less the spaces at
+// either end of it, which TeX drops.
+inline std::string listTextItem(const std::string& item) {
+  size_t from = 0, to = item.size();
+  while (from < to && std::isspace((unsigned char)item[from]) != 0) from++;
+  while (to > from && std::isspace((unsigned char)item[to - 1]) != 0) to--;
+  return "\\text{" + item.substr(from, to - from) + "}";
+}
+
 // Lay a list body out as a single left-aligned column, one row per item,
 // each row prefixed with `marker(index)`.
 inline sptr<Atom> listBuild(
@@ -351,7 +368,7 @@ inline sptr<Atom> listBuild(
   std::string s;
   for (size_t i = 0; i < items.size(); i++) {
     if (i > 0) s += "\\\\";
-    s += marker((int)i + 1) + "\\quad{}" + items[i];
+    s += marker((int)i + 1) + "\\quad{}" + (args.isMathMode() ? items[i] : listTextItem(items[i]));
   }
   const auto arr = args.alignmentOfText(s);
   arr->checkDimensions();

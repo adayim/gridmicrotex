@@ -69,7 +69,9 @@ struct Token {
   /** Set on the `{` the expander opens a prelude environment's expansion
    *  with: 1 for one with code of its own (tabular, pmatrix), which a label
    *  sets as a unit, not as prose; 2 for one with none (document, table),
-   *  whose content a label sets as if it were not there. */
+   *  whose content a label sets as if it were not there; 3 for a display
+   *  (equation, displaymath), a unit that a document sets on a line of its
+   *  own. */
   std::uint8_t environment = 0;
 
   bool isControl() const {

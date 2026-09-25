@@ -19,9 +19,13 @@ test_that("a label lays out as its wrapped form did", {
               "Cost: \\$100 for $x$ items", "The value $-x$ here",
               "\\textcolor{red}{a\nb} c", "{a\\\\b}", "\n\nTitle\n\n", "a\n\n\nb",
               "$a\\\\b$ c", "\\begin{matrix}a&b\\end{matrix} after",
-              "A \\(x\\) B", "A \\[x\\] B", "x\n\\begin{tabular}{l}\\textit{p}\\end{tabular}")) {
+              "A \\(x\\) B", "A \\[x\\] B")) {
     expect_identical(records(s), suppressWarnings(records(latex_wrap(s), "math")), info = s)
   }
+  # Except a tabular's cells, which are text in a label, as in LaTeX, where
+  # the wrapped form kept them math.
+  s <- "x\n\\begin{tabular}{l}p q\\end{tabular}"
+  expect_identical(texts(s)$text, c("x", "p q"))
 })
 
 test_that("a line end in the prose breaks the line, even after a command", {

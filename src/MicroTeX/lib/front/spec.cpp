@@ -1,6 +1,7 @@
 #include "front/spec.h"
 
 #include <initializer_list>
+#include <set>
 #include <unordered_map>
 
 namespace microtex::front {
@@ -52,10 +53,12 @@ struct Table {
     for (const char* name : names) commands[name] = spec;
   }
 
-  void env(std::initializer_list<const char*> names, const char* args, EnvBody body) {
+  void env(std::initializer_list<const char*> names, const char* args, EnvBody body,
+           bool textInText = false) {
     EnvSpec spec;
     spec.args = parseArgs(args);
     spec.body = body;
+    spec.textInText = textInText;
     for (const char* name : names) envs[name] = spec;
   }
 
@@ -83,7 +86,8 @@ struct Table {
     add({"mathversion"}, "Rr");
     add({"fatalIfCmdConflict", "breakEverywhere"}, "r");
     add({"makeatletter", "makeatother"}, "");
-    add({"multicolumn", "multirow"}, "rrm");
+    // Their content is a cell's: text in a tabular met in text.
+    add({"multicolumn", "multirow"}, "rrc");
     // Rules end the row they are in, as they did in the old parser.
     add({"hline", "thickhline"}, "", Shape::prefix, Bare::none, true);
     add({"cline"}, "r", Shape::prefix, Bare::none, true);
@@ -207,7 +211,9 @@ struct Table {
          "gathered"},
         "", EnvBody::alignment);
     env({"array", "alignat", "alignedat"}, "r", EnvBody::alignment);
-    env({"itemize", "enumerate"}, "", EnvBody::raw);
+    // As array, but its cells are text, as LaTeX's are.
+    env({"tabular"}, "r", EnvBody::alignment, true);
+    env({"itemize", "enumerate"}, "", EnvBody::raw, true);
   }
 };
 
@@ -233,6 +239,16 @@ bool isHeading(const std::string& name) {
 bool isHeadingLine(const std::string& name) {
   const int level = headingLevel(name);
   return level >= 0 && level < 3;
+}
+
+bool isDisplayEnvironment(const std::string& name) {
+  static const std::set<std::string> display = {
+    // Built by the engine.
+    "align", "alignat", "flalign", "gather", "multline",
+    // Written in LaTeX by the prelude.
+    "displaymath", "equation", "eqnarray"};
+  const bool starred = name.size() > 1 && name.back() == '*';
+  return display.count(starred ? name.substr(0, name.size() - 1) : name) > 0;
 }
 
 const CommandSpec* findCommand(const std::string& name) {

@@ -406,8 +406,10 @@ test_that("emphasis does not apply to pre", {
 
   # Tables used to be in this list. They are not any more: cell content is
   # generated with its emphasis already applied, so font-weight inherits
-  # from `table` into the cells the way CSS says it should.
-  expect_equal(styles_of("| a |\n|---|\n| 1 |", "table { font-weight: bold }"), 2)
+  # from `table` into the cells the way CSS says it should. (The cells are
+  # text, so the style is bold over roman: the bold bit is what counts.)
+  s <- styles_of("| a |\n|---|\n| 1 |", "table { font-weight: bold }")
+  expect_true(all(bitwAnd(s, 2L) != 0L))
 })
 
 # --- tags and properties that had no effect at all -----------------------

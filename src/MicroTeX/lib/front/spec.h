@@ -78,6 +78,9 @@ enum class EnvBody : std::uint8_t {
 struct EnvSpec {
   std::vector<ArgSpec> args;
   EnvBody body = EnvBody::alignment;
+  /** Its cells or items are text when it is met in text, as in LaTeX
+   *  (tabular, itemize); met in math, they are math, as they always were. */
+  bool textInText = false;
 };
 
 /** The spec of an environment the engine builds, or nullptr. Environments
@@ -98,6 +101,10 @@ bool isHeadingLine(const std::string& name);
 bool isHeading(const std::string& name);
 /** How deep it sits: 0 for \section ... 3 for \paragraph. */
 int headingLevel(const std::string& name);
+
+/** An environment LaTeX sets as a display (equation, align, gather, ...),
+ *  starred or not, which a document sets on a line of its own. */
+bool isDisplayEnvironment(const std::string& name);
 
 }  // namespace microtex::front
 

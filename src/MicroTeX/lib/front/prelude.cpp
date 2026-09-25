@@ -16,7 +16,6 @@ namespace microtex::front {
 // is laid out as if they were not there.
 std::string_view preludeSource() {
   static constexpr std::string_view source = R"TEX(
-\newenvironment{tabular}[1]{\begin{array}{#1}}{\end{array}}
 \newenvironment{pmatrix}{\left(\begin{matrix}}{\end{matrix}\right)}
 \newenvironment{bmatrix}{\left[\begin{matrix}}{\end{matrix}\right]}
 \newenvironment{Bmatrix}{\left\{\begin{matrix}}{\end{matrix}\right\}}
@@ -60,7 +59,7 @@ std::string_view preludeSource() {
 \newenvironment{table*}[1][]{}{}
 \newenvironment{figure}[1][]{}{}
 \newenvironment{figure*}[1][]{}{}
-\newenvironment{tabular*}[2]{\begin{array}{#2}}{\end{array}}
+\newenvironment{tabular*}[2]{\begin{tabular}{#2}}{\end{tabular}}
 \newcommand{\maketitle}{}
 \newcommand{\title}[1]{}
 \newcommand{\author}[1]{}

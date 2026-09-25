@@ -51,6 +51,20 @@ public:
   sptr<Box> createBox(Env& env) override;
 };
 
+/** A display on a line of its own (`\[...\]`, equation, align ... in a
+ *  document), centred in the text width as TeX centres one in \hsize. With
+ *  no text width, the VRowAtom it is a line of centres it on its widest
+ *  line instead. */
+class DisplayAtom : public Atom {
+private:
+  sptr<Atom> _base;
+
+public:
+  explicit DisplayAtom(const sptr<Atom>& base) : _base(base) {}
+
+  sptr<Box> createBox(Env& env) override;
+};
+
 }  // namespace microtex
 
 #endif  // MICROTEX_ATOM_VROW_H

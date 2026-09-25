@@ -25,14 +25,35 @@ test_that("itemize puts each item on its own row, marker then content", {
 test_that("math inside an item is still set as math", {
   # Flattened to text these would come out as the literal characters, so
   # assert the two things only a math setter produces: a radical rule,
-  # and a superscript set smaller than its base.
-  g <- latex_grob("\\begin{enumerate}\\item x^2 \\item \\sqrt{y}\\end{enumerate}",
-                  render_mode = "path")
-  expect_true("line" %in% g$layout_df$type)
+  # and a superscript set smaller than its base. An item is text, as in
+  # LaTeX, so its math is between $...$; in math mode it is math anyway.
+  for (mode in c("mixed", "math")) {
+    src <- if (mode == "math") "\\begin{enumerate}\\item x^2 \\item \\sqrt{y}\\end{enumerate}"
+           else "\\begin{enumerate}\\item $x^2$ \\item $\\sqrt{y}$\\end{enumerate}"
+    g <- latex_grob(src, render_mode = "path", input_mode = mode)
+    expect_true("line" %in% g$layout_df$type, info = mode)
+    r <- latex_tree(src, input_mode = mode)$records
+    r <- r[!is.na(r$font_size), ]
+    expect_length(unique(r$font_size), 2L)
+    expect_lt(min(r$font_size), max(r$font_size))
+  }
+})
 
-  r <- items("\\begin{enumerate}\\item x^2\\end{enumerate}")
-  expect_length(unique(r$font_size), 2L)
-  expect_lt(min(r$font_size), max(r$font_size))
+test_that("an item is text, as in LaTeX, when the list is met in text", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- items("\\begin{itemize}\n\\item First point\n\\item Second\n\\end{itemize}")
+  # One run of text per item, its words kept apart and the spaces either
+  # end of it dropped, as TeX drops them.
+  expect_identical(r$text[r$type == "text"], c("First point", "Second"))
+  expect_identical(latex_tree("\\begin{itemize}\\item First point\\end{itemize}",
+                              input_mode = "document")$records$text[2], "First point")
+  # In math, an item is math, as it always was: letters one glyph each.
+  m <- latex_tree("\\begin{itemize}\\item ab\\end{itemize}", input_mode = "math")$records
+  expect_false(any(m$type == "text"))
+  # A problem in an item is reported, at the list, since the item is read
+  # again from its text: `^` outside math, as anywhere in text.
+  expect_warning(latex_grob("\\begin{itemize}\\item x^2\\end{itemize}"),
+                 "1:1: \\\\begin\\{itemize\\}: \\^ outside math")
 })
 
 test_that("the optional [label] changes the marker", {
@@ -84,11 +105,10 @@ test_that("lists survive default (mixed) input mode", {
   # body is wrapped in \text{} and split around nested environments.
   wrapped <- latex_wrap("\\begin{itemize}\\item a\\end{itemize}")
   expect_false(any(grepl("\\\\text\\{", wrapped)))
-  src <- paste0("\\begin{enumerate}\\item x^2 \\item \\text{T:}\\ ",
-                "\\begin{array}{|c|c|}a&b\\\\c&d\\end{array}\\end{enumerate}")
-  g_mixed <- latex_grob(src, render_mode = "path")
-  g_math <- latex_grob(src, render_mode = "path", input_mode = "math")
-  # mixed mode must not mangle the body: identical layout to math mode
-  expect_equal(g_mixed$bbox_h, g_math$bbox_h)
-  expect_equal(nrow(g_mixed$layout_df), nrow(g_math$layout_df))
+  # A label keeps a list whole, environment and all, whatever is inside.
+  src <- paste0("\\begin{enumerate}\\item $x^2$ \\item T: ",
+                "$\\begin{array}{|c|c|}a&b\\\\c&d\\end{array}$\\end{enumerate}")
+  r <- items(src)
+  expect_true("T: " %in% r$text)
+  expect_true(any(r$type == "line"))  # the array's rules
 })

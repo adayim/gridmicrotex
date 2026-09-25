@@ -48,7 +48,9 @@ enum class NodeKind : std::uint8_t {
    *  right delimiter argument. */
   leftRight,
   /** `\begin{name}...\end{name}`: `text` is the name, `raw` the body's
-   *  source text. Children: the environment's arguments, then its rows. */
+   *  source text. Children: the environment's arguments, then its rows.
+   *  `flag` says its cells or items are text (a tabular or a list met in
+   *  text). */
   environment,
   /** One row of an alignment. Children: its cells. `text` says what ended
    *  it: "\\", "cr", a rule's name, "intertext", or "" at the end;
