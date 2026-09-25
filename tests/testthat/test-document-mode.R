@@ -99,6 +99,55 @@ test_that("a display interrupts its paragraph without ending it", {
   expect_equal(d$x, c(indent, indent), tolerance = 1e-5)
 })
 
+test_that("a display environment is in display style, as \\[...\\] is", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # A fraction in display style keeps its numerator at the body size; in
+  # text style it would be at script size.
+  for (d in c("\\[\\frac{a}{b}\\]", "\\begin{equation}\\frac{a}{b}\\end{equation}",
+              "\\begin{align*}\\frac{a}{b}\\end{align*}")) {
+    r <- latex_tree(paste("x", d), input_mode = "document")$records
+    expect_identical(unique(r$font_size[!is.na(r$font_size)]), 20, info = d)
+  }
+})
+
+test_that("a list or a float is set apart from its paragraph", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # A list is a block, as in LaTeX: the text before it ends its line, and
+  # the text after it goes on unindented, as after a display.
+  d <- runs("Before\n\\begin{itemize}\\item one\\end{itemize}\nafter.")
+  expect_identical(d$text, c("Before", "one", "after."))
+  expect_length(unique(d$y), 3L)
+  expect_identical(d$x[d$text == "after."], 0)
+  # A float is set where it is written, on lines of its own.
+  d <- runs(paste0("Before \\begin{table}\\caption{Cap}",
+                   "\\begin{tabular}{l}cell\\end{tabular}\\end{table} after."))
+  expect_identical(d$text, c("Before", "Cap", "cell", "after."))
+  expect_length(unique(d$y), 4L)
+  # In a label, as before, a list is part of the line: it follows "Before".
+  d <- runs("Before \\begin{itemize}\\item one\\end{itemize}", mode = "mixed")
+  expect_gt(d$x[d$text == "one"], as.numeric(latex_dims("Before", input_mode = "mixed")$width))
+})
+
+test_that("center and \\centering centre a document's lines", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  x_of <- function(tex, word, ...) {
+    d <- runs(tex, ...)
+    d$x[d$text == word]
+  }
+  # Centred in the text width: 100 more of it moves a line 50 to the right.
+  # The text after the block is flush again.
+  for (tex in c("\\begin{center}Short\\end{center}\nafter",
+                "\\begin{figure}\\centering Short\\end{figure}\nafter")) {
+    expect_equal(x_of(tex, "Short", max_width = 400) - x_of(tex, "Short", max_width = 300),
+                 50, tolerance = 1e-6, info = tex)
+    expect_identical(x_of(tex, "after", max_width = 300), 0, info = tex)
+  }
+  # A float without \centering is flush left, as LaTeX sets it.
+  expect_identical(x_of("\\begin{figure}Short\\end{figure}", "Short", max_width = 300), 0)
+  # A label is not a document: \centering does nothing there, as before.
+  expect_identical(runs("\\centering Short", mode = "mixed")$x, 0)
+})
+
 test_that("a heading is numbered as LaTeX numbers it", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   d <- runs("\\section{A}\n\n\\subsection{B}\n\n\\subsubsection{C}")

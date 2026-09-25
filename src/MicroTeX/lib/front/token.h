@@ -71,7 +71,8 @@ struct Token {
    *  sets as a unit, not as prose; 2 for one with none (document, table),
    *  whose content a label sets as if it were not there; 3 for a display
    *  (equation, displaymath), a unit that a document sets on a line of its
-   *  own. */
+   *  own; 4 for a float (table, figure) and 5 for center, which have no
+   *  code either but which a document sets apart from its paragraphs. */
   std::uint8_t environment = 0;
 
   bool isControl() const {

@@ -10,10 +10,12 @@ namespace microtex::front {
 // Then the document commands a grob has no use for, which used to be
 // rewritten in R: the preamble, title and cross-reference metadata, and
 // alignment declarations, dropped with their arguments; skips and \hfill as
-// fixed space (a grob has no glue to fill); \emph, \textnormal, \par and
-// booktabs' rules as their nearest equivalents; \caption as a line of text.
-// document, table and figure have no code of their own, so their content
-// is laid out as if they were not there.
+// fixed space (a grob has no glue to fill); \emph, \textnormal, \newline
+// and booktabs' rules as their nearest equivalents; \caption as a line of
+// text.
+// document, table, figure and center have no code of their own, so a label
+// lays their content out as if they were not there; a document sets a
+// float, or center's lines, apart (lower.cpp).
 std::string_view preludeSource() {
   static constexpr std::string_view source = R"TEX(
 \newenvironment{pmatrix}{\left(\begin{matrix}}{\end{matrix}\right)}
@@ -59,13 +61,13 @@ std::string_view preludeSource() {
 \newenvironment{table*}[1][]{}{}
 \newenvironment{figure}[1][]{}{}
 \newenvironment{figure*}[1][]{}{}
+\newenvironment{center}{}{}
 \newenvironment{tabular*}[2]{\begin{tabular}{#2}}{\end{tabular}}
 \newcommand{\maketitle}{}
 \newcommand{\title}[1]{}
 \newcommand{\author}[1]{}
 \newcommand{\label}[1]{}
 \newcommand{\DeclareGraphicsExtensions}[1]{}
-\newcommand{\centering}{}
 \newcommand{\raggedright}{}
 \newcommand{\raggedleft}{}
 \newcommand{\flushleft}{}

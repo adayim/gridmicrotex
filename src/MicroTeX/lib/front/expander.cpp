@@ -734,9 +734,11 @@ struct Expander::Impl {
       pushExpansion("{" + substitute(def->body, args), e.tok.span);
       ExpToken open = rawUntaped();
       if (envs.find(name) == envs.end()) {  // the prelude's, not the input's
-        open.tok.environment = def->body.empty() && def->endBody.empty() ? 2
-                               : isDisplayEnvironment(name)             ? 3
-                                                                        : 1;
+        const bool transparent = def->body.empty() && def->endBody.empty();
+        open.tok.environment = !transparent             ? (isDisplayEnvironment(name) ? 3 : 1)
+                               : isFloatEnvironment(name) ? 4
+                               : name == "center"        ? 5
+                                                          : 2;
       }
       frames.back().pushback.push_back(std::move(open));
       return true;

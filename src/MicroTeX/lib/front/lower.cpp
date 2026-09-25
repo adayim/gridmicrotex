@@ -352,7 +352,7 @@ private:
     }
     // Only the lines of a label have indents to suppress; elsewhere it is
     // what it was when the prelude dropped it.
-    if (name == "noindent") return nullptr;
+    if (name == "noindent" || name == "centering") return nullptr;
     // What LaTeX draws for a reference it cannot resolve.
     if (name == "ref" || name == "pageref") return literalText("??");
     if (name == "eqref") return literalText("(?\?)");  // `??)` is a trigraph
@@ -1063,6 +1063,10 @@ private:
     bool afterHeading = false;
     /** A document, not a label: its displays go on lines of their own. */
     bool document = false;
+    /** Lines set now are centred: center, or \centering in a document. */
+    bool centring = false;
+    /** The current line was set while centring: centre it when it ends. */
+    bool lineCentred = false;
   };
 
   /** TeX's \parindent: 15pt at a 10pt font, so 1.5em, which follows the
@@ -1116,11 +1120,20 @@ private:
     return sptrOf<ScaleAtom>(bold, size);
   }
 
-  /** The indent a paragraph opens with, once something goes on its line. */
+  /** The indent a paragraph opens with, once something goes on its line.
+   *  A centred line has none. */
   void indentIfNeeded(Label& l) {
     if (!l.indentNext) return;
     l.indentNext = false;
-    l.line->add(parIndent());
+    if (!l.centring) l.line->add(parIndent());
+  }
+
+  /** The current line is done: centred, if it was set while centring. */
+  void finishLine(Label& l) {
+    if (l.lineCentred && l.line->_root != nullptr) {
+      l.line->_root = sptrOf<DisplayAtom>(l.line->_root);
+    }
+    l.lineCentred = false;
   }
 
   Formula& prose(Label& l) {
@@ -1133,6 +1146,7 @@ private:
   void startLine(Label& l) {
     if (!l.broken) return;
     l.broken = false;
+    finishLine(l);
     if (l.rows == nullptr) {
       // As a `\\` in a formula makes it: the first line is one row.
       l.rows = std::make_unique<ArrayFormula>();
@@ -1152,6 +1166,7 @@ private:
       l.line->add(sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root));
       l.drawn = true;
       l.afterHeading = false;
+      if (l.centring) l.lineCentred = true;
     }
     l.prose.reset();
   }
@@ -1171,6 +1186,7 @@ private:
     indentIfNeeded(l);
     l.drawn = true;
     l.afterHeading = false;
+    if (l.centring) l.lineCentred = true;
   }
 
   void lineBreak(Label& l, NodeId brk = kNoNode) {
@@ -1207,10 +1223,17 @@ private:
     return x.kind == NodeKind::group && x.aux == 3;
   }
 
-  /** The expansion of document, table or figure: nothing of their own, so
-   *  their content is set as if they were not there. */
+  /** The expansion of document, table, figure or center: nothing of their
+   *  own, so a label sets their content as if they were not there. */
   bool isTransparentGroup(NodeId id) const {
-    return node(id).kind == NodeKind::group && node(id).aux == 2;
+    const Node& x = node(id);
+    return x.kind == NodeKind::group && (x.aux == 2 || x.aux == 4 || x.aux == 5);
+  }
+
+  /** itemize or enumerate, which a document sets apart from its text. */
+  bool isList(NodeId id) const {
+    const Node& x = node(id);
+    return x.kind == NodeKind::environment && (x.text == "itemize" || x.text == "enumerate");
   }
 
   /** A space a break takes with it: not `~`, which TeX never drops. */
@@ -1231,6 +1254,7 @@ private:
     // Spaces at the very end are kept, as they were in the \text{}.
     beforeProse(l);
     endProse(l);
+    finishLine(l);
     if (l.rows != nullptr) {
       l.rows->checkDimensions();
       f._root = l.rows->getAsVRow();
@@ -1253,13 +1277,14 @@ private:
     l.afterHeading = true;
   }
 
-  /** A display on a line of its own, centred, with TeX's 10pt
-   *  \abovedisplayskip and \belowdisplayskip (1em at a 10pt font) around
-   *  it. A display interrupts a paragraph without ending it, so what
-   *  follows goes on unindented, as in TeX. */
-  void displayLine(Label& l, NodeId id) {
+  /** Something a document sets on a line of its own, `skip` above and
+   *  below it: a display, centred, with TeX's 10pt \abovedisplayskip and
+   *  \belowdisplayskip (1em at a 10pt font); or a list, with \topsep's
+   *  8pt. It interrupts a paragraph without ending it, so what follows
+   *  goes on unindented, as in TeX. */
+  void blockLine(Label& l, NodeId id, bool display, const char* skip) {
     lineBreak(l);
-    if (l.drawn) l.gap = "1em";
+    if (l.drawn) l.gap = skip;
     l.indentNext = false;
     beforeLine(l);
     Formula g;
@@ -1269,9 +1294,30 @@ private:
     } else {
       lowerItem(id, g);
     }
-    l.line->add(sptrOf<DisplayAtom>(g._root == nullptr ? sptrOf<EmptyAtom>() : g._root));
+    auto atom = g._root == nullptr ? sptrOf<EmptyAtom>() : g._root;
+    // An equation or align is in display style, as `\[...\]` is.
+    if (display && node(id).kind != NodeKind::math) atom = sptrOf<StyleAtom>(TexStyle::display, atom);
+    l.line->add(display ? sptrOf<DisplayAtom>(atom) : atom);
     lineBreak(l);
-    l.gap = "1em";
+    l.gap = skip;
+    l.indentNext = false;
+  }
+
+  /** The content of a group a document sets apart from its paragraphs,
+   *  `skip` above and below: a float (table, figure) where it is written,
+   *  as LaTeX's [h] placement sets one, with \intextsep's 12pt; or center,
+   *  its lines centred, with \topsep's 8pt. A \centering in either lasts
+   *  to its end. */
+  void blockLines(Label& l, NodeId id, bool centred, const char* skip) {
+    lineBreak(l);
+    if (l.drawn) l.gap = skip;
+    l.indentNext = false;
+    const bool centring = l.centring;
+    l.centring = centred;
+    feedLines(l, child(id, 0));
+    lineBreak(l);
+    l.centring = centring;
+    l.gap = skip;
     l.indentNext = false;
   }
 
@@ -1280,15 +1326,27 @@ private:
     for (std::uint32_t i = 0; i < count(list); i++) {
       const NodeId id = child(list, i);
       const Node& x = node(id);
-      if (isTransparentGroup(id)) {
+      if (l.document && x.kind == NodeKind::group && (x.aux == 4 || x.aux == 5)) {
+        blockLines(l, id, x.aux == 5, x.aux == 5 ? "0.8em" : "1.2em");
+      } else if (isTransparentGroup(id)) {
+        // \centering lasts to the end of the group it is in.
+        const bool centring = l.centring;
         feedLines(l, child(id, 0));
+        l.centring = centring;
       } else if (l.document && isDisplay(id)) {
-        displayLine(l, id);
+        blockLine(l, id, true, "1em");
+      } else if (l.document && isList(id)) {
+        blockLine(l, id, false, "0.8em");
       } else if (isBreakNode(x)) {
         lineBreak(l, id);
       } else if (x.kind == NodeKind::command && !x.flag && x.text == "noindent") {
         // LaTeX's one way to say this paragraph is not indented.
         l.indentNext = false;
+      } else if (x.kind == NodeKind::command && !x.flag && x.text == "centering") {
+        // Centres the paragraph it is in and those after it, to the end of
+        // the group; a label is a grob's own business, so only a document's.
+        l.centring = l.document;
+        if (l.document && !l.broken) l.lineCentred = true;
       } else if (x.kind == NodeKind::command && !x.flag && isHeadingLine(x.text)) {
         headingLine(l, id);
       } else if (isSpace(x)) {

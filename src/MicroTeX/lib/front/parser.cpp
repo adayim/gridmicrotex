@@ -601,7 +601,7 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
       // A heading is set as text, whatever mode it was met in.
       return _ast.add(std::move(n), {parseArgument(spec->args[0], Mode::text, who)});
     }
-    if (name == "noindent") return _ast.add(std::move(n), {});
+    if (name == "noindent" || name == "centering") return _ast.add(std::move(n), {});
     if (name == "ref" || name == "pageref" || name == "eqref" || name == "cite" ||
         name == "footnote") {
       std::vector<NodeId> args;

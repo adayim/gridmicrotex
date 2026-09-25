@@ -191,6 +191,8 @@ struct Table {
     add({"section", "subsection", "subsubsection", "paragraph"}, "t", Shape::prefix, Bare::none,
         true);
     add({"noindent"}, "", Shape::prefix, Bare::none, true);
+    // Centres the lines of a document until the end of its group.
+    add({"centering"}, "", Shape::prefix, Bare::none, true);
     // Commands a single grob cannot carry out: there is no bibliography to
     // cite, no counter to refer to and no page to put a note on. Each is
     // read so that it warns and draws what LaTeX draws when it cannot
@@ -239,6 +241,10 @@ bool isHeading(const std::string& name) {
 bool isHeadingLine(const std::string& name) {
   const int level = headingLevel(name);
   return level >= 0 && level < 3;
+}
+
+bool isFloatEnvironment(const std::string& name) {
+  return name == "table" || name == "table*" || name == "figure" || name == "figure*";
 }
 
 bool isDisplayEnvironment(const std::string& name) {
