@@ -1,6 +1,9 @@
 #ifndef GRIDMICROTEX_FRONT_LOWER_H
 #define GRIDMICROTEX_FRONT_LOWER_H
 
+#include <cstdint>
+#include <utility>
+
 #include "core/formula.h"
 #include "front/ast.h"
 #include "front/diagnostics.h"
@@ -22,13 +25,17 @@ namespace microtex::front {
  * An error a handler raises is recorded as a diagnostic at the command, and
  * the command is drawn as its name in red, as an unknown one is.
  */
+/** A byte range of the input: [first, second). */
+using BodyRange = std::pair<std::uint32_t, std::uint32_t>;
+
 /**
  * `lines`: build the tree as the rows of a label (mixed and document mode)
  * rather than as one formula. `paragraphs`: those rows are paragraphs, so
- * the first one is indented as TeX indents it.
+ * the first one is indented as TeX indents it. `body`: the part of the
+ * input that is drawn, when it holds \begin{document} (documentBody()).
  */
 void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines = false,
-               bool paragraphs = false);
+               bool paragraphs = false, BodyRange body = {0, UINT32_MAX});
 
 /**
  * `latex` read as a piece of input of its own, in math or text mode, and

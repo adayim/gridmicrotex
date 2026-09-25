@@ -164,8 +164,13 @@
 #' float, or a paper's body with `input_mode = "document"`. What a grob has
 #' no use for is read and dropped:
 #'
-#' * the preamble: `\documentclass`, `\usepackage` (which loads nothing:
-#'   every supported command is built in) and the `document` environment;
+#' * the preamble: in a whole LaTeX file, everything before
+#'   `\begin{document}` is read for its definitions (`\newcommand`,
+#'   `\definecolor`, ...) and not drawn, as LaTeX draws nothing there, and
+#'   what follows `\end{document}` is ignored. Package settings a grob
+#'   cannot honour are not warned about. `\documentclass`, `\usepackage`
+#'   (which loads nothing: every supported command is built in) and
+#'   `\bibliographystyle` draw nothing wherever they are;
 #' * title and cross-reference metadata: `\maketitle`, `\title{}`,
 #'   `\author{}`, `\label{}`;
 #' * alignment: `\raggedright`, `\raggedleft`, `\flushleft`, `\flushright`
@@ -198,8 +203,9 @@
 #' text, as in LaTeX, when the table or list is met in text; met in math
 #' (`input_mode = "math"`, or between `$...$`) they are math. A list item
 #' wraps at `max_width`, as a `p{}` cell does; a cell in an `l`, `c` or `r`
-#' column is one line. A `minipage` sets its paragraphs to its width (its
-#' optional height and inner position are read and not set).
+#' column is one line. A `minipage` sets its paragraphs to its width, and
+#' to its optional height, as LaTeX does. A heading too long for
+#' `max_width` wraps, its title hanging from its number.
 #'
 #' Commands that need the rest of a document warn and draw what LaTeX
 #' draws when it cannot resolve them: `\ref` and `\pageref` are a bold

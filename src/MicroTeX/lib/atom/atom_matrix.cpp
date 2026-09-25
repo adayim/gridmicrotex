@@ -735,13 +735,15 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
           if (i >= 1 && dynamic_cast<HlineAtom*>(_matrix->_array[i - 1][j].get()) != nullptr) {
             hb->add(sptrOf<StrutBox>(0.f, 2 * drt, 0.f, 0.f));
           }
-          if (at->colStart() >= 0) {
+          if (at->colStart() >= 0 && cols > 0) {
             // Partial rule: \cline{a-b}. Span left edge of column a to
             // right edge of column b (LaTeX 1-indexed columns are
-            // converted to 0-indexed by the macro).
+            // converted to 0-indexed by the macro). Both are kept inside
+            // the table: \cline{2-2} on one column read past its widths.
             int a = at->colStart();
             int b = at->colEnd();
             if (a < 0) a = 0;
+            if (a >= cols) a = cols - 1;
             if (b >= cols) b = cols - 1;
             if (b < a) b = a;
             float offset = 0;

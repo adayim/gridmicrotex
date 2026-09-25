@@ -14,12 +14,14 @@
 - A prime is TeX's `^{\prime}`, and `` ` `` and `"` in math are those characters, not a backprime and a double prime.
 - `\|` is ‖, as in LaTeX, so `Vmatrix` has double bars.
 - `\ref`, `\eqref`, `\pageref`, `\cite` and `\footnote` warn and draw what LaTeX draws when it cannot resolve them (a bold `??` or `[?]`, the note's text), instead of their names in red; so do natbib's `\citep`, `\citet` and `\citealp`.
-- A pasted paper's `abstract`, `thebibliography` (with `\bibitem` and `\newblock`), `\em`, `\boldmath` and booktabs' `\specialrule` are read, and `\textwidth`, `\linewidth` and `\columnwidth` work in lengths (`0.5\textwidth`).
-- Text under `\large`, `\small` and the other sizes, `\color` or `\textcolor` wraps at `max_width`, and so does a list item, hanging under its own text; they used to run past it. List labels of different widths are set right, as in LaTeX.
-- `minipage` sets its paragraphs to its width, placed by its `[t]`, `[c]` or `[b]` position, so figures can sit side by side.
+- A pasted paper's `abstract`, `thebibliography` (with `\bibitem` and `\newblock`), `\em`, `\boldmath` and booktabs' `\specialrule` are read, and `\textwidth`, `\linewidth` and `\columnwidth` work in lengths (`0.5\textwidth`). In a whole LaTeX file the preamble is read for its definitions and not drawn, and what follows `\end{document}` is ignored, as in LaTeX.
+- `\definecolor` takes xcolor's `RGB` (0–255) and `HTML` (hexadecimal) models.
+- Text under `\large`, `\small` and the other sizes, `\color` or `\textcolor` wraps at `max_width`, and so do a list item, hanging under its own text, and a heading, hanging from its number; they used to run past it. List labels of different widths are set right, as in LaTeX.
+- `minipage` sets its paragraphs to its width (and height, if given), placed by its `[t]`, `[c]` or `[b]` position, so figures can sit side by side.
 - A definition inside `{…}` ends with the group, as in TeX; `\gdef` is global.
 - An unknown environment draws its body instead of its name in red: as text in prose, as LaTeX does, and as an array in math. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
 - Starred forms work (`\operatorname*`, `\newcommand*`, `\DeclareMathOperator*`, `\hspace*`, `\\*`), as do `\def` with delimited parameters, `\let`, `\providecommand`, `\newenvironment` with arguments, and `\ensuremath`.
+- Bug fix: `\cline{a-b}` naming a column past a table's last read past the end of its column widths.
 - Bug fix: math drawn to base `pdf()` used a font the file did not embed, so it was garbled in any viewer without that font; `pdf()` and `postscript()` now draw it as outlines. Use `cairo_pdf()` for selectable math.
 - Bug fix: an argument without braces took one byte rather than one character, garbling `\frac αβ` and `\hat é`.
 - Bug fix: a macro argument's own `#2` was replaced by the macro's second argument.

@@ -1,6 +1,7 @@
 #include "front/lower.h"
 
 #include <algorithm>
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <set>
@@ -81,7 +82,8 @@ std::size_t codepoints(const std::string& s) {
 
 class Lowerer {
 public:
-  Lowerer(const Ast& ast, Diagnostics& diags) : _ast(ast), _diags(diags) {}
+  Lowerer(const Ast& ast, Diagnostics& diags, BodyRange body = {0, UINT32_MAX})
+      : _ast(ast), _diags(diags), _body(body) {}
 
   void run(Formula& f, bool lines, bool paragraphs) {
     if (_ast.root == kNoNode) return;
@@ -95,6 +97,9 @@ public:
 private:
   const Ast& _ast;
   Diagnostics& _diags;
+  /** The byte range of the input that is drawn: all of it, or a
+   *  document's body without its preamble and what follows it. */
+  BodyRange _body;
   /** Per node, whether a line break is in it: 0 not known yet, 1 no, 2 yes. */
   std::vector<std::int8_t> _breaks;
   /** The same for a document's block structure (hasBlock). */
@@ -1166,17 +1171,32 @@ private:
     const int level = headingLevel(x.text);
     auto row = sptrOf<RowAtom>();
     const std::string number = headingNumber(level, x.star);
+    const auto numbered = [&]() {
+      auto lead = sptrOf<RowAtom>();
+      lead->add(sptrOf<TextAtom>(number, false));
+      lead->add(sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f));
+      return lead;
+    };
     if (!number.empty()) {
       row->add(sptrOf<TextAtom>(number, false));
       row->add(sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f));
     }
-    // The title is the last argument; the first is the short one.
+    // The title is the last argument; the first is the short one. Lowered
+    // once (its warnings are said once) and shared by both settings below.
     const NodeId title = child(id, count(id) - 1);
-    row->add(argumentFormula(title, rawOf(title), false));
-    auto bold = sptrOf<FontStyleAtom>(FontStyle::bf, false, row);
+    const sptr<Atom> text = argumentFormula(title, rawOf(title), false);
+    row->add(text);
+    // The heading's font and size, around any part of it.
     const float size = headingSize(level);
-    if (size == 1.f) return bold;
-    return sptrOf<ScaleAtom>(bold, size);
+    const auto styled = [&](const sptr<Atom>& a) -> sptr<Atom> {
+      auto bold = sptrOf<FontStyleAtom>(FontStyle::bf, false, a);
+      if (size == 1.f) return bold;
+      return sptrOf<ScaleAtom>(bold, size);
+    };
+    // A heading on a line of its own hangs its number, as LaTeX does, if
+    // the title has to be broken. \paragraph runs into its text instead.
+    if (number.empty() || !isHeadingLine(x.text) || text == nullptr) return styled(row);
+    return sptrOf<HangingAtom>(styled(row), styled(numbered()), styled(text));
   }
 
   /** The indent a paragraph opens with, once something goes on its line.
@@ -1307,10 +1327,14 @@ private:
   void runLines(Formula& f, bool paragraphs) {
     Label l(f);
     l.document = paragraphs;
-    // A document opens a paragraph, so its first line is indented too.
+    // A document opens a paragraph, so its first line is indented too. It
+    // starts, as TeX does, between paragraphs, where a space is nothing.
     l.indentNext = paragraphs;
-    feedLines(l, _ast.root);
-    // Spaces at the very end are kept, as they were in the \text{}.
+    l.afterBreak = paragraphs;
+    feedBody(l);
+    // Spaces at the very end are kept in a label, as they were in the
+    // \text{}; a document's last paragraph drops them, as \par does.
+    if (paragraphs) l.spaces.clear();
     beforeProse(l);
     endProse(l);
     finishLine(l);
@@ -1462,9 +1486,34 @@ private:
 
   /** The items of `list` onto the label's lines. */
   void feedLines(Label& l, NodeId list) {
-    for (std::uint32_t i = 0; i < count(list); i++) {
-      const NodeId id = child(list, i);
-      const Node& x = node(id);
+    for (std::uint32_t i = 0; i < count(list); i++) feedItem(l, child(list, i));
+  }
+
+  /** A whole input onto the label's lines, but for its preamble and what
+   *  follows \end{document}: LaTeX draws neither. The preamble is still
+   *  lowered, for what its commands do (\definecolor, \newcolumntype,
+   *  \graphicspath), into lines that are thrown away. */
+  void feedBody(Label& l) {
+    const NodeId root = _ast.root;
+    for (std::uint32_t i = 0; i < count(root); i++) {
+      const NodeId id = child(root, i);
+      const std::uint32_t at = node(id).span.offset;
+      if (at >= _body.second) break;
+      if (at >= _body.first) {
+        feedItem(l, id);
+        continue;
+      }
+      Formula scratch;
+      Label preamble(scratch);
+      preamble.document = l.document;
+      feedItem(preamble, id);
+    }
+  }
+
+  /** One item of a list onto the label's lines. */
+  void feedItem(Label& l, NodeId id) {
+    const Node& x = node(id);
+    {
       if (l.document && x.kind == NodeKind::group && (x.aux == 4 || x.aux == 5)) {
         blockLines(l, id, x.aux == 5, x.aux == 5 ? "0.8em" : "1.2em");
       } else if (isTransparentGroup(id)) {
@@ -1514,7 +1563,7 @@ private:
           beforeLine(l);
           auto g = build(list);
           l.line->add(sptrOf<StyleAtom>(TexStyle::display, g == nullptr ? sptrOf<EmptyAtom>() : g));
-          continue;
+          return;
         }
         for (std::uint32_t j = 0; j < count(list); j++) {
           const NodeId m = child(list, j);
@@ -1565,14 +1614,21 @@ private:
   }
 
   /** \begin{minipage}[position][height][inner position]{width}: its
-   *  body set to its width. The height and the inner position, which only
-   *  matter for a box taller than its text, are not set. */
+   *  body set to its width, and to its height when that is taller. The
+   *  inner position is the position unless given, as in LaTeX. */
   sptr<Atom> minipage(NodeId id) {
-    const std::string pos = rawOf(child(id, 0));
-    const auto at = pos.find_first_not_of(" \t\r\n");
-    const char p = at != std::string::npos && (pos[at] == 't' || pos[at] == 'b') ? pos[at] : 'c';
+    // The first letter of an optional argument, or `fallback`.
+    const auto letter = [&](NodeId arg, const char* allowed, char fallback) {
+      const std::string s = rawOf(arg);
+      const auto at = s.find_first_not_of(" \t\r\n");
+      if (at == std::string::npos || std::strchr(allowed, s[at]) == nullptr) return fallback;
+      return s[at];
+    };
+    const char p = letter(child(id, 0), "tb", 'c');
+    const char inner = letter(child(id, 2), "tbcs", p);
+    const Dimen height = Units::getDimen(rawOf(child(id, 1)));
     const Dimen width = Units::getDimen(rawOf(child(id, 3)));
-    return sptrOf<MinipageAtom>(subDocument(child(id, count(id) - 1)), width, p);
+    return sptrOf<MinipageAtom>(subDocument(child(id, count(id) - 1)), width, p, height, inner);
   }
 
   sptr<Atom> environment(NodeId id) {
@@ -1674,8 +1730,8 @@ private:
 }  // namespace
 
 void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines,
-               bool paragraphs) {
-  Lowerer(ast, diagnostics).run(formula, lines, paragraphs);
+               bool paragraphs, BodyRange body) {
+  Lowerer(ast, diagnostics, body).run(formula, lines, paragraphs);
 }
 
 sptr<Atom> buildFragment(const std::string& latex, bool math) {

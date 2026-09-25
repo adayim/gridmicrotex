@@ -21,6 +21,14 @@ test_that("a line end is a space, as TeX reads it", {
   expect_false(m$y[1] == m$y[2])
 })
 
+test_that("a paragraph neither starts nor ends with a space, as in TeX", {
+  # Between paragraphs TeX is in vertical mode, where a space is nothing,
+  # and \par drops the space a paragraph ends with.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_identical(runs("\nText.\n"), runs("Text."))
+  expect_identical(runs("  Text.  "), runs("Text."))
+})
+
 test_that("a blank line starts a paragraph, however many there are", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   one <- runs("one\n\ntwo")
@@ -398,6 +406,37 @@ test_that("a minipage sets its body to its width, placed as LaTeX places it", {
   expect_equal(two$x[two$text == "R"] - two$x[two$text == "L"], 150, tolerance = 5)
   # Its body is paragraphs, so markdown does not take it for math.
   expect_false("minipage" %in% .math_envs())
+})
+
+test_that("a heading that wraps hangs its title from the number, as LaTeX does", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  title <- "A rather long section title that has to wrap"
+  r <- runs(sprintf("\\section{%s}", title), max_width = 200)
+  number <- r[r$text == "1", ]
+  words <- r[r$text != "1", ]
+  expect_gt(length(unique(round(words$y))), 2L)
+  # Every line of the title starts where its first line does.
+  starts <- tapply(words$x, round(words$y), min)
+  expect_identical(length(unique(round(starts, 2))), 1L)
+  expect_gt(min(starts), number$x)
+  # One that fits is set as it always was, on one line.
+  expect_identical(runs("\\section{Short}", max_width = 200),
+                   runs("\\section{Short}", max_width = 5000))
+})
+
+test_that("a minipage taller than its body puts the room where it is told", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  at <- function(inner) {
+    r <- runs(sprintf("A \\begin{minipage}[t][80pt][%s]{60pt}one\\end{minipage} B", inner))
+    c(a = r$y[r$text == "A "], one = r$y[r$text == "one"])
+  }
+  top <- at("t"); mid <- at("c"); bottom <- at("b")
+  # [t] meets the body's first line; the room goes below it (t), around
+  # it (c) or above it (b), so the body moves down in that order.
+  expect_equal(top[["a"]], top[["one"]])
+  expect_lt(top[["one"]], mid[["one"]])
+  expect_lt(mid[["one"]], bottom[["one"]])
+  expect_equal(bottom[["one"]] - top[["one"]], 2 * (mid[["one"]] - top[["one"]]), tolerance = 0.5)
 })
 
 test_that("\\textwidth and \\linewidth are the text width, as in LaTeX", {

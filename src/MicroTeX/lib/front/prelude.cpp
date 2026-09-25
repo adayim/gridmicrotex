@@ -59,6 +59,7 @@ std::string_view preludeSource() {
 \newcommand{\parr}{\mathbin{\rotatebox[origin=c]{180}{\&}}}
 \newcommand{\documentclass}[2][]{}
 \newcommand{\usepackage}[2][]{}
+\newcommand{\bibliographystyle}[1]{}
 \newenvironment{document}{}{}
 \newenvironment{table}[1][]{}{}
 \newenvironment{table*}[1][]{}{}

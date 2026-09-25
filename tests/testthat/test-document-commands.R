@@ -18,6 +18,42 @@ test_that("the preamble, title metadata and alignment declarations draw nothing"
                          "\\usepackage{amsmath}\\begin{document}$x^2$\\end{document}"),
                   "$x^2$")
   expect_draws_as("\\maketitle\\title{Foo}\\author{Bar}\\label{eq:1}content", "content")
+  expect_draws_as("\\bibliographystyle{plain}content", "content")
+})
+
+test_that("a whole file's preamble is read for its definitions and not drawn", {
+  # LaTeX draws nothing before \begin{document}; a paper's preamble is full
+  # of package settings a grob cannot honour, which must neither be drawn
+  # nor warned about. Its definitions still hold, and what follows
+  # \end{document} is ignored, as in LaTeX.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  file <- paste(
+    "\\documentclass{article}",
+    "\\PassOptionsToPackage{numbers, compress}{natbib}",
+    "\\RequirePackage[final]{nips}\\hypersetup{colorlinks=true}",
+    "stray preamble text \\unknowncommand{x}",
+    "\\newcommand{\\R}{\\mathbb{R}}",
+    "\\definecolor{brand}{RGB}{200,30,30}",
+    "\\begin{document}",
+    "Body $\\R$ in \\textcolor{brand}{colour}.",
+    "\\end{document}",
+    "Notes after the end.", sep = "\n")
+  for (mode in c("document", "mixed")) {
+    expect_silent(g <- latex_grob(file, input_mode = mode))
+    body <- latex_grob(paste0("\\newcommand{\\R}{\\mathbb{R}}\\definecolor{brand}{RGB}{200,30,30}",
+                              "Body $\\R$ in \\textcolor{brand}{colour}."),
+                       input_mode = mode)
+    expect_identical(g$layout_df$text, body$layout_df$text, info = mode)
+    expect_identical(g$layout_df$color, body$layout_df$color, info = mode)
+    # The preamble's \definecolor took effect (xcolor's RGB model, 0-255).
+    expect_identical(g$layout_df$color[g$layout_df$text %in% "colour"], "#C81E1E", info = mode)
+  }
+  # xcolor's HTML model too.
+  r <- latex_tree("\\definecolor{c}{HTML}{C81E1E}\\textcolor{c}{x}")$records
+  expect_identical(r$color[r$text %in% "x"], "#C81E1E")
+  # Without \begin{document} nothing is taken for a preamble.
+  expect_warning(latex_grob("\\unknowncommand{x} text", input_mode = "document"),
+                 "unknown command")
   expect_draws_as("\\graphicspath{{figs/}}\\DeclareGraphicsExtensions{.png}x", "x")
   expect_draws_as("% leading comment\n$x^2$", "$x^2$")
   for (cmd in c("centering", "raggedright", "raggedleft", "flushleft", "flushright",

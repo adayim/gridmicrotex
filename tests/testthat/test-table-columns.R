@@ -3,6 +3,16 @@
 # only `l r c | @ * >` and `p{}` was a hard parse error, so a wide table
 # could only overflow.
 
+test_that("\\cline past the last column stays inside the table", {
+  # \cline{2-2} on a one-column table read past the column widths (found by
+  # the engine fuzzer); it clamps to the last column, as its end already did.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  t <- latex_tree("\\begin{array}{l}a\\\\ \\cline{2-2} b\\end{array}", input_mode = "math")
+  rule <- t$records[t$records$type == "line", ]
+  expect_equal(nrow(rule), 1L)
+  expect_lte(rule$x2, t$bbox[["width"]] + 0.01)
+})
+
 test_that("p{} wraps a cell to a fixed measure", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   long <- "\\text{the quick brown fox jumps over the lazy dog again and again}"

@@ -43,10 +43,20 @@ class Diagnostics {
 public:
   explicit Diagnostics(std::size_t limit = 100) : _limit(limit) {}
 
+  /** Warnings at byte offsets in [from, to) are not kept: a preamble's, say,
+   *  whose package settings a grob cannot honour and does not draw. Errors
+   *  still are. */
+  void mute(std::uint32_t from, std::uint32_t to) { _muted.emplace_back(from, to); }
+
   void add(Severity severity, const SourceSpan& span, std::string message) {
     if (severity == Severity::error && !_hasError) {
       _hasError = true;
       _firstError = {severity, span, message};
+    }
+    if (severity == Severity::warning) {
+      for (const auto& [from, to] : _muted) {
+        if (span.offset >= from && span.offset < to) return;
+      }
     }
     if (_items.size() >= _limit) {
       _dropped++;
@@ -75,6 +85,7 @@ public:
 
 private:
   std::vector<Diagnostic> _items;
+  std::vector<std::pair<std::uint32_t, std::uint32_t>> _muted;
   bool _hasError = false;
   Diagnostic _firstError{Severity::error, {}, {}};
   std::size_t _dropped = 0;

@@ -223,8 +223,13 @@ output of \code{print.xtable()} or \code{knitr::kable()}, a \code{table}
 float, or a paper's body with \code{input_mode = "document"}. What a grob has
 no use for is read and dropped:
 \itemize{
-\item the preamble: \verb{\\documentclass}, \verb{\\usepackage} (which loads nothing:
-every supported command is built in) and the \code{document} environment;
+\item the preamble: in a whole LaTeX file, everything before
+\verb{\\begin\{document\}} is read for its definitions (\verb{\newcommand},
+\verb{\\definecolor}, ...) and not drawn, as LaTeX draws nothing there, and
+what follows \verb{\\end\{document\}} is ignored. Package settings a grob
+cannot honour are not warned about. \verb{\\documentclass}, \verb{\\usepackage}
+(which loads nothing: every supported command is built in) and
+\verb{\\bibliographystyle} draw nothing wherever they are;
 \item title and cross-reference metadata: \verb{\\maketitle}, \verb{\\title\{\}},
 \verb{\\author\{\}}, \verb{\\label\{\}};
 \item alignment: \verb{\\raggedright}, \verb{\\raggedleft}, \verb{\\flushleft}, \verb{\\flushright}
@@ -258,8 +263,9 @@ A \code{tabular}'s cells and the items of \code{itemize} and \code{enumerate} ar
 text, as in LaTeX, when the table or list is met in text; met in math
 (\code{input_mode = "math"}, or between \verb{$...$}) they are math. A list item
 wraps at \code{max_width}, as a \verb{p\{\}} cell does; a cell in an \code{l}, \code{c} or \code{r}
-column is one line. A \code{minipage} sets its paragraphs to its width (its
-optional height and inner position are read and not set).
+column is one line. A \code{minipage} sets its paragraphs to its width, and
+to its optional height, as LaTeX does. A heading too long for
+\code{max_width} wraps, its title hanging from its number.
 
 Commands that need the rest of a document warn and draw what LaTeX
 draws when it cannot resolve them: \verb{\\ref} and \verb{\\pageref} are a bold

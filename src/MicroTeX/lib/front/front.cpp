@@ -43,6 +43,40 @@ Diagnostics& lastStore() {
   return last;
 }
 
+// The part of `latex` that a LaTeX file draws: from its \begin{document}
+// to the end of its \end{document}. Found as the lexer would find them --
+// outside `%` comments, and at the top level, outside braces. The whole
+// input when it has no \begin{document}.
+BodyRange documentBody(const std::string& s) {
+  static const std::string begin = "\\begin{document}";
+  static const std::string end = "\\end{document}";
+  BodyRange body{0, UINT32_MAX};
+  bool found = false;
+  int depth = 0;
+  for (std::size_t i = 0; i < s.size(); i++) {
+    const char c = s[i];
+    if (c == '%') {
+      while (i < s.size() && s[i] != '\n') i++;
+    } else if (c == '{') {
+      depth++;
+    } else if (c == '}') {
+      depth--;
+    } else if (c == '\\') {
+      if (depth == 0 && !found && s.compare(i, begin.size(), begin) == 0) {
+        body.first = static_cast<std::uint32_t>(i);
+        found = true;
+        i += begin.size() - 1;
+      } else if (depth == 0 && found && s.compare(i, end.size(), end) == 0) {
+        body.second = static_cast<std::uint32_t>(i + end.size());
+        break;
+      } else {
+        i++;  // what a backslash escapes: `\%`, `\{`, `\\`
+      }
+    }
+  }
+  return found ? body : BodyRange{0, UINT32_MAX};
+}
+
 }  // namespace
 
 void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
@@ -53,11 +87,17 @@ void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
   // Both prose modes start in text and are laid out as rows; they differ in
   // what breaks a row -- a line end in mixed, a blank line in a document.
   const bool prose = mixed || document;
+  // A whole LaTeX file: its preamble is read for its definitions and not
+  // drawn, as LaTeX does; nor is what follows \end{document}. Package
+  // settings a grob cannot honour say nothing about it.
+  const BodyRange body = prose ? documentBody(latex) : BodyRange{0, UINT32_MAX};
+  if (body.first > 0) diags.mute(0, body.first);
+  if (body.second != UINT32_MAX) diags.mute(body.second, UINT32_MAX);
   const Ast ast =
     parseLatex(latex, prose ? Mode::text : Mode::math, diags, mixed, document);
   // A capacity ran out: what was read is not what the input means.
   if (const Diagnostic* e = diags.firstError()) throw ex_parse(e->message);
-  lowerInto(ast, formula, diags, prose, document);
+  lowerInto(ast, formula, diags, prose, document, body);
   lastStore() = std::move(diags);
 }
 

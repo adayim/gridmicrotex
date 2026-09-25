@@ -163,15 +163,46 @@ sptr<Box> MinipageAtom::createBox(Env& env) {
     vb = sptrOf<VBox>();
     vb->add(box);
   }
-  const float total = vb->_height + vb->_depth;
-  if (_position == 't') {
-    vb->_height = vb->_children.front()->_height;
-  } else if (_position == 'b') {
-    vb->_height = total - vb->_children.back()->_depth;
-  } else {
-    vb->_height = total / 2 + env.axisHeight();
+  // Measured from its top: the body's own height, and where its first and
+  // last baselines are in it.
+  const float body = vb->_height + vb->_depth;
+  const float first = vb->_children.front()->_height;
+  const float last = body - vb->_children.back()->_depth;
+  // A height of its own, taller than the body: the room goes where the
+  // inner position puts the body (below it for `t`, above for `b`).
+  float total = body;
+  float above = 0;
+  const float height = Units::fsize(_height, env);
+  if (_height.isValid() && height > body) {
+    const float room = height - body;
+    above = _inner == 't' ? 0.f : _inner == 'b' ? room : room / 2;
+    total = height;
   }
-  vb->_depth = total - vb->_height;
+  const float baseline = _position == 't'   ? above + first
+                         : _position == 'b' ? above + last
+                                            : total / 2 + env.axisHeight();
+  if (above > 0) {
+    // Drawn from its top down: a strut there moves the body down by it.
+    vb->add(0, sptrOf<StrutBox>(0.f, above, 0.f, 0.f));
+  }
+  vb->_height = baseline;
+  vb->_depth = total - baseline;
   if (!measured) return vb;
   return sptrOf<HBox>(vb, width, Alignment::left);
+}
+
+sptr<Box> HangingAtom::createBox(Env& env) {
+  auto whole = _whole->createBox(env);
+  const float width = env.textWidth();
+  if (width == POS_INF || whole->_width <= width) return whole;
+  auto lead = _lead->createBox(env);
+  const float rest = width - lead->_width;
+  if (rest <= 0) return whole;
+  const auto [split, lines] = BoxSplitter::split(_rest->createBox(env), rest, env.lineSpace());
+  if (!split) return whole;
+  // The title's lines are a column whose baseline is their first line.
+  auto row = sptrOf<HBox>();
+  row->add(lead);
+  row->add(lines);
+  return row;
 }
