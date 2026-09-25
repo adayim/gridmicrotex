@@ -73,6 +73,8 @@ enum class EnvBody : std::uint8_t {
   alignment,
   /** Kept as text for its builder (itemize, enumerate). */
   raw,
+  /** Text up to its \end, paragraphs and all: a minipage's. */
+  text,
 };
 
 struct EnvSpec {
@@ -109,6 +111,14 @@ bool isDisplayEnvironment(const std::string& name);
 /** A float (table, figure), which a document sets where it is written, as
  *  LaTeX's [h] placement does, apart from the paragraphs around it. */
 bool isFloatEnvironment(const std::string& name);
+
+/** A prelude environment of text blocks (abstract, thebibliography): its
+ *  expansion is transparent, as document's is, so a document sets the
+ *  headings and paragraphs in it as its own. */
+bool isBlockEnvironment(const std::string& name);
+
+/** \cite, and natbib's \citep, \citet and \citealp. */
+bool isCitation(const std::string& name);
 
 }  // namespace microtex::front
 

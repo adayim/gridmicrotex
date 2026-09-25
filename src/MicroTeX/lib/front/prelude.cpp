@@ -10,9 +10,12 @@ namespace microtex::front {
 // Then the document commands a grob has no use for, which used to be
 // rewritten in R: the preamble, title and cross-reference metadata, and
 // alignment declarations, dropped with their arguments; skips and \hfill as
-// fixed space (a grob has no glue to fill); \emph, \textnormal, \newline
-// and booktabs' rules as their nearest equivalents. (\caption is the
-// parser's, which knows whether it is in a document.)
+// fixed space (a grob has no glue to fill); \emph, \em, \textnormal,
+// \newline and booktabs' rules as their nearest equivalents. (\caption is
+// the parser's, which knows whether it is in a document.) article's
+// abstract, and a bibliography as the list of [n] it sets, whose keys have
+// nothing to point at; both are transparent, as their text is a document's
+// (isBlockEnvironment()).
 // document, table, figure and center have no code of their own, so a label
 // lays their content out as if they were not there; a document sets a
 // float, or center's lines, apart (lower.cpp).
@@ -79,6 +82,11 @@ std::string_view preludeSource() {
 \newcommand{\hfill}{\quad}
 \newcommand{\vfill}{\vspace{1em}}
 \newcommand{\emph}[1]{\textit{#1}}
+\newcommand{\em}{\it}
+\newenvironment{abstract}{\small\begin{center}\textbf{Abstract}\end{center}}{\par}
+\newenvironment{thebibliography}[1]{\section*{References}\begin{enumerate}[{[}\arabic*{]}]}{\end{enumerate}}
+\newcommand{\bibitem}[2][]{\item}
+\newcommand{\newblock}{}
 \newcommand{\textnormal}[1]{\text{#1}}
 \newcommand{\newline}{\\}
 \newcommand{\toprule}{\thickhline}

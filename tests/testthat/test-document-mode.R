@@ -267,3 +267,144 @@ test_that("latex_options and the grob functions accept the document mode", {
   reset_latex_options()
   expect_error(latex_options(input_mode = "paragraph"), "should be one of")
 })
+
+test_that("text under \\large, \\color or \\textcolor wraps at max_width", {
+  # A size or a colour is one box around its text, which the line breaker
+  # could not enter: a paper's \small abstract ran off the page.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  long <- paste(rep("word", 40), collapse = " ")
+  for (mode in c("document", "mixed")) {
+    for (tex in c(sprintf("\\large %s", long), sprintf("\\color{red} %s", long),
+                  sprintf("\\textcolor{red}{%s}", long), sprintf("A {\\small %s}", long))) {
+      t <- latex_tree(tex, input_mode = mode, max_width = 200)
+      r <- t$records[t$records$type == "text", ]
+      expect_lte(t$bbox[["width"]], 200, label = paste(mode, tex))
+      expect_gt(length(unique(round(r$y))), 5L, label = paste(mode, tex))
+    }
+    # What the box did it still does, to every piece: the colour...
+    r <- latex_tree(sprintf("\\color{red} %s", long), input_mode = mode,
+                    max_width = 200)$records
+    expect_true(all(r$color[r$type == "text"] == "#FF0000"), info = mode)
+    # ...and the size, word for word as \large sets a line that fits.
+    big <- latex_tree(sprintf("\\large %s", long), input_mode = mode, max_width = 200)$records
+    one <- latex_tree("\\large word word", input_mode = mode)$records
+    expect_identical(unique(big$font_size), unique(one$font_size), info = mode)
+  }
+  # A line that fits is never opened, so any measure it fits in sets it the
+  # same (the harness holds it to the layouts drawn before).
+  fits <- "\\large a few {\\color{blue} words} here"
+  expect_identical(latex_tree(fits, input_mode = "document", max_width = 1000)$records,
+                   latex_tree(fits, input_mode = "document", max_width = 5000)$records)
+})
+
+# --- what a pasted paper uses (Stage 9d, from rendering arXiv 1706.03762) ---
+
+test_that("\\em is italic, as \\emph is", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Italic, and set where \emph sets it (\emph's \textit also records the
+  # roman bit, which draws nothing different).
+  em <- latex_tree("a {\\em b} c", input_mode = "document")$records
+  emph <- latex_tree("a \\emph{b} c", input_mode = "document")$records
+  expect_true(bitwAnd(em$font_style[em$text == "b"], 4L) != 0)
+  expect_identical(em[, c("text", "x", "y")], emph[, c("text", "x", "y")])
+})
+
+test_that("natbib's citations draw what natbib draws for an unknown key", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  drawn <- function(tex) {
+    r <- suppressWarnings(latex_tree(tex, input_mode = "document"))$records
+    paste(r$text[r$type == "text"], collapse = "")
+  }
+  expect_identical(drawn("\\citep{a}"), drawn("\\cite{a}"))
+  expect_identical(drawn("\\citep[p.~5]{a}"), drawn("\\cite[p.~5]{a}"))
+  expect_identical(drawn("\\citep[see][ch.~2]{a,b}"), "[see ?, ?, ch. 2]")
+  expect_identical(drawn("\\citet{a}"), "(author?) [?]")
+  expect_identical(drawn("\\citealp{a}"), "?")
+  expect_warning(latex_grob("\\citet{k1}", input_mode = "document"),
+                 "citation `k1' is undefined: drawn as (author?) [?]", fixed = TRUE)
+})
+
+test_that("\\specialrule is a rule of the thickness it names", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- latex_tree("\\begin{tabular}{l}a \\\\ \\specialrule{3pt}{0pt}{0pt} b\\end{tabular}",
+                  input_mode = "document")$records
+  expect_identical(r$text[r$type == "text"], c("a", "b"))  # its arguments are read
+  expect_equal(r$lwd[r$type == "line"], 3 * 72 / 72.27, tolerance = 1e-4)
+})
+
+test_that("\\boldmath makes the math of its group bold, and only the math", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  glyphs <- function(tex) {
+    r <- latex_tree(tex, input_mode = "document")$records
+    r$glyph[r$type == "glyph"]
+  }
+  expect_false(identical(glyphs("{\\boldmath $x + 2$}"), glyphs("$x + 2$")))
+  # It ends with its group.
+  expect_identical(glyphs("{\\boldmath $x$} $x$")[2], glyphs("$x$"))
+  words <- function(tex) latex_tree(tex, input_mode = "document")$records$font_style
+  expect_identical(words("{\\boldmath words}"), words("words"))
+})
+
+test_that("an abstract has article's heading, and a bibliography its [n] labels", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  a <- runs("\\begin{abstract}Body text.\\end{abstract}")
+  expect_identical(a$text, c("Abstract", "Body text."))
+  expect_gt(a$x[1], a$x[2])  # centred over the text
+  bib <- paste("\\begin{thebibliography}{9}",
+               "\\bibitem{one} A. Author. \\newblock {\\em Title}, 2016.",
+               "\\bibitem{two} B. Author.", "\\end{thebibliography}", sep = "\n")
+  b <- runs(bib)
+  expect_identical(b$text[1], "References")
+  expect_false(any(grepl("one|two", b$text)))  # the keys point at nothing
+  labels <- function(tex) {
+    r <- latex_tree(tex, input_mode = "document")$records
+    r$glyph[r$type == "glyph"]
+  }
+  expect_identical(labels(bib),
+                   labels("\\begin{enumerate}[{[}\\arabic*{]}]\\item a \\item b\\end{enumerate}"))
+})
+
+test_that("a minipage sets its body to its width, placed as LaTeX places it", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  long <- paste(rep("word", 12), collapse = " ")
+  text <- function(tex, ...) {
+    r <- latex_tree(tex, input_mode = "document", ...)$records
+    r[r$type == "text", ]
+  }
+  for (pos in c("t", "c", "b")) {
+    r <- text(sprintf("A \\begin{minipage}[%s]{100pt}%s\\end{minipage} B", pos, long))
+    words <- r[r$text == "word", ]
+    lines <- sort(unique(round(words$y, 2)))
+    expect_gt(length(lines), 3L, label = pos)                    # it wraps...
+    expect_lte(max(words$x) - min(words$x), 100, label = pos)     # ...inside its width
+    expect_identical(unique(round(words$x[words$y == min(words$y)], 2))[1],
+                     round(min(words$x), 2), label = pos)          # with no indent
+    a <- round(r$y[r$text == "A "], 2)
+    expected <- switch(pos, t = lines[1], b = lines[length(lines)])
+    if (pos == "c") {
+      expect_gt(a, lines[1], label = pos)
+      expect_lt(a, lines[length(lines)], label = pos)
+    } else {
+      expect_equal(a, expected, label = pos)
+    }
+  }
+  # \centering centres each line in the minipage's width, not the page's.
+  r <- text("\\begin{minipage}{200pt}\\centering ab\\end{minipage}")
+  plain <- text("\\begin{minipage}{200pt}ab\\end{minipage}")
+  expect_gt(r$x, plain$x + 50)
+  # 0.5\textwidth is half of max_width.
+  two <- text("\\begin{minipage}{0.5\\textwidth}\\centering L\\end{minipage}%\n\\begin{minipage}{0.5\\textwidth}\\centering R\\end{minipage}",
+              max_width = 300)
+  expect_equal(two$x[two$text == "R"] - two$x[two$text == "L"], 150, tolerance = 5)
+  # Its body is paragraphs, so markdown does not take it for math.
+  expect_false("minipage" %in% .math_envs())
+})
+
+test_that("\\textwidth and \\linewidth are the text width, as in LaTeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  w <- function(tex, ...) as.numeric(latex_dims(tex, input_mode = "math", ...)$width)
+  expect_equal(w("\\rule{0.5\\textwidth}{1pt}", max_width = 200), 100, tolerance = 0.01)
+  expect_equal(w("\\rule{\\linewidth}{1pt}", max_width = 200), 200, tolerance = 0.01)
+  # With no page to measure, article's 345pt.
+  expect_equal(w("\\rule{\\columnwidth}{1pt}"), 345 * 72 / 72.27, tolerance = 0.01)
+})

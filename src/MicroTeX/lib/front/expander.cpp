@@ -734,7 +734,8 @@ struct Expander::Impl {
       pushExpansion("{" + substitute(def->body, args), e.tok.span);
       ExpToken open = rawUntaped();
       if (envs.find(name) == envs.end()) {  // the prelude's, not the input's
-        const bool transparent = def->body.empty() && def->endBody.empty();
+        const bool transparent =
+          (def->body.empty() && def->endBody.empty()) || isBlockEnvironment(name);
         open.tok.environment = !transparent             ? (isDisplayEnvironment(name) ? 3 : 1)
                                : isFloatEnvironment(name) ? 4
                                : name == "center"        ? 5
@@ -1124,7 +1125,9 @@ std::vector<std::string> preludeTransparentEnvironmentNames() {
   std::vector<std::string> names;
   for (const auto& kv : Expander::Impl::prelude().envs) {
     // The same test that marks the group transparent when one is expanded.
-    if (kv.second.body.empty() && kv.second.endBody.empty()) names.push_back(kv.first);
+    if ((kv.second.body.empty() && kv.second.endBody.empty()) || isBlockEnvironment(kv.first)) {
+      names.push_back(kv.first);
+    }
   }
   return names;
 }

@@ -248,7 +248,12 @@ Rcpp::List command_tables_cpp() {
 // spans in mixed input reads this, and masks what it finds from CommonMark.
 // [[Rcpp::export]]
 std::vector<std::string> math_env_names_cpp() {
-  std::vector<std::string> names = environmentNames();
+  std::vector<std::string> names;
+  // A minipage's body is paragraphs, not math.
+  for (const std::string& n : environmentNames()) {
+    const EnvSpec* spec = findEnvironment(n);
+    if (spec == nullptr || spec->body != EnvBody::text) names.push_back(n);
+  }
   const std::vector<std::string> wrappers = preludeTransparentEnvironmentNames();
   for (const std::string& n : preludeEnvironmentNames()) {
     if (std::find(wrappers.begin(), wrappers.end(), n) == wrappers.end()) names.push_back(n);

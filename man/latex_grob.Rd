@@ -78,7 +78,8 @@ Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files: no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
-R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
+R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
+\code{postscript()}, which cannot embed the math font.
 For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).}
@@ -236,22 +237,35 @@ like any other. A document sets a float where it is written, apart from
 its paragraphs, as LaTeX's \verb{[h]} placement would, and a \code{center}
 environment or a \verb{\\centering} centres its lines.
 
-Some commands are their nearest equivalent. \verb{\\emph} is \verb{\\textit}, and
-\verb{\\newline} is \verb{\\\\}. Booktabs' \verb{\\toprule} and \verb{\\bottomrule} are thick
-rules, \verb{\\midrule} a plain one and \verb{\\cmidrule} a partial one. A grob has
+Some commands are their nearest equivalent. \verb{\\emph} is \verb{\\textit}, \verb{\\em}
+is \verb{\\it}, and \verb{\\newline} is \verb{\\\\}. Booktabs' \verb{\\toprule} and
+\verb{\\bottomrule} are thick rules, \verb{\\midrule} a plain one, \verb{\\cmidrule} a
+partial one and \verb{\\specialrule\{w\}\{a\}\{b\}} one \code{w} thick. \verb{\\boldmath} sets
+the math that follows in its group in bold. A grob has
 no glue to stretch, so \verb{\\smallskip}, \verb{\\medskip} and \verb{\\bigskip} are 0.25,
 0.5 and 1 em of space, \verb{\\hfill} is a quad and \verb{\\vfill} 1 em. And
 \verb{\\caption\{X\}} is a line of text where it is written, unnumbered, so a
 caption written before a \code{tabular} is set above it.
 
+\verb{\\textwidth}, \verb{\\linewidth} and \verb{\\columnwidth} in a length
+(\verb{0.5\\textwidth}) are \code{max_width}, or with none the 345pt of LaTeX's
+article class. An \code{abstract} is set as article sets it, under a centred
+heading, and \code{thebibliography} as a "References" heading over a list
+numbered \verb{[1]}, \verb{[2]}, ... (\verb{\\bibitem}'s key has nothing to point at, and
+\verb{\\newblock} is a space).
+
 A \code{tabular}'s cells and the items of \code{itemize} and \code{enumerate} are
 text, as in LaTeX, when the table or list is met in text; met in math
-(\code{input_mode = "math"}, or between \verb{$...$}) they are math.
+(\code{input_mode = "math"}, or between \verb{$...$}) they are math. A list item
+wraps at \code{max_width}, as a \verb{p\{\}} cell does; a cell in an \code{l}, \code{c} or \code{r}
+column is one line. A \code{minipage} sets its paragraphs to its width (its
+optional height and inner position are read and not set).
 
 Commands that need the rest of a document warn and draw what LaTeX
 draws when it cannot resolve them: \verb{\\ref} and \verb{\\pageref} are a bold
-\verb{??}, \verb{\\eqref} is \verb{(??)}, \verb{\\cite\{key\}} is \verb{[?]}, and a \verb{\\footnote}'s text is
-set where it is written. Equations are not numbered. Not supported:
+\verb{??}, \verb{\\eqref} is \verb{(??)}, \verb{\\cite\{key\}} and natbib's \verb{\\citep\{key\}} are
+\verb{[?]} (\verb{\\citet} is \verb{(author?) [?]}, \verb{\\citealp} a bare \verb{?}), and a
+\verb{\\footnote}'s text is set where it is written. Equations are not numbered. Not supported:
 \verb{\\tag}, \code{\\verb}, \verb{\\textsc}, the declarations \verb{\\bfseries}, \verb{\\itshape} and
 their kin (use \verb{\\textbf\{\}}, \verb{\\textit\{\}} or \verb{\\bf}, \verb{\\it}), the
 \code{description} list, theorem environments, and TikZ.
@@ -278,7 +292,9 @@ resolution; a bitmap does not, and warns when it would be shown below
 instead.
 \item The file must be local; a URL is not downloaded. A file that cannot
 be drawn -- missing, a URL, an unsupported format, or unreadable --
-is an error saying why. Each format needs its reader, all
+is an error saying why; in a document (\code{input_mode = "document"}) it
+warns and draws the file's name, so that one figure does not cost the
+whole document. Each format needs its reader, all
 \emph{Suggests}: \code{png} for PNG, \code{jpeg} for JPEG and \code{rsvg} for SVG; the
 error names the one to install.
 \item The file is read when the parser meets the command, after macros are

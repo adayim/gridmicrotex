@@ -59,7 +59,7 @@ float sizeFactor(const std::string& n) {
 }
 
 bool isRule(const std::string& name) {
-  return name == "hline" || name == "thickhline" || name == "cline";
+  return name == "hline" || name == "thickhline" || name == "cline" || name == "specialrule";
 }
 
 bool isSize(const std::string& n) {
@@ -368,23 +368,36 @@ private:
       row->add(literalText(")"));
       return row;
     }
-    if (name == "cite") {
+    if (isCitation(name)) {
       // What LaTeX draws for citations it cannot resolve: a bold ? for each
       // key, then the note, in brackets -- `\cite[p.~3]{a,b}` is [?, ?, p. 3].
+      // natbib's take a note before as well, `\citep[see][p.~3]{a}`, or one
+      // after alone; \citet names the author it does not have, and
+      // \citealp has no brackets.
+      const std::string keys = rawOf(child(id, count(id) - 1));
+      std::string pre, post = rawOf(child(id, 0));
+      if (name != "cite" && node(child(id, 1)).flag) {
+        pre = post;
+        post = rawOf(child(id, 1));
+      }
       auto row = sptrOf<RowAtom>();
-      row->add(literalText("["));
-      const std::string keys = rawOf(child(id, 1));
+      if (name == "citet") row->add(literalText("(author?) "));
+      const bool brackets = name != "citealp";
+      if (brackets) row->add(literalText("["));
+      if (!pre.empty()) {
+        row->add(fragment(pre, false));
+        row->add(literalText(" "));
+      }
       const auto n = std::count(keys.begin(), keys.end(), ',') + 1;
       for (std::ptrdiff_t i = 0; i < n; i++) {
         if (i > 0) row->add(literalText(", "));
         row->add(bold("?"));
       }
-      const std::string note = rawOf(child(id, 0));
-      if (!note.empty()) {
+      if (!post.empty()) {
         row->add(literalText(", "));
-        row->add(fragment(note, false));
+        row->add(fragment(post, false));
       }
-      row->add(literalText("]"));
+      if (brackets) row->add(literalText("]"));
       return row;
     }
     // No page to put the note on, so its text is set where it was written.
@@ -821,6 +834,10 @@ private:
         const auto atom = body();
         return sptrOf<FontStyleAtom>(FontContext::mainFontStyleOf(name), math, atom);
       }
+      if (name == "boldmath") {
+        // A math style: text in its reach keeps its own.
+        return sptrOf<FontStyleAtom>(FontStyle::bf, true, body());
+      }
       if (name == "cal" || name == "frak") {
         // TeX's old switches for \mathcal and \mathfrak.
         const auto style = FontContext::mathFontStyleOf(name == "cal" ? "mathcal" : "mathfrak");
@@ -1092,6 +1109,8 @@ private:
     bool drawn = false;
     /** A paragraph starts here: its first line is indented, as in TeX. */
     bool indentNext = false;
+    /** Paragraphs are indented at all: a minipage sets \parindent to 0. */
+    bool indents = true;
     /** Nothing has been set since a heading. LaTeX leaves the paragraph
      *  that follows one unindented, whether it comes straight after the
      *  heading or after a blank line. */
@@ -1165,7 +1184,7 @@ private:
   void indentIfNeeded(Label& l) {
     if (!l.indentNext) return;
     l.indentNext = false;
-    if (!l.centring) l.line->add(parIndent());
+    if (!l.centring && l.indents) l.line->add(parIndent());
   }
 
   /** The current line is done: centred, if it was set while centring. */
@@ -1526,8 +1545,39 @@ private:
 
   /** Built by the engine's environment handler from its source text, as
    *  the old parser's `\name@@env{...}{body}` did. */
+  /** `list` set as a document of its own -- paragraphs, displays and lists
+   *  apart, \centering's lines centred -- with no paragraph indent, as
+   *  LaTeX's minipage sets \parindent to 0. */
+  sptr<Atom> subDocument(NodeId list) {
+    Formula f;
+    Label l(f);
+    l.document = true;
+    l.indents = false;
+    feedLines(l, list);
+    beforeProse(l);
+    endProse(l);
+    finishLine(l);
+    if (l.rows != nullptr) {
+      l.rows->checkDimensions();
+      f._root = l.rows->getAsVRow();
+    }
+    return f._root;
+  }
+
+  /** \begin{minipage}[position][height][inner position]{width}: its
+   *  body set to its width. The height and the inner position, which only
+   *  matter for a box taller than its text, are not set. */
+  sptr<Atom> minipage(NodeId id) {
+    const std::string pos = rawOf(child(id, 0));
+    const auto at = pos.find_first_not_of(" \t\r\n");
+    const char p = at != std::string::npos && (pos[at] == 't' || pos[at] == 'b') ? pos[at] : 'c';
+    const Dimen width = Units::getDimen(rawOf(child(id, 3)));
+    return sptrOf<MinipageAtom>(subDocument(child(id, count(id) - 1)), width, p);
+  }
+
   sptr<Atom> environment(NodeId id) {
     const Node& x = node(id);
+    if (x.text == "minipage") return minipage(id);
     const EnvSpec* spec = findEnvironment(x.text);
     const std::string macName = (spec != nullptr ? x.text : std::string("matrix")) + "@@env";
     MacroInfo* mac = MacroInfo::get(macName);

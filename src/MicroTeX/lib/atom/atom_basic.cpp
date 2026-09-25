@@ -4,6 +4,7 @@
 #include "box/box_factory.h"
 #include "box/box_group.h"
 #include "env/env.h"
+#include "env/units.h"
 
 using namespace std;
 using namespace microtex;
@@ -51,7 +52,9 @@ sptr<Box> MathAtom::createBox(Env& env) {
 }
 
 sptr<Box> HlineAtom::createBox(Env& env) {
-  const auto drt = env.ruleThickness() * _thicknessScale;
+  const auto drt = _thicknessUnit != UnitType::none
+                     ? Units::fsize(_thicknessUnit, _thickness, env)
+                     : env.ruleThickness() * _thicknessScale;
   auto b = new RuleBox(drt, _width, _shift, _color, false);
   auto vb = new VBox();
   vb->add(sptr<Box>(b));

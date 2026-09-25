@@ -9,6 +9,7 @@
 #include "atom/atom_font.h"
 #include "atom/atom_matrix.h"
 #include "core/formula.h"
+#include "env/units.h"
 #include "macro/macro.h"
 #include "macro/macro_decl.h"
 #include "utils/exceptions.h"
@@ -142,6 +143,21 @@ inline cmdmacro(thickhline) {
     throw ex_parse("The macro \\thickhline only available in array mode!");
   auto a = sptrOf<HlineAtom>();
   a->setThicknessScale(2.f);
+  return a;
+}
+
+// booktabs' \specialrule{thickness}{above}{below}: a rule of that
+// thickness. The space above and below is not set; no rule here has any.
+inline cmdmacro(specialrule) {
+  if (args.alignmentHere() == nullptr)
+    throw ex_parse("The macro \\specialrule only available in array mode!");
+  auto a = sptrOf<HlineAtom>();
+  const Dimen thick = Units::getDimen(args.text(1));
+  if (thick.isValid()) {
+    a->setThickness(thick.val, thick.unit);
+  } else {
+    a->setThicknessScale(2.f);  // an unreadable thickness: \toprule's
+  }
   return a;
 }
 
@@ -348,11 +364,18 @@ inline std::string listFormatLabel(const std::string& tmpl, int n) {
   return tmpl;
 }
 
-// `s` less the spaces at either end, which TeX drops from an item.
+// `s` less the spaces at either end, which TeX drops from an item. A
+// control space `\ ` is not one of them: trimmed, it left its backslash to
+// join the `\\` that ends the row, and the next row lost its first cell.
 inline std::string listTrim(const std::string& s) {
   size_t from = 0, to = s.size();
   while (from < to && std::isspace((unsigned char)s[from]) != 0) from++;
-  while (to > from && std::isspace((unsigned char)s[to - 1]) != 0) to--;
+  while (to > from && std::isspace((unsigned char)s[to - 1]) != 0) {
+    size_t slashes = 0;
+    while (to - 1 - slashes > from && s[to - 2 - slashes] == '\\') slashes++;
+    if (slashes % 2 == 1) break;
+    to--;
+  }
   return s.substr(from, to - from);
 }
 
@@ -406,10 +429,12 @@ inline std::vector<std::string> listParts(const std::string& item) {
   return parts;
 }
 
-// Lay a list body out as a single left-aligned column, one row per item,
-// each row prefixed with `marker(index)`. A list nested after an item's
-// text goes on rows of its own, level with that text, as LaTeX sets it;
-// one that opens the item shares the item's first line, as in LaTeX too.
+// Lay a list body out as rows, one per item: its marker, set right as
+// LaTeX sets labels, a quad, and its text in an X column, which takes the
+// rest of the text width and wraps to it (the whole line without a
+// width). A list nested after an item's text goes on rows of its own,
+// level with that text, as LaTeX sets it; one that opens the item shares
+// the item's first line, as in LaTeX too.
 inline sptr<Atom> listBuild(
   CommandArgs& args,
   const std::vector<std::string>& items,
@@ -419,7 +444,7 @@ inline sptr<Atom> listBuild(
   std::string s;
   const auto row = [&](const std::string& lead, const std::string& content) {
     if (!s.empty()) s += "\\\\";
-    s += lead + "\\quad{}" + content;
+    s += lead + "&" + content;
   };
   for (size_t i = 0; i < items.size(); i++) {
     const std::string mark = marker((int)i + 1);
@@ -433,14 +458,14 @@ inline sptr<Atom> listBuild(
       const std::string content = args.isMathMode() ? part
                                   : nested         ? "\\text{" + part + "}"
                                                    : listTextItem(part);
-      row(first ? mark : "\\hphantom{" + mark + "}", content);
+      row(first ? mark : "", content);
       first = false;
     }
     if (first) row(mark, "");  // an empty item still has its marker
   }
   const auto arr = args.alignmentOfText(s);
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(args.isPartial(), arr, "l", false);
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, "r@{\\quad}X", false);
 }
 
 inline cmdmacro(itemizeATATenv) {

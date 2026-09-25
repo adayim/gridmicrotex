@@ -75,7 +75,7 @@ test_that("an unknown environment draws its body, with a warning", {
 
 test_that("an unknown environment met in text is text, as in LaTeX", {
   # LaTeX's recovery from "Environment ... undefined" sets the body as
-  # ordinary text in a group. Read as an array (math), a pasted abstract
+  # ordinary text in a group. Read as an array (math), a pasted abstract (then unknown)
   # lost every space between its words.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   quiet <- function(tex, mode) {
@@ -84,8 +84,8 @@ test_that("an unknown environment met in text is text, as in LaTeX", {
     records
   }
   for (mode in c("document", "mixed")) {
-    expect_warning(latex_grob("\\begin{abstract}One two.\\end{abstract}", input_mode = mode),
-                   "unknown environment abstract: its body is set as text", fixed = TRUE)
+    expect_warning(latex_grob("\\begin{quote}One two.\\end{quote}", input_mode = mode),
+                   "unknown environment quote: its body is set as text", fixed = TRUE)
     body <- quiet("a \\begin{foo}\\bf b c\\end{foo} d", mode)
     expect_identical(body, quiet("a {\\bf b c} d", mode), info = mode)
     expect_identical(body$text[!is.na(body$text)], c("a ", "b c", " d"), info = mode)

@@ -148,6 +148,9 @@ private:
   NodeId parseLeftRight(const ExpandedToken& left, Mode mode);
   NodeId parseDelimiter(const std::string& who);
   NodeId parseEnvironment(const ExpandedToken& begin, Mode mode);
+  /** An environment's body read as text up to its `\end{name}`, which is
+   *  read too (or warned about). */
+  NodeId parseTextBody(const std::string& name, SourceSpan at);
   /** `inGroup`: the math sits in a group, whose `}` ends it too. */
   NodeId parseMath(const ExpandedToken& open, bool display, const std::string& closeSymbol,
                    bool inGroup);

@@ -63,6 +63,24 @@ public:
   sptr<Box> createBox(Env& env) override;
 };
 
+/** LaTeX's minipage: its body, a little document of its own, set to its
+ *  width -- which is its text width, so paragraphs break to it and
+ *  \centering centres in it -- and placed in the line as one box. The
+ *  line's baseline meets its first line (`t`), its last (`b`), or its
+ *  middle (`c`, on the math axis). */
+class MinipageAtom : public Atom {
+private:
+  sptr<Atom> _body;
+  Dimen _width;
+  char _position;
+
+public:
+  MinipageAtom(const sptr<Atom>& body, const Dimen& width, char position)
+      : _body(body), _width(width), _position(position) {}
+
+  sptr<Box> createBox(Env& env) override;
+};
+
 }  // namespace microtex
 
 #endif  // MICROTEX_ATOM_VROW_H

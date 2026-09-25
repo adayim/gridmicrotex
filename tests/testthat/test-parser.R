@@ -65,9 +65,9 @@ test_that("every command is read by the front end or has a handler, and no handl
   # these draws as it did there.
   expect_setequal(setdiff(t$spec_commands, t$engine_commands),
                   c("(", "[", "\\", "above", "abovewithdelims", "atop", "atopwithdelims",
-                     "bangle", "begin", "bf", "brace", "brack", "cal", "caption", "centering",
-                     "char", "choose",
-                     "cite", "cmidrule", "color", "cr", "displaystyle", "end", "ensuremath",
+                     "bangle", "begin", "bf", "boldmath", "brace", "brack", "cal", "caption",
+                     "centering", "char", "choose",
+                     "cite", "citealp", "citep", "citet", "cmidrule", "color", "cr", "displaystyle", "end", "ensuremath",
                      "eqref", "footnote", "footnotesize", "frak", "graphicspath",
                      "href", "huge", "Huge", "it", "kern", "large", "Large", "LARGE",
                      "left", "limits", "makeatletter", "makeatother", "noindent",

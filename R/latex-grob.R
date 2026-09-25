@@ -177,22 +177,35 @@
 #' its paragraphs, as LaTeX's `[h]` placement would, and a `center`
 #' environment or a `\centering` centres its lines.
 #'
-#' Some commands are their nearest equivalent. `\emph` is `\textit`, and
-#' `\newline` is `\\`. Booktabs' `\toprule` and `\bottomrule` are thick
-#' rules, `\midrule` a plain one and `\cmidrule` a partial one. A grob has
+#' Some commands are their nearest equivalent. `\emph` is `\textit`, `\em`
+#' is `\it`, and `\newline` is `\\`. Booktabs' `\toprule` and
+#' `\bottomrule` are thick rules, `\midrule` a plain one, `\cmidrule` a
+#' partial one and `\specialrule{w}{a}{b}` one `w` thick. `\boldmath` sets
+#' the math that follows in its group in bold. A grob has
 #' no glue to stretch, so `\smallskip`, `\medskip` and `\bigskip` are 0.25,
 #' 0.5 and 1 em of space, `\hfill` is a quad and `\vfill` 1 em. And
 #' `\caption{X}` is a line of text where it is written, unnumbered, so a
 #' caption written before a `tabular` is set above it.
 #'
+#' `\textwidth`, `\linewidth` and `\columnwidth` in a length
+#' (`0.5\textwidth`) are `max_width`, or with none the 345pt of LaTeX's
+#' article class. An `abstract` is set as article sets it, under a centred
+#' heading, and `thebibliography` as a "References" heading over a list
+#' numbered `[1]`, `[2]`, ... (`\bibitem`'s key has nothing to point at, and
+#' `\newblock` is a space).
+#'
 #' A `tabular`'s cells and the items of `itemize` and `enumerate` are
 #' text, as in LaTeX, when the table or list is met in text; met in math
-#' (`input_mode = "math"`, or between `$...$`) they are math.
+#' (`input_mode = "math"`, or between `$...$`) they are math. A list item
+#' wraps at `max_width`, as a `p{}` cell does; a cell in an `l`, `c` or `r`
+#' column is one line. A `minipage` sets its paragraphs to its width (its
+#' optional height and inner position are read and not set).
 #'
 #' Commands that need the rest of a document warn and draw what LaTeX
 #' draws when it cannot resolve them: `\ref` and `\pageref` are a bold
-#' `??`, `\eqref` is `(??)`, `\cite{key}` is `[?]`, and a `\footnote`'s text is
-#' set where it is written. Equations are not numbered. Not supported:
+#' `??`, `\eqref` is `(??)`, `\cite{key}` and natbib's `\citep{key}` are
+#' `[?]` (`\citet` is `(author?) [?]`, `\citealp` a bare `?`), and a
+#' `\footnote`'s text is set where it is written. Equations are not numbered. Not supported:
 #' `\tag`, \code{\\verb}, `\textsc`, the declarations `\bfseries`, `\itshape` and
 #' their kin (use `\textbf{}`, `\textit{}` or `\bf`, `\it`), the
 #' `description` list, theorem environments, and TikZ.

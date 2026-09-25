@@ -1,5 +1,6 @@
 #include "atom/atom_matrix.h"
 
+#include <algorithm>
 #include <cctype>
 #include <memory>
 
@@ -110,12 +111,17 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
   char ch;
   // clear first
   lpos.clear();
+  _fillCols.clear();
   while (pos < len) {
     ch = opt[pos];
     switch (ch) {
       case 'l': lpos.push_back(Alignment::left); break;
       case 'r': lpos.push_back(Alignment::right); break;
       case 'c': lpos.push_back(Alignment::center); break;
+      case 'X':
+        _fillCols.push_back(static_cast<int>(lpos.size()));
+        lpos.push_back(Alignment::left);
+        break;
       case '|': {
         int nb = 1;
         while (++pos < len) {
@@ -562,6 +568,60 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
         auto* mca = (MulticolumnAtom*)atom.get();
         mca->setRowColumn(i, j);
         multiCols.push_back(atom);
+      }
+    }
+  }
+
+  // `X`: what the other columns and the space between them leave of the
+  // text width, shared by the X columns. A cell wider than that is made
+  // again at that width -- so a list or a table inside it fits in turn --
+  // with the word-level runs the breaker needs, and broken to it as p{}
+  // is. A column whose cells all fit is left as it was: a short list in a
+  // label keeps its own width, which is what `hjust` places.
+  if (!_fillCols.empty() && env.textWidth() != POS_INF) {
+    float used = 0;
+    for (int j = 0; j < cols; j++) {
+      if (std::find(_fillCols.begin(), _fillCols.end(), j) == _fillCols.end()) {
+        used += colWidth[j];
+      }
+    }
+    const float* sep = getColumnSep(env, used);
+    for (int j = 0; j <= cols; j++) {
+      used += sep[j];
+      const auto it = _vlines.find(j);
+      if (it != _vlines.end()) used += it->second->getWidth(env);
+    }
+    delete[] sep;
+    const float xw = (env.textWidth() - used) / static_cast<float>(_fillCols.size());
+    if (xw > 0) {
+      for (int i = 0; i < rows; i++) {
+        const int size = _matrix->_array[i].size();
+        bool made = false;
+        for (const int j : _fillCols) {
+          if (j >= size || j >= cols || colWidth[j] <= xw) continue;
+          const sptr<Atom>& atom = _matrix->_array[i][j];
+          if (atom == nullptr || boxarr[i][j]->_type != AtomType::none) continue;
+          if (boxarr[i][j]->_width <= xw) continue;
+          sptr<Box> cell;
+          {
+            MergeTextGuard guard(true);
+            cell = env.withTextWidth(xw, [&](Env& e) { return atom->createBox(e); });
+          }
+          const auto [wasSplit, splitBox] = BoxSplitter::split(cell, xw, env.lineSpace());
+          (void)wasSplit;
+          boxarr[i][j] = sptrOf<HBox>(splitBox, xw, Alignment::left);
+          made = true;
+        }
+        if (!made) continue;
+        lineHeight[i] = lineDepth[i] = 0;
+        for (int j = 0; j < cols; j++) {
+          if (boxarr[i][j] == nullptr || boxarr[i][j]->_type == AtomType::multiRow) continue;
+          lineHeight[i] = max(boxarr[i][j]->_height, lineHeight[i]);
+          lineDepth[i] = max(boxarr[i][j]->_depth, lineDepth[i]);
+        }
+      }
+      for (const int j : _fillCols) {
+        if (j < cols) colWidth[j] = min(colWidth[j], xw);
       }
     }
   }

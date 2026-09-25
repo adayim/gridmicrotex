@@ -18,7 +18,7 @@ bool isOther(const Token& t, char c) {
 }
 
 bool isRule(const std::string& name) {
-  return name == "hline" || name == "thickhline" || name == "cline";
+  return name == "hline" || name == "thickhline" || name == "cline" || name == "specialrule";
 }
 
 std::string trim(const std::string& s) {
@@ -614,7 +614,7 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
       items.push_back(_ast.add(std::move(n), args));
       return lineBreak(at, mode);
     }
-    if (name == "ref" || name == "pageref" || name == "eqref" || name == "cite" ||
+    if (name == "ref" || name == "pageref" || name == "eqref" || isCitation(name) ||
         name == "footnote") {
       std::vector<NodeId> args;
       for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
@@ -624,8 +624,11 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
         // No argument at all: parseArgument() has said so.
       } else if (name == "footnote") {
         _diags.warn(at, "\\footnote has no page to put a note on: its text is drawn here");
-      } else if (name == "cite") {
-        _diags.warn(at, "citation `" + key + "' is undefined: drawn as [?]");
+      } else if (isCitation(name)) {
+        // What natbib draws for its own: \citet names an author it does
+        // not have, \citealp drops the brackets.
+        const std::string drawn = name == "citet" ? "(author?) [?]" : name == "citealp" ? "?" : "[?]";
+        _diags.warn(at, "citation `" + key + "' is undefined: drawn as " + drawn);
       } else {
         // `?\?)` so that `??)` is not read as a trigraph.
         _diags.warn(at, "reference `" + key + "' is undefined: drawn as " +
@@ -1068,6 +1071,23 @@ std::string Parser::readGroupName() {
   return trim(name);
 }
 
+NodeId Parser::parseTextBody(const std::string& name, SourceSpan at) {
+  Stop body;
+  body.end = true;
+  const NodeId list = parseList(Mode::text, body, at);
+  ExpandedToken t = next();
+  if (t.tok.isCs("end")) {
+    const std::string closing = readGroupName();
+    if (closing != name) {
+      _diags.warn(t.tok.span, "\\end{" + closing + "} ends \\begin{" + name + "}");
+    }
+  } else {
+    _diags.warn(at, "missing \\end{" + name + "} inserted");
+    unread(std::move(t));
+  }
+  return list;
+}
+
 NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
   const SourceSpan at = begin.tok.span;
   // An environment's line ends are its own business, as in TeX.
@@ -1092,19 +1112,7 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
     _diags.warn(at, "unknown environment " + name + ": its body is set as text");
     // Text as around it, line ends included.
     const Scoped text(_prose, prose.was);
-    Stop body;
-    body.end = true;
-    const NodeId list = parseList(Mode::text, body, at);
-    ExpandedToken t = next();
-    if (t.tok.isCs("end")) {
-      const std::string closing = readGroupName();
-      if (closing != name) {
-        _diags.warn(t.tok.span, "\\end{" + closing + "} ends \\begin{" + name + "}");
-      }
-    } else {
-      _diags.warn(at, "missing \\end{" + name + "} inserted");
-      unread(std::move(t));
-    }
+    const NodeId list = parseTextBody(name, at);
     // Transparent, as document's expansion is: its content is set as if
     // the environment were not there.
     Node g;
@@ -1123,6 +1131,11 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
   std::vector<NodeId> kids;
   if (spec != nullptr) {
     for (const ArgSpec& a : spec->args) kids.push_back(parseArgument(a, mode, "\\begin{" + name + "}"));
+  }
+  if (spec != nullptr && spec->body == EnvBody::text) {
+    // Paragraphs, in text whatever the mode around it.
+    kids.push_back(parseTextBody(name, at));
+    return _ast.add(std::move(n), kids);
   }
 
   const std::size_t mark = startRecording();

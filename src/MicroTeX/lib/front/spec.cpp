@@ -91,6 +91,8 @@ struct Table {
     // Rules end the row they are in, as they did in the old parser.
     add({"hline", "thickhline"}, "", Shape::prefix, Bare::none, true);
     add({"cline"}, "r", Shape::prefix, Bare::none, true);
+    // booktabs' rule of a given thickness, and the space above and below.
+    add({"specialrule"}, "ddd", Shape::prefix, Bare::none, true);
     add({"rowcolor", "columncolor", "arrayrulecolor", "cellcolor"}, "r");
     add({"newcolumntype"}, "rr");
     add({"color"}, "r", Shape::groupDeclaration);
@@ -129,6 +131,8 @@ struct Table {
          "mathclose"},
         "m");
     add({"bf", "it", "rm", "sf", "tt"}, "", Shape::declaration);
+    // Bold math for the rest of the group; text in it is left as it is.
+    add({"boldmath"}, "", Shape::declaration);
     // TeX's old font switches: \cal and \frak are \mathcal and \mathfrak
     // for the rest of the group.
     add({"cal", "frak"}, "", Shape::declaration);
@@ -200,6 +204,8 @@ struct Table {
     // resolve one, instead of coming out red as an unknown command.
     add({"ref", "pageref", "eqref"}, "r", Shape::prefix, Bare::none, true);
     add({"cite"}, "Rr", Shape::prefix, Bare::none, true);
+    // natbib's: \citep[post]{keys} or \citep[pre][post]{keys}.
+    add({"citep", "citet", "citealp"}, "RRr", Shape::prefix, Bare::none, true);
     add({"footnote"}, "Rt", Shape::prefix, Bare::none, true);
     add({"hspace", "vspace"}, "d");
     // --- our own (lib/atom/) ----------------------------------------------
@@ -217,6 +223,8 @@ struct Table {
     // As array, but its cells are text, as LaTeX's are.
     env({"tabular"}, "r", EnvBody::alignment, true);
     env({"itemize", "enumerate"}, "", EnvBody::raw, true);
+    // [position][height][inner position]{width}: a box of paragraphs.
+    env({"minipage"}, "RDRd", EnvBody::text);
   }
 };
 
@@ -246,6 +254,14 @@ bool isHeadingLine(const std::string& name) {
 
 bool isFloatEnvironment(const std::string& name) {
   return name == "table" || name == "table*" || name == "figure" || name == "figure*";
+}
+
+bool isBlockEnvironment(const std::string& name) {
+  return name == "abstract" || name == "thebibliography";
+}
+
+bool isCitation(const std::string& name) {
+  return name == "cite" || name == "citep" || name == "citet" || name == "citealp";
 }
 
 bool isDisplayEnvironment(const std::string& name) {

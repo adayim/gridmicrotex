@@ -1,5 +1,6 @@
 #include "atom/atom_vrow.h"
 
+#include "atom/atom_row.h"
 #include "box/box_group.h"
 #include "box/box_single.h"
 #include "core/split.h"
@@ -133,4 +134,44 @@ sptr<Box> DisplayAtom::createBox(Env& env) {
     }
   }
   return out;
+}
+
+sptr<Box> MinipageAtom::createBox(Env& env) {
+  if (_body == nullptr) return sptrOf<StrutBox>(0.f, 0.f, 0.f, 0.f);
+  const float width = Units::fsize(_width, env);
+  const bool measured = width > 0 && width != POS_INF;
+  sptr<Box> box;
+  {
+    // The breaker needs word-level runs, as a p{} cell does: folded into
+    // one phrase a paragraph could not be broken.
+    const bool merge = RowAtom::_mergeText;
+    RowAtom::_mergeText = false;
+    try {
+      box = env.withTextWidth(measured ? width : env.textWidth(),
+                              [&](Env& e) { return _body->createBox(e); });
+    } catch (...) {
+      RowAtom::_mergeText = merge;
+      throw;
+    }
+    RowAtom::_mergeText = merge;
+  }
+  if (measured) box = BoxSplitter::split(box, width, env.lineSpace()).second;
+
+  // A column of lines, whose baseline can be put where the position says.
+  auto vb = std::dynamic_pointer_cast<VBox>(box);
+  if (vb == nullptr || vb->_children.empty()) {
+    vb = sptrOf<VBox>();
+    vb->add(box);
+  }
+  const float total = vb->_height + vb->_depth;
+  if (_position == 't') {
+    vb->_height = vb->_children.front()->_height;
+  } else if (_position == 'b') {
+    vb->_height = total - vb->_children.back()->_depth;
+  } else {
+    vb->_height = total / 2 + env.axisHeight();
+  }
+  vb->_depth = total - vb->_height;
+  if (!measured) return vb;
+  return sptrOf<HBox>(vb, width, Alignment::left);
 }

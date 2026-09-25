@@ -103,7 +103,8 @@ Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files: no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
-R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
+R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
+\code{postscript()}, which cannot embed the math font.
 For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).}

@@ -13,7 +13,10 @@
 - `--` and `---` in text are dashes, and `` ` `` and `'`, single or doubled, are curly quotes, as in TeX, except in `\texttt{}`, `\tt` and `\url{}`. Markdown prose keeps its quotes and hyphens, as CommonMark does.
 - A prime is TeX's `^{\prime}`, and `` ` `` and `"` in math are those characters, not a backprime and a double prime.
 - `\|` is ‖, as in LaTeX, so `Vmatrix` has double bars.
-- `\ref`, `\eqref`, `\pageref`, `\cite` and `\footnote` warn and draw what LaTeX draws when it cannot resolve them (a bold `??` or `[?]`, the note's text), instead of their names in red.
+- `\ref`, `\eqref`, `\pageref`, `\cite` and `\footnote` warn and draw what LaTeX draws when it cannot resolve them (a bold `??` or `[?]`, the note's text), instead of their names in red; so do natbib's `\citep`, `\citet` and `\citealp`.
+- A pasted paper's `abstract`, `thebibliography` (with `\bibitem` and `\newblock`), `\em`, `\boldmath` and booktabs' `\specialrule` are read, and `\textwidth`, `\linewidth` and `\columnwidth` work in lengths (`0.5\textwidth`).
+- Text under `\large`, `\small` and the other sizes, `\color` or `\textcolor` wraps at `max_width`, and so does a list item, hanging under its own text; they used to run past it. List labels of different widths are set right, as in LaTeX.
+- `minipage` sets its paragraphs to its width, placed by its `[t]`, `[c]` or `[b]` position, so figures can sit side by side.
 - A definition inside `{…}` ends with the group, as in TeX; `\gdef` is global.
 - An unknown environment draws its body instead of its name in red: as text in prose, as LaTeX does, and as an array in math. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
 - Starred forms work (`\operatorname*`, `\newcommand*`, `\DeclareMathOperator*`, `\hspace*`, `\\*`), as do `\def` with delimited parameters, `\let`, `\providecommand`, `\newenvironment` with arguments, and `\ensuremath`.
