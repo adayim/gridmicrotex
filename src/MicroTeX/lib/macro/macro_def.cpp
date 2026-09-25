@@ -179,7 +179,6 @@ map<string, MacroInfo*> MacroInfo::_commands{
   // semantics than the previous behaviour of leaving them undefined.
   mac(1, macro_bold, "bm"),
   mac(1, macro_bold, "pmb"),
-  mac(2, macro_addfont, "addfont"),
   // endregion
   // region nested styles
   mac(1, macro_text, "mbox"),

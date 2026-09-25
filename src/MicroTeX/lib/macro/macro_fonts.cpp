@@ -23,14 +23,6 @@ cmdmacro(intertext) {
   return nullptr;
 }
 
-cmdmacro(addfont) {
-  if (MicroTeX::isPrivilegedEnvironment())
-    MicroTeX::addFont(FontSrcFile(args.text(1), args.text(2)));
-  else
-    throw ex_unprivileged("\\addfont may only be called in privileged environments");
-  return nullptr;
-}
-
 cmdmacro(mathversion) {
   auto mathStyle = MathStyle::TeX;
   const auto& options = parseOption(args.text(2));

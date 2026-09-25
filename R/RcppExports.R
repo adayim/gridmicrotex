@@ -73,16 +73,8 @@ clear_image_resolver <- function() {
     invisible(.Call(`_gridmicrotex_clear_image_resolver`))
 }
 
-microtex_init <- function(clm_path, otf_path) {
-    invisible(.Call(`_gridmicrotex_microtex_init`, clm_path, otf_path))
-}
-
 microtex_init_from_otf <- function(otf_path, index = 0L) {
     invisible(.Call(`_gridmicrotex_microtex_init_from_otf`, otf_path, index))
-}
-
-microtex_add_font <- function(clm_path, otf_path) {
-    invisible(.Call(`_gridmicrotex_microtex_add_font`, clm_path, otf_path))
 }
 
 microtex_math_font_names <- function() {
@@ -115,14 +107,6 @@ microtex_set_default_main_font <- function(family) {
 
 microtex_main_font_families <- function() {
     .Call(`_gridmicrotex_microtex_main_font_families`)
-}
-
-ot_math_table_bytes <- function(path, index = 0L) {
-    .Call(`_gridmicrotex_ot_math_table_bytes`, path, index)
-}
-
-otf_to_clm_bytes <- function(path, index = 0L) {
-    .Call(`_gridmicrotex_otf_to_clm_bytes`, path, index)
 }
 
 microtex_add_font_from_otf <- function(otf_path, index = 0L) {

@@ -69,8 +69,6 @@ inline cmdmacro(bold) {
 
 cmdmacro(intertext);
 
-cmdmacro(addfont);
-
 cmdmacro(mathversion);
 
 }  // namespace microtex

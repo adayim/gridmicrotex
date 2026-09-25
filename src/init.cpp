@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-// CLM v6 synthesis from a font file, in the layout engine.
+// Reads an engine font straight from its font file.
 #include "otf/otf_math_reader.h"
 
 using namespace microtex;
@@ -302,17 +302,19 @@ public:
 static bool s_initialized = false;
 
 // [[Rcpp::export]]
-void microtex_init(std::string clm_path, std::string otf_path) {
+void microtex_init_from_otf(std::string otf_path, int index = 0) {
     if (s_initialized) return;
 
     PlatformFactory::registerFactory("r", std::make_unique<PlatformFactory_R>());
     PlatformFactory::activate("r");
 
-    FontSrcFile fontSrc(clm_path, otf_path);
+    // The font is read from the file itself (otf_math_reader), as it is
+    // added to the context.
+    FontSrcOtf fontSrc(otf_path, index);
     try {
         MicroTeX::init(fontSrc);
     } catch (const std::exception& e) {
-        Rcpp::stop(std::string("MicroTeX::init failed: ") + e.what());
+        Rcpp::stop(std::string("Failed to read font '") + otf_path + "': " + e.what());
     }
 
     // Default to path rendering (universal compatibility)
@@ -326,53 +328,6 @@ void microtex_init(std::string clm_path, std::string otf_path) {
     s_initialized = true;
 }
 
-// [[Rcpp::export]]
-void microtex_init_from_otf(std::string otf_path, int index = 0) {
-    if (s_initialized) return;
-
-    PlatformFactory::registerFactory("r", std::make_unique<PlatformFactory_R>());
-    PlatformFactory::activate("r");
-
-    std::vector<std::uint8_t> clm;
-    try {
-        clm = microtex::otfToClmBytes(otf_path, index);
-    } catch (const std::exception& e) {
-        Rcpp::stop(std::string("Failed to read font '") + otf_path + "': " + e.what());
-    }
-
-    FontSrcData fontSrc(clm.size(), clm.data(), otf_path);
-    try {
-        MicroTeX::init(fontSrc);
-    } catch (const std::exception& e) {
-        Rcpp::stop(std::string("MicroTeX::init failed: ") + e.what());
-    }
-
-    if (MicroTeX::hasGlyphPathRender()) {
-        MicroTeX::setRenderGlyphUsePath(true);
-    }
-
-    register_mark_macro();
-    register_font_family_macro();
-    register_image_macros();
-    s_initialized = true;
-}
-
-// [[Rcpp::export]]
-void microtex_add_font(std::string clm_path, std::string otf_path) {
-    if (!s_initialized) {
-        Rcpp::stop("MicroTeX is not initialized.");
-    }
-
-    FontSrcFile fontSrc(clm_path, otf_path);
-    try {
-        auto meta = MicroTeX::addFont(fontSrc);
-        if (!meta.isValid()) {
-            Rcpp::warning("Failed to load font from: " + clm_path);
-        }
-    } catch (const std::exception& e) {
-        Rcpp::warning(std::string("Font load failed: ") + e.what());
-    }
-}
 
 // [[Rcpp::export]]
 std::vector<std::string> microtex_math_font_names() {

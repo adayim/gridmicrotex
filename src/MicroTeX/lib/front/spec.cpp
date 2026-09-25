@@ -138,7 +138,6 @@ struct Table {
          "mathbfsf", "mathsfit", "mathsfbfit", "mathbfsfit", "Bbb", "mathds", "bold",
          "boldsymbol", "bm", "pmb"},
         "c");
-    add({"addfont"}, "rr");
     add({"mbox", "text", "textit", "textbf", "textsf", "texttt", "textrm"}, "t");
     // \intertext ends the row it is in, as a rule does.
     add({"intertext"}, "t", Shape::prefix, Bare::none, true);
