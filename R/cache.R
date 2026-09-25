@@ -164,6 +164,14 @@ latex_cache_info <- function() {
                           device = .cache_device(), input_mode = input_mode)
   hit <- .cache_get(key, valid = .images_current)
   if (!is.null(hit)) return(hit)
+  # Measuring needs a device. With none open, one pdf(NULL) serves the
+  # whole parse, where the measurer would open and close its own for every
+  # word it measured; a cache hit needs none at all. The key above names
+  # it "pdf@72" (.cache_device()).
+  if (grDevices::dev.cur() == 1L) {
+    grDevices::pdf(NULL)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
   # The parser asks R for each image as it meets one (.image_resolver()),
   # and the files it read ride along with the layout: the key is the
   # source, which says nothing of an image edited since.

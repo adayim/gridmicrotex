@@ -320,3 +320,20 @@ test_that("a cached layout is not reused across graphics devices", {
   grDevices::dev.off()
   expect_equal(on_agg(), alone)
 })
+
+test_that("with no device open, a parse opens one for its length and a cache hit none", {
+  # Measuring needs a device. A cached layout measures nothing, so opening
+  # one for it is waste that latex_dims() in a loop, or markdown measuring
+  # a label several times over, paid on every call.
+  skip_if(!is.null(grDevices::dev.list()), "a device is already open")
+  opened <- 0L
+  suppressMessages(trace("pdf", where = asNamespace("grDevices"),
+                         tracer = function() opened <<- opened + 1L, print = FALSE))
+  on.exit(suppressMessages(untrace("pdf", where = asNamespace("grDevices"))), add = TRUE)
+  latex_cache_clear()
+  latex_dims("\\text{a word}", input_mode = "math")
+  expect_identical(opened, 1L)
+  expect_null(grDevices::dev.list())  # and closed again
+  for (i in 1:5) latex_dims("\\text{a word}", input_mode = "math")
+  expect_identical(opened, 1L)
+})

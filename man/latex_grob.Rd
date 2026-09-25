@@ -225,8 +225,9 @@ no use for is read and dropped:
 \itemize{
 \item the preamble: in a whole LaTeX file, everything before
 \verb{\\begin\{document\}} is read for its definitions (\verb{\newcommand},
-\verb{\\definecolor}, ...) and not drawn, as LaTeX draws nothing there, and
-what follows \verb{\\end\{document\}} is ignored. Package settings a grob
+\verb{\\definecolor}, ...) and not drawn, as LaTeX draws nothing there; a
+size, colour or environment begun there ends at \verb{\\begin\{document\}}.
+What follows \verb{\\end\{document\}} is ignored. Package settings a grob
 cannot honour are not warned about. \verb{\\documentclass}, \verb{\\usepackage}
 (which loads nothing: every supported command is built in) and
 \verb{\\bibliographystyle} draw nothing wherever they are;

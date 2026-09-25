@@ -166,8 +166,9 @@
 #'
 #' * the preamble: in a whole LaTeX file, everything before
 #'   `\begin{document}` is read for its definitions (`\newcommand`,
-#'   `\definecolor`, ...) and not drawn, as LaTeX draws nothing there, and
-#'   what follows `\end{document}` is ignored. Package settings a grob
+#'   `\definecolor`, ...) and not drawn, as LaTeX draws nothing there; a
+#'   size, colour or environment begun there ends at `\begin{document}`.
+#'   What follows `\end{document}` is ignored. Package settings a grob
 #'   cannot honour are not warned about. `\documentclass`, `\usepackage`
 #'   (which loads nothing: every supported command is built in) and
 #'   `\bibliographystyle` draw nothing wherever they are;
@@ -585,13 +586,6 @@ grobMark <- function(grob, name) {
 
   main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
 
-  # Measuring needs a device. With none open, one pdf(NULL) serves the
-  # whole parse, where the measurer used to open and close its own for
-  # every word it measured. The layout cache keys it as "pdf@72" either way.
-  if (grDevices::dev.cur() == 1L) {
-    grDevices::pdf(NULL)
-    on.exit(grDevices::dev.off(), add = TRUE)
-  }
   measurer <- .make_text_measurer(text_gp)
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
@@ -1099,7 +1093,8 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     }
 
     # Ensure a graphics device is available for measurement. A parse opens
-    # one for its whole length (.parse_from_gp()), so this is a safety net.
+    # one for its whole length (.parse_latex_cached()), so this is a
+    # safety net.
     needs_dev <- grDevices::dev.cur() == 1L
     if (needs_dev) {
       grDevices::pdf(NULL)

@@ -59,14 +59,17 @@ float sizeFactor(const std::string& n) {
   return 1.f;  // normalsize
 }
 
-bool isRule(const std::string& name) {
-  return name == "hline" || name == "thickhline" || name == "cline" || name == "specialrule";
-}
-
 bool isSize(const std::string& n) {
   return n == "tiny" || n == "scriptsize" || n == "footnotesize" || n == "small" ||
          n == "normalsize" || n == "large" || n == "Large" || n == "LARGE" || n == "huge" ||
          n == "Huge";
+}
+
+/** `a` at a size a declaration (\large) sets: text that still breaks. */
+sptr<Atom> sized(const sptr<Atom>& a, float factor) {
+  auto s = sptrOf<ScaleAtom>(a, factor);
+  s->_declaration = true;
+  return s;
 }
 
 std::size_t codepoints(const std::string& s) {
@@ -82,8 +85,7 @@ std::size_t codepoints(const std::string& s) {
 
 class Lowerer {
 public:
-  Lowerer(const Ast& ast, Diagnostics& diags, BodyRange body = {0, UINT32_MAX})
-      : _ast(ast), _diags(diags), _body(body) {}
+  Lowerer(const Ast& ast, Diagnostics& diags) : _ast(ast), _diags(diags) {}
 
   void run(Formula& f, bool lines, bool paragraphs) {
     if (_ast.root == kNoNode) return;
@@ -97,9 +99,6 @@ public:
 private:
   const Ast& _ast;
   Diagnostics& _diags;
-  /** The byte range of the input that is drawn: all of it, or a
-   *  document's body without its preamble and what follows it. */
-  BodyRange _body;
   /** Per node, whether a line break is in it: 0 not known yet, 1 no, 2 yes. */
   std::vector<std::int8_t> _breaks;
   /** The same for a document's block structure (hasBlock). */
@@ -850,7 +849,7 @@ private:
       }
       if (isSize(name)) {
         auto a = body();
-        return sptrOf<ScaleAtom>(a == nullptr ? sptrOf<EmptyAtom>() : a, sizeFactor(name));
+        return sized(a == nullptr ? sptrOf<EmptyAtom>() : a, sizeFactor(name));
       }
       if (name == "color") {
         const color c = ColorAtom::getColor(rawOf(child(id, 0)));
@@ -1169,34 +1168,34 @@ private:
   sptr<Atom> heading(NodeId id) {
     const Node& x = node(id);
     const int level = headingLevel(x.text);
-    auto row = sptrOf<RowAtom>();
     const std::string number = headingNumber(level, x.star);
-    const auto numbered = [&]() {
-      auto lead = sptrOf<RowAtom>();
-      lead->add(sptrOf<TextAtom>(number, false));
-      lead->add(sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f));
-      return lead;
-    };
+    // The number and the quad after it, and the title: the last argument
+    // (the first is the short one). Each is made once -- the title's
+    // warnings are said once -- and shared by both settings below.
+    std::vector<sptr<Atom>> lead;
     if (!number.empty()) {
-      row->add(sptrOf<TextAtom>(number, false));
-      row->add(sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f));
+      lead = {sptrOf<TextAtom>(number, false), sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f)};
     }
-    // The title is the last argument; the first is the short one. Lowered
-    // once (its warnings are said once) and shared by both settings below.
     const NodeId title = child(id, count(id) - 1);
     const sptr<Atom> text = argumentFormula(title, rawOf(title), false);
-    row->add(text);
+    const auto rowOf = [](const std::vector<sptr<Atom>>& atoms) {
+      auto row = sptrOf<RowAtom>();
+      for (const auto& a : atoms) row->add(a);
+      return row;
+    };
+    std::vector<sptr<Atom>> whole = lead;
+    whole.push_back(text);
     // The heading's font and size, around any part of it.
     const float size = headingSize(level);
     const auto styled = [&](const sptr<Atom>& a) -> sptr<Atom> {
       auto bold = sptrOf<FontStyleAtom>(FontStyle::bf, false, a);
       if (size == 1.f) return bold;
-      return sptrOf<ScaleAtom>(bold, size);
+      return sized(bold, size);
     };
     // A heading on a line of its own hangs its number, as LaTeX does, if
     // the title has to be broken. \paragraph runs into its text instead.
-    if (number.empty() || !isHeadingLine(x.text) || text == nullptr) return styled(row);
-    return sptrOf<HangingAtom>(styled(row), styled(numbered()), styled(text));
+    if (number.empty() || !isHeadingLine(x.text) || text == nullptr) return styled(rowOf(whole));
+    return sptrOf<HangingAtom>(styled(rowOf(whole)), styled(rowOf(lead)), styled(text));
   }
 
   /** The indent a paragraph opens with, once something goes on its line.
@@ -1332,9 +1331,14 @@ private:
     l.indentNext = paragraphs;
     l.afterBreak = paragraphs;
     feedBody(l);
-    // Spaces at the very end are kept in a label, as they were in the
-    // \text{}; a document's last paragraph drops them, as \par does.
-    if (paragraphs) l.spaces.clear();
+    finishLabel(l, f);
+  }
+
+  /** Everything fed: the label's last line set, and its lines made the
+   *  rows of `f`. Spaces at the very end are kept in a label, as they were
+   *  in the \text{}; a document's last paragraph drops them, as \par does. */
+  void finishLabel(Label& l, Formula& f) {
+    if (l.document) l.spaces.clear();
     beforeProse(l);
     endProse(l);
     finishLine(l);
@@ -1489,23 +1493,23 @@ private:
     for (std::uint32_t i = 0; i < count(list); i++) feedItem(l, child(list, i));
   }
 
-  /** A whole input onto the label's lines, but for its preamble and what
-   *  follows \end{document}: LaTeX draws neither. The preamble is still
-   *  lowered, for what its commands do (\definecolor, \newcolumntype,
-   *  \graphicspath), into lines that are thrown away. */
+  /** A whole input onto the label's lines, but for its preamble, which
+   *  LaTeX does not draw (what follows \end{document} was never read). The
+   *  preamble is still lowered, quietly, for what its commands do
+   *  (\definecolor, \newcolumntype, \graphicspath), into lines that are
+   *  thrown away. */
   void feedBody(Label& l) {
     const NodeId root = _ast.root;
     for (std::uint32_t i = 0; i < count(root); i++) {
       const NodeId id = child(root, i);
-      const std::uint32_t at = node(id).span.offset;
-      if (at >= _body.second) break;
-      if (at >= _body.first) {
+      if (i >= _ast.preamble) {
         feedItem(l, id);
         continue;
       }
       Formula scratch;
       Label preamble(scratch);
       preamble.document = l.document;
+      const Diagnostics::Quiet quiet(_diags);
       feedItem(preamble, id);
     }
   }
@@ -1592,24 +1596,19 @@ private:
 
   // --- environments ----------------------------------------------------------
 
-  /** Built by the engine's environment handler from its source text, as
-   *  the old parser's `\name@@env{...}{body}` did. */
   /** `list` set as a document of its own -- paragraphs, displays and lists
    *  apart, \centering's lines centred -- with no paragraph indent, as
-   *  LaTeX's minipage sets \parindent to 0. */
+   *  LaTeX's minipage sets \parindent to 0. It starts between paragraphs,
+   *  as a document does, so the line end after `\begin{minipage}{..}` is
+   *  nothing, and its last paragraph drops the spaces that end it. */
   sptr<Atom> subDocument(NodeId list) {
     Formula f;
     Label l(f);
     l.document = true;
     l.indents = false;
+    l.afterBreak = true;
     feedLines(l, list);
-    beforeProse(l);
-    endProse(l);
-    finishLine(l);
-    if (l.rows != nullptr) {
-      l.rows->checkDimensions();
-      f._root = l.rows->getAsVRow();
-    }
+    finishLabel(l, f);
     return f._root;
   }
 
@@ -1631,6 +1630,8 @@ private:
     return sptrOf<MinipageAtom>(subDocument(child(id, count(id) - 1)), width, p, height, inner);
   }
 
+  /** Built by the engine's environment handler from its source text, as
+   *  the old parser's `\name@@env{...}{body}` did. */
   sptr<Atom> environment(NodeId id) {
     const Node& x = node(id);
     if (x.text == "minipage") return minipage(id);
@@ -1730,8 +1731,8 @@ private:
 }  // namespace
 
 void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines,
-               bool paragraphs, BodyRange body) {
-  Lowerer(ast, diagnostics, body).run(formula, lines, paragraphs);
+               bool paragraphs) {
+  Lowerer(ast, diagnostics).run(formula, lines, paragraphs);
 }
 
 sptr<Atom> buildFragment(const std::string& latex, bool math) {

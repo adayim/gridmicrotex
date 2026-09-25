@@ -58,9 +58,13 @@ test_that("device support detection and typeface fallback work", {
   # pdf() and postscript() fall back with a message. pdf() reports glyphs
   # (R >= 4.3) but does not embed the font, which garbled the math in any
   # viewer without it; postscript() has no glyphs at all.
-  for (dev in c("pdf", "postscript")) {
+  # Each device is closed on every way out: one left open would be the
+  # device every later test measures and draws on.
+  falls_back_on <- function(dev) {
     tf <- tempfile()
     get(dev, asNamespace("grDevices"))(tf)
+    opened <- grDevices::dev.cur()
+    on.exit({ grDevices::dev.off(opened); unlink(tf) }, add = TRUE)
     gridmicrotex:::.clear_typeface_noted()
     expect_false(gridmicrotex:::.device_supports_typeface_glyphs(), info = dev)
     expect_message({
@@ -72,9 +76,8 @@ test_that("device support detection and typeface fallback work", {
     # children it draws must be outlines, not glyphs the device cannot set.
     expect_true("pathgrob" %in% kinds(g), info = dev)
     expect_false("glyphgrob" %in% kinds(g), info = dev)
-    grDevices::dev.off()
-    unlink(tf)
   }
+  for (dev in c("pdf", "postscript")) falls_back_on(dev)
 
   # cairo_pdf() embeds the font, so the math stays text.
   skip_if_not(capabilities("cairo"))

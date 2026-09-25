@@ -18,23 +18,6 @@
 using namespace std;
 using namespace microtex;
 
-namespace {
-
-// Turn RowAtom::_mergeText off for one scope, restoring it on every exit
-// path -- createBox() can throw, and leaking the cleared flag would stop
-// every later row in the formula from merging.
-struct MergeTextGuard {
-  const bool _saved;
-
-  explicit MergeTextGuard(bool disable) : _saved(RowAtom::_mergeText) {
-    if (disable) RowAtom::_mergeText = false;
-  }
-
-  ~MergeTextGuard() { RowAtom::_mergeText = _saved; }
-};
-
-}  // namespace
-
 color MatrixAtom::LINE_COLOR = transparent;
 
 map<string, string> MatrixAtom::_colspeReplacement;
@@ -221,9 +204,9 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
   if (lpos.empty()) lpos.push_back(Alignment::center);
 }
 
-float* MatrixAtom::getColumnSep(Env& env, float width) {
+vector<float> MatrixAtom::getColumnSep(Env& env, float width) {
   const int cols = _matrix->cols();
-  auto* arr = new float[cols + 1]();
+  vector<float> arr(cols + 1, 0.f);
   sptr<Box> Align, AlignSep, Hsep;
   float h, w = env.textWidth();
   int i = 0;
@@ -328,10 +311,10 @@ float* MatrixAtom::getColumnSep(Env& env, float width) {
 
 void MatrixAtom::recalculateLine(
   const int rows,
-  sptr<Box>** boxarr,
+  vector<vector<sptr<Box>>>& boxarr,
   vector<sptr<Atom>>& multiRows,
-  float* height,
-  float* depth,
+  vector<float>& height,
+  vector<float>& depth,
   float drt,
   float vspace
 ) {
@@ -397,8 +380,8 @@ void MatrixAtom::recalculateLine(
 sptr<Box> MatrixAtom::generateMulticolumn(
   Env& env,
   const sptr<Box>& b,
-  const float* hsep,
-  const float* colWidth,
+  const vector<float>& hsep,
+  const vector<float>& colWidth,
   int i,
   int j
 ) {
@@ -500,11 +483,11 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   const int rows = _matrix->rows();
   const int cols = _matrix->cols();
 
-  auto lineDepth = new float[rows]();
-  auto lineHeight = new float[rows]();
-  auto colWidth = new float[cols]();
-  auto boxarr = new sptr<Box>*[rows]();
-  for (int i = 0; i < rows; i++) boxarr[i] = new sptr<Box>[cols]();
+  // Owned by value: cells are built below, and building one can throw.
+  vector<float> lineDepth(rows, 0.f);
+  vector<float> lineHeight(rows, 0.f);
+  vector<float> colWidth(cols, 0.f);
+  vector<vector<sptr<Box>>> boxarr(rows, vector<sptr<Box>>(cols));
 
   float matW = 0;
   const auto drt = env.ruleThickness();
@@ -585,13 +568,12 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
         used += colWidth[j];
       }
     }
-    const float* sep = getColumnSep(env, used);
+    const vector<float> sep = getColumnSep(env, used);
     for (int j = 0; j <= cols; j++) {
       used += sep[j];
       const auto it = _vlines.find(j);
       if (it != _vlines.end()) used += it->second->getWidth(env);
     }
-    delete[] sep;
     const float xw = (env.textWidth() - used) / static_cast<float>(_fillCols.size());
     if (xw > 0) {
       for (int i = 0; i < rows; i++) {
@@ -635,7 +617,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   for (int j = 0; j < cols; j++) matW += colWidth[j];
 
   // The horizontal separator's width
-  float* Hsep = getColumnSep(env, matW);
+  const vector<float> Hsep = getColumnSep(env, matW);
 
   for (auto& i : multiCols) {
     auto* multi = (MulticolumnAtom*)i.get();
@@ -687,11 +669,11 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
 
           bool isLastVline = true;
 
-          WrapperBox* wb = nullptr;
+          sptr<WrapperBox> wb;
           int tj = j;
           float l = j == 0 ? Hsep[j] : Hsep[j] / 2;
           if (boxarr[i][j]->_type == AtomType::none) {
-            wb = new WrapperBox(
+            wb = sptrOf<WrapperBox>(
               boxarr[i][j],
               colWidth[j],
               lineHeight[i],
@@ -702,15 +684,14 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
             auto b = generateMulticolumn(env, boxarr[i][j], Hsep, colWidth, i, j);
             auto* matom = (MulticolumnAtom*)_matrix->_array[i][j].get();
             j += matom->skipped() - 1;
-            wb = new WrapperBox(b, b->_width, lineHeight[i], lineDepth[i], Alignment::left);
+            wb = sptrOf<WrapperBox>(b, b->_width, lineHeight[i], lineDepth[i], Alignment::left);
             isLastVline = matom->hasRightVline();
           }
           float r = j == cols - 1 ? Hsep[j + 1] : Hsep[j + 1] / 2;
           wb->addInsets(l, Vspace, r, Vspace);
           applyCell(*wb, i, j);
-          sptr<Box> swb(wb);
-          boxarr[i][tj] = swb;
-          hb->add(swb);
+          boxarr[i][tj] = wb;
+          hb->add(wb);
 
           auto it = _vlines.find(j + 1);
           if (isLastVline && it != _vlines.end()) {
@@ -778,13 +759,6 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   const auto axis = env.axisHeight();
   vb->_height = totalHeight / 2 + axis;
   vb->_depth = totalHeight / 2 - axis;
-
-  delete[] Hsep;
-  delete[] lineDepth;
-  delete[] lineHeight;
-  delete[] colWidth;
-  for (int i = 0; i < rows; i++) delete[] boxarr[i];
-  delete[] boxarr;
 
   return vb;
 }

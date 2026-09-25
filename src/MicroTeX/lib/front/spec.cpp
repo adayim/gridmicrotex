@@ -264,6 +264,10 @@ bool isCitation(const std::string& name) {
   return name == "cite" || name == "citep" || name == "citet" || name == "citealp";
 }
 
+bool isRule(const std::string& name) {
+  return name == "hline" || name == "thickhline" || name == "cline" || name == "specialrule";
+}
+
 bool isDisplayEnvironment(const std::string& name) {
   static const std::set<std::string> display = {
     // Built by the engine.

@@ -86,23 +86,24 @@ private:
   sptr<Box> generateMulticolumn(
     Env& env,
     const sptr<Box>& b,
-    const float* hsep,
-    const float* colWidth,
+    const std::vector<float>& hsep,
+    const std::vector<float>& colWidth,
     int i,
     int j
   );
 
   static void recalculateLine(
     int rows,
-    sptr<Box>** boxarr,
+    std::vector<std::vector<sptr<Box>>>& boxarr,
     std::vector<sptr<Atom>>& multiRows,
-    float* height,
-    float* depth,
+    std::vector<float>& height,
+    std::vector<float>& depth,
     float drt,
     float vspace
   );
 
-  float* getColumnSep(Env& env, float width);
+  /** The space before each column and after the last: `cols + 1` values. */
+  std::vector<float> getColumnSep(Env& env, float width);
 
   void applyCell(WrapperBox& box, int i, int j);
 

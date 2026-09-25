@@ -169,6 +169,11 @@ public:
 class DecorBox : public Box {
 public:
   sptr<Box> _base;
+  /** Not a box in LaTeX but the reach of a declaration -- a size (\large)
+   *  or a colour (\color, \textcolor) -- whose text breaks across lines:
+   *  the line breaker may put the decoration around each piece instead
+   *  (core/split.cpp). \scalebox and \colorbox are boxes, and stay whole. */
+  bool _openable = false;
 
   explicit DecorBox(const sptr<Box>& base) : _base(base) {}
 

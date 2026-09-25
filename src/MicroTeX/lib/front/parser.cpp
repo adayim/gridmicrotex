@@ -17,10 +17,6 @@ bool isOther(const Token& t, char c) {
   return t.kind == TokKind::character && t.cat == Cat::other && t.cp == static_cast<unsigned char>(c);
 }
 
-bool isRule(const std::string& name) {
-  return name == "hline" || name == "thickhline" || name == "cline" || name == "specialrule";
-}
-
 std::string trim(const std::string& s) {
   const auto first = s.find_first_not_of(" \t\r\n");
   if (first == std::string::npos) return "";
@@ -193,7 +189,33 @@ NodeId Parser::character(const ExpandedToken& t, Mode mode) {
 
 NodeId Parser::parse() {
   _prose = (_opts.lineEndsBreak || _opts.parBreaks) && _opts.startMode == Mode::text;
-  _ast.root = parseList(_opts.startMode, Stop{}, SourceSpan{});
+  std::vector<NodeId> items;
+  _depth++;
+  if (_opts.bodyStart > 0) {
+    // A whole file: its preamble is read as if the input ended where the
+    // body begins -- for every reader, a macro's arguments included -- so
+    // that nothing begun in it (a declaration such as \large, an
+    // environment, \over) takes the body into what is read only for what
+    // it defines. Its warnings are about settings a grob cannot honour.
+    _in.endInputAt(_opts.bodyStart);
+    {
+      const Diagnostics::Quiet quiet(_diags);
+      readItems(_opts.startMode, Stop{}, items);
+    }
+    _ast.preamble = static_cast<std::uint32_t>(items.size());
+    // That end was not the input's.
+    _ahead.erase(std::remove_if(_ahead.begin(), _ahead.end(),
+                                [](const Pending& p) { return p.tok.tok.kind == TokKind::end; }),
+                 _ahead.end());
+  }
+  // What follows \end{document} is never read, as LaTeX never reads it.
+  _in.endInputAt(_opts.bodyEnd);
+  readItems(_opts.startMode, Stop{}, items);
+  _depth--;
+  Node root;
+  root.kind = NodeKind::list;
+  root.mode = _opts.startMode;
+  _ast.root = _ast.add(std::move(root), items);
   // Anything left over is after a stray closing token at the top level.
   while (true) {
     ExpandedToken t = next();
@@ -229,6 +251,16 @@ NodeId Parser::parseList(Mode mode, const Stop& stop, SourceSpan at) {
     return emptyList(at, mode);
   }
   _depth++;
+  readItems(mode, stop, items);
+  _depth--;
+  Node n;
+  n.kind = NodeKind::list;
+  n.mode = mode;
+  n.span = at;
+  return _ast.add(std::move(n), items);
+}
+
+void Parser::readItems(Mode mode, const Stop& stop, std::vector<NodeId>& items) {
   _listDone = false;
   _rowEnded = false;
   while (true) {
@@ -253,12 +285,6 @@ NodeId Parser::parseList(Mode mode, const Stop& stop, SourceSpan at) {
     }
     if (_rowEnded && stop.cellTop) break;
   }
-  _depth--;
-  Node n;
-  n.kind = NodeKind::list;
-  n.mode = mode;
-  n.span = at;
-  return _ast.add(std::move(n), items);
 }
 
 bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) {
@@ -1133,7 +1159,9 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
     for (const ArgSpec& a : spec->args) kids.push_back(parseArgument(a, mode, "\\begin{" + name + "}"));
   }
   if (spec != nullptr && spec->body == EnvBody::text) {
-    // Paragraphs, in text whatever the mode around it.
+    // Paragraphs, in text whatever the mode around it: a blank line in a
+    // minipage in a document is a paragraph, as it is outside one.
+    const Scoped text(_prose, prose.was);
     kids.push_back(parseTextBody(name, at));
     return _ast.add(std::move(n), kids);
   }

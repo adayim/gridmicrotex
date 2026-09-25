@@ -120,6 +120,10 @@ bool isBlockEnvironment(const std::string& name);
 /** \cite, and natbib's \citep, \citet and \citealp. */
 bool isCitation(const std::string& name);
 
+/** A rule across an alignment (\hline, \cline, booktabs' \specialrule):
+ *  it ends the row it is in. */
+bool isRule(const std::string& name);
+
 }  // namespace microtex::front
 
 #endif

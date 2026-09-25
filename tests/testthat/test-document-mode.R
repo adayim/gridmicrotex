@@ -305,6 +305,33 @@ test_that("text under \\large, \\color or \\textcolor wraps at max_width", {
                    latex_tree(fits, input_mode = "document", max_width = 5000)$records)
 })
 
+test_that("a box stays whole in a broken line, and keeps a height set by hand", {
+  # Only a declaration's size or colour is broken with its text:
+  # \scalebox and \colorbox are boxes in LaTeX, and a line breaks around
+  # them, not inside.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  long <- paste(rep("abc", 20), collapse = " ")
+  lines <- function(tex) length(unique(round(runs(tex, max_width = 200)$y)))
+  for (box in c("\\scalebox{0.9}{%s}", "\\colorbox{yellow}{%s}")) {
+    expect_identical(lines(paste("Lead", sprintf(box, long), "tail")), 3L, label = box)
+  }
+  expect_gt(lines(paste("Lead \\large", long, "tail")), 3L)
+  # A row the breaker rebuilds, to reach a size or colour in it, keeps
+  # the height \smash or \raisebox gave it.
+  words <- paste(rep("word", 30), collapse = " ")
+  height <- function(tall) {
+    latex_tree(paste("Lead", words, tall, words), input_mode = "document", max_width = 200,
+               render_mode = "path")$bbox[["height"]]
+  }
+  flat <- height("")
+  for (tall in c("\\smash{\\Huge Tall}", "\\smash{\\textcolor{red}{\\Huge Tall}}",
+                 "\\raisebox{0pt}[0pt][0pt]{\\Huge Tall}",
+                 "\\smash{\\rule{1pt}{40pt}\\textcolor{red}{a b}}")) {
+    expect_equal(height(tall), flat, label = tall)
+  }
+  expect_gt(height("{\\Huge Tall}"), flat)
+})
+
 # --- what a pasted paper uses (Stage 9d, from rendering arXiv 1706.03762) ---
 
 test_that("\\em is italic, as \\emph is", {
@@ -406,6 +433,26 @@ test_that("a minipage sets its body to its width, placed as LaTeX places it", {
   expect_equal(two$x[two$text == "R"] - two$x[two$text == "L"], 150, tolerance = 5)
   # Its body is paragraphs, so markdown does not take it for math.
   expect_false("minipage" %in% .math_envs())
+})
+
+test_that("a minipage's body is paragraphs, as the text around it is", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # A blank line starts a paragraph in it, as it does outside one.
+  inside <- runs("\\begin{minipage}{200pt}First para.\n\nSecond para.\\end{minipage}")
+  expect_identical(length(unique(inside$y)), 2L)
+  # The line ends around its body -- the usual way to write one -- are
+  # nothing, and do not push its lines off their place.
+  expect_identical(runs("\\begin{minipage}{200pt}\n  Text  \n\\end{minipage}"),
+                   runs("\\begin{minipage}{200pt}Text\\end{minipage}"))
+  expect_identical(runs("\\begin{minipage}{200pt}\\centering\n  Text  \n\\end{minipage}"),
+                   runs("\\begin{minipage}{200pt}\\centering Text\\end{minipage}"))
+  # [b] meets the last line of all, when the breaker broke the paragraph
+  # (or a centred line) that ends it.
+  r <- runs(paste("A \\begin{minipage}[b]{100pt}\\centering Short\\\\",
+                  paste(rep("word", 10), collapse = " "), "\\end{minipage} B"))
+  expect_gt(length(unique(r$y[r$text == "word"])), 2L)
+  expect_equal(r$y[r$text == "A "], max(r$y[r$text == "word"]))
+  expect_equal(r$y[r$text == " B"], max(r$y[r$text == "word"]))
 })
 
 test_that("a heading that wraps hangs its title from the number, as LaTeX does", {

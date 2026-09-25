@@ -62,6 +62,40 @@ test_that("a whole file's preamble is read for its definitions and not drawn", {
   }
 })
 
+test_that("nothing begun in the preamble reaches into the body", {
+  # A declaration runs to the end of its group, an environment or a list to
+  # its \end, \over takes the rest of its list, and a macro reads its
+  # arguments wherever they are: begun in the preamble, none may take the
+  # body into what is read only for its definitions.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  file <- function(pre) {
+    paste0("\\documentclass{article}\n", pre,
+           "\n\\begin{document}Hello \\emph{world}\\end{document}")
+  }
+  for (mode in c("document", "mixed")) {
+    plain <- layout_of(file(""), mode)
+    expect_identical(plain$records$text[plain$records$type == "text"], c("Hello ", "world"))
+    for (pre in c("\\large", "\\color{red}", "\\bfseries", "\\begin{foo}", "a \\over b",
+                  "\\begin{itemize}\\item x", "\\newcommand{\\two}[2]{#1#2}\\two{x}",
+                  "\\def\\upto#1.{#1}\\upto abc", "\\title")) {
+      expect_silent(got <- layout_of(file(pre), mode))
+      expect_identical(got, plain, info = paste(mode, pre))
+    }
+  }
+})
+
+test_that("nothing after \\end{document} is read", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  body <- "\\documentclass{article}\n\\begin{document}Hello\\end{document}\n"
+  plain <- layout_of(body, "document")
+  # Not taken into the body (\over), not a capacity error (a runaway), not
+  # warned about.
+  for (post in c("a \\over b", "\\def\\a{\\a}\\a", "} { $ \\unknown", "\\begin{itemize}")) {
+    expect_silent(got <- layout_of(paste0(body, post), "document"))
+    expect_identical(got, plain, info = post)
+  }
+})
+
 test_that("floats keep their contents", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_draws_as(paste("\\begin{table}[ht]", "\\centering",

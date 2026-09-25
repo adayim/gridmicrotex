@@ -89,6 +89,12 @@ private:
   void recalculateWidth(const Box& box);
 
 public:
+  /** One paragraph broken into lines. Its baseline is its first line's, as
+   *  any VBox's is, but its lines are lines of the column around it, as
+   *  TeX adds each line to the page on its own: that column's last
+   *  baseline is its last line's. */
+  bool _lines = false;
+
   VBox() : _leftMostPos(F_MAX), _rightMostPos(F_MIN) {}
 
   VBox(const sptr<Box>& box, float rest, Alignment alignment);

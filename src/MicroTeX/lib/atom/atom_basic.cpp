@@ -35,7 +35,9 @@ sptr<Box> SmashedAtom::createBox(Env& env) {
 }
 
 sptr<Box> ScaleAtom::createBox(Env& env) {
-  return sptrOf<ScaleBox>(_base->createBox(env), _sx, _sy);
+  auto box = sptrOf<ScaleBox>(_base->createBox(env), _sx, _sy);
+  box->_openable = _declaration;
+  return box;
 }
 
 sptr<Box> MathAtom::createBox(Env& env) {
@@ -73,8 +75,11 @@ void ColorAtom::defineColor(const string& name, color c) {
 }
 
 sptr<Box> ColorAtom::createBox(Env& env) {
-  const auto box = _elements->createBox(env);
-  return sptrOf<ColorBox>(box, _color, _background);
+  auto box = sptrOf<ColorBox>(_elements->createBox(env), _color, _background);
+  // A colour alone is no box in LaTeX (\color, \textcolor); one with a
+  // background is (\colorbox).
+  box->_openable = isTransparent(_background);
+  return box;
 }
 
 PhantomAtom::PhantomAtom(const sptr<Atom>& el) {

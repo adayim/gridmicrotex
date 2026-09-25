@@ -24,19 +24,30 @@ namespace {
 // sets its pieces side by side, each at its (scaled) shift. A space stays a
 // GlueBox, which the line builder looks for, scaled rather than wrapped.
 // Only a line that is broken is opened, so every other layout is exactly
-// as it was. A colour with a background is a box in LaTeX too
-// (\colorbox), and stays one.
+// as it was. Only a declaration's box is opened (DecorBox::_openable, set
+// where it is made): \scalebox, \resizebox and \colorbox are boxes in
+// LaTeX, and stay whole.
 
 const ScaleBox* scaling(const sptr<Box>& b) {
   const auto* s = dynamic_cast<const ScaleBox*>(b.get());
-  if (s == nullptr || s->sx() <= 0 || s->sy() <= 0) return nullptr;
+  if (s == nullptr || !s->_openable || s->sx() <= 0 || s->sy() <= 0) return nullptr;
   return dynamic_pointer_cast<HBox>(s->_base) != nullptr ? s : nullptr;
 }
 
 const ColorBox* colouring(const sptr<Box>& b) {
   const auto* c = dynamic_cast<const ColorBox*>(b.get());
-  if (c == nullptr || !isTransparent(c->background())) return nullptr;
+  if (c == nullptr || !c->_openable) return nullptr;
   return dynamic_pointer_cast<HBox>(c->_base) != nullptr ? c : nullptr;
+}
+
+// A row rebuilt from `from`'s children keeps `from`'s size, scaled by
+// `sy` (and `sx`) as a wrapper around it scales it: adding the children
+// again would compute it afresh, and lose a size set by hand (\smash,
+// \raisebox's [h][d]).
+void keepSize(HBox& row, const Box& from, float sx = 1, float sy = 1) {
+  row._width = from._width * sx;
+  row._height = from._height * sy;
+  row._depth = from._depth * sy;
 }
 
 bool openable(const sptr<Box>& b) {
@@ -56,6 +67,8 @@ sptr<HBox> wrapRow(const sptr<Box>& w, const sptr<HBox>& row, float shift) {
   out->_childLevels = row->_childLevels;
   out->_shift = shift;
   out->_type = row->_type;
+  const ScaleBox* s = scaling(w);
+  keepSize(*out, *row, s != nullptr ? s->sx() : 1, s != nullptr ? s->sy() : 1);
   return out;
 }
 
@@ -108,6 +121,7 @@ sptr<HBox> openRow(const sptr<HBox>& row) {
   out->_childLevels = row->_childLevels;
   out->_shift = row->_shift;
   out->_type = row->_type;
+  keepSize(*out, *row);
   return out;
 }
 
@@ -473,6 +487,7 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
   // raw owner leaked the VBox when it did (valgrind: 6 blocks from
   // BoxSplitter::split over one test run).
   auto vbox = sptrOf<VBox>();
+  vbox->_lines = true;
   sptr<HBox> first, second;
   // Colour and size boxes opened, so the text in them can be broken too.
   sptr<HBox> hbox = openRow(hb);

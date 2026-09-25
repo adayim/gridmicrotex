@@ -126,6 +126,7 @@ sptr<Box> DisplayAtom::createBox(Env& env) {
   const auto vb = std::dynamic_pointer_cast<VBox>(lines);
   if (!split || vb == nullptr) return box;
   auto out = sptrOf<VBox>();
+  out->_lines = true;
   for (const auto& line : vb->_children) {
     if (std::dynamic_pointer_cast<HBox>(line) != nullptr) {
       out->add(sptrOf<HBox>(line, width, Alignment::center));
@@ -136,6 +137,19 @@ sptr<Box> DisplayAtom::createBox(Env& env) {
   return out;
 }
 
+namespace {
+
+// The baseline of the last line in `b`, from its top: a paragraph broken
+// into lines is a column whose own baseline is its first line.
+float lastBaseline(const sptr<Box>& b) {
+  const auto v = std::dynamic_pointer_cast<VBox>(b);
+  if (v == nullptr || !v->_lines || v->_children.empty()) return b->_height;
+  const auto& last = v->_children.back();
+  return v->_height + v->_depth - (last->_height + last->_depth) + lastBaseline(last);
+}
+
+}  // namespace
+
 sptr<Box> MinipageAtom::createBox(Env& env) {
   if (_body == nullptr) return sptrOf<StrutBox>(0.f, 0.f, 0.f, 0.f);
   const float width = Units::fsize(_width, env);
@@ -144,16 +158,9 @@ sptr<Box> MinipageAtom::createBox(Env& env) {
   {
     // The breaker needs word-level runs, as a p{} cell does: folded into
     // one phrase a paragraph could not be broken.
-    const bool merge = RowAtom::_mergeText;
-    RowAtom::_mergeText = false;
-    try {
-      box = env.withTextWidth(measured ? width : env.textWidth(),
-                              [&](Env& e) { return _body->createBox(e); });
-    } catch (...) {
-      RowAtom::_mergeText = merge;
-      throw;
-    }
-    RowAtom::_mergeText = merge;
+    const MergeTextGuard guard(true);
+    box = env.withTextWidth(measured ? width : env.textWidth(),
+                            [&](Env& e) { return _body->createBox(e); });
   }
   if (measured) box = BoxSplitter::split(box, width, env.lineSpace()).second;
 
@@ -164,10 +171,12 @@ sptr<Box> MinipageAtom::createBox(Env& env) {
     vb->add(box);
   }
   // Measured from its top: the body's own height, and where its first and
-  // last baselines are in it.
+  // last baselines are in it -- the last paragraph's last line, when the
+  // breaker broke it.
   const float body = vb->_height + vb->_depth;
   const float first = vb->_children.front()->_height;
-  const float last = body - vb->_children.back()->_depth;
+  const auto& back = vb->_children.back();
+  const float last = body - (back->_height + back->_depth) + lastBaseline(back);
   // A height of its own, taller than the body: the room goes where the
   // inner position puts the body (below it for `t`, above for `b`).
   float total = body;
