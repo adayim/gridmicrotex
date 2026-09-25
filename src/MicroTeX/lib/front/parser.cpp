@@ -139,8 +139,10 @@ bool Parser::atStop(const ExpandedToken& t, const Stop& stop) const {
       (k.isChar(Cat::alignTab) || k.isCs("\\") || k.isCs("cr"))) {
     return true;
   }
-  // A line end in mixed-mode prose is a `\\`, and stops where one does.
-  if (stop.overArg && _prose && k.lineEnds > 0) return true;
+  // A line end in mixed-mode prose is a `\\`, and stops where one does. In
+  // a document it is a space, and a paragraph break does not end a
+  // declaration either: \small lasts to the end of its group, as in TeX.
+  if (stop.overArg && _prose && _opts.lineEndsBreak && k.lineEnds > 0) return true;
   if (stop.cell && k.isCs("end")) return true;
   if (stop.right && (k.isCs("right") || k.isCs("middle"))) return true;
   if ((stop.dollar || stop.displayDollar) && k.isChar(Cat::mathShift)) return true;
@@ -359,10 +361,11 @@ bool Parser::parseItem(Mode mode, const Stop& stop, std::vector<NodeId>& items) 
 }
 
 /** TeX's text ligatures: `--` and `---` are the dashes, `` and '' the
- *  double quotes. Only in text, and only where the characters are written
- *  next to each other; in math `''` is a double prime, and a lone `-` is a
- *  hyphen as it always was. Returns kNoNode when this is not one, having
- *  read nothing. */
+ *  double quotes, and a single ` and ' the single ones, which is how TeX's
+ *  text fonts set them. Only in text, and only where the characters are
+ *  written next to each other; in math `''` is a double prime, and a lone
+ *  `-` is a hyphen as it always was. Returns kNoNode when this is not one,
+ *  having read nothing. */
 NodeId Parser::ligature(const ExpandedToken& first, Mode mode) {
   const char c = isOther(first.tok, '-')    ? '-'
                  : isOther(first.tok, '`')  ? '`'
@@ -384,8 +387,8 @@ NodeId Parser::ligature(const ExpandedToken& first, Mode mode) {
   c32 cp = 0;
   if (c == '-' && n == 2) cp = 0x2013;        // en dash
   if (c == '-' && n == 3) cp = 0x2014;        // em dash
-  if (c == '`' && n == 2) cp = 0x201C;        // opening double quote
-  if (c == '\'' && n == 2) cp = 0x201D;       // closing double quote
+  if (c == '`') cp = n == 2 ? 0x201C : 0x2018;   // opening quotes
+  if (c == '\'') cp = n == 2 ? 0x201D : 0x2019;  // closing quotes, apostrophe
   if (cp == 0) {
     // Not a ligature after all: put back what was read beyond the first.
     for (auto it = taken.rbegin(); it != taken.rend(); ++it) unread(std::move(*it));
@@ -592,25 +595,37 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     if (isHeading(name)) {
       // `\section*` is the same heading without its number. The star is a
       // character to the lexer, so it is read here, where the spec says
-      // which names have a starred form.
-      const ExpandedToken& p = peek();
-      if (isOther(p.tok, '*') && p.lead.empty()) {
+      // which names have a starred form; LaTeX looks for it past spaces.
+      if (isOther(peek().tok, '*')) {
         next();
         n.star = true;
       }
-      // A heading is set as text, whatever mode it was met in.
-      return _ast.add(std::move(n), {parseArgument(spec->args[0], Mode::text, who)});
+      // The short title for a table of contents, which a grob has not got,
+      // then the title, set as text whatever mode it was met in.
+      const NodeId shortTitle = parseArgument(spec->args[0], mode, who);
+      return _ast.add(std::move(n), {shortTitle, parseArgument(spec->args[1], Mode::text, who)});
     }
     if (name == "noindent" || name == "centering") return _ast.add(std::move(n), {});
+    if (name == "caption") {
+      // A line of text, ended as the prelude used to end it, with a line
+      // break. A document also starts it on a line of its own (lower.cpp).
+      std::vector<NodeId> args;
+      for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, Mode::text, who));
+      items.push_back(_ast.add(std::move(n), args));
+      return lineBreak(at, mode);
+    }
     if (name == "ref" || name == "pageref" || name == "eqref" || name == "cite" ||
         name == "footnote") {
       std::vector<NodeId> args;
       for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
-      const std::string key = trim(_ast.node(args.back()).raw);
-      if (name == "footnote") {
+      const Node& last = _ast.node(args.back());
+      const std::string key = trim(last.raw);
+      if (!last.flag) {
+        // No argument at all: parseArgument() has said so.
+      } else if (name == "footnote") {
         _diags.warn(at, "\\footnote has no page to put a note on: its text is drawn here");
       } else if (name == "cite") {
-        _diags.warn(at, "citation `" + key + "' is undefined: drawn as [" + key + "]");
+        _diags.warn(at, "citation `" + key + "' is undefined: drawn as [?]");
       } else {
         // `?\?)` so that `??)` is not read as a trigraph.
         _diags.warn(at, "reference `" + key + "' is undefined: drawn as " +
@@ -689,9 +704,9 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
   {
     // A typewriter font has no ligatures in TeX, so `--v` in \texttt is two
     // hyphens, not a dash. It is the font that decides there; naming the
-    // commands is the closest the parser can come to it.
-    const Scoped verbatim(_monospace,
-                          _monospace || name == "texttt" || name == "tt" || name == "mathtt");
+    // commands is the closest the parser can come to it. (\tt is a
+    // declaration: its body is read below.)
+    const Scoped verbatim(_monospace, _monospace || name == "texttt" || name == "mathtt");
     for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
     if (spec->bare != Bare::none) args.push_back(parseBare(spec->bare, who));
   }
@@ -726,6 +741,7 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     body.argument = false;
     body.overArg = spec->shape == Shape::declaration;
     const Mode bodyMode = spec->body == ArgKind::math ? Mode::math : mode;
+    const Scoped verbatim(_monospace, _monospace || name == "tt");
     const NodeId list = parseList(bodyMode, body, at);
     n.kind = NodeKind::declaration;
     args.push_back(list);

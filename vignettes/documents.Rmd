@@ -84,8 +84,11 @@ As LaTeX reads it, with nothing of our own:
 - **Lists and tables.** `itemize` and `enumerate` are set as blocks;
   their items, like a `tabular`'s cells, are text, with math between
   `$…$`.
-- **Text.** `--` and `---` are dashes, ``` `` ``` and `''` curly quotes,
-  and `~` a space the line is not broken at.
+- **Text.** `--` and `---` are dashes, `` ` `` and `'` (single or
+  doubled) curly quotes, and `~` a space the line is not broken at.
+  `\centering` and the `center` environment centre their lines, and a
+  `table` or `figure` is set apart where it is written, with its
+  `\caption` on a line of its own.
 
 Anything LaTeX would stop on is drawn as well as it can be, and one
 warning lists each problem with its line and column in the body.
@@ -138,8 +141,8 @@ part on a page of its own.
 
 A document's cross-references need the rest of the document, so they
 warn and are drawn as LaTeX draws them when it cannot resolve one:
-`\ref` and `\pageref` as `??`, `\eqref` as `(??)` and `\cite{key}` as
-`[key]`. A `\footnote` has no foot of a page to go to, so its text is set
+`\ref` and `\pageref` as a bold `??`, `\eqref` as `(??)` and `\cite{key}`
+as `[?]`. A `\footnote` has no foot of a page to go to, so its text is set
 where it is written. The preamble, `\maketitle` and `\label` are read and
 dropped, and a `table` or `figure` is set where it is written, as a float
 placed "here" would be. `vignette("getting-started")` lists what is not

@@ -113,6 +113,29 @@ test_that("annotate('latex') follows latex_options(), as geom_latex() does", {
   expect_identical(mixed$layout_df$text, "x^2")
 })
 
+test_that("geom_latex() and annotate('latex') read the options when drawn", {
+  # Both take them when the plot is drawn, so a plot made under one set of
+  # options and printed under another draws both layers alike.
+  on.exit(reset_latex_options(), add = TRUE)
+  base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
+  latex_options(input_mode = "math")
+  p <- base + geom_latex(ggplot2::aes(label = "x^2")) +
+    ggplot2::annotate("latex", x = 1, y = 1, label = "x^2")
+  reset_latex_options()
+  # Drawn in the default mode now: "x^2" as text, with its warning.
+  g1 <- suppressWarnings(layer_grobs(p, 1L))[[1]]
+  g2 <- suppressWarnings(layer_grobs(p, 2L))[[1]]
+  expect_identical(g1$layout_df, g2$layout_df)
+  expect_identical(g1$layout_df$text, "x^2")
+  # Neither says it was asked for typeface when it was not, so the fallback
+  # message follows the same rule for both.
+  expect_null(p$layers[[1]]$geom_params$render_mode)
+  expect_identical(p$layers[[1]]$geom_params$input_mode, NULL)
+  # What the caller does give is checked when the layer is made.
+  expect_error(geom_latex(input_mode = "bogus"), "should be one of")
+  expect_identical(geom_latex(render_mode = "path")$geom_params$render_mode, "path")
+})
+
 # --- element_latex() ---
 
 test_that("element_latex is an element_text subclass that merges", {

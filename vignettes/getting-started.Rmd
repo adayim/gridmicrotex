@@ -735,8 +735,8 @@ fixed-size grob, so they become a static 1 em gap --- right position, no
 elasticity.
 
 **Drawn as LaTeX draws them when there is nothing to resolve them
-against**, with a warning: `\ref{…}` and `\pageref{…}` as `??`,
-`\eqref{…}` as `(??)`, `\cite{key}` as `[key]`, and a `\footnote{…}`'s text
+against**, with a warning: `\ref{…}` and `\pageref{…}` as a bold `??`,
+`\eqref{…}` as `(??)`, `\cite{key}` as `[?]`, and a `\footnote{…}`'s text
 where it is written, since a grob has no foot of the page.
 
 **Not supported** --- drawn in red with a warning, which makes them easy

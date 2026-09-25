@@ -2,6 +2,7 @@
 
 #include "box/box_group.h"
 #include "box/box_single.h"
+#include "core/split.h"
 #include "env/env.h"
 
 using namespace microtex;
@@ -119,7 +120,23 @@ sptr<Box> VRowAtom::createBox(Env& env) {
 sptr<Box> DisplayAtom::createBox(Env& env) {
   auto box = _base->createBox(env);
   const float width = env.textWidth();
-  // Too wide to centre: left as it is, like any line that overruns.
-  if (width == POS_INF || box->_width >= width) return box;
-  return sptrOf<HBox>(box, width, Alignment::center);
+  if (width == POS_INF) return box;
+  if (box->_width <= width) return sptrOf<HBox>(box, width, Alignment::center);
+  // Too wide for the line: broken as any line is, and each line it makes
+  // centred -- not justified, as LaTeX's \centering leaves them.
+  const bool justify = BoxSplitter::_justify;
+  BoxSplitter::_justify = false;
+  const auto [split, lines] = BoxSplitter::split(box, width, env.lineSpace());
+  BoxSplitter::_justify = justify;
+  const auto vb = std::dynamic_pointer_cast<VBox>(lines);
+  if (!split || vb == nullptr) return box;
+  auto out = sptrOf<VBox>();
+  for (const auto& line : vb->_children) {
+    if (std::dynamic_pointer_cast<HBox>(line) != nullptr) {
+      out->add(sptrOf<HBox>(line, width, Alignment::center));
+    } else {
+      out->add(line);  // the space between lines
+    }
+  }
+  return out;
 }

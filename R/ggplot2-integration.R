@@ -71,14 +71,18 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
                        render_mode = c("typeface", "path"),
                        na.rm = FALSE, show.legend = NA,
                        inherit.aes = TRUE) {
-  .apply_opts("math_font", "render_mode", "input_mode")
-  render_mode <- match.arg(render_mode)
-  input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required for geom_latex(). ",
          "Please install it with install.packages('ggplot2').",
          call. = FALSE)
   }
+  # Only what the caller gave: latex_grob() fills the rest from
+  # latex_options() when the plot is drawn, as it does for annotate("latex"),
+  # which never comes through here. Checked now, so a typo fails early.
+  given <- list()
+  if (!missing(math_font)) given$math_font <- math_font
+  if (!missing(input_mode)) given$input_mode <- match.arg(input_mode)
+  if (!missing(render_mode)) given$render_mode <- match.arg(render_mode)
 
   ggplot2::layer(
     geom = GeomLatex,
@@ -88,16 +92,9 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
     position = position,
     show.legend = show.legend,
     inherit.aes = inherit.aes,
-    params = list(
-      fontsize = fontsize,
-      math_font = math_font,
-      lineheight = lineheight,
-      max_width = max_width,
-      input_mode = input_mode,
-      render_mode = render_mode,
-      na.rm = na.rm,
-      ...
-    )
+    params = c(list(fontsize = fontsize, lineheight = lineheight,
+                    max_width = max_width, na.rm = na.rm),
+               given, list(...))
   )
 }
 
@@ -181,6 +178,37 @@ element_latex <- function(math_font = "", fontsize = NULL,
 # Placeholder — replaced in .onLoad_ggplot2() with the real S7 constructor
 .element_latex_class <- NULL
 
+# The grobs of a GeomLatex or GeomMarkdown panel, one per row: `make`
+# ("latex_grob" or "markdown_grob", by name so an error's call stays
+# readable) with the row's label as its `text_arg`. `set` holds the layer's
+# settings, NULL where the caller gave none: those are left out, so the
+# grob fills them from latex_options() when it is drawn, whether the layer
+# came from geom_latex() or annotate("latex").
+.label_panel_grobs <- function(data, panel_params, coord, make, text_arg,
+                               lineheight, max_width, set) {
+  coords <- coord$transform(data, panel_params)
+  set <- Filter(Negate(is.null), set)
+  grobs <- lapply(seq_len(nrow(coords)), function(i) {
+    row <- coords[i, ]
+    if (is.na(row$label) || !nzchar(row$label)) return(grid::nullGrob())
+    # A mapped alpha can be NA, which ggplot2 draws opaque.
+    col <- if (isTRUE(row$alpha < 1)) {
+      grDevices::adjustcolor(row$colour, alpha.f = row$alpha)
+    } else {
+      row$colour
+    }
+    args <- list(row$label,
+                 x = grid::unit(row$x, "npc"), y = grid::unit(row$y, "npc"),
+                 hjust = row$hjust, vjust = row$vjust,
+                 rot = row$angle %||% 0, max_width = max_width,
+                 gp = grid::gpar(col = col, fontsize = row$size,
+                                 lineheight = lineheight))
+    names(args)[1] <- text_arg
+    do.call(make, c(args, set))
+  })
+  do.call(grid::gList, grobs)
+}
+
 # --------------------------------------------------------------------------
 # .onLoad_ggplot2() — called from .onLoad in zzz.R
 # --------------------------------------------------------------------------
@@ -218,41 +246,10 @@ element_latex <- function(math_font = "", fontsize = NULL,
                           math_font = NULL, lineheight = 1.2, max_width = 0,
                           input_mode = NULL, render_mode = NULL,
                           na.rm = FALSE) {
-      coords <- coord$transform(data, panel_params)
-      # geom_latex() fills these from latex_options() when it makes the
-      # layer. A layer made any other way -- annotate("latex"), a stat's
-      # geom = "latex" -- leaves them unset, and latex_grob() fills them
-      # from the options itself; a default here would override them.
-      set <- Filter(Negate(is.null), list(math_font = math_font,
-                                          input_mode = input_mode,
-                                          render_mode = render_mode))
-
-      grobs <- lapply(seq_len(nrow(coords)), function(i) {
-        row <- coords[i, ]
-
-        if (is.na(row$label) || !nzchar(row$label)) return(grid::nullGrob())
-
-        fs <- row$size
-        # A mapped alpha can be NA, which ggplot2 draws opaque.
-        col <- if (isTRUE(row$alpha < 1)) {
-          grDevices::adjustcolor(row$colour, alpha.f = row$alpha)
-        } else {
-          row$colour
-        }
-
-        do.call(latex_grob, c(list(
-          tex = row$label,
-          x = grid::unit(row$x, "npc"),
-          y = grid::unit(row$y, "npc"),
-          hjust = row$hjust,
-          vjust = row$vjust,
-          rot = row$angle %||% 0,
-          max_width = max_width,
-          gp = grid::gpar(col = col, fontsize = fs, lineheight = lineheight)
-        ), set))
-      })
-
-      do.call(grid::gList, grobs)
+      .label_panel_grobs(data, panel_params, coord, "latex_grob", "tex",
+                         lineheight, max_width,
+                         list(math_font = math_font, input_mode = input_mode,
+                              render_mode = render_mode))
     }
   )
 
@@ -320,10 +317,10 @@ element_latex <- function(math_font = "", fontsize = NULL,
   if (!is.null(face)   && nzchar(face))   gp$fontface   <- face
 
   # In math mode, strip enclosing $...$ that users add by analogy with
-  # plotmath-style labels. In text mode, $ toggles math sub-spans, so
-  # leave them intact.
+  # plotmath-style labels. In a label or a document, $ toggles math
+  # sub-spans, so leave them intact.
   strip_dollars <- function(s) {
-    if (input_mode == "mixed") s else gsub("^\\$|\\$$", "", s)
+    if (input_mode == "math") gsub("^\\$|\\$$", "", s) else s
   }
 
   # When x/y aren't supplied, anchor at the rotation-adjusted just so the

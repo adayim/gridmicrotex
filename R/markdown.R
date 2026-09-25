@@ -131,6 +131,12 @@
   # is required: \char126b swallows the `b`.
   s <- gsub("~", "\\\\char126{}", s)
   s <- gsub("^", "\\char94{}", s, fixed = TRUE)
+  # Quotes and dashes stay as CommonMark writes them (it curls nothing
+  # without its `smart` extension), where TeX would make `--` a dash and
+  # ' a curly quote. Only a hyphen next to another forms a dash.
+  s <- gsub("'", "\\char39{}", s, fixed = TRUE)
+  s <- gsub("`", "\\char96{}", s, fixed = TRUE)
+  s <- gsub("-(?=-)", "\\\\char45{}", s, perl = TRUE)
   # MicroTeX has no \textbackslash -- it would typeset those 13 letters
   # literally. \backslash is the spelling that works; the empty group
   # stops it gluing onto a following letter (\backslashx).

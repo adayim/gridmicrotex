@@ -94,6 +94,20 @@ test_that("a nested list is indented past its parent", {
   expect_gt(max(left), min(left))
 })
 
+test_that("a nested list after an item's text goes below it, as in LaTeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  row_of <- function(r, word) r$y[r$type == "text" & r$text == word]
+  r <- items("\\begin{itemize}\\item outer \\begin{itemize}\\item inner\\end{itemize}\\end{itemize}")
+  expect_gt(row_of(r, "inner"), row_of(r, "outer"))
+  # Level with the outer item's text, not its marker.
+  expect_gte(min(r$x[r$y > row_of(r, "outer") + 1]), r$x[r$text %in% "outer"])
+  # One that opens the item shares its line, as LaTeX sets it.
+  r <- items("\\begin{itemize}\\item \\begin{itemize}\\item inner\\end{itemize}\\end{itemize}")
+  expect_lt(diff(range(r$y[r$type == "glyph"])), 5)
+  # A `}` that closes nothing cannot end the item's text early.
+  expect_identical(items("\\begin{itemize}\\item {a}} b\\end{itemize}")$text[2], "a b")
+})
+
 test_that("empty list does not error", {
   g <- latex_grob("\\begin{itemize}\\end{itemize}", render_mode = "path")
   expect_s3_class(g, "latexgrob")

@@ -86,13 +86,19 @@ geom_markdown <- function(mapping = NULL, data = NULL, stat = "identity",
                           justify = FALSE, style = NULL,
                           na.rm = FALSE, show.legend = NA,
                           inherit.aes = TRUE) {
-  .apply_opts("math_font", "render_mode", "justify")
-  render_mode <- match.arg(render_mode)
-  .check_justify(justify)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop("Package 'ggplot2' is required for geom_markdown(). ",
          "Please install it with install.packages('ggplot2').",
          call. = FALSE)
+  }
+  # As geom_latex(): only what the caller gave, checked now; the grob fills
+  # the rest from latex_options() when the plot is drawn.
+  given <- list(style = style)
+  if (!missing(math_font)) given$math_font <- math_font
+  if (!missing(render_mode)) given$render_mode <- match.arg(render_mode)
+  if (!missing(justify)) {
+    .check_justify(justify)
+    given$justify <- justify
   }
 
   ggplot2::layer(
@@ -103,17 +109,9 @@ geom_markdown <- function(mapping = NULL, data = NULL, stat = "identity",
     position = position,
     show.legend = show.legend,
     inherit.aes = inherit.aes,
-    params = list(
-      fontsize = fontsize,
-      math_font = math_font,
-      lineheight = lineheight,
-      max_width = max_width,
-      render_mode = render_mode,
-      justify = justify,
-      style = style,
-      na.rm = na.rm,
-      ...
-    )
+    params = c(list(fontsize = fontsize, lineheight = lineheight,
+                    max_width = max_width, na.rm = na.rm),
+               given, list(...))
   )
 }
 
@@ -294,41 +292,10 @@ element_markdown <- function(math_font = "", fontsize = NULL,
                           math_font = NULL, lineheight = 1.2, max_width = 0,
                           render_mode = NULL, justify = NULL,
                           style = NULL, na.rm = FALSE) {
-      coords <- coord$transform(data, panel_params)
-      # As GeomLatex: unset for annotate("markdown") and the like, so that
-      # markdown_grob() takes them from latex_options(), as geom_markdown()
-      # does when it makes the layer.
-      set <- Filter(Negate(is.null), list(math_font = math_font,
-                                          render_mode = render_mode,
-                                          justify = justify))
-
-      grobs <- lapply(seq_len(nrow(coords)), function(i) {
-        row <- coords[i, ]
-
-        if (is.na(row$label) || !nzchar(row$label)) return(grid::nullGrob())
-
-        # A mapped alpha can be NA, which ggplot2 draws opaque.
-        col <- if (isTRUE(row$alpha < 1)) {
-          grDevices::adjustcolor(row$colour, alpha.f = row$alpha)
-        } else {
-          row$colour
-        }
-
-        do.call(markdown_grob, c(list(
-          md = row$label,
-          x = grid::unit(row$x, "npc"),
-          y = grid::unit(row$y, "npc"),
-          hjust = row$hjust,
-          vjust = row$vjust,
-          rot = row$angle %||% 0,
-          max_width = max_width,
-          style = style,
-          gp = grid::gpar(col = col, fontsize = row$size,
-                          lineheight = lineheight)
-        ), set))
-      })
-
-      do.call(grid::gList, grobs)
+      .label_panel_grobs(data, panel_params, coord, "markdown_grob", "md",
+                         lineheight, max_width,
+                         list(math_font = math_font, render_mode = render_mode,
+                              justify = justify, style = style))
     }
   )
 

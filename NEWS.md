@@ -9,10 +9,10 @@
 - A space after a command is dropped, as in TeX: `\LaTeX is` draws "LaTeXis"; write `\LaTeX{} is` or `\LaTeX\ is`. A run of spaces is one space.
 - In labels, `_`, `^`, `#` and `&` outside math are drawn with a warning, as LaTeX refuses them there: write `$x^2$`, or `\_`, `\#`, `\&` for the character.
 - The items of `itemize` and `enumerate` and the cells of `tabular` are text, as in LaTeX: put math in them between `$…$`. With `input_mode = "math"` they are math, as before.
-- `--`, `---`, ``` `` ``` and `''` in text are dashes and curly quotes, as in TeX, except in `\texttt{}` and `\url{}`.
+- `--` and `---` in text are dashes, and `` ` `` and `'`, single or doubled, are curly quotes, as in TeX, except in `\texttt{}`, `\tt` and `\url{}`. Markdown prose keeps its quotes and hyphens, as CommonMark does.
 - A prime is TeX's `^{\prime}`, and `` ` `` and `"` in math are those characters, not a backprime and a double prime.
 - `\|` is ‖, as in LaTeX, so `Vmatrix` has double bars.
-- `\ref`, `\eqref`, `\pageref`, `\cite` and `\footnote` warn and draw what LaTeX draws when it cannot resolve them (`??`, `[key]`, the note's text), instead of their names in red.
+- `\ref`, `\eqref`, `\pageref`, `\cite` and `\footnote` warn and draw what LaTeX draws when it cannot resolve them (a bold `??` or `[?]`, the note's text), instead of their names in red.
 - A definition inside `{…}` ends with the group, as in TeX; `\gdef` is global.
 - An unknown environment draws its body instead of its name in red. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
 - Starred forms work (`\operatorname*`, `\newcommand*`, `\DeclareMathOperator*`, `\hspace*`, `\\*`), as do `\def` with delimited parameters, `\let`, `\providecommand`, `\newenvironment` with arguments, and `\ensuremath`.
@@ -37,7 +37,7 @@
 - Bug fix: a macro defined in terms of itself hung R; it is now an error.
 - Bug fix: a layout measured on one device was reused on a device of the same kind at a different resolution.
 - Bug fix: `geom_latex()` and `geom_markdown()` failed when a mapped `alpha` was `NA`.
-- Bug fix: `annotate("latex")` and `annotate("markdown")` ignored `latex_options()`: a label was drawn in the default input mode, math font and render mode.
+- Bug fix: `annotate("latex")` and `annotate("markdown")` ignored `latex_options()`: a label was drawn in the default input mode, math font and render mode. They, and `geom_latex()` and `geom_markdown()`, now read the options when the plot is drawn.
 - Bug fix: CSS `border: none` or `border: 0` still drew a frame or table rule, and a `body` border with no colour was not drawn.
 - Bug fix: `clear_macros()` given a number removed an unrelated macro.
 - Bug fix: Ctrl-C was ignored while text in a formula was being measured.

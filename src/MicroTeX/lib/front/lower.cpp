@@ -1,5 +1,6 @@
 #include "front/lower.h"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <set>
@@ -96,6 +97,8 @@ private:
   Diagnostics& _diags;
   /** Per node, whether a line break is in it: 0 not known yet, 1 no, 2 yes. */
   std::vector<std::int8_t> _breaks;
+  /** The same for a document's block structure (hasBlock). */
+  std::vector<std::int8_t> _blocks;
   /** Where images are looked for: the last \graphicspath. */
   std::vector<std::string> _graphicsDirs;
 
@@ -353,17 +356,49 @@ private:
     // Only the lines of a label have indents to suppress; elsewhere it is
     // what it was when the prelude dropped it.
     if (name == "noindent" || name == "centering") return nullptr;
-    // What LaTeX draws for a reference it cannot resolve.
-    if (name == "ref" || name == "pageref") return literalText("??");
-    if (name == "eqref") return literalText("(?\?)");  // `??)` is a trigraph
+    // What LaTeX draws for a reference it cannot resolve: a bold ??.
+    const auto bold = [](const std::string& s) {
+      return sptrOf<FontStyleAtom>(FontStyle::bf, false, literalText(s));
+    };
+    if (name == "ref" || name == "pageref") return bold("??");
+    if (name == "eqref") {
+      auto row = sptrOf<RowAtom>();
+      row->add(literalText("("));
+      row->add(bold("??"));
+      row->add(literalText(")"));
+      return row;
+    }
     if (name == "cite") {
-      // What LaTeX draws for a citation it cannot resolve: the key itself,
-      // in brackets. Its optional note has nothing to be a note on. The key
-      // is set as written -- a `_` or `:` in one is not LaTeX here.
-      return literalText("[" + rawOf(child(id, 1)) + "]");
+      // What LaTeX draws for citations it cannot resolve: a bold ? for each
+      // key, then the note, in brackets -- `\cite[p.~3]{a,b}` is [?, ?, p. 3].
+      auto row = sptrOf<RowAtom>();
+      row->add(literalText("["));
+      const std::string keys = rawOf(child(id, 1));
+      const auto n = std::count(keys.begin(), keys.end(), ',') + 1;
+      for (std::ptrdiff_t i = 0; i < n; i++) {
+        if (i > 0) row->add(literalText(", "));
+        row->add(bold("?"));
+      }
+      const std::string note = rawOf(child(id, 0));
+      if (!note.empty()) {
+        row->add(literalText(", "));
+        row->add(fragment(note, false));
+      }
+      row->add(literalText("]"));
+      return row;
     }
     // No page to put the note on, so its text is set where it was written.
-    if (name == "footnote") return argumentFormula(child(id, 0), rawOf(child(id, 0)), false);
+    // Its optional number has no note to number.
+    if (name == "footnote") {
+      const NodeId text = child(id, count(id) - 1);
+      return argumentFormula(text, rawOf(text), false);
+    }
+    // A caption is a line of text, as \text{} sets one; the parser put the
+    // break that ends its line after it.
+    if (name == "caption") {
+      const NodeId text = child(id, count(id) - 1);
+      return sptrOf<FontStyleAtom>(FontStyle::rm, false, argumentFormula(text, rawOf(text), false));
+    }
     if (name == "url" || name == "href") return link(id, f);
     if (name == "includegraphics") return image(id);
     if (name == "graphicspath") {
@@ -1067,6 +1102,9 @@ private:
     bool centring = false;
     /** The current line was set while centring: centre it when it ends. */
     bool lineCentred = false;
+    /** Declarations (\small, \color) whose body a document reads line by
+     *  line (blockGroup): each part of it set on a line is set under them. */
+    std::vector<NodeId> decls;
   };
 
   /** TeX's \parindent: 15pt at a 10pt font, so 1.5em, which follows the
@@ -1113,7 +1151,9 @@ private:
       row->add(sptrOf<TextAtom>(number, false));
       row->add(sptrOf<SpaceAtom>(UnitType::em, 1.f, 0.f, 0.f));
     }
-    row->add(argumentFormula(child(id, 0), rawOf(child(id, 0)), false));
+    // The title is the last argument; the first is the short one.
+    const NodeId title = child(id, count(id) - 1);
+    row->add(argumentFormula(title, rawOf(title), false));
     auto bold = sptrOf<FontStyleAtom>(FontStyle::bf, false, row);
     const float size = headingSize(level);
     if (size == 1.f) return bold;
@@ -1163,7 +1203,7 @@ private:
     if (l.prose != nullptr && l.prose->_root != nullptr) {
       startLine(l);
       indentIfNeeded(l);
-      l.line->add(sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root));
+      l.line->add(wrap(l, sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root)));
       l.drawn = true;
       l.afterHeading = false;
       if (l.centring) l.lineCentred = true;
@@ -1270,7 +1310,8 @@ private:
     // A heading is never indented, whatever paragraph it interrupts.
     l.indentNext = false;
     beforeLine(l);
-    l.line->add(heading(id));
+    // A heading has its own size, whatever size the text around it is.
+    l.line->add(wrap(l, heading(id), false));
     lineBreak(l);
     l.gap = "1.15em";
     l.indentNext = false;
@@ -1297,6 +1338,7 @@ private:
     auto atom = g._root == nullptr ? sptrOf<EmptyAtom>() : g._root;
     // An equation or align is in display style, as `\[...\]` is.
     if (display && node(id).kind != NodeKind::math) atom = sptrOf<StyleAtom>(TexStyle::display, atom);
+    atom = wrap(l, atom);
     l.line->add(display ? sptrOf<DisplayAtom>(atom) : atom);
     lineBreak(l);
     l.gap = skip;
@@ -1321,6 +1363,84 @@ private:
     l.indentNext = false;
   }
 
+  /** `atom` under the declarations whose bodies a document is reading line
+   *  by line, innermost first; `sizes` false leaves out \small and kin. */
+  sptr<Atom> wrap(const Label& l, sptr<Atom> atom, bool sizes = true) {
+    for (auto it = l.decls.rbegin(); it != l.decls.rend(); ++it) {
+      if (!sizes && isSize(node(*it).text)) continue;
+      const sptr<Atom> inner = atom;
+      auto wrapped = declarationAtom(*it, [&] { return inner; });
+      if (wrapped != nullptr) atom = wrapped;
+    }
+    return atom;
+  }
+
+  /** Math or an environment, into the line itself. */
+  void placeOnLine(Label& l, NodeId id) {
+    beforeLine(l);
+    if (l.decls.empty()) {
+      lowerItem(id, *l.line);
+      return;
+    }
+    Formula g;
+    lowerItem(id, g);
+    if (g._root != nullptr) l.line->add(wrap(l, g._root));
+  }
+
+  /** Whether `id` holds what only a document's lines can set: a paragraph
+   *  break, a heading, a display, a list, a float, \centering, \noindent. */
+  bool hasBlock(NodeId id) {
+    if (_blocks.empty()) _blocks.assign(_ast.size(), 0);
+    if (_blocks[id] != 0) return _blocks[id] == 2;
+    const Node& x = node(id);
+    bool found = false;
+    switch (x.kind) {
+      case NodeKind::list:
+        for (std::uint32_t i = 0; i < count(id) && !found; i++) found = hasBlock(child(id, i));
+        break;
+      case NodeKind::group:
+        // A unit (tabular, pmatrix) sets nothing of the kind inside it.
+        found = x.aux != 1 && (x.aux != 0 || hasBlock(child(id, 0)));
+        break;
+      case NodeKind::declaration:
+        found = hasBlock(child(id, count(id) - 1));
+        break;
+      case NodeKind::command:
+        found = !x.flag && ((isBreakNode(x) && x.aux == 1) || isHeading(x.text) ||
+                            x.text == "noindent" || x.text == "centering");
+        break;
+      case NodeKind::environment:
+        found = isList(id) || isDisplayEnvironment(x.text);
+        break;
+      case NodeKind::math:
+        found = x.flag;
+        break;
+      default:
+        break;
+    }
+    _blocks[id] = found ? 2 : 1;
+    return found;
+  }
+
+  /** A group or a declaration with a document's block structure inside it
+   *  (`{\small one\n\ntwo}`, `\color{red}\section{A}`): its content goes
+   *  onto the lines as anything else does, a declaration applied to each
+   *  part of it set there, as TeX carries a font change across the
+   *  paragraphs of its group. \centering ends with the group. */
+  void blockGroup(Label& l, NodeId id) {
+    const Node& x = node(id);
+    const bool declaration = x.kind == NodeKind::declaration;
+    // What came before is set without the declaration.
+    beforeProse(l);
+    endProse(l);
+    const bool centring = l.centring;
+    if (declaration) l.decls.push_back(id);
+    feedLines(l, declaration ? child(id, count(id) - 1) : child(id, 0));
+    endProse(l);
+    if (declaration) l.decls.pop_back();
+    l.centring = centring;
+  }
+
   /** The items of `list` onto the label's lines. */
   void feedLines(Label& l, NodeId list) {
     for (std::uint32_t i = 0; i < count(list); i++) {
@@ -1333,10 +1453,27 @@ private:
         const bool centring = l.centring;
         feedLines(l, child(id, 0));
         l.centring = centring;
+      } else if (l.document && (x.kind == NodeKind::declaration ||
+                                (x.kind == NodeKind::group && x.aux == 0)) && hasBlock(id)) {
+        blockGroup(l, id);
       } else if (l.document && isDisplay(id)) {
         blockLine(l, id, true, "1em");
       } else if (l.document && isList(id)) {
         blockLine(l, id, false, "0.8em");
+      } else if (l.document && x.kind == NodeKind::command && !x.flag && x.text == "caption") {
+        // On a line of its own, unindented; the parser ended its line.
+        lineBreak(l);
+        l.indentNext = false;
+        beforeProse(l);
+        lowerItem(id, prose(l));
+      } else if (l.document && x.kind == NodeKind::command && !x.flag && x.text == "paragraph") {
+        // \paragraph starts a paragraph of its own, flush left with LaTeX's
+        // 3.25ex above it, and runs into it.
+        lineBreak(l);
+        if (l.drawn) l.gap = "1.625em";
+        l.indentNext = false;
+        beforeProse(l);
+        lowerItem(id, prose(l));
       } else if (isBreakNode(x)) {
         lineBreak(l, id);
       } else if (x.kind == NodeKind::command && !x.flag && x.text == "noindent") {
@@ -1366,12 +1503,10 @@ private:
             lineBreak(l, m);
             continue;
           }
-          beforeLine(l);
-          lowerItem(m, *l.line);
+          placeOnLine(l, m);
         }
       } else if (x.kind == NodeKind::environment || isEnvironmentGroup(id)) {
-        beforeLine(l);
-        lowerItem(id, *l.line);
+        placeOnLine(l, id);
       } else if (!hasBreak(id)) {
         beforeProse(l);
         lowerItem(id, prose(l));

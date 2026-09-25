@@ -189,8 +189,8 @@
 #' (`input_mode = "math"`, or between `$...$`) they are math.
 #'
 #' Commands that need the rest of a document warn and draw what LaTeX
-#' draws when it cannot resolve them: `\ref` and `\pageref` are `??`,
-#' `\eqref` is `(??)`, `\cite{key}` is `[key]`, and a `\footnote`'s text is
+#' draws when it cannot resolve them: `\ref` and `\pageref` are a bold
+#' `??`, `\eqref` is `(??)`, `\cite{key}` is `[?]`, and a `\footnote`'s text is
 #' set where it is written. Equations are not numbered. Not supported:
 #' `\tag`, \code{\\verb}, `\textsc`, the declarations `\bfseries`, `\itshape` and
 #' their kin (use `\textbf{}`, `\textit{}` or `\bf`, `\it`), the

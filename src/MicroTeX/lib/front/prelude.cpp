@@ -11,8 +11,8 @@ namespace microtex::front {
 // rewritten in R: the preamble, title and cross-reference metadata, and
 // alignment declarations, dropped with their arguments; skips and \hfill as
 // fixed space (a grob has no glue to fill); \emph, \textnormal, \newline
-// and booktabs' rules as their nearest equivalents; \caption as a line of
-// text.
+// and booktabs' rules as their nearest equivalents. (\caption is the
+// parser's, which knows whether it is in a document.)
 // document, table, figure and center have no code of their own, so a label
 // lays their content out as if they were not there; a document sets a
 // float, or center's lines, apart (lower.cpp).
@@ -84,7 +84,6 @@ std::string_view preludeSource() {
 \newcommand{\toprule}{\thickhline}
 \newcommand{\bottomrule}{\thickhline}
 \newcommand{\midrule}{\hline}
-\newcommand{\caption}[2][]{\text{#2}\\}
 \newcommand{\sfrac}[2]{\scalebox{.8}{\raisebox{.5ex}{\raisebox{.45ex}{\numstyle{#1}}\kern-.4ex\nokern\mathslash\nokern\kern-.4ex\raisebox{-.45ex}{\dnomstyle{#2}}}}}
 )TEX";
   return source;

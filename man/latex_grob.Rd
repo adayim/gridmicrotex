@@ -249,8 +249,8 @@ text, as in LaTeX, when the table or list is met in text; met in math
 (\code{input_mode = "math"}, or between \verb{$...$}) they are math.
 
 Commands that need the rest of a document warn and draw what LaTeX
-draws when it cannot resolve them: \verb{\\ref} and \verb{\\pageref} are \verb{??},
-\verb{\\eqref} is \verb{(??)}, \verb{\\cite\{key\}} is \verb{[key]}, and a \verb{\\footnote}'s text is
+draws when it cannot resolve them: \verb{\\ref} and \verb{\\pageref} are a bold
+\verb{??}, \verb{\\eqref} is \verb{(??)}, \verb{\\cite\{key\}} is \verb{[?]}, and a \verb{\\footnote}'s text is
 set where it is written. Equations are not numbered. Not supported:
 \verb{\\tag}, \code{\\verb}, \verb{\\textsc}, the declarations \verb{\\bfseries}, \verb{\\itshape} and
 their kin (use \verb{\\textbf\{\}}, \verb{\\textit\{\}} or \verb{\\bf}, \verb{\\it}), the

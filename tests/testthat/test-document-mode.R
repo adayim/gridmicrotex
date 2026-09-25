@@ -148,6 +148,69 @@ test_that("center and \\centering centre a document's lines", {
   expect_identical(runs("\\centering Short", mode = "mixed")$x, 0)
 })
 
+test_that("a heading reads LaTeX's optional short title and a spaced star", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The short title is for a table of contents a grob has not got.
+  expect_identical(runs("\\section[Intro]{Introduction}\nText.")$text,
+                   c("1", "Introduction", "Text."))
+  # LaTeX finds the star past a space, as it finds it after a newline.
+  expect_identical(runs("\\section *{A}\nText")$text, c("A", "Text"))
+})
+
+test_that("\\paragraph starts a paragraph of its own, flush left, and runs in", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  d <- runs("Para one.\n\n\\paragraph{Run} Text after.")
+  expect_identical(d$x[d$text == "Run"], 0)
+  expect_identical(d$y[d$text == "Run"], d$y[grepl("Text after", d$text)])
+  expect_gt(d$y[d$text == "Run"], d$y[d$text == "Para one."])
+})
+
+test_that("a caption is a line of its own in a document", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # After the figure, as LaTeX's usual order writes it, it goes below it.
+  d <- runs("\\begin{figure}\\centering x\\caption{Cap}\\end{figure}")
+  expect_gt(d$y[d$text == "Cap"], d$y[d$text == "x"])
+})
+
+test_that("a group's paragraphs and headings are a document's, its declarations kept", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  indent <- as.numeric(latex_dims("\\kern1.5em")$width)
+  size <- function(d, word) {
+    t <- latex_tree(d, input_mode = "document")$records
+    t$font_size[t$type == "text" & t$text == word]
+  }
+  # \small lasts to the end of its group, across a paragraph break, and the
+  # new paragraph is indented.
+  tex <- "Intro.\n\n{\\small first para\n\nsecond para}"
+  expect_identical(size(tex, "second para"), size(tex, "first para"))
+  expect_lt(size(tex, "second para"), size(tex, "Intro."))
+  expect_equal(runs(tex)$x[runs(tex)$text == "second para"], indent, tolerance = 1e-5)
+  # A heading inside a group is still a heading on a line of its own.
+  d <- runs("{\\color{red}\\section{A}\nText one.}")
+  expect_false(d$y[d$text == "A"] == d$y[d$text == "Text one."])
+  # \small at the top reaches the text after a heading, and adds no line.
+  tex <- "\\small\n\\section{A}\nText"
+  expect_identical(runs(tex)$y[1], runs("\\section{A}\nText")$y[1])
+  expect_lt(size(tex, "Text"), 20)
+  # \centering ends with its group: `{\centering Title\par}` centres the
+  # title, and what follows is not centred.
+  d <- runs("{\\centering Title\\par}\nBody", max_width = 300)
+  expect_gt(d$x[d$text == "Title"], 50)
+  expect_equal(d$x[d$text == "Body"], indent, tolerance = 1e-5)
+})
+
+test_that("a centred paragraph broken at max_width is centred line by line", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  words <- paste(strrep(letters[1:12], 3), collapse = " ")
+  at <- function(w) {
+    d <- runs(paste0("\\begin{center}", words, "\\end{center}"), max_width = w)
+    tapply(d$x, d$y, min)
+  }
+  # Several lines, none of them flush left, as the splitter left them.
+  expect_gt(length(at(80)), 2L)
+  expect_true(all(at(80) > 0))
+})
+
 test_that("a heading is numbered as LaTeX numbers it", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   d <- runs("\\section{A}\n\n\\subsection{B}\n\n\\subsubsection{C}")

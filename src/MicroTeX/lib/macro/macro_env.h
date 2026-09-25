@@ -348,17 +348,68 @@ inline std::string listFormatLabel(const std::string& tmpl, int n) {
   return tmpl;
 }
 
-// An item of a list met in text is text, as in LaTeX, less the spaces at
-// either end of it, which TeX drops.
+// `s` less the spaces at either end, which TeX drops from an item.
+inline std::string listTrim(const std::string& s) {
+  size_t from = 0, to = s.size();
+  while (from < to && std::isspace((unsigned char)s[from]) != 0) from++;
+  while (to > from && std::isspace((unsigned char)s[to - 1]) != 0) to--;
+  return s.substr(from, to - from);
+}
+
+// An item's text met in text is text, as in LaTeX. A `}` that closes
+// nothing is dropped, as TeX drops it, so that it cannot end the \text{}.
 inline std::string listTextItem(const std::string& item) {
-  size_t from = 0, to = item.size();
-  while (from < to && std::isspace((unsigned char)item[from]) != 0) from++;
-  while (to > from && std::isspace((unsigned char)item[to - 1]) != 0) to--;
-  return "\\text{" + item.substr(from, to - from) + "}";
+  std::string out;
+  int depth = 0;
+  for (size_t i = 0; i < item.size(); i++) {
+    const char c = item[i];
+    if (c == '\\' && i + 1 < item.size()) {
+      out += c;
+      out += item[++i];
+      continue;
+    }
+    if (c == '}' && depth == 0) continue;
+    if (c == '{') depth++;
+    if (c == '}') depth--;
+    out += c;
+  }
+  return "\\text{" + out + std::string((size_t)depth, '}') + "}";
+}
+
+// An item's text and the lists nested in it, in turn: text, list, text, ...
+inline std::vector<std::string> listParts(const std::string& item) {
+  const auto at = [&](size_t pos, const std::string& s) { return item.compare(pos, s.size(), s) == 0; };
+  std::vector<std::string> parts{""};
+  size_t i = 0;
+  while (i < item.size()) {
+    if (!at(i, "\\begin{itemize}") && !at(i, "\\begin{enumerate}")) {
+      if (item[i] == '\\' && i + 1 < item.size()) parts.back() += item[i++];
+      parts.back() += item[i++];
+      continue;
+    }
+    // Up to its own \end, nested environments counted.
+    size_t j = i + 1;
+    int depth = 1;
+    while (j < item.size() && depth > 0) {
+      if (at(j, "\\begin{")) depth++;
+      if (at(j, "\\end{") && --depth == 0) {
+        const size_t close = item.find('}', j);
+        j = close == std::string::npos ? item.size() : close + 1;
+        break;
+      }
+      j++;
+    }
+    parts.push_back(item.substr(i, j - i));
+    parts.emplace_back();
+    i = j;
+  }
+  return parts;
 }
 
 // Lay a list body out as a single left-aligned column, one row per item,
-// each row prefixed with `marker(index)`.
+// each row prefixed with `marker(index)`. A list nested after an item's
+// text goes on rows of its own, level with that text, as LaTeX sets it;
+// one that opens the item shares the item's first line, as in LaTeX too.
 inline sptr<Atom> listBuild(
   CommandArgs& args,
   const std::vector<std::string>& items,
@@ -366,9 +417,26 @@ inline sptr<Atom> listBuild(
 ) {
   if (items.empty()) return nullptr;
   std::string s;
+  const auto row = [&](const std::string& lead, const std::string& content) {
+    if (!s.empty()) s += "\\\\";
+    s += lead + "\\quad{}" + content;
+  };
   for (size_t i = 0; i < items.size(); i++) {
-    if (i > 0) s += "\\\\";
-    s += marker((int)i + 1) + "\\quad{}" + (args.isMathMode() ? items[i] : listTextItem(items[i]));
+    const std::string mark = marker((int)i + 1);
+    const auto parts = listParts(items[i]);
+    bool first = true;
+    for (size_t k = 0; k < parts.size(); k++) {
+      const std::string part = listTrim(parts[k]);
+      if (part.empty()) continue;
+      const bool nested = k % 2 == 1;
+      // A nested list is met in text when its item is text.
+      const std::string content = args.isMathMode() ? part
+                                  : nested         ? "\\text{" + part + "}"
+                                                   : listTextItem(part);
+      row(first ? mark : "\\hphantom{" + mark + "}", content);
+      first = false;
+    }
+    if (first) row(mark, "");  // an empty item still has its marker
   }
   const auto arr = args.alignmentOfText(s);
   arr->checkDimensions();
