@@ -16,7 +16,7 @@ geom_latex(
   math_font = "",
   lineheight = 1.2,
   max_width = 0,
-  input_mode = c("mixed", "math"),
+  input_mode = c("mixed", "math", "document"),
   render_mode = c("typeface", "path"),
   na.rm = FALSE,
   show.legend = NA,
@@ -83,16 +83,18 @@ aesthetic if mapped.}
 \item{max_width}{Maximum width in big points for automatic line
 wrapping (default: 0, no wrapping).}
 
-\item{input_mode}{How \code{tex} is interpreted before being parsed.
-\code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
-string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
-opens math mode, matching document-level LaTeX semantics. Useful for
-labels that arrive from external sources mixing prose and math without
-explicit \code{\\text{}} markers. \code{"math"} is the classic
-MicroTeX behaviour: the whole string is treated as math, so unwrapped
-prose renders as spaced math italics. The default can be changed globally via
-\code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
-for details on the wrapping process.}
+\item{input_mode}{How \code{tex} is read.
+\code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
+with math between \code{$...$} or \code{\\(...\\)}, and a newline
+starts a new line, as \code{"\\n"} does in R.
+\code{"math"} reads the whole string as math, as between \code{$...$},
+so a word is set as italic letters; write text as \code{\\text{...}}.
+\code{"document"} reads a LaTeX document body by LaTeX's own rules: a
+newline is a space, a blank line (or \code{\\par}) starts an indented
+paragraph, \code{\\section} and its kin are numbered headings, and
+display math is centred on a line of its own. Give \code{max_width} to
+break the paragraphs into lines. The default can be set for the
+session with \code{\link{latex_options}(input_mode = )}.}
 
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing

@@ -52,15 +52,11 @@
 #'   \code{"scriptscript"}. \code{"display"} forces large operators with
 #'   limits placed over/under, useful for inline labels that should still
 #'   look like display equations.
-#' @param input_mode How the input string is interpreted before being
-#'   handed to MicroTeX. \code{"mixed"} (default) wraps the string in
-#'   \code{\\text{...}} so it reads as ordinary text, with \code{$...$}
-#'   (and \code{\\(...\\)}) opening math mode: the document-level
-#'   LaTeX convention. Useful when consuming labels from other packages
-#'   that mix prose and math without explicit \code{\\text{}} markers.
-#'   \code{"math"} treats the whole string as math: the classic
-#'   MicroTeX behaviour, where letters render as math italics and
-#'   unwrapped prose looks wrong.
+#' @param input_mode How the input string is read: \code{"mixed"} (the
+#'   default) as a label, text with math between \code{$...$} and a
+#'   newline for a new line; \code{"math"} as a formula throughout; or
+#'   \code{"document"} as a LaTeX document body, with paragraphs,
+#'   headings and displays. See \code{\link{latex_grob}}.
 #' @param justify Logical. When \code{TRUE}, wrapped text is stretched at
 #'   its interword spaces so every line but the last fills
 #'   \code{max_width} exactly. Has no effect without \code{max_width},

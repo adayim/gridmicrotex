@@ -6,10 +6,13 @@
 #' \code{\\mathbb\{R\}}) you reuse across many plots.
 #'
 #' @section Choosing between this and \code{\\newcommand}:
-#' MicroTeX also accepts \code{\\newcommand} and plain-TeX \code{\\def}
-#' written inside the expression itself, and those are the more capable
-#' form: they take up to nine arguments, which \code{define_macro()} does
-#' not.
+#' An expression can also define macros itself, as LaTeX does:
+#' \code{\\newcommand}, \code{\\renewcommand}, \code{\\providecommand},
+#' \code{\\def} (delimited parameters included), \code{\\let},
+#' \code{\\DeclareMathOperator} and \code{\\newenvironment}. Those are the
+#' more capable form: they take up to nine arguments, which
+#' \code{define_macro()} does not. As in TeX, a definition made inside
+#' \code{\{...\}} ends with the group, and \code{\\gdef} is global.
 #'
 #' \preformatted{
 #'   # parameterised, but local to this one expression
@@ -18,7 +21,7 @@
 #' }
 #'
 #' What they cannot do is persist: a \code{\\newcommand} written in one call
-#' is gone by the next. That is the one thing \code{define_macro()} is for.
+#' is gone by the next (\code{\\gdef} included). That is the one thing \code{define_macro()} is for.
 #' Use \code{\\newcommand} / \code{\\def} for an abbreviation local to a
 #' single label, and \code{define_macro()} for notation you want available
 #' to every label in a script. A \code{\\renewcommand} in one label

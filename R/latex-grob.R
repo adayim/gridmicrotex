@@ -1,11 +1,12 @@
 #' Create a grid grob from a LaTeX expression
 #'
-#' Parses a LaTeX math expression and returns a grid grob object
-#' that renders the formula using native grid graphics primitives.
-#' The grob supports standard grid queries such as \code{grobWidth()},
-#' \code{grobHeight()}, \code{grobX()}, and \code{grobY()}.
+#' Reads LaTeX -- a formula, a label mixing text and math, or a document
+#' body -- and returns a grid grob object that draws it with native grid
+#' graphics primitives. The grob supports standard grid queries such as
+#' \code{grobWidth()}, \code{grobHeight()}, \code{grobX()}, and
+#' \code{grobY()}.
 #'
-#' @param tex Character string of LaTeX math code.
+#' @param tex Character string of LaTeX, read as \code{input_mode} says.
 #' @param x,y Position in grid coordinates.
 #' @param default.units Units for x, y if given as numeric.
 #' @param hjust,vjust Horizontal/vertical justification. Accepts the
@@ -27,16 +28,18 @@
 #'   (default; let the parser decide), \code{"display"}, \code{"text"},
 #'   \code{"script"}, or \code{"scriptscript"}. See
 #'   \code{\link{latex_grob}} for the semantics of each value.
-#' @param input_mode How \code{tex} is interpreted before being parsed.
-#'   \code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
-#'   string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
-#'   opens math mode, matching document-level LaTeX semantics. Useful for
-#'   labels that arrive from external sources mixing prose and math without
-#'   explicit \code{\\text{}} markers. \code{"math"} is the classic
-#'   MicroTeX behaviour: the whole string is treated as math, so unwrapped
-#'   prose renders as spaced math italics. The default can be changed globally via
-#'   \code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
-#'  for details on the wrapping process.
+#' @param input_mode How \code{tex} is read.
+#'   \code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
+#'   with math between \code{$...$} or \code{\\(...\\)}, and a newline
+#'   starts a new line, as \code{"\\n"} does in R.
+#'   \code{"math"} reads the whole string as math, as between \code{$...$},
+#'   so a word is set as italic letters; write text as \code{\\text{...}}.
+#'   \code{"document"} reads a LaTeX document body by LaTeX's own rules: a
+#'   newline is a space, a blank line (or \code{\\par}) starts an indented
+#'   paragraph, \code{\\section} and its kin are numbered headings, and
+#'   display math is centred on a line of its own. Give \code{max_width} to
+#'   break the paragraphs into lines. The default can be set for the
+#'   session with \code{\link{latex_options}(input_mode = )}.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
@@ -144,41 +147,57 @@
 #' - `lineheight`: controls multi-line spacing (default 1.2). The
 #'   inter-line gap is `(lineheight - 1) * fontsize` big points.
 #'
-#' ## LaTeX document-level wrappers
+#' ## Malformed input
 #'
-#' The parser accepts raw output from \code{print.xtable()},
-#' \code{knitr::kable()}, and similar functions that emit complete
-#' `tabular` LaTeX. The following document-level constructs are
-#' recognized and rewritten silently before the input reaches MicroTeX:
+#' LaTeX that TeX would stop on is read as far as it can be and the rest
+#' is drawn, with one warning listing each problem at its line and column
+#' in `tex`: an unknown command (drawn as its name, in red), an unbalanced
+#' brace, `&` outside an alignment, `_` or `^` outside math, and so on.
+#' Only a macro that expands without end, or input nested 400 levels deep,
+#' is an error.
 #'
-#' **Removed (no visual effect):**
-#' * `%`-to-end-of-line comments (escaped `\%` is preserved)
-#' * preamble: `\documentclass[...]{...}`, `\usepackage[...]{...}`,
-#'   `\begin{document}` / `\end{document}`
-#' * title metadata: `\maketitle`, `\title{...}`, `\author{...}`
-#' * cross-reference labels: `\label{...}`
-#' * float wrappers: `\begin{table}` / `\end{table}`, `\begin{figure}` /
-#'   `\end{figure}` (and starred variants)
-#' * layout scopes: `\centering`, `\raggedright`, `\raggedleft`,
-#'   `\flushleft`, `\flushright`
+#' ## Pasted LaTeX and documents
 #'
-#' **Rewritten:**
-#' * booktabs rules: `\toprule`, `\midrule`, `\bottomrule`, `\cmidrule`
-#'   are mapped to `\hline`. The optional column-range and trim
-#'   arguments of `\cmidrule` are discarded (MicroTeX has no concept of
-#'   partial-column rules).
-#' * `\caption[short]{X}` is extracted as `\text{X}\\` at its source
-#'   position, so a caption written after `\includegraphics` renders below
-#'   the figure and one written before a `tabular` renders above the table.
-#'   Full LaTeX instead positions the caption by float type regardless of
-#'   source order, and numbers it from a counter; there is no counter here.
-#'   Wrap the figure and its caption in `\begin{array}{c}...\end{array}` to
-#'   centre them on each other (`\centering` is dropped: a grob has no
-#'   page to centre against).
-#' * `\graphicspath{{dir/}}` and `\DeclareGraphicsExtensions{...}` are
-#'   consumed rather than typeset; the former's directories are searched.
+#' LaTeX written for a document can be given as it is, whole or in part:
+#' output of \code{print.xtable()} or \code{knitr::kable()}, a `table`
+#' float, or a paper's body with `input_mode = "document"`. What a grob has
+#' no use for is read and dropped:
 #'
-#' **Images:**
+#' * the preamble: `\documentclass`, `\usepackage` (which loads nothing:
+#'   every supported command is built in) and the `document` environment;
+#' * title and cross-reference metadata: `\maketitle`, `\title{}`,
+#'   `\author{}`, `\label{}`;
+#' * alignment: `\raggedright`, `\raggedleft`, `\flushleft`, `\flushright`
+#'   and `\relax` do nothing, and in a label neither does `\centering` (a
+#'   label is placed by `hjust`).
+#'
+#' In a label the content of a `table` or `figure` float is set in the line
+#' like any other. A document sets a float where it is written, apart from
+#' its paragraphs, as LaTeX's `[h]` placement would, and a `center`
+#' environment or a `\centering` centres its lines.
+#'
+#' Some commands are their nearest equivalent. `\emph` is `\textit`, and
+#' `\newline` is `\\`. Booktabs' `\toprule` and `\bottomrule` are thick
+#' rules, `\midrule` a plain one and `\cmidrule` a partial one. A grob has
+#' no glue to stretch, so `\smallskip`, `\medskip` and `\bigskip` are 0.25,
+#' 0.5 and 1 em of space, `\hfill` is a quad and `\vfill` 1 em. And
+#' `\caption{X}` is a line of text where it is written, unnumbered, so a
+#' caption written before a `tabular` is set above it.
+#'
+#' A `tabular`'s cells and the items of `itemize` and `enumerate` are
+#' text, as in LaTeX, when the table or list is met in text; met in math
+#' (`input_mode = "math"`, or between `$...$`) they are math.
+#'
+#' Commands that need the rest of a document warn and draw what LaTeX
+#' draws when it cannot resolve them: `\ref` and `\pageref` are `??`,
+#' `\eqref` is `(??)`, `\cite{key}` is `[key]`, and a `\footnote`'s text is
+#' set where it is written. Equations are not numbered. Not supported:
+#' `\tag`, \code{\\verb}, `\textsc`, the declarations `\bfseries`, `\itshape` and
+#' their kin (use `\textbf{}`, `\textit{}` or `\bf`, `\it`), the
+#' `description` list, theorem environments, and TikZ.
+#'
+#' ## Images
+#'
 #' * `\includegraphics[opts]{file}` draws a PNG, JPEG or SVG inline. The
 #'   starred form is accepted and behaves identically. `width`, `height`
 #'   and `scale` take any LaTeX length (`\textwidth` resolves against
@@ -205,10 +224,8 @@
 #'   expanded, so one a macro produces (`\newcommand`, `\def` or
 #'   [define_macro()]) works like any other. A commented-out
 #'   `% \includegraphics{...}` is ignored.
-#'
-#' Anything not in this list is passed to MicroTeX unchanged. An unknown
-#' command is not an error: MicroTeX typesets its name in red, which
-#' makes unsupported markup easy to spot in the output.
+#' * `\graphicspath{{dir/}}` names the directories searched, as in LaTeX,
+#'   and `\DeclareGraphicsExtensions{}` is read and dropped.
 #'
 #' ## Parallelism
 #' The MicroTeX engine keeps mutable C++ state for font caching and text
@@ -247,6 +264,17 @@
 #'   grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
 #'              x = grid::unit(0.6, "npc"),
 #'              y = grid::unit(0.8, "npc"),)
+#'
+#'   # A document body: a heading, paragraphs and a display, broken into
+#'   # lines at max_width (in big points).
+#'   grid::grid.newpage()
+#'   doc <- r"(\section{Results}
+#' The fitted line is
+#' \[ \hat{y} = \beta_0 + \beta_1 x, \]
+#' and its slope, $\beta_1$, is positive.)"
+#'   grid.latex(doc, input_mode = "document", max_width = 250,
+#'              x = 0.05, y = 0.95, hjust = 0, vjust = 1,
+#'              gp = grid::gpar(fontsize = 12))
 #' }
 latex_grob <- function(tex,
                        x = grid::unit(0.5, "npc"),
