@@ -300,10 +300,6 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_vphantom, "vphantom"),
   mac(0, macro_spATbreve, "sp@breve"),
   mac(0, macro_nokern, "nokern"),
-#ifdef GRAPHICS_DEBUG
-  mac(1, macro_debug, "debug"),
-  mac(0, macro_undebug, "undebug"),
-#endif  // GRAPHICS_DEBUG
 };
 
 namespace {

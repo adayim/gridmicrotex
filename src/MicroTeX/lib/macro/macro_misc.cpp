@@ -2,7 +2,6 @@
 
 #include "atom/atom_font.h"
 #include "atom/atom_zstack.h"
-#include "core/debug_config.h"
 #include "env/env.h"
 #include "env/units.h"
 #include "graphic/graphic.h"
@@ -67,31 +66,6 @@ cmdmacro(romannumeral) {
     args.isMathMode(),
     args.formulaOf(roman, args.isMathMode())
   );
-}
-
-cmdmacro(debug) {
-  auto& config = DebugConfig::INSTANCE;
-  const auto& options = parseOption(args.text(1));
-  config.enable = true;
-  const auto& showOnlyChar = options.find("showonlychar");
-  if (showOnlyChar != options.end()) {
-    config.showOnlyChar = showOnlyChar->second == "true";
-  }
-  const auto& boundColor = options.find("boundcolor");
-  if (boundColor != options.end()) {
-    config.boundColor = ColorAtom::getColor(boundColor->second);
-  }
-  const auto& baselineColor = options.find("baselinecolor");
-  if (baselineColor != options.end()) {
-    config.baselineColor = ColorAtom::getColor(baselineColor->second);
-  }
-  return nullptr;
-}
-
-cmdmacro(undebug) {
-  auto& config = DebugConfig::INSTANCE;
-  config.enable = false;
-  return nullptr;
 }
 
 cmdmacro(zstack) {

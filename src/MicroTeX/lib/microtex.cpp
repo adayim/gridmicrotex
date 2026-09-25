@@ -2,7 +2,6 @@
 
 #include "core/formula.h"
 #include "front/front.h"
-#include "otf/fontsense.h"
 #include "macro/macro.h"
 #include "utils/exceptions.h"
 #include "utils/string_utils.h"
@@ -40,47 +39,6 @@ std::string MicroTeX::version() {
      + std::to_string(MICROTEX_VERSION_PATCH);
   return ver;
 }
-
-#ifdef HAVE_AUTO_FONT_FIND
-
-struct InitVisitor {
-
-  FontMeta operator()(const FontSrc* src) {
-    auto meta = FontContext::addFont(*src);
-    if (!meta.isMathFont) {
-      throw ex_invalid_param("'" + meta.name + "' is not a math font!");
-    }
-    return meta;
-  }
-
-  FontMeta operator()(const string& name) {
-    fontsenseLookup();
-    if (!FontContext::isMathFontExists(name)) {
-      throw ex_invalid_param("Math font '" + name + "' does not exists!");
-    }
-    return FontContext::mathFontMetaOf(name);
-  }
-
-  FontMeta operator()(const InitFontSenseAuto& sense) {
-    auto mathFont = fontsenseLookup();
-    if (!mathFont.has_value()) {
-      throw ex_invalid_param("No math font found by font-sense.");
-    }
-    return mathFont.value();
-  }
-};
-
-FontMeta MicroTeX::init(const Init& init) {
-  if (_config->isInited) return {};
-  std::setlocale(LC_NUMERIC, "C"); // workaround for decimal parsing on German (decimal comma) systems
-  auto meta = std::visit(InitVisitor(), init);
-  _config->defaultMathFontName = meta.name;
-  _config->isInited = true;
-  _config->isPrivilegedEnvironment = false;
-  return meta;
-}
-
-#endif // HAVE_AUTO_FONT_FIND
 
 FontMeta MicroTeX::init(const FontSrc& mathFontSrc) {
   if (_config->isInited) return {};

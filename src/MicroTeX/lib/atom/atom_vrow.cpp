@@ -34,12 +34,6 @@ void VRowAtom::setRaise(UnitType unit, float r) {
   _raise = sptrOf<SpaceAtom>(unit, r, 0.f, 0.f);
 }
 
-sptr<Atom> VRowAtom::popLastAtom() {
-  auto x = _elements.back();
-  _elements.pop_back();
-  return x;
-}
-
 void VRowAtom::prepend(const sptr<Atom>& el) {
   if (el != nullptr) _elements.insert(_elements.begin(), el);
 }

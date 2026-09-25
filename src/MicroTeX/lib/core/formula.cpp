@@ -40,11 +40,6 @@ Formula* Formula::add(const sptr<Atom>& a) {
   return this;
 }
 
-sptr<Box> Formula::createBox(Env& env) {
-  if (_root == nullptr) return StrutBox::empty();
-  return _root->createBox(env);
-}
-
 sptr<Formula> Formula::get(const string& name) {
   auto it = _predefFormulas.find(name);
   if (it != _predefFormulas.end()) return it->second;

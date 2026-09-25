@@ -158,26 +158,6 @@ public:
   sptr<Box> createBox(Env& env) override;
 };
 
-/** An atom representing a cumulative scripts atom */
-class CumulativeScriptsAtom : public Atom {
-private:
-  sptr<Atom> _base;
-  sptr<RowAtom> _sup, _sub;
-
-public:
-  CumulativeScriptsAtom() = delete;
-
-  CumulativeScriptsAtom(const sptr<Atom>& base, const sptr<Atom>& sub, const sptr<Atom>& sup);
-
-  void addSuperscript(const sptr<Atom>& sup);
-
-  void addSubscript(const sptr<Atom>& sub);
-
-  sptr<Atom> getScriptsAtom() const;
-
-  sptr<Box> createBox(Env& env) override;
-};
-
 /** An atom representing the foreground and background color of an other atom */
 class ColorAtom : public Atom, public Row {
 private:

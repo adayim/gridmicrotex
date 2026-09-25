@@ -44,9 +44,6 @@ public:
   /** Inserts an atom at the end of the current formula. */
   Formula* add(const sptr<Atom>& a);
 
-  /** Convert this Formula into a box, with the given environment. */
-  sptr<Box> createBox(Env& env);
-
   /** Test if this formula is in array mode. */
   virtual bool isArrayMode() const { return false; }
 

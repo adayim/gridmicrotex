@@ -11,47 +11,6 @@
 #include "unimath/font_meta.h"
 #include "unimath/font_src.h"
 
-#ifdef HAVE_AUTO_FONT_FIND
-
-#include <variant>
-
-namespace microtex {
-
-struct MICROTEX_EXPORT InitFontSenseAuto {};
-
-/**
- * MicroTeX context initialization.
- * <ol>
- *  <li> If a FontSrc presents, the context will load math font from the given font source.
- *  <li> If a InitFontSenseAuto presents, fill the search dirs by following rules:
- *    <ul>
- *      <li> If environment variable `MICROTEX_FONTDIR` is set, add it into search dirs.
- *      <li> If environment variable `XDG_DATA_HOME` is set, add `${XDG_DATA_HOME}/microtex` into
- *           search dirs.
- *      <li> If environment variable `XDG_DATA_DIRS` is set, iterate over the list and add the sub
- *           dir `microtex` of each item into search dirs.
- *      <li> If the current platform is WIN32, add the dir `share/microtex` where its parent is the
- *           executable running dir into search dirs.
- *      <li> Otherwise, try the following ways:
- *      <ul>
- *        <li> If environment variable `HOME` is set, add dir `${HOME}/.local/share/microtex` into
- *             search dirs.
- *        <li> Add `/usr/local/share/microtex` into search dirs.
- *        <li> Add `/usr/share/microtex` into search dirs.
- *      </ul>
- *    </ul>
- *    And then iterate over the search dirs, add all found fonts to context, and select the first
- *    found math font as the default.
- *  <li> If a string presents, follow the above way to init the context but select the math font
- *       which its name was given by this string as the default.
- * </ol>
- */
-using Init = std::variant<const FontSrc*, const std::string, InitFontSenseAuto>;
-
-}  // namespace microtex
-
-#endif  // HAVE_AUTO_FONT_FIND
-
 namespace microtex {
 
 struct Config;
@@ -68,18 +27,6 @@ private:
 public:
   /** The version of the library */
   static std::string version();
-
-#ifdef HAVE_AUTO_FONT_FIND
-
-  /**
-   * Initialize MicroTeX context by given Init, at least we need a math font
-   * to layout formulas.
-   *
-   * @returns the math font meta info
-   */
-  static FontMeta init(const Init& init);
-
-#endif  // HAVE_AUTO_FONT_FIND
 
   /**
    * Initialize the context with given math font source, at least we need a

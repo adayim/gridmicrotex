@@ -81,10 +81,6 @@ public:
 
   std::string_view source() const { return _src; }
 
-  /** An empty span at the current position, for reporting a problem with
-   *  something that is missing. */
-  SourceSpan here() const;
-
 private:
   enum class State : std::uint8_t { newLine, midLine, skipBlanks };
 

@@ -17,10 +17,6 @@ cmdmacro(sideset) {
   }
   op->_limitsType = LimitsType::limits;
   op->_type = AtomType::bigOperator;
-  auto cl = dynamic_cast<CumulativeScriptsAtom*>(l.get());
-  auto cr = dynamic_cast<CumulativeScriptsAtom*>(r.get());
-  if (cl != nullptr) l = cl->getScriptsAtom();
-  if (cr != nullptr) r = cr->getScriptsAtom();
   return sptrOf<SideSetsAtom>(op, l, r);
 }
 

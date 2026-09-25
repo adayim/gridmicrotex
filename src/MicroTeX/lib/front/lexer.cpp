@@ -44,10 +44,6 @@ Lexer::Lexer(std::string_view source, LexOptions options, Diagnostics& diagnosti
   if (_src.compare(0, 3, "\xEF\xBB\xBF") == 0) _pos = _lastEnd = 3;
 }
 
-SourceSpan Lexer::here() const {
-  return {static_cast<std::uint32_t>(_pos), 0, _line, _col};
-}
-
 c32 Lexer::decode(std::size_t at, int& len) const {
   const auto* s = reinterpret_cast<const unsigned char*>(_src.data());
   const std::size_t n = _src.size();

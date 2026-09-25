@@ -37,8 +37,6 @@ public:
 
   void setRaise(UnitType unit, float r);
 
-  sptr<Atom> popLastAtom();
-
   /** Add an atom at the front */
   void prepend(const sptr<Atom>& el);
 

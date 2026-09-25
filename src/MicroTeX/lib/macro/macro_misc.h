@@ -147,14 +147,6 @@ cmdmacro(romannumeral);
 
 cmdmacro(zstack);
 
-#ifdef GRAPHICS_DEBUG
-
-cmdmacro(debug);
-
-cmdmacro(undebug);
-
-#endif  // GRAPHICS_DEBUG
-
 /**************************************** not implemented *****************************************/
 
 inline cmdmacro(includegraphics) {

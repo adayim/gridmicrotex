@@ -59,46 +59,6 @@ sptr<Box> HlineAtom::createBox(Env& env) {
   return sptr<Box>(vb);
 }
 
-CumulativeScriptsAtom::CumulativeScriptsAtom(
-  const sptr<Atom>& base,
-  const sptr<Atom>& sub,
-  const sptr<Atom>& sup
-) {
-  if (auto ca = dynamic_cast<CumulativeScriptsAtom*>(base.get()); ca != nullptr) {
-    _base = ca->_base;
-    ca->_sup->add(sup);
-    ca->_sub->add(sub);
-    _sup = ca->_sup;
-    _sub = ca->_sub;
-  } else if (auto sa = dynamic_cast<ScriptsAtom*>(base.get()); sa != nullptr) {
-    _base = sa->_base;
-    _sup = sptrOf<RowAtom>(sa->_sup);
-    _sub = sptrOf<RowAtom>(sa->_sub);
-    _sup->add(sup);
-    _sub->add(sub);
-  } else {
-    _base = base;
-    _sup = sptrOf<RowAtom>(sup);
-    _sub = sptrOf<RowAtom>(sub);
-  }
-}
-
-void CumulativeScriptsAtom::addSuperscript(const sptr<Atom>& sup) {
-  _sup->add(sup);
-}
-
-void CumulativeScriptsAtom::addSubscript(const sptr<Atom>& sub) {
-  _sub->add(sub);
-}
-
-sptr<Atom> CumulativeScriptsAtom::getScriptsAtom() const {
-  return sptrOf<ScriptsAtom>(_base, _sub, _sup);
-}
-
-sptr<Box> CumulativeScriptsAtom::createBox(Env& env) {
-  return ScriptsAtom(_base, _sub, _sup).createBox(env);
-}
-
 const color ColorAtom::_default = black;
 
 ColorAtom::ColorAtom(const sptr<Atom>& atom, color bg, color c) : _background(bg), _color(c) {
