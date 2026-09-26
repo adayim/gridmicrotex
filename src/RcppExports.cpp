@@ -51,6 +51,112 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// lex_latex_cpp
+Rcpp::DataFrame lex_latex_cpp(std::string tex, bool blank_line_is_par);
+RcppExport SEXP _gridmicrotex_lex_latex_cpp(SEXP texSEXP, SEXP blank_line_is_parSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
+    Rcpp::traits::input_parameter< bool >::type blank_line_is_par(blank_line_is_parSEXP);
+    rcpp_result_gen = Rcpp::wrap(lex_latex_cpp(tex, blank_line_is_par));
+    return rcpp_result_gen;
+END_RCPP
+}
+// expand_latex_cpp
+Rcpp::CharacterVector expand_latex_cpp(std::string tex);
+RcppExport SEXP _gridmicrotex_expand_latex_cpp(SEXP texSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
+    rcpp_result_gen = Rcpp::wrap(expand_latex_cpp(tex));
+    return rcpp_result_gen;
+END_RCPP
+}
+// persistent_macro_set_cpp
+void persistent_macro_set_cpp(std::string name, std::string body);
+RcppExport SEXP _gridmicrotex_persistent_macro_set_cpp(SEXP nameSEXP, SEXP bodySEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type name(nameSEXP);
+    Rcpp::traits::input_parameter< std::string >::type body(bodySEXP);
+    persistent_macro_set_cpp(name, body);
+    return R_NilValue;
+END_RCPP
+}
+// persistent_macro_remove_cpp
+bool persistent_macro_remove_cpp(std::string name);
+RcppExport SEXP _gridmicrotex_persistent_macro_remove_cpp(SEXP nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type name(nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(persistent_macro_remove_cpp(name));
+    return rcpp_result_gen;
+END_RCPP
+}
+// persistent_macro_clear_cpp
+void persistent_macro_clear_cpp();
+RcppExport SEXP _gridmicrotex_persistent_macro_clear_cpp() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    persistent_macro_clear_cpp();
+    return R_NilValue;
+END_RCPP
+}
+// persistent_macro_list_cpp
+Rcpp::CharacterVector persistent_macro_list_cpp();
+RcppExport SEXP _gridmicrotex_persistent_macro_list_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(persistent_macro_list_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
+// persistent_macro_generation_cpp
+double persistent_macro_generation_cpp();
+RcppExport SEXP _gridmicrotex_persistent_macro_generation_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(persistent_macro_generation_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
+// parse_ast_cpp
+Rcpp::DataFrame parse_ast_cpp(std::string tex, std::string mode);
+RcppExport SEXP _gridmicrotex_parse_ast_cpp(SEXP texSEXP, SEXP modeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
+    Rcpp::traits::input_parameter< std::string >::type mode(modeSEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_ast_cpp(tex, mode));
+    return rcpp_result_gen;
+END_RCPP
+}
+// command_tables_cpp
+Rcpp::List command_tables_cpp();
+RcppExport SEXP _gridmicrotex_command_tables_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(command_tables_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
+// math_env_names_cpp
+std::vector<std::string> math_env_names_cpp();
+RcppExport SEXP _gridmicrotex_math_env_names_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(math_env_names_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
 // register_text_measurer
 void register_text_measurer(SEXP fn);
 RcppExport SEXP _gridmicrotex_register_text_measurer(SEXP fnSEXP) {
@@ -70,14 +176,22 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// microtex_init
-void microtex_init(std::string clm_path, std::string otf_path);
-RcppExport SEXP _gridmicrotex_microtex_init(SEXP clm_pathSEXP, SEXP otf_pathSEXP) {
+// register_image_resolver
+void register_image_resolver(SEXP fn);
+RcppExport SEXP _gridmicrotex_register_image_resolver(SEXP fnSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type clm_path(clm_pathSEXP);
-    Rcpp::traits::input_parameter< std::string >::type otf_path(otf_pathSEXP);
-    microtex_init(clm_path, otf_path);
+    Rcpp::traits::input_parameter< SEXP >::type fn(fnSEXP);
+    register_image_resolver(fn);
+    return R_NilValue;
+END_RCPP
+}
+// clear_image_resolver
+void clear_image_resolver();
+RcppExport SEXP _gridmicrotex_clear_image_resolver() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    clear_image_resolver();
     return R_NilValue;
 END_RCPP
 }
@@ -89,17 +203,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type otf_path(otf_pathSEXP);
     Rcpp::traits::input_parameter< int >::type index(indexSEXP);
     microtex_init_from_otf(otf_path, index);
-    return R_NilValue;
-END_RCPP
-}
-// microtex_add_font
-void microtex_add_font(std::string clm_path, std::string otf_path);
-RcppExport SEXP _gridmicrotex_microtex_add_font(SEXP clm_pathSEXP, SEXP otf_pathSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type clm_path(clm_pathSEXP);
-    Rcpp::traits::input_parameter< std::string >::type otf_path(otf_pathSEXP);
-    microtex_add_font(clm_path, otf_path);
     return R_NilValue;
 END_RCPP
 }
@@ -184,30 +287,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// ot_math_table_bytes
-SEXP ot_math_table_bytes(std::string path, int index);
-RcppExport SEXP _gridmicrotex_ot_math_table_bytes(SEXP pathSEXP, SEXP indexSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type path(pathSEXP);
-    Rcpp::traits::input_parameter< int >::type index(indexSEXP);
-    rcpp_result_gen = Rcpp::wrap(ot_math_table_bytes(path, index));
-    return rcpp_result_gen;
-END_RCPP
-}
-// otf_to_clm_bytes
-Rcpp::RawVector otf_to_clm_bytes(std::string path, int index);
-RcppExport SEXP _gridmicrotex_otf_to_clm_bytes(SEXP pathSEXP, SEXP indexSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type path(pathSEXP);
-    Rcpp::traits::input_parameter< int >::type index(indexSEXP);
-    rcpp_result_gen = Rcpp::wrap(otf_to_clm_bytes(path, index));
-    return rcpp_result_gen;
-END_RCPP
-}
 // microtex_add_font_from_otf
 std::string microtex_add_font_from_otf(std::string otf_path, int index);
 RcppExport SEXP _gridmicrotex_microtex_add_font_from_otf(SEXP otf_pathSEXP, SEXP indexSEXP) {
@@ -221,8 +300,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // parse_latex_cpp
-Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style, bool justify, bool optimal_break);
-RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP, SEXP justifySEXP, SEXP optimal_breakSEXP) {
+Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style, bool justify, bool optimal_break, std::string input_mode);
+RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP, SEXP justifySEXP, SEXP optimal_breakSEXP, SEXP input_modeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -237,7 +316,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::string >::type tex_style(tex_styleSEXP);
     Rcpp::traits::input_parameter< bool >::type justify(justifySEXP);
     Rcpp::traits::input_parameter< bool >::type optimal_break(optimal_breakSEXP);
-    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break));
+    Rcpp::traits::input_parameter< std::string >::type input_mode(input_modeSEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break, input_mode));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -247,11 +327,21 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_gm_base_teardown", (DL_FUNC) &_gridmicrotex_gm_base_teardown, 0},
     {"_gridmicrotex_gm_base_release_pending", (DL_FUNC) &_gridmicrotex_gm_base_release_pending, 0},
     {"_gridmicrotex_gm_base_armed_count", (DL_FUNC) &_gridmicrotex_gm_base_armed_count, 0},
+    {"_gridmicrotex_lex_latex_cpp", (DL_FUNC) &_gridmicrotex_lex_latex_cpp, 2},
+    {"_gridmicrotex_expand_latex_cpp", (DL_FUNC) &_gridmicrotex_expand_latex_cpp, 1},
+    {"_gridmicrotex_persistent_macro_set_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_set_cpp, 2},
+    {"_gridmicrotex_persistent_macro_remove_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_remove_cpp, 1},
+    {"_gridmicrotex_persistent_macro_clear_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_clear_cpp, 0},
+    {"_gridmicrotex_persistent_macro_list_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_list_cpp, 0},
+    {"_gridmicrotex_persistent_macro_generation_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_generation_cpp, 0},
+    {"_gridmicrotex_parse_ast_cpp", (DL_FUNC) &_gridmicrotex_parse_ast_cpp, 2},
+    {"_gridmicrotex_command_tables_cpp", (DL_FUNC) &_gridmicrotex_command_tables_cpp, 0},
+    {"_gridmicrotex_math_env_names_cpp", (DL_FUNC) &_gridmicrotex_math_env_names_cpp, 0},
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
-    {"_gridmicrotex_microtex_init", (DL_FUNC) &_gridmicrotex_microtex_init, 2},
+    {"_gridmicrotex_register_image_resolver", (DL_FUNC) &_gridmicrotex_register_image_resolver, 1},
+    {"_gridmicrotex_clear_image_resolver", (DL_FUNC) &_gridmicrotex_clear_image_resolver, 0},
     {"_gridmicrotex_microtex_init_from_otf", (DL_FUNC) &_gridmicrotex_microtex_init_from_otf, 2},
-    {"_gridmicrotex_microtex_add_font", (DL_FUNC) &_gridmicrotex_microtex_add_font, 2},
     {"_gridmicrotex_microtex_math_font_names", (DL_FUNC) &_gridmicrotex_microtex_math_font_names, 0},
     {"_gridmicrotex_microtex_set_default_math_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_math_font, 1},
     {"_gridmicrotex_microtex_bidi_available", (DL_FUNC) &_gridmicrotex_microtex_bidi_available, 0},
@@ -260,10 +350,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_microtex_version", (DL_FUNC) &_gridmicrotex_microtex_version, 0},
     {"_gridmicrotex_microtex_set_default_main_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_main_font, 1},
     {"_gridmicrotex_microtex_main_font_families", (DL_FUNC) &_gridmicrotex_microtex_main_font_families, 0},
-    {"_gridmicrotex_ot_math_table_bytes", (DL_FUNC) &_gridmicrotex_ot_math_table_bytes, 2},
-    {"_gridmicrotex_otf_to_clm_bytes", (DL_FUNC) &_gridmicrotex_otf_to_clm_bytes, 2},
     {"_gridmicrotex_microtex_add_font_from_otf", (DL_FUNC) &_gridmicrotex_microtex_add_font_from_otf, 2},
-    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 11},
+    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 12},
     {NULL, NULL, 0}
 };
 

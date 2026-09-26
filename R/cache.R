@@ -5,8 +5,11 @@
 .latex_cache$hits <- 0L
 .latex_cache$misses <- 0L
 
-.cache_get <- function(key) {
-  if (!nzchar(key) || is.null(.latex_cache$entries[[key]])) {
+# `valid`: a check an entry must still pass, or it is a miss -- a layout
+# whose image file has changed since.
+.cache_get <- function(key, valid = NULL) {
+  if (!nzchar(key) || is.null(.latex_cache$entries[[key]]) ||
+      (!is.null(valid) && !valid(.latex_cache$entries[[key]]))) {
     .latex_cache$misses <- .latex_cache$misses + 1L
     return(NULL)
   }
@@ -90,7 +93,6 @@ latex_cache_clear <- function() {
   # far larger than a layout. They have no size limit of their own, so this
   # is the only way to give that memory back.
   .image_cache_clear()
-  .strip_memo_clear()
   invisible(NULL)
 }
 
@@ -135,13 +137,16 @@ latex_cache_info <- function() {
 .parse_cache_key <- function(tex, text_size, line_space, fg_color, max_width,
                              math_font, main_font, text_family, use_path,
                              tex_style, justify, optimal_break,
-                             device = "") {
+                             device = "", input_mode = "math") {
   paste(
     tex, "|", text_size, "|", line_space, "|", fg_color, "|",
     max_width, "|", math_font, "|", main_font, "|", text_family, "|",
     as.integer(use_path), "|", tex_style, "|", as.integer(justify),
-    "|", as.integer(optimal_break),
+    "|", as.integer(optimal_break), "|", input_mode,
     "|", device,
+    # define_macro() macros are expanded in C++, so a layout depends on them
+    # without `tex` showing it.
+    "|", persistent_macro_generation_cpp(),
     sep = ""
   )
 }
@@ -151,19 +156,45 @@ latex_cache_info <- function() {
 .parse_latex_cached <- function(tex, text_size, line_space, fg_color,
                                 max_width, math_font, main_font, use_path,
                                 tex_style = "", text_family = "",
-                                justify = FALSE, optimal_break = FALSE) {
+                                justify = FALSE, optimal_break = FALSE,
+                                input_mode = "math") {
+  # One figure that cannot be drawn -- a PDF, say, as most papers' are --
+  # must not cost a whole document: it warns and draws the file's name.
+  # A label, where the figure is the point, still stops, markdown's too
+  # (.images_strict()). Which of the two is part of the key: a layout with
+  # a file's name in place of its figure must not answer for a parse that
+  # would have stopped.
+  lenient <- !.image_state$strict ||
+    (identical(input_mode, "document") && !isTRUE(.image_state$label))
   key <- .parse_cache_key(tex, text_size, line_space, fg_color, max_width,
                           math_font, main_font, text_family, use_path,
                           tex_style, justify, optimal_break,
-                          device = .cache_device())
-  hit <- .cache_get(key)
+                          device = .cache_device(),
+                          input_mode = paste0(input_mode, if (lenient) "+lenient"))
+  hit <- .cache_get(key, valid = .images_current)
   if (!is.null(hit)) return(hit)
-  layout <- parse_latex_cpp(
+  # Measuring needs a device. With none open, one pdf(NULL) serves the
+  # whole parse, where the measurer would open and close its own for every
+  # word it measured; a cache hit needs none at all. The key above names
+  # it "pdf@72" (.cache_device()).
+  if (grDevices::dev.cur() == 1L) {
+    grDevices::pdf(NULL)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
+  # The parser asks R for each image as it meets one (.image_resolver()),
+  # and the files it read ride along with the layout: the key is the
+  # source, which says nothing of an image edited since.
+  used <- new.env(parent = emptyenv())
+  register_image_resolver(.image_resolver(text_size, max_width, used))
+  on.exit(clear_image_resolver(), add = TRUE)
+  parse <- function() parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = use_path, tex_style = tex_style,
-    justify = justify, optimal_break = optimal_break
+    justify = justify, optimal_break = optimal_break, input_mode = input_mode
   )
+  layout <- if (lenient) .images_lenient(parse()) else parse()
+  if (length(used$stamps)) attr(layout, "images") <- used$stamps
   .cache_put(key, layout)
   layout
 }

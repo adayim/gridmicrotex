@@ -102,6 +102,10 @@ private:
   float _sx, _sy;
 
 public:
+  /** The reach of a size declaration (\large), not a box as \scalebox's
+   *  is: its text breaks across lines (DecorBox::_openable). */
+  bool _declaration = false;
+
   ScaleAtom() = delete;
 
   ScaleAtom(const sptr<Atom>& base, float sx, float sy) noexcept
@@ -130,6 +134,9 @@ class HlineAtom : public Atom {
 private:
   float _width, _shift;
   float _thicknessScale;
+  // A thickness of its own (booktabs' \specialrule), used when a unit is set.
+  float _thickness = 0.f;
+  UnitType _thicknessUnit = UnitType::none;
   int _colStart, _colEnd;
   color _color;
 
@@ -148,32 +155,17 @@ public:
 
   inline void setThicknessScale(float s) { _thicknessScale = s; }
 
+  inline void setThickness(float value, UnitType unit) {
+    _thickness = value;
+    _thicknessUnit = unit;
+  }
+
   /** 0-indexed inclusive column range; -1 (the default) means full width. */
   inline void setColumnRange(int s, int e) { _colStart = s; _colEnd = e; }
 
   inline int colStart() const { return _colStart; }
 
   inline int colEnd() const { return _colEnd; }
-
-  sptr<Box> createBox(Env& env) override;
-};
-
-/** An atom representing a cumulative scripts atom */
-class CumulativeScriptsAtom : public Atom {
-private:
-  sptr<Atom> _base;
-  sptr<RowAtom> _sup, _sub;
-
-public:
-  CumulativeScriptsAtom() = delete;
-
-  CumulativeScriptsAtom(const sptr<Atom>& base, const sptr<Atom>& sub, const sptr<Atom>& sup);
-
-  void addSuperscript(const sptr<Atom>& sup);
-
-  void addSubscript(const sptr<Atom>& sub);
-
-  sptr<Atom> getScriptsAtom() const;
 
   sptr<Box> createBox(Env& env) override;
 };

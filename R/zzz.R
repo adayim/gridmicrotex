@@ -6,9 +6,8 @@
   requireNamespace("systemfonts", quietly = TRUE)
 
   # Initialize MicroTeX with Lete Sans Math as the default font --- it pairs
-  # naturally with R's sans-serif default for plot text. The CLM metrics
-  # are synthesised in C++ from the OTF's OpenType MATH table at load
-  # time; no companion .clm2 file is shipped.
+  # naturally with R's sans-serif default for plot text. C++ reads its
+  # metrics and OpenType MATH table from the OTF itself at load time.
   otf_path <- system.file("fonts", "LeteSansMath.otf", package = pkgname)
 
   if (nchar(otf_path) == 0) {

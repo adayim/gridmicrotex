@@ -41,150 +41,6 @@ test_that(".find_close_brace balances nested and escaped braces", {
   expect_true(is.na(fcb("a{b}c", 1L)))         # unbalanced
 })
 
-test_that(".strip_document_wrappers handles comments and floats", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-
-  expect_equal(strip("% leading comment\n$x^2$"), "$x^2$")
-  expect_equal(strip("$50\\% + x^2$"), "$50\\% + x^2$")
-
-  src <- "\\begin{table}[ht]\n\\centering\n\\begin{tabular}{rr} a & b \\\\ \\end{tabular}\n\\end{table}"
-  out <- strip(src)
-  expect_false(grepl("\\\\begin\\{table",  out))
-  expect_false(grepl("\\\\end\\{table",    out))
-  expect_false(grepl("\\\\centering",      out))
-  expect_true( grepl("\\\\begin\\{tabular\\}", out))
-
-  # figure floats + starred variants
-  expect_false(grepl("\\\\begin\\{figure",
-                     strip("\\begin{figure*}[ht]x\\end{figure*}")))
-  expect_false(grepl("\\\\begin\\{table",
-                     strip("\\begin{table*}[ht]x\\end{table*}")))
-})
-
-test_that(".strip_document_wrappers gives the same answer from its memo", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-  tex <- "\\centering $\\emph{x}$ % note"
-  expect_equal(strip(tex), " $\\textit{x}$ ")
-  expect_equal(strip(tex), " $\\textit{x}$ ")
-  # Environment names stop at 10000 bytes, so a longer string bypasses the
-  # memo -- and must still be stripped.
-  long <- paste0(strrep("a", 20000), "\\centering")
-  expect_equal(strip(long), strrep("a", 20000))
-
-  # The memo is keyed on the UTF-8 form. Latin-1 text under 10000 bytes
-  # can be over it once converted, and bytes-encoded text cannot be a name
-  # at all; both made latex_dims() error.
-  once <- gridmicrotex:::.strip_wrappers_once
-  latin <- iconv(paste0(strrep("\u00e9t\u00e9 ", 1700), "\\centering"),
-                 "UTF-8", "latin1")
-  expect_lt(nchar(latin, type = "bytes"), 10000)
-  expect_equal(strip(latin), once(latin))
-  # The text measurer keyed its own cache the same way.
-  expect_gt(as.numeric(latex_dims(latin)$width), 0)
-  raw_bytes <- "caf\xe9 \\centering"
-  Encoding(raw_bytes) <- "bytes"
-  expect_equal(strip(raw_bytes), once(raw_bytes))
-})
-
-test_that("the stripping memo follows the layout cache's controls", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-  memo <- gridmicrotex:::.strip_memo
-  old <- latex_cache_info()$max_size
-  on.exit(latex_cache_limit(old), add = TRUE)
-
-  strip("\\centering memo probe one")
-  expect_gt(length(memo), 0)
-  # latex_cache_clear() is how a user gives the memory back...
-  latex_cache_clear()
-  expect_equal(length(memo), 0)
-  # ...and a limit of 0 is documented as turning caching off.
-  latex_cache_limit(0)
-  strip("\\centering memo probe two")
-  expect_equal(length(memo), 0)
-})
-
-test_that(".strip_document_wrappers removes preamble and title metadata", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-
-  src <- "\\documentclass[12pt]{article}\\usepackage[utf8]{inputenc}\\usepackage{amsmath}\\begin{document}x^2\\end{document}"
-  out <- strip(src)
-  expect_false(grepl("documentclass", out))
-  expect_false(grepl("usepackage",    out))
-  expect_false(grepl("begin\\{document",  out))
-  expect_false(grepl("end\\{document",    out))
-  expect_true( grepl("x\\^2", out))
-
-  out2 <- strip("\\maketitle\\title{Foo}\\author{Bar}\\label{eq:1}content")
-  expect_equal(out2, "content")
-
-  # alignment scope declarations
-  for (cmd in c("centering", "raggedright", "raggedleft",
-                "flushleft", "flushright")) {
-    expect_false(grepl(cmd, strip(paste0("\\", cmd, " x"))))
-  }
-})
-
-test_that("booktabs rules alias correctly", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-
-  # top/bottom rules render thicker; middle stays normal
-  expect_equal(strip("\\toprule a\\midrule b\\bottomrule"),
-               "\\thickhline a\\hline b\\thickhline")
-
-  # \cmidrule keeps its column range via \cline (no longer lossy)
-  expect_equal(strip("\\cmidrule{2-3}"),          "\\cline{2-3}")
-  expect_equal(strip("\\cmidrule(lr){2-3}"),      "\\cline{2-3}")
-  expect_equal(strip("\\cmidrule[2pt]{2-3}"),     "\\cline{2-3}")
-  expect_equal(strip("\\cmidrule[2pt](lr){2-3}"), "\\cline{2-3}")
-})
-
-test_that("Tier 1 aliases rewrite to MicroTeX-supported commands", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-
-  expect_equal(strip("\\emph{stress}"),       "\\textit{stress}")
-  expect_equal(strip("\\textnormal{plain}"),  "\\text{plain}")
-  expect_equal(strip("a\\par b"),             "a\\\\ b")
-  expect_equal(strip("a\\newline b"),         "a\\\\ b")
-
-  # nested braces in argument
-  expect_equal(strip("\\emph{a $x_{i}$ b}"),
-               "\\textit{a $x_{i}$ b}")
-})
-
-test_that("content-free declarations are stripped", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-  for (cmd in c("noindent", "relax")) {
-    expect_false(grepl(cmd, strip(paste0("\\", cmd, " x"))))
-  }
-})
-
-test_that("skip and fill commands map to em-relative \\vspace / \\quad", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-
-  expect_equal(strip("a\\smallskip b"), "a\\vspace{0.25em} b")
-  expect_equal(strip("a\\medskip b"),   "a\\vspace{0.5em} b")
-  expect_equal(strip("a\\bigskip b"),   "a\\vspace{1em} b")
-  expect_equal(strip("a\\hfill b"),     "a\\quad b")
-  expect_equal(strip("a\\vfill b"),     "a\\vspace{1em} b")
-
-  # mapped commands render end-to-end (MicroTeX has \vspace and \quad)
-  d <- latex_dims("a\\bigskip b")
-  expect_gt(as.numeric(d$width),  0)
-  expect_gt(as.numeric(d$height), 0)
-})
-
-test_that("\\caption{X} is extracted as inline \\text{X}\\\\", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-
-  expect_equal(strip("\\caption{Hello}"),     "\\text{Hello}\\\\")
-  expect_equal(strip("a \\caption{Hi} b"),    "a \\text{Hi}\\\\ b")
-  expect_equal(strip("\\caption[short]{Long}"), "\\text{Long}\\\\")
-
-  # nested braces in caption content (e.g. inline subscripts)
-  expect_equal(strip("\\caption{Foo $x_{i}$}"),
-               "\\text{Foo $x_{i}$}\\\\")
-})
-
 test_that("every break lands at the formula level, not inside the text", {
   # A break kept inside the \text{} makes a multi-line text *box*, and a
   # box is one item in the enclosing row -- so anything after it was set
@@ -245,23 +101,6 @@ test_that("a pasted caption sits above its table, not beside it", {
   expect_equal(cap$x, min(rules$x))
 })
 
-test_that("strip preserves legitimate MicroTeX math commands", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-
-  # Size commands (mac(0, macro_sizes, ...)) and \multirow stay intact.
-  passthrough <- c(
-    "\\sum_{i=1}^n x_i",
-    "\\int_0^\\infty e^{-x} dx",
-    "\\alpha + \\beta",
-    "\\frac{a}{b}",
-    "\\small \\text{tiny note}",
-    "\\Large \\text{title-ish}",
-    "\\multirow{2}{*}{a}",
-    "\\hline\\hline"
-  )
-  for (s in passthrough) expect_equal(strip(s), s)
-})
-
 test_that("latex_grob renders raw xtable output end-to-end", {
   src <- paste(
     "% latex table generated by xtable",
@@ -285,13 +124,7 @@ test_that("latex_grob renders kable booktabs-style tabular", {
   expect_gt(as.numeric(d$height), 0)
 })
 
-test_that("starred env variants are normalized to non-starred", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-  expect_equal(strip("\\begin{align*}a&=b\\end{align*}"),
-               "\\begin{align}a&=b\\end{align}")
-  expect_equal(strip("\\begin{alignat*}{2}a&=b\\end{alignat*}"),
-               "\\begin{alignat}{2}a&=b\\end{alignat}")
-
+test_that("starred alignment environments render", {
   # End-to-end: starred align/eqnarray previously errored on '&' because
   # MicroTeX didn't recognise the env and never entered array mode.
   alignment_cases <- list(
@@ -363,7 +196,7 @@ test_that("\\cmidrule renders end-to-end via \\cline", {
   expect_gt(as.numeric(d$height), 0)
 })
 
-test_that("strip emits no messages — all transforms are silent", {
+test_that("document commands emit no messages", {
   # The rules sit in a table, where they are valid: outside one, LaTeX and
   # now MicroTeX reject them.
   msgs <- testthat::capture_messages(
@@ -373,49 +206,24 @@ test_that("strip emits no messages — all transforms are silent", {
   expect_equal(length(msgs), 0L)
 })
 
-test_that("links are styled, following LaTeX's convention not HTML's", {
-  strip <- gridmicrotex:::.strip_document_wrappers
-  col <- gridmicrotex:::.MD_LINK_COLOR
-
-  # hyperref with colorlinks=true colours a link and does not underline it;
-  # the `url` package sets a URL in monospace. The markdown side uses the
-  # HTML convention (blue AND underlined) instead -- see the `a` rule.
-  expect_equal(strip("\\href{https://ex.org}{the text}"),
-               paste0("\\textcolor{", col, "}{the text}"))
-  expect_equal(strip("\\url{https://ex.org}"),
-               paste0("\\textcolor{", col, "}{\\texttt{https://ex.org}}"))
-
-  # A URL is verbatim in real LaTeX, so its specials are escaped: an
-  # unescaped _ would open a subscript.
-  expect_equal(strip("\\url{a.io/x_y}"),
-               paste0("\\textcolor{", col, "}{\\texttt{a.io/x\\_y}}"))
-
-  # Links are rewritten before the comment stripper, so a % inside a URL
-  # survives as \% instead of eating the rest of the line.
-  expect_equal(strip("\\url{a.io/x%20y} tail"),
-               paste0("\\textcolor{", col, "}{\\texttt{a.io/x\\%20y}} tail"))
-
-  # \href text is ordinary LaTeX and keeps its markup.
-  expect_equal(strip("\\href{u}{\\textbf{b}}"),
-               paste0("\\textcolor{", col, "}{\\textbf{b}}"))
-
-  # Malformed input is left alone rather than half-rewritten.
-  expect_equal(strip("\\href{only-one-group}"), "\\href{only-one-group}")
-})
-
-test_that("an ampersand in prose is a literal, not an alignment tab", {
+test_that("an ampersand in prose is drawn, with TeX's warning", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # MicroTeX reads a bare `&` as an alignment tab even inside \text{} and
-  # drops everything after it, so "Treatment & Control" rendered as
-  # "Treatment " -- half the label gone, with no error. `&` cannot mean
-  # alignment in prose: math spans and tabular environments are passed
-  # through verbatim by the scanner and never reach the prose escaper.
+  # MicroTeX once read a bare `&` as an alignment tab even inside \text{}
+  # and dropped everything after it, so "Treatment & Control" rendered as
+  # "Treatment ". Now the whole label is drawn, `&` as a character of the
+  # text, and TeX's refusal is a warning at its position. `\&` is the
+  # same character, and says so on purpose.
   drawn <- function(s) {
     d <- latex_grob(s, gp = grid::gpar(fontsize = 14))$layout_df
     paste(d$text[d$type == "text" & !is.na(d$text)], collapse = "")
   }
-  expect_equal(drawn("Treatment & Control"), "Treatment  Control")
-  expect_equal(drawn("Cats & Dogs & Mice"), "Cats  Dogs  Mice")
+  expect_warning(out <- drawn("Treatment & Control"),
+                 "1:11: & outside an alignment is drawn as a character")
+  expect_equal(out, "Treatment & Control")
+  expect_warning(out <- drawn("Cats & Dogs & Mice"), "1:6: .*\n.*1:13: ")
+  expect_equal(out, "Cats & Dogs & Mice")
+  expect_no_warning(out <- drawn("Treatment \\& Control"))
+  expect_equal(out, "Treatment & Control")
 
   # An ampersand the user already escaped must not be escaped twice.
   expect_equal(latex_wrap("a \\& b"), "\\text{a \\& b}")
@@ -489,11 +297,16 @@ test_that("tabular* renders instead of erroring on its width argument", {
   # `tabular*` takes a target width before the column spec. Stripping only
   # the star left the width where the alignment belonged, and MicroTeX
   # rejected it outright with "Invalid alignment in array environment".
-  strip <- gridmicrotex:::.strip_document_wrappers
-  expect_equal(strip("\\begin{tabular*}{\\textwidth}{lcr}a\\end{tabular*}"),
-               "\\begin{tabular}{lcr}a\\end{tabular}")
-
   starred <- latex_dims("\\begin{tabular*}{\\textwidth}{lcr}a&b&c\\end{tabular*}")
   plain <- latex_dims("\\begin{tabular}{lcr}a&b&c\\end{tabular}")
   expect_equal(as.numeric(starred$width), as.numeric(plain$width))
+})
+
+test_that("Latin-1 text is read as the characters it holds", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The parser reads UTF-8; a Latin-1 string reached it as invalid bytes,
+  # each drawn as U+FFFD with a warning.
+  latin <- iconv("café crème", "UTF-8", "latin1")
+  expect_no_warning(r <- latex_tree(latin)$records)
+  expect_equal(paste(r$text[!is.na(r$text)], collapse = ""), "café crème")
 })

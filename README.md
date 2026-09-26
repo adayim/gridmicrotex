@@ -53,7 +53,7 @@ grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}",
 </div>
 
 
-By default, the input is treated as LaTeX math mode ("mixed" mode), which wraps non-math text in `\text{}` and preserves math expressions as-is. Use `$...$` or `\\(...\\)` delimiters to render math. The `"x = "` in the equation above treated as text. Use `input_mode = "math"` to treat the whole string as math mode and render text with `\\text{}`. You can change this with global option `latex_options(input_mode = "math")`.
+By default a string is read as a label (`input_mode = "mixed"`): text, as in a LaTeX paragraph, with math between `$...$` or `\(...\)` --- which is why the `"x = "` above is set as text. `input_mode = "math"` reads the whole string as math, and `input_mode = "document"` reads a LaTeX document body, with paragraphs, headings, displayed equations and lists (`vignette("documents")`). Change the default with `latex_options(input_mode = "math")`.
 
 
 ### Composing with other grobs
@@ -126,6 +126,32 @@ grid.latex(
 <div class="figure">
 <img src="man/figures/README-example-mixed-definition-1.png" alt="plot of chunk example-mixed-definition" width="50%" />
 <p class="caption">plot of chunk example-mixed-definition</p>
+</div>
+
+``` r
+reset_latex_options()  # back to input_mode = "mixed" for what follows
+```
+
+### Documents
+
+`input_mode = "document"` sets the body of a LaTeX document --- paragraphs,
+headings, displayed equations, lists and tables --- broken into lines at
+`max_width`, ready for a PDF page. See `vignette("documents")`.
+
+
+``` r
+grid.newpage()
+grid.latex(r"(\section{Results}
+The slope is positive --- the fitted line is
+\[ \hat{y} = 1.2 + 0.42\,x, \]
+and its residuals show no pattern.)",
+  input_mode = "document", max_width = 5.6 * 72,
+  x = 0.02, y = 0.95, hjust = 0, vjust = 1, gp = gpar(fontsize = 12))
+```
+
+<div class="figure">
+<img src="man/figures/README-example-document-1.png" alt="plot of chunk example-document" width="80%" />
+<p class="caption">plot of chunk example-document</p>
 </div>
 
 ## Base graphics
@@ -213,14 +239,14 @@ Use `geom_latex()` to place LaTeX labels at data coordinates, and
 
 ``` r
 library(ggplot2)
-# Add a LaTeX table as an annotation
-tab_str <- r"(\begin{tabular}{c|c} \text{A} & B^2 \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
+# Add a LaTeX table as an annotation: its cells are text, as in LaTeX
+tab_str <- r"(\begin{tabular}{c|c} A & $B^2$ \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 
 df <- data.frame(x = 1:3, y = 1:3,
-                 eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
-ggplot(df, aes(x, y, label = eq)) + 
+                 eq = c("$x^2$", "$\\frac{a}{b}$", "$\\sum_{i=1}^n x_i$"))
+ggplot(df, aes(x, y, label = eq)) +
   geom_latex() +
-  annotate("latex", x = 1, y = 2.7, label = tab_str, size = 12) +
+  annotate("latex", x = 1.15, y = 2.7, label = tab_str, size = 12) +
   labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
   theme(axis.title.x = element_latex())
 ```
@@ -251,9 +277,10 @@ See `vignette("ggplot2-integration")` for more examples.
 
 ## How it works
 
-MicroTeX parses the LaTeX and computes the full TeX box model; a recorder
-captures every draw operation with exact coordinates, and R turns those
-into native grid primitives. Nothing is rasterised, so the output stays
+The LaTeX is read by TeX's rules --- macros expanded, commands and
+environments parsed --- and MicroTeX computes the full TeX box model; a
+recorder captures every draw operation with exact coordinates, and R turns
+those into native grid primitives. Nothing is rasterised, so the output stays
 sharp at any resolution on any device.
 
 Glyphs are drawn either as native text (which keeps PDF and SVG output

@@ -1,29 +1,18 @@
-# Authoritative list: every environment MicroTeX registers in
-# src/MicroTeX/lib/macro/macro_def.cpp env(...) calls, plus the
-# starred variants (amsmath's no-equation-numbering forms) that users
-# commonly type and that MicroTeX accepts without separate registration.
-# Hand-synced to the C++ registrations -- a gap here corrupts mixed-mode
-# input, so update both together.
-.MATH_ENVS <- c(
-  # array family
-  "array", "tabular", "tabular*",
-  # matrix family
-  "matrix", "smallmatrix",
-  "pmatrix", "bmatrix", "Bmatrix", "vmatrix", "Vmatrix",
-  # equation / display
-  "equation", "equation*", "math", "displaymath",
-  # amsmath alignments
-  "align", "align*", "flalign", "flalign*",
-  "alignat", "alignat*", "aligned",
-  "alignedat", "alignedat*",
-  "eqnarray", "eqnarray*",
-  "multline", "multline*",
-  # paragraph-like
-  "gather", "gather*", "gathered",
-  "split", "cases", "rcases",
-  # list environments
-  "itemize", "enumerate"
-)
+# Every environment the engine knows, and its starred form (amsmath's
+# no-numbering variants; the star changes nothing here). Read from the C++
+# front end's own tables -- the environments it builds and those its
+# prelude defines in LaTeX -- so this can no longer fall out of step with
+# them. Asked once, on first use: the DLL is not loaded when this file is.
+.math_envs <- local({
+  envs <- NULL
+  function() {
+    if (is.null(envs)) {
+      names <- math_env_names_cpp()
+      envs <<- c(names, paste0(names, "*"))
+    }
+    envs
+  }
+})
 
 # Find \end{env} matching \begin{env}, honoring nesting of the same env.
 # `from` is the index just past the opening \begin{env}; the return value
@@ -57,7 +46,7 @@
 #
 # Walks `tex` once and returns its maximal math regions: `$...$`,
 # `$$...$$`, `\(...\)`, `\[...\]`, and `\begin{env}...\end{env}` for
-# every environment in .MATH_ENVS. Any character not covered by a
+# every environment in .math_envs(). Any character not covered by a
 # returned span is prose.
 #
 # Both latex_wrap() (which wraps the prose in \text{}) and
@@ -143,7 +132,7 @@
         paste(chars[i:(i + 5L)], collapse = "") == "\\begin") {
       rest <- paste(chars[i:min(i + 64L, n)], collapse = "")
       m <- regmatches(rest, regexec("^\\\\begin\\{([^}]+)\\}", rest))[[1]]
-      if (length(m) == 2 && m[2] %in% .MATH_ENVS) {
+      if (length(m) == 2 && m[2] %in% .math_envs()) {
         env <- m[2]
         start_inner <- i + nchar(m[1])
         j <- .find_env_close(chars, n, start_inner, env)
@@ -188,12 +177,14 @@
 #' Wrap standard text for math-first LaTeX renderers
 #'
 #' @description
-#' Parses character strings to safely isolate standard natural language from
-#' LaTeX math environments. Standard text is wrapped in `\text{}` blocks, while
-#' equations, display math, and specific LaTeX environments are preserved verbatim.
-#' This is heavily optimized for passing mixed-content strings (like plot titles
-#' or axis labels) to pure-math typesetting engines like MicroTex. The conversion
-#' is not perfect, but it should handle most common cases without user intervention.
+#' Turns a label that mixes text and math into a formula: the text is
+#' wrapped in `\text{}` blocks, while equations, display math and math
+#' environments are kept verbatim. [latex_grob()] does not need this, as it
+#' reads such a label itself (`input_mode = "mixed"`); it is for handing a
+#' label to something that takes only math, such as
+#' `latex_grob(input_mode = "math")` or another math renderer. The
+#' conversion is not perfect, but it should handle most common cases
+#' without user intervention.
 #'
 #' @param tex `character`. The string or vector of strings to be processed.
 #' @param input_mode `character`. A length-one character vector dictating the
@@ -438,228 +429,8 @@ latex_wrap <- function(tex, input_mode = c("mixed", "math")) {
   NA_integer_
 }
 
-# Replace every occurrence of `\command[opt]?(paren)?{...}` with
-# `replacement`. Brace nesting is balanced via .find_close_brace.
-# When `keep_inner = TRUE`, the matched braced content is re-attached
-# after the replacement (so `\emph{X}` → `\textit{X}` via
-# replacement = "\\textit", keep_inner = TRUE). When FALSE (default),
-# the whole construct is dropped or substituted with a literal.
-.replace_command_braced <- function(tex, command, replacement = "",
-                                    keep_inner = FALSE) {
-  pat <- paste0("\\\\", command, "(?:\\[[^]]*\\])?(?:\\([^)]*\\))?\\{")
-  repeat {
-    m <- regexpr(pat, tex, perl = TRUE)
-    if (m == -1L) return(tex)
-    brace_open <- m + attr(m, "match.length") - 1L   # index of `{`
-    close <- .find_close_brace(tex, brace_open + 1L)
-    if (is.na(close)) return(tex)
-    if (keep_inner) {
-      inner <- substr(tex, brace_open + 1L, close - 1L)
-      rep <- paste0(replacement, "{", inner, "}")
-    } else {
-      rep <- replacement
-    }
-    tex <- paste0(substr(tex, 1L, m - 1L),
-                  rep,
-                  substr(tex, close + 1L, nchar(tex)))
-  }
-}
-
-# Rewrite `\url{X}` and `\href{U}{X}` to styled text. There is no link in a
-# grob, so only the appearance is reproduced -- and it follows LaTeX's
-# convention rather than HTML's: hyperref with `colorlinks=true` (which is
-# what almost every document sets) colours the text and does not underline
-# it, and the `url` package sets a URL in monospace. The markdown side uses
-# the HTML convention instead; see the `a` rule in .md_default_rules().
-#
-# A URL is verbatim in real LaTeX, so its LaTeX-special characters are
-# escaped here -- an unescaped `_` in `example.com/a_b` would otherwise open
-# a subscript.
+# The colour of a link. LaTeX's \url and \href are drawn in it by the C++
+# front end (link() in front/lower.cpp), following hyperref's colorlinks
+# convention; markdown's `a` rule uses it too, with the HTML convention of
+# an underline as well.
 .MD_LINK_COLOR <- "#0969DA"
-
-.replace_links <- function(tex) {
-  esc <- function(s) gsub("([{}$&#_%~^])", "\\\\\\1", s)
-
-  # \href{destination}{text}: drop the destination, style the text. The
-  # text is *not* escaped -- unlike a URL it is ordinary LaTeX and may
-  # legitimately contain markup.
-  repeat {
-    m <- regexpr("\\\\href\\{", tex, perl = TRUE)
-    if (m == -1L) break
-    o1 <- m + attr(m, "match.length") - 1L
-    c1 <- .find_close_brace(tex, o1 + 1L)
-    if (is.na(c1)) break
-    # The second group must follow immediately for this to be an \href.
-    rest <- substr(tex, c1 + 1L, nchar(tex))
-    if (!startsWith(rest, "{")) break
-    c2 <- .find_close_brace(tex, c1 + 2L)
-    if (is.na(c2)) break
-    txt <- substr(tex, c1 + 2L, c2 - 1L)
-    tex <- paste0(substr(tex, 1L, m - 1L),
-                  "\\textcolor{", .MD_LINK_COLOR, "}{", txt, "}",
-                  substr(tex, c2 + 1L, nchar(tex)))
-  }
-
-  # \url{X}: monospace and coloured, with X escaped.
-  repeat {
-    m <- regexpr("\\\\url\\{", tex, perl = TRUE)
-    if (m == -1L) break
-    o1 <- m + attr(m, "match.length") - 1L
-    c1 <- .find_close_brace(tex, o1 + 1L)
-    if (is.na(c1)) break
-    txt <- esc(substr(tex, o1 + 1L, c1 - 1L))
-    tex <- paste0(substr(tex, 1L, m - 1L),
-                  "\\textcolor{", .MD_LINK_COLOR, "}{\\texttt{", txt, "}}",
-                  substr(tex, c1 + 1L, nchar(tex)))
-  }
-  tex
-}
-
-# Rewrite `\caption[opt]?{X}` → `\text{X}\\` inline at source position.
-# Position-preserving: where the caption is written in the source is where
-# it renders, separated from neighbouring content by a line break.
-.replace_caption <- function(tex) {
-  pat <- "\\\\caption(?:\\[[^]]*\\])?\\{"
-  repeat {
-    m <- regexpr(pat, tex, perl = TRUE)
-    if (m == -1L) return(tex)
-    brace_open <- m + attr(m, "match.length") - 1L
-    close <- .find_close_brace(tex, brace_open + 1L)
-    if (is.na(close)) return(tex)
-    inner <- substr(tex, brace_open + 1L, close - 1L)
-    tex <- paste0(substr(tex, 1L, m - 1L),
-                  "\\text{", inner, "}\\\\",
-                  substr(tex, close + 1L, nchar(tex)))
-  }
-}
-
-# Strip / rewrite LaTeX document-layer wrappers that MicroTeX doesn't
-# model, so raw `print.xtable()`, `knitr::kable()`, and similar
-# `tabular`-bearing strings render directly. See `?latex_grob` (section
-# "LaTeX document-level wrappers") for the user-facing list.
-#
-# Strip-list contract: every command here MUST be absent from MicroTeX's
-# command tables. Verified against src/MicroTeX/lib/macro/macro_def.cpp
-# and lib/core/formula_def.cpp; in particular `\multirow` and the
-# `\tiny`..`\Huge` size family ARE valid MicroTeX macros and must
-# not be added.
-.strip_document_wrappers <- function(tex) {
-  if (!nzchar(tex)) return(tex)
-  # A pure function of `tex`, but its ~30 PCRE patterns are compiled
-  # afresh on every call: 2.6 ms for a one-command label, most of what a
-  # cached redraw costs, and a base-graphics label pays it on every
-  # strWidth and text call. So it is memoised, under the layout cache's
-  # own controls (latex_cache_limit(), latex_cache_clear()).
-  #
-  # The key becomes a variable name, which R translates to the native
-  # encoding and caps at 10000 bytes. So key on the UTF-8 form, skip
-  # bytes-encoded text (it cannot be translated at all), and leave
-  # anything long enough to near the cap unmemoised -- it is a document,
-  # not a label.
-  key <- if (!is.na(tex) && !identical(Encoding(tex), "bytes")) enc2utf8(tex)
-  if (is.null(key) || .latex_cache$max_size <= 0L ||
-      nchar(key, type = "bytes") > 2048L) {
-    return(.strip_wrappers_once(tex))
-  }
-  hit <- .strip_memo[[key]]
-  if (is.null(hit)) {
-    if (length(.strip_memo) >= .latex_cache$max_size) .strip_memo_clear()
-    hit <- .strip_memo[[key]] <- .strip_wrappers_once(tex)
-  }
-  hit
-}
-
-.strip_memo <- new.env(parent = emptyenv())
-
-.strip_memo_clear <- function() {
-  rm(list = ls(.strip_memo, all.names = TRUE), envir = .strip_memo)
-}
-
-.strip_wrappers_once <- function(tex) {
-  # 0. Links, before the comment stripper: a `%` inside a URL is a real
-  # character, and .replace_links() escapes it to `\%`, which step 1 then
-  # leaves alone. Stripping comments first would eat the rest of the URL.
-  tex <- .replace_links(tex)
-
-  # 1. `%`-to-EOL comments, preserving `\%`.
-  tex <- gsub("(?<!\\\\)%[^\n]*\n?", "", tex, perl = TRUE)
-
-  # 2. Preamble + document boundary.
-  tex <- .replace_command_braced(tex, "documentclass")
-  tex <- .replace_command_braced(tex, "usepackage")
-  tex <- gsub("\\\\(?:begin|end)\\{document\\}", "", tex, perl = TRUE)
-
-  # 3. Float environments: keep the contents.
-  tex <- gsub("\\\\begin\\{(?:table|figure)\\*?\\}(\\[[^]]*\\])?",
-              "", tex, perl = TRUE)
-  tex <- gsub("\\\\end\\{(?:table|figure)\\*?\\}", "", tex, perl = TRUE)
-
-  # 3a-i. `tabular*` takes a target width before its column spec, which
-  # `tabular` does not. Dropping only the star left the width where the
-  # alignment belonged and MicroTeX rejected it outright ("Invalid
-  # alignment in array environment"), so drop the width with it. A grob
-  # is sized by its content, so there is no width to honour.
-  tex <- gsub("\\\\begin\\{tabular\\*\\}\\s*\\{[^{}]*\\}", "\\\\begin{tabular}",
-              tex, perl = TRUE)
-
-  # 3a. Strip the trailing `*` on env names. In amsmath, `align*` means
-  # "no equation numbering" — MicroTeX doesn't number equations, so the
-  # star is semantically a no-op. Normalising here lets the engine
-  # recognise the env and enter array mode (without it, `&` errors out).
-  tex <- gsub("\\\\(begin|end)\\{([A-Za-z]+)\\*\\}",
-              "\\\\\\1{\\2}", tex, perl = TRUE)
-
-  # 4. Title-page metadata (no body output in LaTeX either).
-  tex <- gsub("\\\\maketitle\\b", "", tex, perl = TRUE)
-  tex <- .replace_command_braced(tex, "title")
-  tex <- .replace_command_braced(tex, "author")
-
-  # 5. Cross-reference metadata.
-  tex <- .replace_command_braced(tex, "label")
-
-  # 5a. Graphics declarations. `\graphicspath` is normally consumed by
-  # .resolve_graphics(), which needs the directories; this catches one that
-  # survived (no \includegraphics in the string, or a macro produced it),
-  # so its argument is not typeset as visible text.
-  tex <- .replace_command_braced(tex, "graphicspath")
-  tex <- .replace_command_braced(tex, "DeclareGraphicsExtensions")
-
-  # 6. Layout / alignment scope declarations + content-free declarations
-  # that have no analog in a fixed-size grob.
-  tex <- gsub("\\\\centering\\b", "", tex, perl = TRUE)
-  tex <- gsub("\\\\(?:raggedright|raggedleft|flushleft|flushright)\\b",
-              "", tex, perl = TRUE)
-  tex <- gsub("\\\\(?:noindent|relax)\\b", "", tex, perl = TRUE)
-
-  # Spacing primitives: map to MicroTeX's \vspace / \quad. Values are
-  # em-relative so they scale with the grob's fontsize. The ratios
-  # follow LaTeX's small/med/big proportion (1:2:4) rescaled so that
-  # \bigskip is one full line at the current size. \hfill and \vfill
-  # are rubber lengths in LaTeX (which expand to fill the surrounding
-  # glue); a fixed-size grob has nothing to fill, so we substitute a
-  # static 1em horizontal / 1em vertical gap.
-  tex <- gsub("\\\\smallskip\\b", "\\\\vspace{0.25em}", tex, perl = TRUE)
-  tex <- gsub("\\\\medskip\\b",   "\\\\vspace{0.5em}",  tex, perl = TRUE)
-  tex <- gsub("\\\\bigskip\\b",   "\\\\vspace{1em}",    tex, perl = TRUE)
-  tex <- gsub("\\\\hfill\\b",     "\\\\quad",           tex, perl = TRUE)
-  tex <- gsub("\\\\vfill\\b",     "\\\\vspace{1em}",    tex, perl = TRUE)
-
-  # 7. Body-text aliases that map cleanly onto MicroTeX-supported commands.
-  tex <- .replace_command_braced(tex, "emph",       "\\textit", keep_inner = TRUE)
-  tex <- .replace_command_braced(tex, "textnormal", "\\text",   keep_inner = TRUE)
-  tex <- gsub("\\\\(?:par|newline)\\b", "\\\\\\\\", tex, perl = TRUE)
-
-  # 8. Booktabs rules. Top/bottom map to \thickhline (a thicker rule
-  # added in MicroTeX C++ alongside this layer); middle rules stay
-  # \hline. `\cmidrule[trim]?(parenarg)?{a-b}` keeps its column range
-  # via \cline{a-b}, which is also new in C++.
-  tex <- gsub("\\\\(?:toprule|bottomrule)\\b",
-              "\\\\thickhline", tex, perl = TRUE)
-  tex <- gsub("\\\\midrule\\b", "\\\\hline", tex, perl = TRUE)
-  tex <- .replace_command_braced(tex, "cmidrule", "\\cline", keep_inner = TRUE)
-
-  # 9. Caption: extract content as inline `\text{...}\\`.
-  tex <- .replace_caption(tex)
-
-  tex
-}

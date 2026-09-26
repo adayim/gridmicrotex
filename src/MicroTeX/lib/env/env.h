@@ -202,17 +202,35 @@ public:
   }
 
   /**
+   * Do something with the given text width (in font units), as a column or
+   * a minipage narrower than the page sets its content. This will reset the
+   * width after function #f return.
+   */
+  template <typename F>
+  auto withTextWidth(float width, F&& f) -> decltype(f(*this)) {
+    const float oldWidth = _textWidth;
+    _textWidth = width;
+    auto result = f(*this);
+    _textWidth = oldWidth;
+    return result;
+  }
+
+  /**
    * Do something with given FontStyle. This will reset the FontStyle after function #f
    * return.
    */
   template <typename F>
   auto withFontStyle(const FontStyle style, bool isMathMode, F&& f) -> decltype(f(*this)) {
-    auto oldStyle = isMathMode ? _mathFontStyle : _textFontStyle;
     auto& target = isMathMode ? _mathFontStyle : _textFontStyle;
+    // Put back on every way out: the lowering carries on past a command
+    // that throws, and a style left set would reach everything after it.
+    struct Restore {
+      FontStyle& target;
+      FontStyle old;
+      ~Restore() { target = old; }
+    } restore{target, target};
     target = style;
-    auto result = f(*this);
-    target = oldStyle;
-    return result;
+    return f(*this);
   }
 };
 

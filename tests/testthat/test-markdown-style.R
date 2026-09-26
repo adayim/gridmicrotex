@@ -301,11 +301,9 @@ test_that("a span resolves its class from the stylesheet", {
     .md_to_tex('<span class="hot" style="color: #0000FF">b</span>', 20, s),
     "#0000FF", fixed = TRUE)
   # An unknown class is not an error, it simply matches nothing.
-  expect_match(.md_to_tex('<span class="nope">b</span>', 20, s),
-               "\\text{b}", fixed = TRUE)
+  expect_identical(.md_to_tex('<span class="nope">b</span>', 20, s), "b")
   # Without a stylesheet a class means nothing at all.
-  expect_match(.md_to_tex('<span class="hot">b</span>'), "\\text{b}",
-               fixed = TRUE)
+  expect_identical(.md_to_tex('<span class="hot">b</span>'), "b")
 })
 
 test_that("font-weight and font-style now work on a span", {
@@ -328,7 +326,7 @@ test_that("font-weight and font-style now work on a span", {
 
 test_that("markdown_grob() applies what compiles to LaTeX and ignores layout", {
   # A heading had no size at all in the flattened path before this.
-  expect_match(.md_to_tex("# H", 20, markdown_style()), "\\scalebox{",
+  expect_match(.md_to_tex("# H", 20, markdown_style()), "\\textscale{",
                fixed = TRUE)
   expect_match(.md_to_tex("# H", 20, .md_as_style("h1 { color: #FF0000 }")),
                "\\textcolor{#FF0000}", fixed = TRUE)
@@ -371,43 +369,41 @@ styles_of <- function(md, css = NULL, size = 12) {
   sort(unique(d[!is.na(d)]))
 }
 
+# Text is roman (bit 1) under whatever weight (2) and slant (4) it has.
 test_that("block font-weight and font-style reach the glyphs", {
-  # Emitting \textbf{\text{x}} is not enough: \text{} builds a non-nested
-  # FontStyleAtom, so the weight is silently dropped and the run reports
-  # plain. The content has to be generated bare instead.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_equal(styles_of("hello"), 1)
-  expect_equal(styles_of("hello", "p { font-weight: bold }"), 2)
-  expect_equal(styles_of("hello", "p { font-style: italic }"), 4)
-  expect_equal(styles_of("hello", "p { font-weight: bold; font-style: italic }"), 6)
+  expect_equal(styles_of("hello", "p { font-weight: bold }"), 3)
+  expect_equal(styles_of("hello", "p { font-style: italic }"), 5)
+  expect_equal(styles_of("hello", "p { font-weight: bold; font-style: italic }"), 7)
 })
 
 test_that("headings are bold by default, and can be told not to be", {
-  # They were not, before: the old \Huge{}\textbf{\text{H}} had the same
-  # reset problem, so no heading this package ever drew was actually bold.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_equal(styles_of("# Head"), 2)
+  expect_equal(styles_of("# Head"), 3)
   expect_equal(styles_of("# Head", "h1 { font-weight: normal }"), 1)
 })
 
 test_that("emphasis inherits into quotes, list items and divs", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_equal(styles_of("> quoted", "blockquote { font-weight: bold }"), 2)
-  expect_equal(styles_of("- item", "li { font-weight: bold }"), 2)
+  expect_equal(styles_of("> quoted", "blockquote { font-weight: bold }"), 3)
+  expect_equal(styles_of("- item", "li { font-weight: bold }"), 3)
   expect_equal(styles_of("<div class=\"b\">\n\nx\n\n</div>",
-                         ".b { font-weight: bold }"), 2)
+                         ".b { font-weight: bold }"), 3)
 })
 
-test_that("emphasis does not apply to pre", {
-  # A documented limitation, tested so the documentation stays true: code
-  # builds its own LaTeX and imposes its own font handling.
+test_that("emphasis applies to pre and to tables, as CSS says it should", {
+  # Code was once left plain: \text{} replaced the style around it. It
+  # keeps the text font it is in now, as LaTeX's does, so a bold `pre` is
+  # bold monospace (128 + 2 + 1).
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 1)
+  expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 131)
+  expect_equal(styles_of("```\ncode\n```"), 129)
 
-  # Tables used to be in this list. They are not any more: cell content is
-  # generated with its emphasis already applied, so font-weight inherits
-  # from `table` into the cells the way CSS says it should.
-  expect_equal(styles_of("| a |\n|---|\n| 1 |", "table { font-weight: bold }"), 2)
+  # Cell content is generated with its emphasis applied, so font-weight
+  # inherits from `table` into the cells.
+  s <- styles_of("| a |\n|---|\n| 1 |", "table { font-weight: bold }")
+  expect_true(all(bitwAnd(s, 2L) != 0L))
 })
 
 # --- tags and properties that had no effect at all -----------------------
@@ -509,18 +505,20 @@ test_that("a markdown link is styled through the `a` tag", {
   tex <- function(md, style = NULL) .md_to_tex(md, style = .md_as_style(style))
   col <- gridmicrotex:::.MD_LINK_COLOR
 
-  # Blue and underlined by default, as a browser renders <a>.
-  expect_equal(tex("[x](u)"),
-               paste0("\\textcolor{", col, "}{\\underline{\\text{x}}}"))
+  # Blue and underlined by default, as a browser renders <a>, with ulem's
+  # underline, which wraps with the text as a browser's does.
+  expect_equal(tex("[x](u)"), paste0("\\textcolor{", col, "}{\\uline{x}}"))
 
   # It is an ordinary tag, so a stylesheet overrides it.
   expect_match(tex("[x](u)", "a { color: red }"), "textcolor\\{#FF0000\\}",
                fixed = FALSE)
 
-  # \underline typesets a fresh sub-formula and would drop the bold around
-  # it, so the enclosing style is re-opened inside -- the rule ~~strike~~
-  # already follows.
-  expect_match(tex("**[x](u)**"), "underline\\{\\\\textbf\\{")
+  # The bold around it holds inside it, as LaTeX's does: nothing is
+  # re-opened.
+  expect_match(tex("**[x](u)**"), "\\textbf{\\textcolor{", fixed = TRUE)
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  fs <- markdown_grob("**[x](u)**")$layout_df$font_style
+  expect_true(all(bitwAnd(fs[!is.na(fs)], 2L) != 0L))
 
   # The destination is dropped; only the text is kept.
   expect_false(grepl("u}", tex("[x](u)"), fixed = TRUE))
@@ -589,7 +587,7 @@ test_that("table CSS compiles to the tabular primitives MicroTeX has", {
                "arrayrulecolor{#D1D9E0}", fixed = TRUE)
   # A cell border becomes vertical rules in the column spec.
   expect_match(tbl_tex("td { border-left: 1px solid black }"),
-               "{|l|r|}", fixed = TRUE)
+               "{|X|>{\\raggedleft\\arraybackslash}X|}", fixed = TRUE)
   # Cell padding becomes the inter-column @{} material.
   expect_match(tbl_tex("td { padding-left: 6pt }"),
                "@{\\hspace{6.00pt}}", fixed = TRUE)
@@ -598,8 +596,9 @@ test_that("table CSS compiles to the tabular primitives MicroTeX has", {
 test_that("a border of none or zero draws nothing", {
   # .md_css_border() reports these as zero width, and both callers only
   # asked whether a border had been declared at all.
-  expect_match(tbl_tex("td { border-left: none }"), "{lr}", fixed = TRUE)
-  expect_match(tbl_tex("td { border-left: 0 }"), "{lr}", fixed = TRUE)
+  plain <- "{X>{\\raggedleft\\arraybackslash}X}"
+  expect_match(tbl_tex("td { border-left: none }"), plain, fixed = TRUE)
+  expect_match(tbl_tex("td { border-left: 0 }"), plain, fixed = TRUE)
 
   open <- function(css) {
     paste(.md_css_inline_latex(.md_parse_css(css), 12)$open, collapse = "")
@@ -620,10 +619,7 @@ test_that("tr border-bottom rules rows without doubling the bottom rule", {
   expect_match(t, "hline", fixed = TRUE)
 })
 
-test_that("header cells are bold, which needs parse-time emphasis", {
-  # \textbf{\text{x}} reports plain -- \text{} builds a non-nested
-  # FontStyleAtom -- so wrapping the finished table could never work. The
-  # emphasis has to be applied as each cell is generated.
+test_that("header cells are bold", {
   expect_match(tbl_tex(), "\\textbf{Name}", fixed = TRUE)
   # And it is a plain rule, so it can be turned off.
   expect_false(grepl("textbf", tbl_tex("th { font-weight: normal }"),
@@ -643,7 +639,7 @@ test_that("table-layout: fixed divides the measure into p{} columns", {
                "p{", fixed = TRUE)
 })
 
-test_that("a fixed-layout table fits the box instead of overflowing", {
+test_that("a table fits the box, a fixed-layout one in even columns", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   wide <- paste0(
     "| Column one | Column two |\n|---|---|\n",
@@ -659,11 +655,10 @@ test_that("a fixed-layout table fits the box instead of overflowing", {
   free <- meas(NULL)
   fixed <- meas("table { table-layout: fixed }")
 
-  # The default still overflows -- unchanged behaviour.
-  expect_gt(free[["w"]], free[["content"]])
-  # Fixed fits, and is taller because the cells now wrap.
+  # Both fit, their cells wrapping; the default's X columns share the width
+  # the table needs, the fixed one's divide the measure evenly.
+  expect_lte(free[["w"]], free[["content"]] + 1)
   expect_lte(fixed[["w"]], fixed[["content"]] + 1)
-  expect_gt(fixed[["h"]], free[["h"]])
 })
 
 # --- box properties ------------------------------------------------------
@@ -675,35 +670,33 @@ span_tex <- function(css) {
 }
 
 test_that("inline box properties compile to MicroTeX primitives", {
-  expect_equal(span_tex("background: #FFFF00"),
-               "\\bgcolor{#FFFF00}{\\text{hi}}")
-  expect_equal(span_tex("text-decoration: overline"),
-               "\\overline{\\text{hi}}")
-  expect_equal(span_tex("border: 1px solid red"), "\\fbox{\\text{hi}}")
-  expect_equal(span_tex("border-style: double"), "\\doublebox{\\text{hi}}")
-  expect_equal(span_tex("border-radius: 4pt"), "\\ovalbox{\\text{hi}}")
-  expect_equal(span_tex("box-shadow: 2pt 2pt"), "\\shadowbox{\\text{hi}}")
-  expect_equal(span_tex("visibility: hidden"), "\\phantom{\\text{hi}}")
-  expect_equal(span_tex("vertical-align: super"),
-               "\\textsuperscript{\\text{hi}}")
-  expect_equal(span_tex("vertical-align: sub"), "\\textsubscript{\\text{hi}}")
-  expect_equal(span_tex("vertical-align: 3pt"),
-               "\\raisebox{3.00pt}{\\text{hi}}")
-  expect_equal(span_tex("transform: rotate(45deg)"),
-               "\\rotatebox{45}{\\text{hi}}")
-  expect_equal(span_tex("transform: scaleX(-1)"),
-               "\\reflectbox{\\text{hi}}")
+  expect_equal(span_tex("background: #FFFF00"), "\\bgcolor{#FFFF00}{hi}")
+  # LaTeX has an overline in math only.
+  expect_equal(span_tex("text-decoration: overline"), "$\\overline{\\text{hi}}$")
+  expect_equal(span_tex("text-decoration: underline"), "\\uline{hi}")
+  expect_equal(span_tex("text-decoration: line-through"), "\\sout{hi}")
+  expect_equal(span_tex("font-size: 150%"), "\\textscale{1.500000}{hi}")
+  expect_equal(span_tex("border: 1px solid red"), "\\fbox{hi}")
+  expect_equal(span_tex("border-style: double"), "\\doublebox{hi}")
+  expect_equal(span_tex("border-radius: 4pt"), "\\ovalbox{hi}")
+  expect_equal(span_tex("box-shadow: 2pt 2pt"), "\\shadowbox{hi}")
+  expect_equal(span_tex("visibility: hidden"), "\\phantom{hi}")
+  expect_equal(span_tex("vertical-align: super"), "\\textsuperscript{hi}")
+  expect_equal(span_tex("vertical-align: sub"), "\\textsubscript{hi}")
+  expect_equal(span_tex("vertical-align: 3pt"), "\\raisebox{3.00pt}{hi}")
+  expect_equal(span_tex("transform: rotate(45deg)"), "\\rotatebox{45}{hi}")
+  expect_equal(span_tex("transform: scaleX(-1)"), "\\reflectbox{hi}")
 
   # A border takes the background as \fcolorbox's fill, so \bgcolor must
   # not paint it a second time.
   expect_equal(span_tex("border: 1px solid red; background: #EEEEEE"),
-               "\\fcolorbox{#FF0000}{#EEEEEE}{\\text{hi}}")
+               "\\fcolorbox{#FF0000}{#EEEEEE}{hi}")
 })
 
 test_that("values MicroTeX has no primitive for are ignored, not errors", {
   for (css in c("transform: skew(3deg)", "visibility: visible",
                 "box-shadow: none", "vertical-align: nonsense")) {
-    expect_equal(span_tex(css), "\\text{hi}", info = css)
+    expect_equal(span_tex(css), "hi", info = css)
   }
 })
 

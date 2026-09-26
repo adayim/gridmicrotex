@@ -16,7 +16,7 @@ latex_grob(
   math_font = "",
   max_width = 0,
   tex_style = "",
-  input_mode = c("mixed", "math"),
+  input_mode = c("mixed", "math", "document"),
   render_mode = c("typeface", "path"),
   justify = FALSE,
   line_break = c("greedy", "optimal"),
@@ -58,16 +58,18 @@ line wrapping.  Use \code{0} (default) for no wrapping.}
 \code{"script"}, or \code{"scriptscript"}. See
 \code{\link{latex_grob}} for the semantics of each value.}
 
-\item{input_mode}{How \code{tex} is interpreted before being parsed.
-\code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
-string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
-opens math mode, matching document-level LaTeX semantics. Useful for
-labels that arrive from external sources mixing prose and math without
-explicit \code{\\text{}} markers. \code{"math"} is the classic
-MicroTeX behaviour: the whole string is treated as math, so unwrapped
-prose renders as spaced math italics. The default can be changed globally via
-\code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
-for details on the wrapping process.}
+\item{input_mode}{How \code{tex} is read.
+\code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
+with math between \code{$...$} or \code{\\(...\\)}, and a newline
+starts a new line, as \code{"\\n"} does in R.
+\code{"math"} reads the whole string as math, as between \code{$...$},
+so a word is set as italic letters; write text as \code{\\text{...}}.
+\code{"document"} reads a LaTeX document body by LaTeX's own rules: a
+newline is a space, a blank line (or \code{\\par}) starts an indented
+paragraph, \code{\\section} and its kin are numbered headings, and
+display math is centred on a line of its own. Give \code{max_width} to
+break the paragraphs into lines. The default can be set for the
+session with \code{\link{latex_options}(input_mode = )}.}
 
 \item{render_mode}{Character string: \code{"typeface"} (default) renders
 glyphs as native text using the math font, producing
@@ -76,7 +78,8 @@ Bundled math fonts and any registered via \code{\link{load_math_font}}
 are read directly from their OTF files: no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
-R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
+R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
+\code{postscript()}, which cannot embed the math font.
 For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 \code{"path"} renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).}
@@ -120,10 +123,11 @@ A \code{grid} grob of class \code{"latexgrob"}.
 Invisibly returns the grob.
 }
 \description{
-Parses a LaTeX math expression and returns a grid grob object
-that renders the formula using native grid graphics primitives.
-The grob supports standard grid queries such as \code{grobWidth()},
-\code{grobHeight()}, \code{grobX()}, and \code{grobY()}.
+Reads LaTeX -- a formula, a label mixing text and math, or a document
+body -- and returns a grid grob object that draws it with native grid
+graphics primitives. The grob supports standard grid queries such as
+\code{grobWidth()}, \code{grobHeight()}, \code{grobX()}, and
+\code{grobY()}.
 
 A convenience wrapper that creates a \code{\link{latex_grob}} and
 immediately draws it on the current device via
@@ -202,45 +206,80 @@ inter-line gap is \code{(lineheight - 1) * fontsize} big points.
 }
 }
 
-\subsection{LaTeX document-level wrappers}{
+\subsection{Malformed input}{
 
-The parser accepts raw output from \code{print.xtable()},
-\code{knitr::kable()}, and similar functions that emit complete
-\code{tabular} LaTeX. The following document-level constructs are
-recognized and rewritten silently before the input reaches MicroTeX:
-
-\strong{Removed (no visual effect):}
-\itemize{
-\item \verb{\%}-to-end-of-line comments (escaped \verb{\\\%} is preserved)
-\item preamble: \verb{\\documentclass[...]\{...\}}, \verb{\\usepackage[...]\{...\}},
-\verb{\\begin\{document\}} / \verb{\\end\{document\}}
-\item title metadata: \verb{\\maketitle}, \verb{\\title\{...\}}, \verb{\\author\{...\}}
-\item cross-reference labels: \verb{\\label\{...\}}
-\item float wrappers: \verb{\\begin\{table\}} / \verb{\\end\{table\}}, \verb{\\begin\{figure\}} /
-\verb{\\end\{figure\}} (and starred variants)
-\item layout scopes: \verb{\\centering}, \verb{\\raggedright}, \verb{\\raggedleft},
-\verb{\\flushleft}, \verb{\\flushright}
+LaTeX that TeX would stop on is read as far as it can be and the rest
+is drawn, with one warning listing each problem at its line and column
+in \code{tex}: an unknown command (drawn as its name, in red), an unbalanced
+brace, \code{&} outside an alignment, \verb{_} or \code{^} outside math, and so on.
+Only a macro that expands without end, or input nested 400 levels deep,
+is an error.
 }
 
-\strong{Rewritten:}
+\subsection{Pasted LaTeX and documents}{
+
+LaTeX written for a document can be given as it is, whole or in part:
+output of \code{print.xtable()} or \code{knitr::kable()}, a \code{table}
+float, or a paper's body with \code{input_mode = "document"}. What a grob has
+no use for is read and dropped:
 \itemize{
-\item booktabs rules: \verb{\\toprule}, \verb{\\midrule}, \verb{\\bottomrule}, \verb{\\cmidrule}
-are mapped to \verb{\\hline}. The optional column-range and trim
-arguments of \verb{\\cmidrule} are discarded (MicroTeX has no concept of
-partial-column rules).
-\item \verb{\\caption[short]\{X\}} is extracted as \verb{\\text\{X\}\\\\} at its source
-position, so a caption written after \verb{\\includegraphics} renders below
-the figure and one written before a \code{tabular} renders above the table.
-Full LaTeX instead positions the caption by float type regardless of
-source order, and numbers it from a counter; there is no counter here.
-Wrap the figure and its caption in \verb{\\begin\{array\}\{c\}...\\end\{array\}} to
-centre them on each other (\verb{\\centering} is dropped: a grob has no
-page to centre against).
-\item \verb{\\graphicspath\{\{dir/\}\}} and \verb{\\DeclareGraphicsExtensions\{...\}} are
-consumed rather than typeset; the former's directories are searched.
+\item the preamble: in a whole LaTeX file, everything before
+\verb{\\begin\{document\}} is read for its definitions (\verb{\newcommand},
+\verb{\\definecolor}, ...) and not drawn, as LaTeX draws nothing there; a
+size, colour or environment begun there ends at \verb{\\begin\{document\}}.
+What follows \verb{\\end\{document\}} is ignored. Package settings a grob
+cannot honour are not warned about. \verb{\\documentclass}, \verb{\\usepackage}
+(which loads nothing: every supported command is built in) and
+\verb{\\bibliographystyle} draw nothing wherever they are;
+\item title and cross-reference metadata: \verb{\\maketitle}, \verb{\\title\{\}},
+\verb{\\author\{\}}, \verb{\\label\{\}};
+\item alignment: in a label, \verb{\\centering}, \verb{\\raggedleft} and \verb{\\raggedright}
+do nothing (a label is placed by \code{hjust}), nor do \verb{\\flushleft},
+\verb{\\flushright} and \verb{\\relax}. A document aligns each line of the
+paragraphs they are in, and of \code{center}, \code{flushleft} and \code{flushright}.
 }
 
-\strong{Images:}
+In a label the content of a \code{table} or \code{figure} float is set in the line
+like any other. A document sets a float where it is written, apart from
+its paragraphs, as LaTeX's \verb{[h]} placement would, and a \code{center}
+environment or a \verb{\\centering} centres its lines.
+
+Some commands are their nearest equivalent. \verb{\\emph} is \verb{\\textit}, \verb{\\em}
+is \verb{\\it}, and \verb{\\newline} is \verb{\\\\}. Booktabs' \verb{\\toprule} and
+\verb{\\bottomrule} are thick rules, \verb{\\midrule} a plain one, \verb{\\cmidrule} a
+partial one and \verb{\\specialrule\{w\}\{a\}\{b\}} one \code{w} thick. \verb{\\boldmath} sets
+the math that follows in its group in bold. A grob has
+no glue to stretch, so \verb{\\smallskip}, \verb{\\medskip} and \verb{\\bigskip} are 0.25,
+0.5 and 1 em of space, \verb{\\hfill} is a quad and \verb{\\vfill} 1 em. And
+\verb{\\caption\{X\}} is a line of text where it is written, unnumbered, so a
+caption written before a \code{tabular} is set above it.
+
+\verb{\\textwidth}, \verb{\\linewidth} and \verb{\\columnwidth} in a length
+(\verb{0.5\\textwidth}) are \code{max_width}, or with none the 345pt of LaTeX's
+article class. An \code{abstract} is set as article sets it, under a centred
+heading, and \code{thebibliography} as a "References" heading over a list
+numbered \verb{[1]}, \verb{[2]}, ... (\verb{\\bibitem}'s key has nothing to point at, and
+\verb{\\newblock} is a space).
+
+A \code{tabular}'s cells and the items of \code{itemize} and \code{enumerate} are
+text, as in LaTeX, when the table or list is met in text; met in math
+(\code{input_mode = "math"}, or between \verb{$...$}) they are math. A list item
+wraps at \code{max_width}, as a \verb{p\{\}} cell does; a cell in an \code{l}, \code{c} or \code{r}
+column is one line. A \code{minipage} sets its paragraphs to its width, and
+to its optional height, as LaTeX does. A heading too long for
+\code{max_width} wraps, its title hanging from its number.
+
+Commands that need the rest of a document warn and draw what LaTeX
+draws when it cannot resolve them: \verb{\\ref} and \verb{\\pageref} are a bold
+\verb{??}, \verb{\\eqref} is \verb{(??)}, \verb{\\cite\{key\}} and natbib's \verb{\\citep\{key\}} are
+\verb{[?]} (\verb{\\citet} is \verb{(author?) [?]}, \verb{\\citealp} a bare \verb{?}), and a
+\verb{\\footnote}'s text is set where it is written. Equations are not numbered. Not supported:
+\verb{\\tag}, \code{\\verb}, \verb{\\textsc}, the declarations \verb{\\bfseries}, \verb{\\itshape} and
+their kin (use \verb{\\textbf\{\}}, \verb{\\textit\{\}} or \verb{\\bf}, \verb{\\it}), the
+\code{description} list, theorem environments, and TikZ.
+}
+
+\subsection{Images}{
 \itemize{
 \item \verb{\\includegraphics[opts]\{file\}} draws a PNG, JPEG or SVG inline. The
 starred form is accepted and behaves identically. \code{width}, \code{height}
@@ -261,19 +300,18 @@ resolution; a bitmap does not, and warns when it would be shown below
 instead.
 \item The file must be local; a URL is not downloaded. A file that cannot
 be drawn -- missing, a URL, an unsupported format, or unreadable --
-is an error saying why. Each format needs its reader, all
+is an error saying why; in a document (\code{input_mode = "document"}) it
+warns and draws the file's name, so that one figure does not cost the
+whole document. Each format needs its reader, all
 \emph{Suggests}: \code{png} for PNG, \code{jpeg} for JPEG and \code{rsvg} for SVG; the
 error names the one to install.
-\item \verb{\\includegraphics} must be written directly. One that a \verb{\newcommand}
-or \verb{\\def} in the expression produces is an error, because those are
-expanded after the file would have been read; a macro from
-\code{\link[=define_macro]{define_macro()}} is expanded in time. A commented-out
+\item The file is read when the parser meets the command, after macros are
+expanded, so one a macro produces (\verb{\newcommand}, \verb{\\def} or
+\code{\link[=define_macro]{define_macro()}}) works like any other. A commented-out
 \verb{\% \\includegraphics\{...\}} is ignored.
+\item \verb{\\graphicspath\{\{dir/\}\}} names the directories searched, as in LaTeX,
+and \verb{\\DeclareGraphicsExtensions\{\}} is read and dropped.
 }
-
-Anything not in this list is passed to MicroTeX unchanged. An unknown
-command is not an error: MicroTeX typesets its name in red, which
-makes unsupported markup easy to spot in the output.
 }
 
 \subsection{Parallelism}{
@@ -309,6 +347,17 @@ state without synchronisation. Use a socket/multisession backend instead.
   grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
              x = grid::unit(0.6, "npc"),
              y = grid::unit(0.8, "npc"),)
+
+  # A document body: a heading, paragraphs and a display, broken into
+  # lines at max_width (in big points).
+  grid::grid.newpage()
+  doc <- r"(\section{Results}
+The fitted line is
+\[ \hat{y} = \beta_0 + \beta_1 x, \]
+and its slope, $\beta_1$, is positive.)"
+  grid.latex(doc, input_mode = "document", max_width = 250,
+             x = 0.05, y = 0.95, hjust = 0, vjust = 1,
+             gp = grid::gpar(fontsize = 12))
 }
 }
 \seealso{

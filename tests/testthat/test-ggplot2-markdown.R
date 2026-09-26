@@ -42,10 +42,10 @@ test_that("emphasis actually reaches the rendered output", {
   expect_true("plain" %in% faces)
 })
 
-test_that("prose outside a text command is still \\text{}-wrapped", {
-  # Top level is math mode, so unwrapped prose would come out as spaced
-  # math italics.
-  expect_match(.md_to_tex("plain words"), "\\text{plain words}", fixed = TRUE)
+test_that("prose is text, not spaced math italics", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_identical(.md_to_tex("plain words"), "plain words")
+  expect_identical(unique(markdown_grob("plain words")$layout_df$type), "text")
 })
 
 test_that("math and escapes survive inside emphasis", {
@@ -76,6 +76,19 @@ test_that("geom_markdown treats a missing alpha as opaque", {
     ggplot2::ggplot(df, ggplot2::aes(x, y, label = lab, alpha = a)) +
       geom_markdown(colour = "red"))[[1]][[1]]
   expect_equal(g$gp$col, "red")
+})
+
+test_that("annotate('markdown') follows latex_options(), as geom_markdown() does", {
+  # As annotate('latex'): the layer's own defaults used to win.
+  on.exit(reset_latex_options(), add = TRUE)
+  latex_options(math_font = "stix")
+  base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
+  grob_of <- function(layer) ggplot2::layer_grob(base + layer)[[1]][[1]]
+  geom <- grob_of(geom_markdown(ggplot2::aes(label = "*b* $x^2$")))
+  ann <- grob_of(ggplot2::annotate("markdown", x = 1, y = 1, label = "*b* $x^2$"))
+  expect_identical(ann$layout_df, geom$layout_df)
+  fonts <- ann$layout_df$font_file[ann$layout_df$type == "glyph"]
+  expect_true(length(fonts) > 0 && all(grepl("STIX", fonts)))
 })
 
 test_that("element_markdown installs our grob as the axis titles", {

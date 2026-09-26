@@ -1,32 +1,34 @@
-test_that("ot_math_table_bytes returns the OT MATH blob for Lete", {
-  otf <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
-  expect_true(nzchar(otf))
+# A font is read straight from its OpenType file (otf_math_reader.cpp):
+# metrics from its own tables, math from its MATH table. What the MATH
+# table carries shows in a layout, so that is where it is tested.
 
-  blob <- gridmicrotex:::ot_math_table_bytes(otf)
-  expect_type(blob, "raw")
-  expect_gt(length(blob), 4)
-
-  expect_identical(blob[1:4], as.raw(c(0x00, 0x01, 0x00, 0x00)))
+test_that("each bundled math font's MATH table reaches the layout", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  glyph_ids <- function(tex, font) {
+    r <- latex_tree(tex, math_font = font, input_mode = "math")$records
+    r$glyph[r$type == "glyph"]
+  }
+  for (font in c("lete", "stix")) {
+    # A display operator is a larger variant of the text one (MathVariants).
+    expect_false(identical(glyph_ids("\\displaystyle\\sum", font),
+                           glyph_ids("\\textstyle\\sum", font)), info = font)
+    # A delimiter around something tall is stretched -- a variant, or an
+    # assembly of parts -- never the plain glyph.
+    plain <- glyph_ids("(", font)
+    tall <- glyph_ids("\\left(\\rule{1pt}{6em}\\right.", font)
+    expect_length(plain, 1L)
+    expect_false(plain %in% tall, info = font)
+  }
 })
 
-test_that("ot_math_table_bytes errors on a path that cannot be opened", {
+test_that("a font that cannot be read is an error saying why", {
   expect_error(
-    gridmicrotex:::ot_math_table_bytes(tempfile(fileext = ".otf")),
+    gridmicrotex:::microtex_add_font_from_otf(tempfile(fileext = ".otf")),
     "failed to open font"
   )
 })
 
-test_that("otf_to_clm_bytes emits a CLM v6 blob for Lete", {
-  otf <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
-  clm <- gridmicrotex:::otf_to_clm_bytes(otf)
-  expect_type(clm, "raw")
-  # "clm" magic + major=6 + minor=2 (with glyph paths)
-  expect_identical(clm[1:3], charToRaw("clm"))
-  expect_identical(clm[4:5], as.raw(c(0x00, 0x06)))
-  expect_identical(clm[6],   as.raw(0x02))
-})
-
-test_that("load_math_font synthesises CLM from a bare OTF", {
+test_that("load_math_font reads a bare OTF", {
   # Copy Lete.otf to a temp file with a unique name so it registers as a
   # distinct math font (not colliding with the bundled "Lete Sans Math"
   # already loaded at .onLoad). Exercises the MATH-table synthesis path

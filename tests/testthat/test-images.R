@@ -1,8 +1,9 @@
 # \includegraphics: resolving a file reference into a sized box, and
 # drawing whatever that file deserves.
 #
-# The resolver runs before every other rewriting step, so most of what is
-# under test here is that a real path survives contact with the pipeline.
+# The parser asks R for each image as it meets one, after macros are
+# expanded, so most of what is under test here is that a real path
+# survives contact with the pipeline.
 
 # A PNG of a known pixel size. `width`/`height` are PIXELS for agg_png,
 # which is easy to get wrong -- 1 means one pixel, not one inch.
@@ -60,9 +61,9 @@ test_that("a file reference survives the pipeline that would mangle a path", {
   enc <- gridmicrotex:::.image_ref_encode
   dec <- gridmicrotex:::.image_ref_decode
   # Hex, because every one of these breaks a raw path: backslashes are
-  # LaTeX escapes, `%` starts a comment that .strip_document_wrappers()
-  # would run to end of line, and .expand_macros() would rewrite `\Users`
-  # for anyone who had defined a macro of that name.
+  # LaTeX escapes, `%` starts a comment that runs to the end of the line,
+  # and the macro expander would rewrite `\Users` for anyone who had
+  # defined a macro of that name.
   for (p in c("C:\\Users\\a\\my fig.png", "a/b/100%plot.png",
               "with space_and_under.png", "plain.png")) {
     expect_equal(dec(enc(p)), p, info = p)
@@ -233,11 +234,26 @@ test_that("an image that cannot be drawn is an error saying why", {
   }
 })
 
+test_that("a figure that cannot be drawn does not cost a whole document", {
+  # Most papers' figures are PDFs. In a label the figure is the point, so
+  # it stops; in a pasted paper one PDF used to fail every page.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  .image_reset_warnings()
+  f <- tempfile(fileext = ".pdf"); writeBin(as.raw(1:20), f)
+  on.exit(unlink(f), add = TRUE)
+  tex <- sprintf("Before \\includegraphics{%s} after", f)
+  expect_error(latex_grob(tex), "not a PNG, JPEG or SVG file", fixed = TRUE)
+  expect_warning(g <- latex_grob(tex, input_mode = "document"),
+                 "not a PNG, JPEG or SVG file; drawing the file name instead",
+                 fixed = TRUE)
+  expect_true(any(grepl(basename(f), g$layout_df$text, fixed = TRUE)))
+  expect_false("image" %in% g$layout_df$type)
+})
+
 test_that("a commented-out \\includegraphics is not read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Commenting out a figure is routine LaTeX. The resolver runs before the
-  # comments are stripped, so it has to skip them itself or the missing
-  # draft figure stops the whole render.
+  # Commenting out a figure is routine LaTeX; the missing draft figure
+  # must not stop the whole render.
   expect_equal(wid("x % \\includegraphics{old.png}\ny"), wid("xy"))
   doc <- c("\\documentclass{article}", "\\begin{document}", "Text",
            "% \\includegraphics{draft.png}", "\\end{document}")
@@ -250,8 +266,7 @@ test_that("a commented-out \\includegraphics is not read", {
                "file not found")
   # Likewise `\\includegraphics` is a line break and then a word, not the
   # command; a third backslash makes it the command again.
-  expect_equal(gridmicrotex:::.resolve_graphics("a\\\\includegraphics{x}", 20, 0),
-               "a\\\\includegraphics{x}")
+  expect_false("image" %in% latex_tree("a\\\\includegraphics{x}", input_mode = "math")$records$type)
   expect_error(latex_dims("a\\\\\\includegraphics{nope.png}", input_mode = "math"),
                "file not found")
 })
@@ -307,40 +322,39 @@ test_that("an \\includegraphics inside a macro definition still resolves", {
   expect_true("image" %in% d$type)
 })
 
-test_that("an \\includegraphics the resolver cannot read is an error", {
+test_that("an \\includegraphics a macro makes, or a malformed one, is read like any other", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Two kinds reach MicroTeX unread: malformed input -- no braces, or
-  # unbalanced ones -- which the R scanner leaves alone rather than guess
-  # at, and one a \newcommand or \def produces, which MicroTeX expands
-  # after both resolver passes. The vendored stub drew nothing; the
-  # override reports them, and they fail like every other image that cannot
-  # be drawn. In "mixed" mode too, where the prose goes inside \text{} --
-  # MicroTeX parses that leniently and swallowed an exception thrown there,
-  # with the rest of the text.
+  # The parser reads each image after macros are expanded, so one a macro
+  # produces is resolved, and one it cannot read fails like every other
+  # image, malformed ones included -- in both input modes.
   for (tex in c("x\\includegraphics{unbalanced", "x\\includegraphics y",
                 "\\newcommand{\\ig}{\\includegraphics}\\ig{nope.png}",
                 "\\newcommand{\\fig}[1]{\\includegraphics{#1}}\\fig{nope.png}",
                 "\\def\\fig#1{\\includegraphics{#1}}\\fig{nope.png}")) {
     for (mode in c("math", "mixed")) {
-      expect_error(latex_grob(tex, input_mode = mode), "written directly",
+      expect_error(suppressWarnings(latex_grob(tex, input_mode = mode)),
+                   "Cannot draw image '(unbalanced|y|nope.png)': file not found",
                    label = paste(mode, tex))
     }
   }
   # Where images only warn (base graphics, a box mid-draw), it warns and
-  # draws the argument, as for any image.
+  # draws the file's name, as for any image.
   .image_reset_warnings(); on.exit(.image_reset_warnings(), add = TRUE)
   alias <- "\\newcommand{\\ig}{\\includegraphics}\\ig{nope.png}"
   expect_warning(g <- .images_lenient(latex_grob(alias, input_mode = "math")),
                  "drawing the file name instead")
   expect_true("nope.png" %in% g$layout_df$text)
   expect_false(is.null(.gm_base_layout(paste("$x$", alias), 12)))
-  # And the resolver really did leave them: these are not rewritten forms.
-  # A macro parameter is not a file, so it is not read as one either.
-  for (tex in c("x\\includegraphics{unbalanced", "x\\includegraphics y",
-                "\\def\\fig#1{\\includegraphics{#1}}")) {
-    expect_match(gridmicrotex:::.resolve_graphics(tex, 20, 0),
-                 "includegraphics", fixed = TRUE)
-  }
+
+  # A real file through a macro is drawn, define_macro()'s included.
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  f <- mk_png()
+  d <- latex_grob(sprintf("\\newcommand{\\fig}[1]{\\includegraphics[width=1in]{#1}}x\\fig{%s}y",
+                          f), input_mode = "math")$layout_df
+  expect_true("image" %in% d$type)
+  define_macro("gmfig", sprintf("\\includegraphics[width=1in]{%s}", f))
+  on.exit(clear_macros(), add = TRUE)
+  expect_true("image" %in% latex_grob("x\\gmfig y", input_mode = "math")$layout_df$type)
 })
 
 test_that("the layout cache notices a file that changed on disk", {
@@ -402,6 +416,18 @@ test_that("markdown that names an image it cannot draw is an error", {
   # Code is literal: an \includegraphics shown there names no figure.
   expect_match(gridmicrotex:::.md_to_tex("`$\\includegraphics{nope.png}$`"),
                "\\texttt{", fixed = TRUE)
+})
+
+test_that("a macro parameter in an image path is not checked as a file name", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # `#1` is a parameter of the definition, not a path. The build-time check
+  # reads the source as written, before anything is expanded, so it has to
+  # skip one -- it used to refuse the whole grob with "Cannot draw image
+  # '#1'". What the macro is *used* with is still an image like any other.
+  def <- "$\\newcommand{\\fig}[1]{\\includegraphics[width=1in]{#1}}$"
+  expect_true("image" %in% markdown_grob(paste0(def, " $\\fig{", mk_png(), "}$"))$layout_df$type)
+  expect_error(markdown_grob(paste0(def, " $\\fig{nope.png}$")), "file not found")
 })
 
 test_that("markdown reads an image's path the way HTML and CommonMark do", {
@@ -466,19 +492,16 @@ test_that("a path is found the way graphicx finds one", {
   file.copy(mk_png(300, 200), file.path(dir, "sub", "fig.png"))
   old <- setwd(dir); on.exit(setwd(old), add = TRUE)
 
+  rec <- function(tex) latex_tree(tex, input_mode = "math")$records
   # No extension: the idiomatic LaTeX form, and the one that used to warn.
-  expect_match(gridmicrotex:::.resolve_graphics("\\includegraphics{sub/fig}", 20, 0),
-               "gmgraphics", fixed = TRUE)
-  # \graphicspath supplies the directory, and is consumed rather than
-  # typeset -- MicroTeX has no such command and would draw its argument.
-  out <- gridmicrotex:::.resolve_graphics(
-    "\\graphicspath{{sub/}}a\\includegraphics{fig}b", 20, 0)
-  expect_match(out, "gmgraphics", fixed = TRUE)
-  expect_false(grepl("graphicspath", out, fixed = TRUE))
-  expect_false(grepl("sub/", out, fixed = TRUE))
-  # ...including when there is no image at all to trigger the scan.
-  expect_equal(gridmicrotex:::.resolve_graphics("\\graphicspath{{sub/}}text", 20, 0),
-               "text")
+  expect_true("image" %in% rec("\\includegraphics{sub/fig}")$type)
+  # \graphicspath supplies the directory, and draws nothing itself.
+  expect_true("image" %in% rec("\\graphicspath{{sub/}}a\\includegraphics{fig}b")$type)
+  expect_identical(rec("\\graphicspath{{sub/}}ab"), rec("ab"))
+  # A later \graphicspath replaces an earlier one, as in LaTeX.
+  expect_true("image" %in% rec("\\graphicspath{{no/}}\\graphicspath{{sub/}}\\includegraphics{fig}")$type)
+  expect_error(rec("\\graphicspath{{sub/}}\\graphicspath{{no/}}\\includegraphics{fig}"),
+               "file not found")
 })
 
 test_that("the starred and two-argument spellings are the same command", {
@@ -586,11 +609,10 @@ test_that("a rotated image is drawn rotated, not dropped", {
   expect_equal(rec(sprintf("\\includegraphics[angle=30,width=1in]{%s}", f))$rotation,
                -30, tolerance = 1e-3)
   expect_equal(rec(sprintf("\\includegraphics[width=1in]{%s}", f))$rotation, 0)
-  expect_match(gridmicrotex:::.resolve_graphics(
-    sprintf("\\includegraphics[angle=45]{%s}", f), 20, 0), "rotatebox", fixed = TRUE)
+  expect_equal(rec(sprintf("\\includegraphics[angle=45]{%s}", f))$rotation, -45,
+               tolerance = 1e-3)
   # A whole turn is not a rotation.
-  expect_false(grepl("rotatebox", gridmicrotex:::.resolve_graphics(
-    sprintf("\\includegraphics[angle=360]{%s}", f), 20, 0), fixed = TRUE))
+  expect_equal(rec(sprintf("\\includegraphics[angle=360]{%s}", f))$rotation, 0)
 
   # The surrounding box grows to the rotated bounds, as in LaTeX.
   flat <- suppressWarnings(latex_dims(sprintf("\\includegraphics[width=1in]{%s}", f),
@@ -636,7 +658,7 @@ test_that("an unreadable file is reported in the reader's own words", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   skip_if_not_installed("png"); skip_if_not_installed("jpeg")
   why <- function(path) tryCatch({
-    gridmicrotex:::.resolve_graphics(sprintf("\\includegraphics{%s}", path), 20, 0)
+    latex_dims(sprintf("\\includegraphics{%s}", path), input_mode = "math")
     ""
   }, error = conditionMessage)
   dir <- tempfile("gfx"); dir.create(dir)

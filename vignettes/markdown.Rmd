@@ -357,14 +357,12 @@ in HTML: `tr`, `td` and `th` inherit through `table`.
 | `td { padding-left }` | the gap between columns |
 | `table { table-layout: fixed }` | see below |
 
-Header cells are **bold** by default, which needs saying because it could
-not be done before: `\text{}` resets the font style, so wrapping a
-finished table in `\textbf{}` has no effect. The emphasis is applied as
-each cell is generated instead.
+Header cells are **bold** by default.
 
-By default a table sizes to its content, so a wide one overflows the box.
-`table-layout: fixed` divides the available width between the columns and
-lets the cells wrap:
+A table is as wide as its content when that fits the box. When it does
+not, its wide columns share the width the others leave and their cells
+wrap, as an HTML table shrinks to its container. `table-layout: fixed`
+divides the available width evenly between the columns instead:
 
 ```{r style-table, fig.height = 2, fig.width = 5, out.width = "85%"}
 tbl <- r"(

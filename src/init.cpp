@@ -6,6 +6,7 @@
 #include "macro/macro.h"
 #include "atom/mark_atom.h"
 #include "atom/image_atom.h"
+#include "front/hooks.h"
 #include "utils/bidi.h"
 #include "utils/utf.h"
 #include "unimath/font_src.h"
@@ -19,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-// CLM v6 synthesis from a font file, in the layout engine.
+// Reads an engine font straight from its font file.
 #include "otf/otf_math_reader.h"
 
 using namespace microtex;
@@ -56,6 +57,39 @@ void clear_text_measurer() {
     }
     g_text_measure_fn = nullptr;
     g_text_measure_cache.clear();
+}
+
+
+// --- image resolver R callback ---
+//
+// The front end asks the host what stands for each \includegraphics it
+// lowers (front/hooks.h). R answers with \gmgraphics{ref}{w}{h}, or the file
+// name when it only warns; when an image cannot be drawn it raises an R
+// error, which Rcpp carries through the engine as a LongjumpException and
+// resumes at the export boundary. Nothing on the way catches it.
+static SEXP g_image_resolve_fn = nullptr;
+
+// [[Rcpp::export]]
+void register_image_resolver(SEXP fn) {
+    if (g_image_resolve_fn != nullptr) R_ReleaseObject(g_image_resolve_fn);
+    g_image_resolve_fn = fn;
+    R_PreserveObject(g_image_resolve_fn);
+    microtex::front::setImageResolver(
+        [](const std::string& path, const std::string& options,
+           const std::vector<std::string>& dirs) {
+            Rcpp::Function resolve(g_image_resolve_fn);
+            Rcpp::CharacterVector d(dirs.size());
+            for (std::size_t i = 0; i < dirs.size(); i++) d[i] = Rcpp::String(dirs[i], CE_UTF8);
+            SEXP out = resolve(Rcpp::String(path, CE_UTF8), Rcpp::String(options, CE_UTF8), d);
+            return Rcpp::as<std::string>(out);
+        });
+}
+
+// [[Rcpp::export]]
+void clear_image_resolver() {
+    microtex::front::setImageResolver(nullptr);
+    if (g_image_resolve_fn != nullptr) R_ReleaseObject(g_image_resolve_fn);
+    g_image_resolve_fn = nullptr;
 }
 
 
@@ -268,17 +302,19 @@ public:
 static bool s_initialized = false;
 
 // [[Rcpp::export]]
-void microtex_init(std::string clm_path, std::string otf_path) {
+void microtex_init_from_otf(std::string otf_path, int index = 0) {
     if (s_initialized) return;
 
     PlatformFactory::registerFactory("r", std::make_unique<PlatformFactory_R>());
     PlatformFactory::activate("r");
 
-    FontSrcFile fontSrc(clm_path, otf_path);
+    // The font is read from the file itself (otf_math_reader), as it is
+    // added to the context.
+    FontSrcOtf fontSrc(otf_path, index);
     try {
         MicroTeX::init(fontSrc);
     } catch (const std::exception& e) {
-        Rcpp::stop(std::string("MicroTeX::init failed: ") + e.what());
+        Rcpp::stop(std::string("Failed to read font '") + otf_path + "': " + e.what());
     }
 
     // Default to path rendering (universal compatibility)
@@ -292,53 +328,6 @@ void microtex_init(std::string clm_path, std::string otf_path) {
     s_initialized = true;
 }
 
-// [[Rcpp::export]]
-void microtex_init_from_otf(std::string otf_path, int index = 0) {
-    if (s_initialized) return;
-
-    PlatformFactory::registerFactory("r", std::make_unique<PlatformFactory_R>());
-    PlatformFactory::activate("r");
-
-    std::vector<std::uint8_t> clm;
-    try {
-        clm = microtex::otfToClmBytes(otf_path, index);
-    } catch (const std::exception& e) {
-        Rcpp::stop(std::string("Failed to read font '") + otf_path + "': " + e.what());
-    }
-
-    FontSrcData fontSrc(clm.size(), clm.data(), otf_path);
-    try {
-        MicroTeX::init(fontSrc);
-    } catch (const std::exception& e) {
-        Rcpp::stop(std::string("MicroTeX::init failed: ") + e.what());
-    }
-
-    if (MicroTeX::hasGlyphPathRender()) {
-        MicroTeX::setRenderGlyphUsePath(true);
-    }
-
-    register_mark_macro();
-    register_font_family_macro();
-    register_image_macros();
-    s_initialized = true;
-}
-
-// [[Rcpp::export]]
-void microtex_add_font(std::string clm_path, std::string otf_path) {
-    if (!s_initialized) {
-        Rcpp::stop("MicroTeX is not initialized.");
-    }
-
-    FontSrcFile fontSrc(clm_path, otf_path);
-    try {
-        auto meta = MicroTeX::addFont(fontSrc);
-        if (!meta.isValid()) {
-            Rcpp::warning("Failed to load font from: " + clm_path);
-        }
-    } catch (const std::exception& e) {
-        Rcpp::warning(std::string("Font load failed: ") + e.what());
-    }
-}
 
 // [[Rcpp::export]]
 std::vector<std::string> microtex_math_font_names() {
@@ -386,6 +375,7 @@ void gm_base_unload();
 extern "C" void R_unload_gridmicrotex(DllInfo*) {
     gm_base_unload();
     clear_text_measurer();
+    clear_image_resolver();
 }
 
 // R finds R_unload_<pkg> with R_dlsym(), which searches only registered
@@ -413,14 +403,13 @@ void gm_register_unload_hook(DllInfo* dll) {
 void microtex_release() {
     if (!s_initialized) return;
     // Deliberately NOT MicroTeX::release(). That is final teardown, and
-    // the registries it empties are only ever repopulated from inside
-    // MicroTeX::init(). An in-process release is not paired with a
-    // re-init -- the next parse goes straight through -- so clearing them
-    // here would leave the parser without \frac, \mark, \gmfontfamily and
-    // the rest until the shared object itself was reloaded. Drop only
-    // what is genuinely per-session; R_unload_gridmicrotex above does the
-    // real teardown, where losing the registries costs nothing.
-    NewCommandMacro::clearUserMacros();
+    // the registry it empties is only ever repopulated at static
+    // initialisation. An in-process release is not paired with a reload
+    // -- the next parse goes straight through -- so clearing it here would
+    // leave the front end without \frac, \mark, \gmfontfamily and the rest
+    // until the shared object itself was reloaded. Drop only what is
+    // genuinely per-session; R_unload_gridmicrotex above does the real
+    // teardown, where losing the registry costs nothing.
     microtex::g_font_id_cache.clear();
     // The built-in registry survives, so our macros are still there and
     // their registration guards must stay set.
