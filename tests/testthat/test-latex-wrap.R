@@ -158,6 +158,24 @@ test_that("latex_wrap passes every MicroTeX-registered env verbatim", {
   }
 })
 
+test_that("the math environments R scans for come from the C++ tables", {
+  # The list that used to be kept by hand, in step with macro_def.cpp.
+  old <- c("array", "tabular", "tabular*", "matrix", "smallmatrix", "pmatrix",
+           "bmatrix", "Bmatrix", "vmatrix", "Vmatrix", "equation", "equation*",
+           "math", "displaymath", "align", "align*", "flalign", "flalign*",
+           "alignat", "alignat*", "aligned", "alignedat", "alignedat*",
+           "eqnarray", "eqnarray*", "multline", "multline*", "gather", "gather*",
+           "gathered", "split", "cases", "rcases", "itemize", "enumerate")
+  expect_identical(setdiff(old, gridmicrotex:::.math_envs()), character(0))
+  # But an environment that only wraps content is not math: its body is
+  # prose. R masks a math span from CommonMark, so counting `document` as
+  # one hid a whole markdown document from the parser that reads it.
+  expect_identical(
+    intersect(gridmicrotex:::.math_envs(),
+              c("document", "table", "table*", "figure", "figure*")),
+    character(0))
+})
+
 test_that("tabular is treated as a math environment in mixed mode", {
   # Regression: `$...$` inside cells used to chop the tabular into text
   # chunks because latex_wrap didn't know `tabular` was an array env.

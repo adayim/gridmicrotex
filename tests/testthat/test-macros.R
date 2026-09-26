@@ -1,15 +1,16 @@
+# How the expander matches and scopes these macros is tested with the engine,
+# in the MicroTeX fork (test/test_expander.cpp); these check the R side.
 
-expand <- function(tex) as.character(gridmicrotex:::expand_latex_cpp(tex))
+layout <- function(tex) {
+  t <- latex_tree(tex, input_mode = "math", render_mode = "path")
+  list(t$records, t$bbox)
+}
 
 test_that("a define_macro() macro expands, through other macros, to what it stands for", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   on.exit(clear_macros(), add = TRUE)
   define_macro("RR", "\\mathbb{R}")
   define_macro("dom", "\\RR \\times \\RR")
-  layout <- function(tex) {
-    t <- latex_tree(tex, input_mode = "math", render_mode = "path")
-    list(t$records, t$bbox)
-  }
   expect_identical(layout("\\dom"), layout("\\mathbb{R} \\times \\mathbb{R}"))
 })
 
@@ -20,20 +21,13 @@ test_that("circular define_macro() macros are an error, not a hang", {
   expect_error(latex_dims("\\a", input_mode = "math"), "Too many macro expansions")
 })
 
-test_that("a define_macro() name is matched as TeX reads names", {
-  on.exit(clear_macros(), add = TRUE)
-  define_macro("RR", "\\mathbb{R}")
-  # `\\RR` is a line break followed by the letters RR, and \RRx is another
-  # name; the old regex expander rewrote the first of these.
-  expect_equal(expand("a \\\\RR \\RR \\RRx"), "a \\\\RR \\mathbb{R} \\RRx")
-})
-
 test_that("\\renewcommand overrides a define_macro() macro for one label only", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   on.exit(clear_macros(), add = TRUE)
   define_macro("RR", "\\mathbb{R}")
-  expect_equal(expand("\\renewcommand{\\RR}{Q}\\RR"), "Q")
-  expect_equal(expand("\\RR"), "\\mathbb{R}")
-  expect_error(expand("\\newcommand{\\RR}{Q}"), "already exists")
+  expect_identical(layout("\\renewcommand{\\RR}{Q}\\RR"), layout("Q"))
+  expect_identical(layout("\\RR"), layout("\\mathbb{R}"))
+  expect_warning(latex_dims("\\newcommand{\\RR}{Q}", input_mode = "math"), "already exists")
 })
 
 test_that("redefining a define_macro() macro is not hidden by the layout cache", {

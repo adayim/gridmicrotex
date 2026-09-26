@@ -17,14 +17,6 @@ gm_base_armed_count <- function() {
     .Call(`_gridmicrotex_gm_base_armed_count`)
 }
 
-lex_latex_cpp <- function(tex, blank_line_is_par = FALSE) {
-    .Call(`_gridmicrotex_lex_latex_cpp`, tex, blank_line_is_par)
-}
-
-expand_latex_cpp <- function(tex) {
-    .Call(`_gridmicrotex_expand_latex_cpp`, tex)
-}
-
 persistent_macro_set_cpp <- function(name, body) {
     invisible(.Call(`_gridmicrotex_persistent_macro_set_cpp`, name, body))
 }
@@ -43,14 +35,6 @@ persistent_macro_list_cpp <- function() {
 
 persistent_macro_generation_cpp <- function() {
     .Call(`_gridmicrotex_persistent_macro_generation_cpp`)
-}
-
-parse_ast_cpp <- function(tex, mode = "math") {
-    .Call(`_gridmicrotex_parse_ast_cpp`, tex, mode)
-}
-
-command_tables_cpp <- function() {
-    .Call(`_gridmicrotex_command_tables_cpp`)
 }
 
 math_env_names_cpp <- function() {

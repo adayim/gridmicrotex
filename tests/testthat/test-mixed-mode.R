@@ -94,3 +94,19 @@ test_that("~ at the start of a line is a space that stays", {
   r <- texts("a\n~b")
   expect_equal(r$text[2], " b")
 })
+
+test_that("a number or a dimension takes one optional space, as in TeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  text_of <- function(tex) {
+    t <- latex_tree(tex, input_mode = "mixed")
+    t$records[t$records$type == "text", c("text", "x", "y")]
+  }
+  # The space ends the dimension and goes with it; a second one is a space.
+  expect_identical(text_of("\\kern100bp word")[, c("text", "x")],
+                   data.frame(text = "word", x = 100))
+  expect_identical(text_of("\\kern100bp\\ word")$text, " word")
+  # In a label, a line end there still breaks the line.
+  r <- text_of("a\\kern10bp\nb")
+  expect_identical(r$text, c("a", "b"))
+  expect_false(r$y[1] == r$y[2])
+})

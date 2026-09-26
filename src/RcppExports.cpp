@@ -51,29 +51,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// lex_latex_cpp
-Rcpp::DataFrame lex_latex_cpp(std::string tex, bool blank_line_is_par);
-RcppExport SEXP _gridmicrotex_lex_latex_cpp(SEXP texSEXP, SEXP blank_line_is_parSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
-    Rcpp::traits::input_parameter< bool >::type blank_line_is_par(blank_line_is_parSEXP);
-    rcpp_result_gen = Rcpp::wrap(lex_latex_cpp(tex, blank_line_is_par));
-    return rcpp_result_gen;
-END_RCPP
-}
-// expand_latex_cpp
-Rcpp::CharacterVector expand_latex_cpp(std::string tex);
-RcppExport SEXP _gridmicrotex_expand_latex_cpp(SEXP texSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
-    rcpp_result_gen = Rcpp::wrap(expand_latex_cpp(tex));
-    return rcpp_result_gen;
-END_RCPP
-}
 // persistent_macro_set_cpp
 void persistent_macro_set_cpp(std::string name, std::string body);
 RcppExport SEXP _gridmicrotex_persistent_macro_set_cpp(SEXP nameSEXP, SEXP bodySEXP) {
@@ -122,28 +99,6 @@ BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     rcpp_result_gen = Rcpp::wrap(persistent_macro_generation_cpp());
-    return rcpp_result_gen;
-END_RCPP
-}
-// parse_ast_cpp
-Rcpp::DataFrame parse_ast_cpp(std::string tex, std::string mode);
-RcppExport SEXP _gridmicrotex_parse_ast_cpp(SEXP texSEXP, SEXP modeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type tex(texSEXP);
-    Rcpp::traits::input_parameter< std::string >::type mode(modeSEXP);
-    rcpp_result_gen = Rcpp::wrap(parse_ast_cpp(tex, mode));
-    return rcpp_result_gen;
-END_RCPP
-}
-// command_tables_cpp
-Rcpp::List command_tables_cpp();
-RcppExport SEXP _gridmicrotex_command_tables_cpp() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(command_tables_cpp());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -327,15 +282,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_gm_base_teardown", (DL_FUNC) &_gridmicrotex_gm_base_teardown, 0},
     {"_gridmicrotex_gm_base_release_pending", (DL_FUNC) &_gridmicrotex_gm_base_release_pending, 0},
     {"_gridmicrotex_gm_base_armed_count", (DL_FUNC) &_gridmicrotex_gm_base_armed_count, 0},
-    {"_gridmicrotex_lex_latex_cpp", (DL_FUNC) &_gridmicrotex_lex_latex_cpp, 2},
-    {"_gridmicrotex_expand_latex_cpp", (DL_FUNC) &_gridmicrotex_expand_latex_cpp, 1},
     {"_gridmicrotex_persistent_macro_set_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_set_cpp, 2},
     {"_gridmicrotex_persistent_macro_remove_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_remove_cpp, 1},
     {"_gridmicrotex_persistent_macro_clear_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_clear_cpp, 0},
     {"_gridmicrotex_persistent_macro_list_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_list_cpp, 0},
     {"_gridmicrotex_persistent_macro_generation_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_generation_cpp, 0},
-    {"_gridmicrotex_parse_ast_cpp", (DL_FUNC) &_gridmicrotex_parse_ast_cpp, 2},
-    {"_gridmicrotex_command_tables_cpp", (DL_FUNC) &_gridmicrotex_command_tables_cpp, 0},
     {"_gridmicrotex_math_env_names_cpp", (DL_FUNC) &_gridmicrotex_math_env_names_cpp, 0},
     {"_gridmicrotex_register_text_measurer", (DL_FUNC) &_gridmicrotex_register_text_measurer, 1},
     {"_gridmicrotex_clear_text_measurer", (DL_FUNC) &_gridmicrotex_clear_text_measurer, 0},
