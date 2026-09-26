@@ -94,6 +94,10 @@ public:
    *  TeX adds each line to the page on its own: that column's last
    *  baseline is its last line's. */
   bool _lines = false;
+  /** A label's lines (the rows ArrayFormula::getAsVRow() stacks): the line
+   *  breaker breaks each one that is too wide. Any other VBox -- a
+   *  fraction, \underline, an accent -- is one box to it, as in TeX. */
+  bool _rows = false;
 
   VBox() : _leftMostPos(F_MAX), _rightMostPos(F_MIN) {}
 
@@ -130,9 +134,34 @@ public:
 
   inline color background() const { return _background; }
 
+  /** A piece of a highlight fills the whole run's height and depth, so a
+   *  broken highlight is one even band on each line. */
+  sptr<Box> around(const sptr<Box>& piece) const override;
+
+  bool marksSpaces() const override { return !isTransparent(_background); }
+
   void draw(Graphics2D& g2, float x, float y) override;
 
   boxname(ColorBox);
+};
+
+/** A rule along its base at a fixed height above the baseline (below it
+ *  when negative): ulem's \uline and \sout. Broken across lines, each
+ *  piece -- spaces included -- draws its part of the rule at that height. */
+class RuleDecorBox : public DecorBox {
+private:
+  float _raise, _thickness;
+
+public:
+  RuleDecorBox(const sptr<Box>& base, float raise, float thickness);
+
+  sptr<Box> around(const sptr<Box>& piece) const override;
+
+  bool marksSpaces() const override { return true; }
+
+  void draw(Graphics2D& g2, float x, float y) override;
+
+  boxname(RuleDecorBox);
 };
 
 /** A box representing a scale operation */
@@ -152,6 +181,8 @@ public:
   inline float sx() const { return _sx; }
 
   inline float sy() const { return _sy; }
+
+  sptr<Box> around(const sptr<Box>& piece) const override;
 
   void draw(Graphics2D& g2, float x, float y) override;
 

@@ -177,6 +177,14 @@ public:
 
   explicit DecorBox(const sptr<Box>& base) : _base(base) {}
 
+  /** For an openable box: the same decoration around `piece`, one piece of
+   *  its text on a line. */
+  virtual sptr<Box> around(const sptr<Box>& piece) const { return piece; }
+
+  /** It draws on the spaces between its words as well (an underline, a
+   *  highlight), so the line breaker decorates those too. */
+  virtual bool marksSpaces() const { return false; }
+
   bool isSingle() const override { return false; }
 
   int lastFontId() override;

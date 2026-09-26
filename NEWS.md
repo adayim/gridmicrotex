@@ -18,11 +18,16 @@
 - `\definecolor` takes xcolor's `RGB` (0–255) and `HTML` (hexadecimal) models.
 - Text under `\large`, `\small` and the other sizes, `\color` or `\textcolor` wraps at `max_width`, and so do a list item, hanging under its own text, and a heading, hanging from its number; they used to run past it. List labels of different widths are set right, as in LaTeX.
 - `minipage` sets its paragraphs to its width (and height, if given), placed by its `[t]`, `[c]` or `[b]` position, so figures can sit side by side.
+- `\raggedleft`, `\raggedright`, `flushleft` and `flushright` align a document's lines, and `>{\centering\arraybackslash}` or `>{\raggedleft\arraybackslash}` before a `p{}` or `X` column aligns the lines of its cells.
+- New `\uline` (ulem), `\textscale` and `\relscale` (relsize); `\sout` wraps with its text, and `\bgcolor` too.
+- `\text`, `\mbox` and `\textsuperscript` keep the bold or italic around them, and `\underline` and `\phantom` of text are text, as in LaTeX.
+- Markdown is read as LaTeX text, as pandoc writes it: a paragraph keeps within its box, coloured, sized, underlined and highlighted spans wrap, each line of a centred or right-aligned block is aligned, and bold and italic reach code blocks. A table wider than its box shares the width between its columns and wraps their cells.
 - A definition inside `{…}` ends with the group, as in TeX; `\gdef` is global.
 - An unknown environment draws its body instead of its name in red: as text in prose, as LaTeX does, and as an array in math. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
 - Starred forms work (`\operatorname*`, `\newcommand*`, `\DeclareMathOperator*`, `\hspace*`, `\\*`), as do `\def` with delimited parameters, `\let`, `\providecommand`, `\newenvironment` with arguments, and `\ensuremath`.
 - Bug fix: `\cline{a-b}` naming a column past a table's last read past the end of its column widths.
-- Bug fix: math drawn to base `pdf()` used a font the file did not embed, so it was garbled in any viewer without that font; `pdf()` and `postscript()` now draw it as outlines. Use `cairo_pdf()` for selectable math.
+- Bug fix: a line ran past `max_width` when its last break was the space ending a run of text, as before `\textbf{}` or inline math; markdown paragraphs did so almost always.
+- Bug fix: `\underline{…}` as a whole label was broken at `max_width`, its rule left at full width; a box is kept whole, as in LaTeX.- Bug fix: math drawn to base `pdf()` used a font the file did not embed, so it was garbled in any viewer without that font; `pdf()` and `postscript()` now draw it as outlines. Use `cairo_pdf()` for selectable math.
 - Bug fix: an argument without braces took one byte rather than one character, garbling `\frac αβ` and `\hat é`.
 - Bug fix: a macro argument's own `#2` was replaced by the macro's second argument.
 - Bug fix: a `define_macro("RR", …)` macro also replaced the `\RR` in `\\RR`.

@@ -42,10 +42,10 @@ test_that("emphasis actually reaches the rendered output", {
   expect_true("plain" %in% faces)
 })
 
-test_that("prose outside a text command is still \\text{}-wrapped", {
-  # Top level is math mode, so unwrapped prose would come out as spaced
-  # math italics.
-  expect_match(.md_to_tex("plain words"), "\\text{plain words}", fixed = TRUE)
+test_that("prose is text, not spaced math italics", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_identical(.md_to_tex("plain words"), "plain words")
+  expect_identical(unique(markdown_grob("plain words")$layout_df$type), "text")
 })
 
 test_that("math and escapes survive inside emphasis", {

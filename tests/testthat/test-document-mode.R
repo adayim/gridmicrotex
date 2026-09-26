@@ -305,6 +305,123 @@ test_that("text under \\large, \\color or \\textcolor wraps at max_width", {
                    latex_tree(fits, input_mode = "document", max_width = 5000)$records)
 })
 
+test_that("a line breaks at the last break before it overflows, even a level down", {
+  # The break at the space that ends one run of text was not seen when the
+  # next run overflowed, so the line ran on to a later break, past the width.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  width <- function(tex, mode, w) latex_tree(tex, input_mode = mode, max_width = w)$bbox[["width"]]
+  expect_lte(width("\\text{aaa }\\textbf{bbb}\\text{ ccc ddd eee fff ggg hhh}", "math", 60), 60)
+  expect_lte(width("Slope $\\hat{\\beta}_1 = \\sum_{i=1}^{n} x_i^2$", "mixed", 150), 150)
+  expect_lte(width("Hello \\textbf{big bold} world, and more words", "mixed", 100), 100)
+})
+
+test_that("ulem's \\uline and \\sout wrap with their text, their rules straight", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  long <- "words that run on long enough to need several lines in a narrow box"
+  for (cmd in c("uline", "sout")) {
+    t <- latex_tree(sprintf("A \\%s{%s} end", cmd, long), input_mode = "mixed", max_width = 150)
+    r <- t$records
+    expect_lte(t$bbox[["width"]], 150, label = cmd)
+    rules <- r[r$type == "line", ]
+    txt <- r[r$type == "text", ]
+    # One height per line, and no rule past the last word of a line: the
+    # space it broke at is left bare, as ulem leaves it.
+    for (y in unique(round(txt$y))) {
+      line <- txt[round(txt$y) == y, ]
+      at <- rules[abs(rules$y - line$y[1]) < 12, ]
+      if (nrow(at) == 0L) next
+      expect_identical(length(unique(round(at$y, 2))), 1L, label = cmd)
+    }
+    expect_gt(length(unique(round(txt$y))), 2L)
+  }
+  # \underline is LaTeX's box: it is not broken, whatever the width.
+  t <- latex_tree(sprintf("\\underline{%s}", long), input_mode = "mixed", max_width = 150)
+  expect_identical(length(unique(round(t$records$y[t$records$type == "text"]))), 1L)
+  # Nor is a fraction.
+  t <- latex_tree(sprintf("\\frac{\\text{%s}}{2}", long), input_mode = "math", max_width = 150)
+  expect_identical(length(unique(round(t$records$y[t$records$type == "text"]))), 1L)
+})
+
+test_that("relsize's \\textscale and \\relscale set a size that wraps", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  sizes <- function(tex) unique(latex_tree(tex, input_mode = "mixed")$records$font_size)
+  expect_setequal(sizes("a \\textscale{1.5}{b}"), c(20, 30))
+  expect_setequal(sizes("a {\\relscale{0.5} b}"), c(20, 10))
+  long <- paste(rep("word", 20), collapse = " ")
+  t <- latex_tree(sprintf("A \\textscale{1.5}{%s}", long), input_mode = "mixed", max_width = 150)
+  expect_lte(t$bbox[["width"]], 150)
+  expect_warning(latex_grob("\\relscale{big} x"), "not a positive number")
+})
+
+test_that("\\raggedleft, flushright and flushleft align a document's lines", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  long <- "A paragraph long enough to wrap onto several lines at this width here"
+  # Where each line starts. A line put to the right starts twice as far in
+  # as the same line centred: all its room is before it, not half.
+  lefts <- function(tex) {
+    r <- latex_tree(tex, input_mode = "document", max_width = 200)$records
+    r <- r[r$type == "text", ]
+    unname(tapply(r$x, round(r$y), min))
+  }
+  centred <- lefts(paste("\\centering", long))
+  expect_gt(length(centred), 1L)
+  expect_gt(max(centred), 5)
+  for (tex in c(paste("\\raggedleft", long), sprintf("\\begin{flushright}%s\\end{flushright}", long))) {
+    expect_equal(lefts(tex), 2 * centred, tolerance = 0.02, label = tex)
+  }
+  expect_equal(lefts(sprintf("\\begin{flushleft}%s\\end{flushleft}", long)), 0 * centred)
+  # A label is placed by hjust: nothing aligns its lines.
+  expect_identical(latex_tree(paste("\\raggedleft", long), input_mode = "mixed")$records,
+                   latex_tree(long, input_mode = "mixed")$records)
+})
+
+test_that("X columns share what the table needs, and >{} aligns a column's lines", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  tab <- paste("\\begin{tabular}{lXX} 1 & short & a long description of the first thing",
+               "measured in the study \\\\ \\end{tabular}")
+  r <- latex_tree(tab, input_mode = "mixed", max_width = 250)$records
+  r <- r[r$type == "text", ]
+  # The short column keeps its width; the long one takes the rest.
+  expect_lt(min(r$x[r$y > min(r$y)]), 120)
+  expect_lte(max(r$x), 250)
+  centred <- "\\begin{tabular}{>{\\centering\\arraybackslash}p{100pt}} a cell of words that wraps \\\\ \\end{tabular}"
+  right <- "\\begin{tabular}{>{\\raggedleft\\arraybackslash}p{100pt}} a cell of words that wraps \\\\ \\end{tabular}"
+  plain <- "\\begin{tabular}{p{100pt}} a cell of words that wraps \\\\ \\end{tabular}"
+  starts <- function(tex) {
+    r <- latex_tree(tex, input_mode = "mixed")$records
+    r <- r[r$type == "text", ]
+    tapply(r$x, round(r$y), min)
+  }
+  expect_true(all(starts(centred) > starts(plain)))
+  expect_true(all(starts(right) > starts(centred)))
+})
+
+test_that("\\text, \\mbox and \\textsuperscript keep the style around them", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  styles <- function(tex, mode = "mixed") {
+    r <- latex_tree(tex, input_mode = mode)$records
+    r <- r[r$type == "text", ]
+    setNames(r$font_style, trimws(r$text))
+  }
+  s <- styles("\\textbf{a $\\text{b}$ \\mbox{c} H\\textsuperscript{2}}")
+  expect_true(all(bitwAnd(s, 2L) != 0L))
+  # Nor does a style nested in the same style take it away after it.
+  s <- styles("\\textbf{a \\textbf{b} c}")
+  expect_true(bitwAnd(s[["c"]], 2L) != 0L)
+  # \underline and \phantom of text are text, in its font.
+  r <- latex_tree("\\textbf{\\underline{Hg}}", input_mode = "mixed")$records
+  expect_identical(r$type[r$type != "line"], "text")
+  expect_equal(latex_dims("a\\phantom{Hg}b")$width, latex_dims("aHgb")$width)
+})
+
+test_that("a definition in math between two dollars is inline math", {
+  # The expander takes the \newcommand away; TeX saw it between the `$`,
+  # which makes this `$`, not `$$`.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_silent(latex_grob("$\\newcommand{\\R}{\\mathbb{R}}$ $\\R$", input_mode = "document"))
+  expect_silent(latex_grob("$$x$$ and \\[y\\]", input_mode = "document"))
+})
+
 test_that("a box stays whole in a broken line, and keeps a height set by hand", {
   # Only a declaration's size or colour is broken with its text:
   # \scalebox and \colorbox are boxes in LaTeX, and a line breaks around

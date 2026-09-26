@@ -19,19 +19,13 @@
 #                       resolved at draw time, since a relative width
 #                       needs a viewport and measuring needs a device
 #
-# Why any of this is in R rather than MicroTeX: the engine cannot lay a
-# document out in one parse. A `\` puts a VBox at the top of the box tree
-# and, inside matrix/array cells, max_width is not honoured at all (see
-# the note in BoxSplitter::split). So block structure is assembled here
-# -- one latex_grob per block, stacked in grid -- which is also where
-# boxes, padding, background fills and rules have to live, none of which
-# MicroTeX models.
-
-# Heading level -> MicroTeX size macro. All ten of the \tiny..\Huge
-# family are registered (macro_def.cpp); these six are the ones a
-# markdown heading can reach.
-.MD_HEADING_SIZE <- c("\\Huge", "\\huge", "\\LARGE",
-                      "\\Large", "\\large", "\\normalsize")
+# Why the blocks are stacked in R rather than set as one LaTeX document:
+# a markdown document is styled by CSS, and its boxes -- margins,
+# padding, background fills, borders, a quote's bar, per-block fonts and
+# colours from the cascade -- have no LaTeX equivalent the engine models.
+# So each block is one latex_grob, its content LaTeX text read in document
+# mode (.md_document()): paragraphs, emphasis, math, wrapping and the
+# alignment of each line are the engine's, the boxes around them grid's.
 
 # Classify an html_block as a <div> boundary, or neither.
 #
@@ -59,12 +53,8 @@
 # containers (lists, block quotes) so nesting is preserved, and folds
 # <div>...</div> runs into container blocks of their own.
 #
-# `ctx` is the enclosing container's resolved style. It is threaded here,
-# and not only at layout time, because a block's *content* has to know
-# whether an emphasis command will wrap it: \textbf{\text{x}} silently
-# reports plain, so prose destined for \textbf{} must be emitted bare.
-# The cascade is the same function either way, so the two passes cannot
-# disagree about the rules.
+# `ctx` is the enclosing container's resolved style, which a list's items
+# and a quote's blocks inherit.
 .md_blocks <- function(nodes, spans, base = 20, style = NULL, ctx = list()) {
   out <- list()
   # Open <div>s, innermost last. Blocks are collected into the innermost
@@ -85,12 +75,10 @@
     emit(list(type = "div", class = d$class, style = d$style,
               blocks = d$blocks))
   }
-  # Prose for a block, emitted bare when emphasis will wrap it.
-  prose <- function(nd, tag) {
-    res <- .md_cascade(style %||% markdown_style(), tag, inherited = cur_ctx())
-    emph <- .md_emphasis_cmds(res)
-    .md_inline_to_tex(nd, spans, bare = length(emph) > 0L, styles = emph,
-                      base = base, style = style)
+  # Prose for a block. (Its own emphasis and decorations are put around it
+  # when it is laid out: .md_block_style().)
+  prose <- function(nd) {
+    .md_inline_to_tex(nd, spans, base = base, style = style)
   }
   # The context a container hands to its children.
   child_ctx <- function(tag) {
@@ -136,15 +124,15 @@
     # prose: it gets its own centred block, as in every other markdown
     # dialect. Inline `$...$` is untouched.
     if (identical(nm, "paragraph") && !is.na(.md_lone_math_span(nd, spans))) {
-      emit(list(type = "mathblock", tex = prose(nd, "math")))
+      emit(list(type = "mathblock", tex = prose(nd)))
       next
     }
     blk <- switch(nm,
-      paragraph = list(type = "paragraph", tex = prose(nd, "p")),
+      paragraph = list(type = "paragraph", tex = prose(nd)),
       heading = {
         lvl <- .md_heading_level(nd)
         list(type = "heading", level = lvl,
-             tex = prose(nd, paste0("h", lvl)))
+             tex = prose(nd))
       },
       block_quote = list(type = "block_quote",
                          blocks = .md_blocks(xml2::xml_children(nd), spans,
@@ -314,14 +302,11 @@
   r_td    <- .md_cascade(st, "td", inherited = r_table)
   r_th    <- .md_cascade(st, "th", inherited = r_table)
 
-  # A cell's content, wrapped in whatever emphasis its tag asks for. The
-  # emphasis has to be applied here rather than around the finished table:
-  # \text{} builds a non-nested FontStyleAtom, so \textbf{\text{x}} comes
-  # out plain -- which is why header cells were never bold.
+  # A cell's content, wrapped in whatever emphasis its tag asks for (a
+  # header cell's bold).
   cell_tex <- function(cell, res) {
     emph <- .md_emphasis_cmds(res)
-    inner <- .md_inline_to_tex(cell, spans, bare = length(emph) > 0L,
-                               styles = emph, base = base, style = style)
+    inner <- .md_inline_to_tex(cell, spans, base = base, style = style)
     fill <- .md_resolve_color(res$background)
     paste0(if (!is.null(fill)) paste0("\\cellcolor{", fill, "}"),
            paste(emph, collapse = ""), inner, strrep("}", length(emph)))
@@ -343,24 +328,29 @@
   line <- function(cs) paste(pad(cs), collapse = " & ")
 
   # Column alignment from `|:--|:-:|--:|`. cmark records it on the header
-  # cells only, and MicroTeX honours l/c/r in the tabular spec.
-  spec <- rep("l", ncol)
+  # cells only.
+  align <- rep("left", ncol)
   hdr <- Filter(function(r) identical(xml2::xml_name(r), "table_header"), rows)
   if (length(hdr)) {
     a <- vapply(xml2::xml_children(hdr[[1]]), function(cell) {
-      switch(xml2::xml_attr(cell, "align") %||% "left",
-             center = "c", right = "r", "l")
+      xml2::xml_attr(cell, "align") %||% "left"
     }, character(1))
     a <- a[!is.na(a)]
     k <- seq_len(min(ncol, length(a)))
-    if (length(k)) spec[k] <- a[k]
+    if (length(k)) align[k] <- a[k]
   }
+  # array's way to align the lines of a paragraph column.
+  prefix <- ifelse(align == "center", ">{\\centering\\arraybackslash}",
+                   ifelse(align == "right", ">{\\raggedleft\\arraybackslash}", ""))
 
-  # table-layout: fixed divides the measure between the columns and
-  # renders each as a p{} column, so a wide table wraps instead of running
-  # off the edge. Content-sized (l/c/r) stays the default.
+  # By default an X column each (tabularx's): a table that fits the
+  # measure is set at its natural widths, and one that does not has its
+  # wide columns share what the others leave, each cell wrapping in it --
+  # as an HTML table shrinks to its container rather than running off it.
+  # table-layout: fixed divides the measure evenly into p{} columns.
   fixed <- identical(tolower(as.character(r_table[["table-layout"]] %||% "")),
                      "fixed")
+  spec <- paste0(prefix, "X")
   if (fixed && avail > 0 && ncol > 0) {
     # Each column costs its width plus the inter-column separation, which
     # defaults to 1em. Subtract that share or the table overshoots the
@@ -368,7 +358,7 @@
     gap_est <- .md_css_length(r_td[["padding-left"]], base, base,
                               horizontal = TRUE) %||% base
     per <- max(avail / ncol - gap_est, base)
-    spec <- rep(sprintf("p{%.2fpt}", per), ncol)
+    spec <- paste0(prefix, sprintf("p{%.2fpt}", per))
   }
 
   # Vertical rules from a border on the cells, and the gap between
@@ -500,54 +490,46 @@
   g
 }
 
-# Measure a run, and return the max_width that achieved that measurement
-# so the caller can draw with exactly the same setting.
-#
-# input_mode MUST match .md_run_grob(). latex_dims() defaults to
-# "mixed", which would run latex_wrap() over LaTeX the AST walker has
-# already wrapped -- measuring a different (double-wrapped) string from
-# the one drawn. That mismatch shows up as blocks overflowing the box.
-#
-# The retry works around MicroTeX's line breaker, which is greedy
-# first-fit: it takes the last break position that fits and never
-# reconsiders, so text spread over several \text{} runs can settle on a
-# first line wider than the limit. Asking for a slightly narrower line
-# finds a different, fitting set of breaks. Bounded, so genuinely
-# unbreakable content (one long word, a table) still returns promptly.
-.md_measure <- function(tex, width, gp) {
-  d <- latex_dims(tex, max_width = width, input_mode = "math", gp = gp)
-  w <- as.numeric(d$width)
-  if (width > 0 && w > width) {
-    target <- width
-    for (i in seq_len(6L)) {
-      target <- target * 0.94
-      d2 <- latex_dims(tex, max_width = target, input_mode = "math", gp = gp)
-      if (as.numeric(d2$width) <= width) {
-        return(list(w = as.numeric(d2$width), h = as.numeric(d2$height),
-                    bl = as.numeric(d2$baseline), mw = target))
-      }
-    }
-  }
+# Measure a block's LaTeX text at `width` (0: no wrapping) -- read in
+# document mode, as .md_run_grob() draws it -- or, with `math`, a list
+# marker, which is a math glyph.
+.md_measure <- function(tex, width, gp, math = FALSE) {
+  d <- latex_dims(if (math) tex else .md_document(tex), max_width = width,
+                  input_mode = if (math) "math" else "document", gp = gp)
   # `bl` is the baseline as bigpts up from the bottom of the box, so
   # (h - bl) is the baseline measured down from the top -- what the list
   # layout needs to line a marker up with its text.
-  list(w = w, h = as.numeric(d$height), bl = as.numeric(d$baseline),
-       mw = width)
+  list(w = as.numeric(d$width), h = as.numeric(d$height), bl = as.numeric(d$baseline))
 }
 
-# Build the grob for a run of LaTeX at a given offset. `y` is the
-# distance from the top of the content area; vjust = 1 (top) makes the
-# offset land on the block's top edge, so stacking is just addition.
-.md_run_grob <- function(tex, x, y, width, gp) {
+# Build the grob for a block at a given offset, as .md_measure() measured
+# it. `y` is the distance from the top of the content area; vjust = 1
+# (top) makes the offset land on the block's top edge, so stacking is
+# just addition.
+.md_run_grob <- function(tex, x, y, width, gp, math = FALSE) {
   latex_grob(
-    tex,
+    if (math) tex else .md_document(tex),
     x = grid::unit(x, "bigpts"),
     y = grid::unit(1, "npc") - grid::unit(y, "bigpts"),
     hjust = 0, vjust = 1,
     max_width = width,
-    input_mode = "math",
+    input_mode = if (math) "math" else "document",
     gp = gp
   )
+}
+
+# A block's LaTeX with its lines aligned as text-align asks, by the
+# engine, line by line (\centering, \raggedleft), when it wraps at
+# `width`: one that fits keeps its natural width, and the layout moves it
+# as a whole, which also leaves a natural-width box to find its width.
+# Returns the LaTeX and whether the engine aligns it.
+.md_aligned <- function(tex, align, width, gp) {
+  if (is.null(align) || align == 0 || !(width > 0) || !is.finite(width)) {
+    return(list(tex = tex, engine = FALSE))
+  }
+  if (.md_measure(tex, 0, gp)$w <= width) return(list(tex = tex, engine = FALSE))
+  cmd <- if (align == 1) "\\raggedleft " else "\\centering "
+  list(tex = paste0(cmd, tex), engine = TRUE)
 }
 
 # The style tag a block is matched by. HTML's names, not our internal
@@ -598,20 +580,23 @@
     if (is.finite(lh)) gp$lineheight <- lh
   }
 
-  # Decorations wrap the emphasis, not the other way round. \underline
-  # and \sout typeset their argument as a fresh sub-formula and drop the
-  # font style inside it, so \textbf{\underline{x}} loses the bold while
-  # \underline{\textbf{x}} keeps it.
-  dec <- character(0)
+  # Decorations around the emphasis, as the inline ones are made
+  # (.md_css_inline_latex()): ulem's, which wrap with the text.
+  open <- character(0)
+  close <- character(0)
+  add <- function(o, c = "}") {
+    open <<- c(open, o)
+    close <<- c(c, close)
+  }
   td <- tolower(as.character(res[["text-decoration"]] %||% ""))
-  if (grepl("underline", td, fixed = TRUE)) dec <- c(dec, "\\underline{")
-  if (grepl("overline", td, fixed = TRUE)) dec <- c(dec, "\\overline{")
-  if (grepl("line-through", td, fixed = TRUE)) dec <- c(dec, "\\sout{")
+  if (grepl("underline", td, fixed = TRUE)) add("\\uline{")
+  if (grepl("overline", td, fixed = TRUE)) add("$\\overline{\\text{", "}}$")
+  if (grepl("line-through", td, fixed = TRUE)) add("\\sout{")
   emph <- .md_emphasis_cmds(res)
-  open <- c(dec, emph)
+  for (e in emph) add(e)
 
   list(gp = gp, size = size, open = paste(open, collapse = ""),
-       close = strrep("}", length(open)), emph = emph)
+       close = paste(close, collapse = ""), emph = emph)
 }
 
 # Lay out a list of blocks into positioned items.
@@ -679,35 +664,24 @@
     y <- y + pad_t
     n_before <- length(items)
 
-    if (identical(blk$type, "paragraph") || identical(blk$type, "mathblock")) {
-      if (!nzchar(blk$tex)) next
-      tex <- wrap(blk$tex)
-      m <- .md_measure(tex, avail, gp_blk)
-      # Draw at m$mw, not avail: .md_measure() may have had to narrow the
-      # request to get a fitting set of line breaks, and drawing at a
-      # different width would re-break the text and undo the fit.
-      add(.md_item(.md_run_grob(tex, indent_blk, y, m$mw, gp_blk),
-                   indent_blk, y, m$w, m$h, align))
-      note_bl(y + m$h - m$bl)
-      y <- y + m$h
-
-    } else if (identical(blk$type, "heading")) {
-      # The size comes from gp, not a \Huge..\normalsize macro: the macro
+    if (blk$type %in% c("paragraph", "mathblock", "heading")) {
+      # A heading's size comes from gp, not a \Huge..\normalsize macro: the
       # ladder is six fixed steps, and font-size has to be continuous.
-      tex <- wrap(blk$tex)
-      m <- .md_measure(tex, avail, gp_blk)
-      add(.md_item(.md_run_grob(tex, indent_blk, y, m$mw, gp_blk),
-                   indent_blk, y, m$w, m$h, align))
+      if (!nzchar(blk$tex)) next
+      al <- .md_aligned(wrap(blk$tex), align, avail, gp_blk)
+      m <- .md_measure(al$tex, avail, gp_blk)
+      # Lines the engine aligned span the measure: nothing is left to move.
+      add(.md_item(.md_run_grob(al$tex, indent_blk, y, avail, gp_blk),
+                   indent_blk, y, m$w, m$h, if (al$engine) 0 else align))
       note_bl(y + m$h - m$bl)
       y <- y + m$h
 
     } else if (identical(blk$type, "code_block")) {
-      # Code must render in a monospace font. \texttt switches MicroTeX's
-      # internal style, but the \text{} content is drawn with the resolved
-      # system font, which is the sans body font unless told otherwise --
-      # and in a proportional font "<-" comes out misshapen, the "<" set
-      # as a raised math relation while the "-" is a low text hyphen.
-      # The default style says so; a stylesheet may say otherwise.
+      # Code must render in a monospace font. \texttt sets MicroTeX's
+      # style, but the text is drawn with the resolved system font, which
+      # is the sans body font unless told otherwise -- and in a
+      # proportional font "<-" comes out misshapen. The default style says
+      # so; a stylesheet may say otherwise.
       #
       # Lines advance by a fixed leading rather than by their measured
       # height: a line with no descender measures shorter, and stacking
@@ -753,8 +727,9 @@
       }
       if (!nzchar(blk_tex)) next
       tex <- wrap(blk_tex)
-      m <- .md_measure(tex, 0, gp_blk)
-      add(.md_item(.md_run_grob(tex, indent_blk, y, 0, gp_blk),
+      # The measure is the text width its X columns share.
+      m <- .md_measure(tex, avail, gp_blk)
+      add(.md_item(.md_run_grob(tex, indent_blk, y, avail, gp_blk),
                    indent_blk, y, m$w, m$h, align))
       y <- y + m$h
 
@@ -872,7 +847,7 @@
       # of the line instead of sitting on the text baseline. An ordinary
       # ascender/descender line stands in for a body with no baseline of
       # its own to align to.
-      refd <- latex_dims("\\text{Ag}", input_mode = "math", gp = gp_blk)
+      refd <- latex_dims("Ag", input_mode = "document", gp = gp_blk)
       ref_bl_top <- as.numeric(refd$height) - as.numeric(refd$baseline)
       marker_gap <- .md_css_length(res[["marker-gap"]], fontsize, sty$size,
                                    horizontal = TRUE) %||% (0.4 * fontsize)
@@ -883,7 +858,7 @@
                                   checked = if (is.null(blk$checked)) NA
                                             else blk$checked[j],
                                   bullet = res$bullet)
-        mm <- .md_measure(marker, 0, gp_blk)
+        mm <- .md_measure(marker, 0, gp_blk, math = TRUE)
         # Hanging indent: the marker sits at the current indent and the
         # item body is measured at the reduced width, so continuation
         # lines line up under the text rather than under the marker.
@@ -903,7 +878,7 @@
         bl_top <- if (is.na(inner$first_bl)) ref_bl_top else inner$first_bl
         y_marker <- y + bl_top - (mm$h - mm$bl)
         note_bl(y_marker + mm$h - mm$bl)
-        add(.md_item(.md_run_grob(marker, indent_blk, y_marker, 0, gp_blk),
+        add(.md_item(.md_run_grob(marker, indent_blk, y_marker, 0, gp_blk, math = TRUE),
                      indent_blk, y_marker, mm$w, mm$h))
         for (it in inner$items) {
           add(.md_item(.md_shift_grob(it$grob, dy = y),
@@ -1193,15 +1168,17 @@ heightDetails.markdownbox <- function(x) {
 #'
 #' @details
 #' Where \code{\link{markdown_grob}} flattens everything into a single
-#' run, this stacks one grob per block. That is what makes headings, list
-#' indentation, block-quote rules and background fills possible:
-#' MicroTeX has no concept of any of them, and its line breaking does not
-#' reach inside the cells it uses for list and table layout.
+#' run, this stacks one grob per block, which is what makes margins,
+#' padding, background fills, borders and block-quote rules possible. Each
+#' block's content is LaTeX text laid out by the engine, so it wraps,
+#' coloured, sized, underlined and highlighted spans included, and a
+#' block's \code{text-align} aligns each of its lines.
 #'
-#' Two consequences worth knowing. Table cells and code lines are not
-#' wrapped, so a wide table overflows rather than reflowing. And list
-#' items are stacked here rather than handed to MicroTeX's
-#' \code{itemize}, which is what gives them a proper hanging indent.
+#' A table is as wide as its content when that fits the box. When it does
+#' not, its wide columns share the width the others leave and their cells
+#' wrap, as an HTML table shrinks to its container; \code{table-layout:
+#' fixed} divides the width evenly between the columns instead. Code lines
+#' are not wrapped.
 #'
 #' An image on a line of its own is drawn as a block, scaled to fit the
 #' column but never enlarged past its natural size (pixels are read at

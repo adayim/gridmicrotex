@@ -49,6 +49,8 @@ void VRowAtom::addGapAfterLast(const Dimen& gap) {
 
 sptr<Box> VRowAtom::createBox(Env& env) {
   auto vb = sptrOf<VBox>();
+  // Interline space is what makes these a label's lines (getAsVRow()).
+  vb->_rows = _addInterline;
   auto lineSpace = sptrOf<StrutBox>(0.f, env.lineSpace(), 0.f, 0.f);
   // `\\[len]`: extra space below an element that has one.
   const auto gapAfter = [&](size_t i) {
@@ -84,9 +86,11 @@ sptr<Box> VRowAtom::createBox(Env& env) {
       widest = std::max(widest, boxes.back()->_width);
     }
     for (size_t i = 0; i < size; i++) {
-      // A display with no text width to centre in centres on the widest line.
-      if (env.textWidth() == POS_INF && dynamic_cast<DisplayAtom*>(_elements[i].get()) != nullptr) {
-        boxes[i] = sptrOf<HBox>(boxes[i], widest, Alignment::center);
+      // A display, or a centred or right-aligned line, with no text width
+      // to align in is aligned on the widest line.
+      const auto* display = dynamic_cast<DisplayAtom*>(_elements[i].get());
+      if (env.textWidth() == POS_INF && display != nullptr) {
+        boxes[i] = sptrOf<HBox>(boxes[i], widest, display->alignment());
       }
       vb->add(boxes[i]);
       if (i < size - 1) gapAfter(i);
@@ -116,9 +120,9 @@ sptr<Box> DisplayAtom::createBox(Env& env) {
   auto box = _base->createBox(env);
   const float width = env.textWidth();
   if (width == POS_INF) return box;
-  if (box->_width <= width) return sptrOf<HBox>(box, width, Alignment::center);
+  if (box->_width <= width) return sptrOf<HBox>(box, width, _align);
   // Too wide for the line: broken as any line is, and each line it makes
-  // centred -- not justified, as LaTeX's \centering leaves them.
+  // aligned -- not justified, as LaTeX's \centering leaves them.
   const bool justify = BoxSplitter::_justify;
   BoxSplitter::_justify = false;
   const auto [split, lines] = BoxSplitter::split(box, width, env.lineSpace());
@@ -129,7 +133,7 @@ sptr<Box> DisplayAtom::createBox(Env& env) {
   out->_lines = true;
   for (const auto& line : vb->_children) {
     if (std::dynamic_pointer_cast<HBox>(line) != nullptr) {
-      out->add(sptrOf<HBox>(line, width, Alignment::center));
+      out->add(sptrOf<HBox>(line, width, _align));
     } else {
       out->add(line);  // the space between lines
     }

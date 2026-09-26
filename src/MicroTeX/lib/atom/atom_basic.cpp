@@ -76,9 +76,10 @@ void ColorAtom::defineColor(const string& name, color c) {
 
 sptr<Box> ColorAtom::createBox(Env& env) {
   auto box = sptrOf<ColorBox>(_elements->createBox(env), _color, _background);
-  // A colour alone is no box in LaTeX (\color, \textcolor); one with a
-  // background is (\colorbox).
-  box->_openable = isTransparent(_background);
+  // A colour is no box in LaTeX (\color, \textcolor), and a background
+  // here is a highlight (\bgcolor, soul's \hl): both break with their
+  // text. \colorbox, which is a box, is an FBoxAtom.
+  box->_openable = true;
   return box;
 }
 

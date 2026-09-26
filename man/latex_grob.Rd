@@ -233,9 +233,10 @@ cannot honour are not warned about. \verb{\\documentclass}, \verb{\\usepackage}
 \verb{\\bibliographystyle} draw nothing wherever they are;
 \item title and cross-reference metadata: \verb{\\maketitle}, \verb{\\title\{\}},
 \verb{\\author\{\}}, \verb{\\label\{\}};
-\item alignment: \verb{\\raggedright}, \verb{\\raggedleft}, \verb{\\flushleft}, \verb{\\flushright}
-and \verb{\\relax} do nothing, and in a label neither does \verb{\\centering} (a
-label is placed by \code{hjust}).
+\item alignment: in a label, \verb{\\centering}, \verb{\\raggedleft} and \verb{\\raggedright}
+do nothing (a label is placed by \code{hjust}), nor do \verb{\\flushleft},
+\verb{\\flushright} and \verb{\\relax}. A document aligns each line of the
+paragraphs they are in, and of \code{center}, \code{flushleft} and \code{flushright}.
 }
 
 In a label the content of a \code{table} or \code{figure} float is set in the line

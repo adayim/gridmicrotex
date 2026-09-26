@@ -17,6 +17,9 @@ class_of <- function(line, lang, what) {
 
 # Width of a code line in bigpts, as the emitter renders it.
 code_w <- function(line, cls = NULL) {
+  # Its own device: converting a unit with none open opens R's default one
+  # and leaves it open for every later test.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   tex <- .hl_code_tex(line, cls, function(k) NULL)
   d <- latex_dims(tex, input_mode = "math",
                   gp = grid::gpar(fontsize = 12, fontfamily = "mono"))
@@ -26,6 +29,7 @@ code_w <- function(line, cls = NULL) {
 # Every LaTeX string the box grob actually builds, gathered by walking
 # the children makeContent() produces. Drives the real entry point.
 box_tex <- function(md, style = NULL) {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- markdown_box_grob(md, width = grid::unit(4, "in"), style = style)
   out <- character(0)
   walk <- function(x) {
@@ -92,6 +96,7 @@ test_that("interior alignment is preserved, not just the left margin", {
 })
 
 test_that("code with no repeated spaces renders exactly as it did before", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
   # Guards the claim that the emitter change is width-neutral for
   # ordinary code: a single space between runs measures the same as a
   # space inside one run, so nothing already in a snapshot moves.
@@ -159,7 +164,7 @@ test_that("nothing in a code block is interpreted as math or LaTeX", {
   # An inline code span was already correct; keep it that way.
   expect_match(.md_to_tex("`$x$`"), "\\$x\\$", fixed = TRUE)
   # Prose outside a fence must still render real math, not a literal.
-  expect_match(.md_to_tex("value $x$ here"), "\\text{value }x", fixed = TRUE)
+  expect_identical(.md_to_tex("value $x$ here"), "value $x$ here")
 })
 
 test_that("#pop!Context validates its push target", {

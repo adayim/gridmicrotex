@@ -13,6 +13,21 @@ test_that("\\cline past the last column stays inside the table", {
   expect_lte(rule$x2, t$bbox[["width"]] + 0.01)
 })
 
+test_that("an empty \\multirow and numbers past any range draw, not crash", {
+  # All found by the engine fuzzer. An empty \multirow cell was a null atom
+  # that crashed R when laid out; a number past an int's range was
+  # converted as it was, which is undefined (\cline, \multirow's count).
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  cells <- function(tex) {
+    r <- suppressWarnings(latex_tree(tex, input_mode = "math"))$records
+    r$glyph[r$type == "glyph"]
+  }
+  expect_length(cells("\\begin{array}{ll}\\multirow{2}{*}{} & b \\\\ c & d\\end{array}"), 3L)
+  expect_length(cells("\\begin{array}{ll}\\multirow{99999999999}{*}{x} & b \\\\ c & d\\end{array}"), 4L)
+  t <- latex_tree("\\begin{array}{ll} a & b \\\\ \\cline{1e400-2} c & d\\end{array}", input_mode = "math")
+  expect_equal(sum(t$records$type == "line"), 1)
+})
+
 test_that("p{} wraps a cell to a fixed measure", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   long <- "\\text{the quick brown fox jumps over the lazy dog again and again}"

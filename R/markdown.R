@@ -8,8 +8,8 @@
 #   md -> .md_mask_math()          hide math from the markdown parser
 #      -> commonmark::markdown_xml()  CommonMark AST
 #      -> xml2::read_xml()
-#      -> .md_inline_to_tex()      walk the AST, emit LaTeX
-#      -> latex_grob(input_mode = "math")
+#      -> .md_inline_to_tex()      walk the AST, emit LaTeX text
+#      -> latex_grob(input_mode = "document")  (.md_document())
 #
 # Why mask first: CommonMark treats a backslash before ASCII punctuation
 # as an escape, so `$\begin{matrix}a\\b\end{matrix}$` loses its row
@@ -137,49 +137,37 @@
   s <- gsub("'", "\\char39{}", s, fixed = TRUE)
   s <- gsub("`", "\\char96{}", s, fixed = TRUE)
   s <- gsub("-(?=-)", "\\\\char45{}", s, perl = TRUE)
+  # CommonMark decodes &nbsp; to a real U+00A0, which is TeX's `~`: a space
+  # no line breaks at. (After the `~` above, which is a character.)
+  s <- gsub(.MD_NBSP, "~", s, fixed = TRUE)
   # MicroTeX has no \textbackslash -- it would typeset those 13 letters
-  # literally. \backslash is the spelling that works; the empty group
-  # stops it gluing onto a following letter (\backslashx).
-  gsub(.MD_ESC_BS, "\\backslash{}", s, fixed = TRUE)
+  # literally. \backslash is the spelling that works, and it is a math
+  # symbol, so it goes in math, as LaTeX would have it.
+  gsub(.MD_ESC_BS, "$\\backslash$", s, fixed = TRUE)
 }
 
-# Render one markdown text node.
+# Render one markdown text node: the prose escaped, its math spans put
+# back as they were written, delimiters and all.
 #
-# Escape the prose, restore the math spans raw, then -- unless `bare` --
-# hand the result to latex_wrap(). The output of this file is fed to
-# latex_grob() in "math" mode, so prose normally has to arrive already
-# wrapped in \text{} or it would be typeset as spaced math italics.
-# latex_wrap() also strips the `$` delimiters and adds \displaystyle for
-# block math, which is exactly the translation needed.
+# Markdown becomes LaTeX *text*, as pandoc makes it, read in document mode
+# (.md_document()): prose is text there, `$...$` opens math, and \textbf{}
+# and the rest nest as they do in LaTeX.
 #
-# `bare` is for the inside of a text command such as \textbf{}. Those
-# already put their argument in text mode, and a nested \text{} *resets
-# the style*: \textbf{bold} reports font style 2 (bold) but
-# \textbf{\text{bold}} reports 1 (plain), so wrapping there silently
-# throws the emphasis away. Bare content still handles math, because
-# `$...$` opens math mode inside a text command too.
-#
-# Order matters twice over: escape before unmasking, so the escaper never
-# touches a formula; unmask before latex_wrap(), so it can see the real
-# delimiters while escaped prose dollars stay literal.
-.md_text_node <- function(s, spans, bare = FALSE) {
-  one <- function(t) {
-    raw <- .md_unmask_math(.md_escape_tex(t), spans)
-    # Prose backslashes are escaped by now, so an \includegraphics here was
-    # written in a math span. It is read now, like markdown's own images,
-    # so a box fails when it is built rather than when it is drawn.
-    if (grepl("\\includegraphics", raw, fixed = TRUE)) .check_graphics(raw)
-    if (bare) raw else latex_wrap(raw, input_mode = "mixed")
-  }
-  # CommonMark decodes &nbsp; to a real U+00A0. MicroTeX spells it \nbsp,
-  # but only *between* \text{} runs -- inside one it typesets the letters
-  # (measured: \text{a}\nbsp\text{b} is 21bp, matching a real space, while
-  # \text{a\nbsp b} is 25). So the run is split at each one and rejoined.
-  # Left alone when bare, where there is no \text{} to sit between and the
-  # character already renders as a space.
-  if (bare || !grepl(.MD_NBSP, s, fixed = TRUE)) return(one(s))
-  parts <- strsplit(s, .MD_NBSP, fixed = TRUE)[[1]]
-  paste(vapply(parts, one, character(1)), collapse = "\\nbsp ")
+# Order matters: escape before unmasking, so the escaper never touches a
+# formula, while an escaped prose dollar stays literal.
+.md_text_node <- function(s, spans) {
+  raw <- .md_unmask_math(.md_escape_tex(s), spans)
+  # Prose backslashes are escaped by now, so an \includegraphics here was
+  # written in a math span. It is read now, like markdown's own images, so
+  # a box fails when it is built rather than when it is drawn.
+  if (grepl("\\includegraphics", raw, fixed = TRUE)) .check_graphics(raw)
+  raw
+}
+
+# Markdown's LaTeX as the document it is read as: its paragraph is not
+# indented, as a markdown paragraph is not.
+.md_document <- function(tex) {
+  if (nzchar(tex)) paste0("\\noindent ", tex) else tex
 }
 
 # ---------------------------------------------------------------------
@@ -402,16 +390,19 @@
   isTRUE(n >= 600)
 }
 
-# Turn parsed properties into wrapping commands. Several properties nest,
-# so the closer has to match the number opened. `style` names the subset
-# that switches to text mode -- the caller has to emit content inside
-# those bare, and put them back inside a rule (see .md_inline_to_tex).
+# Turn parsed properties into wrapping commands, text-mode LaTeX as the
+# rest of the walker's. Several properties nest, so the closer is built
+# alongside the opener, innermost first.
 #
 # Properties with no inline meaning (margin, padding, text-align ...) are
 # skipped here and read by the block layout instead.
 .md_css_inline_latex <- function(props, base = 20) {
   open <- character(0)
-  text_mode <- character(0)
+  close <- character(0)
+  add <- function(o, c = "}") {
+    open <<- c(open, o)
+    close <<- c(c, close)
+  }
   # `none`, `hidden` and a zero width draw no frame.
   framed <- .md_css_border_drawn(props$border, base)
   # Emitted in declaration order, so the nesting matches what the author
@@ -424,21 +415,21 @@
     val <- if (is.character(val_raw)) tolower(val_raw) else val_raw
     if (prop == "color") {
       hex <- .md_resolve_color(val)
-      if (!is.null(hex)) open <- c(open, paste0("\\textcolor{", hex, "}{"))
+      if (!is.null(hex)) add(paste0("\\textcolor{", hex, "}{"))
     } else if (prop == "text-decoration") {
-      # The three decorations MicroTeX can draw.
-      if (grepl("underline", val, fixed = TRUE)) open <- c(open, "\\underline{")
-      if (grepl("overline", val, fixed = TRUE)) open <- c(open, "\\overline{")
-      if (grepl("line-through", val, fixed = TRUE)) open <- c(open, "\\sout{")
+      # ulem's underline and strike-out, which wrap with their text as a
+      # browser's do. LaTeX has an overline in math only.
+      if (grepl("underline", val, fixed = TRUE)) add("\\uline{")
+      if (grepl("overline", val, fixed = TRUE)) add("$\\overline{\\text{", "}}$")
+      if (grepl("line-through", val, fixed = TRUE)) add("\\sout{")
     } else if (prop == "background") {
-      # \bgcolor fills behind the glyphs with no padding, which is what a
-      # background is; \colorbox would frame them instead. This is how
-      # <mark> has always been drawn.
+      # A background is a highlight, which wraps with its text (\bgcolor,
+      # as soul's \hl); \colorbox would frame it into one box instead.
       #
       # A border alongside it takes the fill as \fcolorbox's second
       # argument, so emitting \bgcolor as well would paint it twice.
       hex <- if (!framed) .md_resolve_color(val) else NULL
-      if (!is.null(hex)) open <- c(open, paste0("\\bgcolor{", hex, "}{"))
+      if (!is.null(hex)) add(paste0("\\bgcolor{", hex, "}{"))
     } else if (prop == "border") {
       if (!framed) next
       # \fcolorbox needs both colours, \fbox neither. MicroTeX has no
@@ -446,21 +437,21 @@
       bd <- .md_css_border(val_raw, base)
       col <- .md_resolve_color(bd$color %||% "")
       fill <- .md_resolve_color(props$background %||% "")
-      open <- c(open, if (!is.null(col) && !is.null(fill)) {
+      add(if (!is.null(col) && !is.null(fill)) {
         paste0("\\fcolorbox{", col, "}{", fill, "}{")
       } else "\\fbox{")
     } else if (prop == "border-style") {
-      if (identical(val, "double")) open <- c(open, "\\doublebox{")
+      if (identical(val, "double")) add("\\doublebox{")
     } else if (prop == "border-radius") {
       # \ovalbox rounds the frame; \cornersize takes the radius as a
       # fraction of the box's smaller side.
-      open <- c(open, "\\ovalbox{")
+      add("\\ovalbox{")
     } else if (prop == "box-shadow") {
-      if (!identical(val, "none")) open <- c(open, "\\shadowbox{")
+      if (!identical(val, "none")) add("\\shadowbox{")
     } else if (prop == "visibility") {
       # \phantom keeps the space and draws nothing, which is exactly what
       # visibility: hidden means (display: none would remove the space).
-      if (identical(val, "hidden")) open <- c(open, "\\phantom{")
+      if (identical(val, "hidden")) add("\\phantom{")
     } else if (prop == "vertical-align") {
       cmd <- if (identical(val, "super")) "\\textsuperscript{"
              else if (identical(val, "sub")) "\\textsubscript{"
@@ -468,53 +459,37 @@
                d <- .md_css_length(val_raw, base, base)
                if (!is.null(d)) sprintf("\\raisebox{%.2fpt}{", d) else NULL
              }
-      if (!is.null(cmd)) open <- c(open, cmd)
+      if (!is.null(cmd)) add(cmd)
     } else if (prop == "transform") {
-      # rotate(Ndeg) / scale(N) / scaleX(-1), the three MicroTeX has.
+      # rotate(Ndeg) / scale(N) / scaleX(-1), the three MicroTeX has. A
+      # transform moves a box without reflowing the text around it, which
+      # is what graphicx's boxes do.
       m <- regmatches(val, regexec("rotate\\(\\s*(-?[0-9.]+)", val))[[1]]
-      if (length(m) == 2L) open <- c(open, paste0("\\rotatebox{", m[2], "}{"))
+      if (length(m) == 2L) add(paste0("\\rotatebox{", m[2], "}{"))
       m <- regmatches(val, regexec("(?<![a-z])scale\\(\\s*([0-9.]+)", val,
                                    perl = TRUE))[[1]]
-      if (length(m) == 2L) open <- c(open, paste0("\\scalebox{", m[2], "}{"))
+      if (length(m) == 2L) add(paste0("\\scalebox{", m[2], "}{"))
       if (grepl("scalex(-1", gsub("[[:space:]]", "", val), fixed = TRUE)) {
-        open <- c(open, "\\reflectbox{")
+        add("\\reflectbox{")
       }
     } else if (prop == "font-size") {
-      # \scalebox scales the whole box, which is what font-size means, and
-      # unlike \underline it keeps the font style around it.
+      # relsize's \textscale: a size relative to the one around it, which
+      # wraps with its text, as a browser's font-size does.
       f <- .md_css_size(val, base)
       # Fixed notation, not format(): that honours getOption("OutDec"), so
-      # a comma locale emitted \scalebox{0,75}, and it switches to
-      # e-notation for a small factor, which the parser cannot read either.
-      if (!is.null(f)) open <- c(open, sprintf("\\scalebox{%.6f}{", f))
+      # a comma locale emitted {0,75}, and it switches to e-notation for a
+      # small factor, which the parser cannot read either.
+      if (!is.null(f)) add(sprintf("\\textscale{%.6f}{", f))
     } else if (prop == "font-weight") {
-      # \textbf switches to text mode itself, so it joins `style` for the
-      # same reason \gmfontfamily does.
-      if (.md_css_is_bold(val)) {
-        open <- c(open, "\\textbf{")
-        text_mode <- c(text_mode, "\\textbf{")
-      }
+      if (.md_css_is_bold(val)) add("\\textbf{")
     } else if (prop == "font-style") {
-      if (val %in% c("italic", "oblique")) {
-        open <- c(open, "\\textit{")
-        text_mode <- c(text_mode, "\\textit{")
-      }
+      if (val %in% c("italic", "oblique")) add("\\textit{")
     } else if (prop == "font-family") {
       fam <- .md_css_family(val_raw)
-      if (nzchar(fam)) {
-        cmd <- paste0("\\gmfontfamily{", fam, "}{")
-        open <- c(open, cmd)
-        # \text{} replaces the whole text font style (macro_fonts.h:12
-        # builds a non-nested FontStyleAtom), which would drop the family
-        # along with any bold. So content goes in bare, and the command
-        # joins the set re-opened inside a rule.
-        text_mode <- c(text_mode, cmd)
-      }
+      if (nzchar(fam)) add(paste0("\\gmfontfamily{", fam, "}{"))
     }
   }
-  list(open = paste(open, collapse = ""),
-       close = strrep("}", length(open)),
-       style = text_mode)
+  list(open = paste(open, collapse = ""), close = paste(close, collapse = ""))
 }
 
 # A `style` attribute straight to wrapping commands.
@@ -530,47 +505,39 @@
 # purpose and fall through to the drop-the-markup-keep-the-text path,
 # which is already the right rendering for them.
 #
-# `bare` says what the command does to the text/math mode:
-#   TRUE -- it switches to text mode itself, so its content must NOT be
-#           wrapped in \text{} or the style is reset and thrown away
-#   NA   -- it leaves the mode alone; content inherits the caller's
-#
-# `reset` marks the commands that typeset their argument as a fresh
-# sub-formula and so lose the bold/italic/mono they sit inside. Measured,
-# not assumed: \textbf{\underline{Hg}} reports no font style at all, while
-# \textbf{\textcolor{red}{Hg}}, \textbf{{\small Hg}} and \textbf{\texttt{Hg}}
-# all keep theirs. Size and colour survive; only the font style is lost.
-.md_tag <- function(open, close = "}", bare = NA, reset = FALSE) {
-  list(open = open, close = close, bare = bare, reset = reset)
+# Each is LaTeX text mode's own command for the effect, and nests as it
+# does in LaTeX: \textbf{\uline{Hg}} is bold and underlined.
+.md_tag <- function(open, close = "}") {
+  list(open = open, close = close)
 }
 
 .MD_HTML_TAGS <- list(
   # font-weight: bold
-  b       = .md_tag("\\textbf{", bare = TRUE),
-  strong  = .md_tag("\\textbf{", bare = TRUE),
+  b       = .md_tag("\\textbf{"),
+  strong  = .md_tag("\\textbf{"),
   # font-style: italic
-  i       = .md_tag("\\textit{", bare = TRUE),
-  em      = .md_tag("\\textit{", bare = TRUE),
-  cite    = .md_tag("\\textit{", bare = TRUE),
-  dfn     = .md_tag("\\textit{", bare = TRUE),
-  var     = .md_tag("\\textit{", bare = TRUE),
-  address = .md_tag("\\textit{", bare = TRUE),
+  i       = .md_tag("\\textit{"),
+  em      = .md_tag("\\textit{"),
+  cite    = .md_tag("\\textit{"),
+  dfn     = .md_tag("\\textit{"),
+  var     = .md_tag("\\textit{"),
+  address = .md_tag("\\textit{"),
   # font-family: monospace
-  code    = .md_tag("\\texttt{", bare = TRUE),
-  kbd     = .md_tag("\\texttt{", bare = TRUE),
-  samp    = .md_tag("\\texttt{", bare = TRUE),
-  tt      = .md_tag("\\texttt{", bare = TRUE),
-  # text-decoration
-  u       = .md_tag("\\underline{", reset = TRUE),
-  ins     = .md_tag("\\underline{", reset = TRUE),
-  s       = .md_tag("\\sout{", reset = TRUE),
-  del     = .md_tag("\\sout{", reset = TRUE),
-  strike  = .md_tag("\\sout{", reset = TRUE),
+  code    = .md_tag("\\texttt{"),
+  kbd     = .md_tag("\\texttt{"),
+  samp    = .md_tag("\\texttt{"),
+  tt      = .md_tag("\\texttt{"),
+  # text-decoration: ulem's, which wrap with their text as a browser's do
+  u       = .md_tag("\\uline{"),
+  ins     = .md_tag("\\uline{"),
+  s       = .md_tag("\\sout{"),
+  del     = .md_tag("\\sout{"),
+  strike  = .md_tag("\\sout{"),
   # vertical-align
-  sub     = .md_tag("\\textsubscript{", reset = TRUE),
-  sup     = .md_tag("\\textsuperscript{", reset = TRUE),
-  # background: yellow. \bgcolor draws the fill behind the glyphs with no
-  # padding, unlike \colorbox, which frames them.
+  sub     = .md_tag("\\textsubscript{"),
+  sup     = .md_tag("\\textsuperscript{"),
+  # background: yellow. \bgcolor fills behind the glyphs with no padding,
+  # and wraps with them, unlike \colorbox, which frames them into a box.
   mark    = .md_tag("\\bgcolor{#FFFF00}{"),
   # font-size: smaller / larger
   small   = .md_tag("{\\small "),
@@ -617,7 +584,7 @@
                                    ignore.case = TRUE))[[1]]
   rest <- gsub(.MD_IMG_TAG, "", txt, perl = TRUE, ignore.case = TRUE)
   if (!length(tags) || nzchar(trimws(rest))) return(NULL)
-  paste(vapply(tags, function(t) .md_html_tag(t, FALSE, base, style, spans)$text,
+  paste(vapply(tags, function(t) .md_html_tag(t, base, style, spans)$text,
                character(1)), collapse = "")
 }
 
@@ -635,18 +602,15 @@
 # rule as markdown's own `[text](url)`.
 .MD_CASCADE_TAGS <- c("span", "a")
 
-# Classify one html_inline node. `bare` is the mode the tag appears in,
-# which <q> needs: its quotation marks are glyphs, not a command, so they
-# have to be wrapped or not like any other text.
+# Classify one html_inline node.
 #
 # Returns a list with `kind`:
-#   "open"  -- emit `open`, push `close` and `bare`
+#   "open"  -- emit `open`, push `close`
 #   "close" -- pop the matching tag, emit its close
 #   "break" -- <br>, a line break; nothing to push
 #   "text"  -- emit `text` as-is; a void element, so nothing to push
 #   "drop"  -- emit nothing (unrecognised markup)
-.md_html_tag <- function(txt, bare = FALSE, base = 20, style = NULL,
-                         spans = character(0)) {
+.md_html_tag <- function(txt, base = 20, style = NULL, spans = character(0)) {
   # CommonMark hands over exactly one tag, so everything up to its final
   # `>` is attributes -- a quoted value may hold a `>` of its own.
   m <- regmatches(txt, regexec("^<\\s*(/?)\\s*([A-Za-z][A-Za-z0-9]*)(.*)>$",
@@ -672,7 +636,7 @@
     # HTML strips the spaces around a URL, so `src=' fig.png '` is fig.png.
     src <- trimws(.md_html_attr(attrs, "src") %||% "")
     # HTML sizes an <img> in pixels, which is exactly what `px` means to
-    # the resolver. A command, so it is emitted bare either way.
+    # the resolver.
     opt <- character(0)
     for (a in c("width", "height")) {
       v <- .md_html_attr(attrs, a)
@@ -702,17 +666,12 @@
                                                 warn = TRUE))
     st <- .md_css_inline_latex(props, base)
     # A span with no usable style still pushes, so </span> pairs cleanly.
-    # font-family opens a text-mode command, so the span then behaves like
-    # <code> and its content must be emitted bare.
-    return(c(list(kind = "open", tag = tag, style = st$style),
-             .md_tag(st$open, st$close,
-                     bare = if (length(st$style)) TRUE else NA)))
+    return(c(list(kind = "open", tag = tag), .md_tag(st$open, st$close)))
   }
   # <q> is the one element whose default rendering adds characters rather
   # than a style: content: open-quote / close-quote.
   if (tag == "q") {
-    q <- if (bare) c("\u201c", "\u201d") else c("\\text{\u201c}", "\\text{\u201d}")
-    return(c(list(kind = "open", tag = "q"), .md_tag(q[1], q[2])))
+    return(c(list(kind = "open", tag = "q"), .md_tag("\u201c", "\u201d")))
   }
   cmd <- .MD_HTML_TAGS[[tag]]
   if (is.null(cmd)) return(list(kind = "drop"))
@@ -726,9 +685,7 @@
 # their text content rather than emitting an unknown command -- MicroTeX
 # does not error on an unknown command, it typesets the command name as
 # red glyphs, so a stray \href would print a red "href" in the label.
-.md_inline_to_tex <- function(node, spans, bare = FALSE,
-                              styles = character(0), base = 20,
-                              style = NULL) {
+.md_inline_to_tex <- function(node, spans, base = 20, style = NULL) {
   kids <- xml2::xml_contents(node)
   if (length(kids) == 0L) return("")
 
@@ -738,21 +695,6 @@
   out <- character(0)
   open_tags <- character(0)   # tag names, innermost last
   open_close <- character(0)  # their closing LaTeX, same order
-  open_bare <- logical(0)     # the mode each one imposes, NA to inherit
-  open_style <- list()        # the font-style commands it adds, if any
-
-  # The mode content is currently in: the innermost tag that imposes one,
-  # or the caller's if none does. This is what lets <b> work at all --
-  # its content is a *sibling* of the tag, so the only way to emit that
-  # sibling bare is to remember that a text-mode tag is open.
-  cur_bare <- function() {
-    set <- which(!is.na(open_bare))
-    if (length(set)) open_bare[set[length(set)]] else bare
-  }
-  # Font-style commands in force here, outermost first. `styles` carries
-  # the ones opened by an enclosing walk (markdown's own ** and *), so a
-  # rule nested inside them can put them back.
-  cur_styles <- function() c(styles, unlist(open_style))
 
   # MicroTeX gives a row holding nothing a height of zero, so consecutive
   # breaks collapse into one and `<br><br>` loses the blank line HTML
@@ -760,77 +702,48 @@
   # puts that row back at exactly the height of a real one.
   row_empty <- TRUE
   emit_break <- function() {
-    b <- if (row_empty) "\\vphantom{\\text{Ag}}\\\\" else "\\\\"
+    b <- if (row_empty) "\\vphantom{Ag}\\\\" else "\\\\"
     row_empty <<- TRUE
     b
   }
+  # The walk of a child node's own inline content (emphasis, a link).
+  inner <- function(k) .md_inline_to_tex(k, spans, base, style)
+  # What a cascade rule for `tag` wraps its content in.
+  rule <- function(tag) .md_css_inline_latex(.md_cascade(style %||% markdown_style(), tag), base)
 
-  emit_one <- function(k, nm, bare, sty) {
+  emit_one <- function(k, nm) {
     switch(nm,
-      text = .md_text_node(xml2::xml_text(k), spans, bare = bare),
-      # \textbf/\textit/\texttt switch to text mode themselves, so their
-      # content is emitted bare -- a nested \text{} would reset the style
-      # and lose the emphasis entirely.
+      text = .md_text_node(xml2::xml_text(k), spans),
       # Routed through the cascade like <code> is, so `strong { color: }`
       # and `em { color: }` work -- the tag vocabulary is HTML's names,
       # and these two are the tags markdown's own ** and * produce.
       strong = {
-        cd <- .md_css_inline_latex(
-          .md_cascade(style %||% markdown_style(), "strong"), base)
-        paste0(cd$open, "\\textbf{",
-               .md_inline_to_tex(k, spans, TRUE,
-                                 c(sty, cd$style, "\\textbf{"), base, style),
-               "}", cd$close)
+        cd <- rule("strong")
+        paste0(cd$open, "\\textbf{", inner(k), "}", cd$close)
       },
       emph = {
-        cd <- .md_css_inline_latex(
-          .md_cascade(style %||% markdown_style(), "em"), base)
-        paste0(cd$open, "\\textit{",
-               .md_inline_to_tex(k, spans, TRUE,
-                                 c(sty, cd$style, "\\textit{"), base, style),
-               "}", cd$close)
+        cd <- rule("em")
+        paste0(cd$open, "\\textit{", inner(k), "}", cd$close)
       },
-      # \sout, \cancel, \bcancel and \xcancel are all registered in
-      # MicroTeX (macro_def.cpp); \sout is the horizontal rule that
-      # matches markdown's ~~strike~~. It typesets its argument as a fresh
-      # sub-formula, which drops any font style around it -- so **~~x~~**
-      # came out unbolded until the enclosing commands were re-opened
-      # inside it.
-      strikethrough = paste0("\\sout{", paste(sty, collapse = ""),
-                             .md_inline_to_tex(
-                               k, spans, if (length(sty)) TRUE else bare,
-                               sty, base, style),
-                             strrep("}", length(sty)), "}"),
+      # ulem's \sout, which wraps with its text.
+      strikethrough = paste0("\\sout{", inner(k), "}"),
       # Code spans are literal. Restore any masked math first so the
       # sentinel never leaks, then escape the lot -- `$x$` in backticks
       # is meant to be shown as characters, not typeset as math.
       # A `code` rule in the stylesheet wraps the result; \texttt is the
       # built-in default that a rule adds to rather than replaces.
       code = {
-        cd <- .md_css_inline_latex(
-          .md_cascade(style %||% markdown_style(), "code"), base)
+        cd <- rule("code")
         paste0(cd$open, "\\texttt{",
                .md_escape_tex(.md_unmask_math(xml2::xml_text(k), spans)),
                "}", cd$close)
       },
       # Grid has no clickable link, so the destination is dropped and only
       # the text is kept -- but it is styled through the `a` tag, so it
-      # still reads as a link. \underline / \textcolor typeset their
-      # argument as a fresh sub-formula and drop the font style around
-      # them, so any enclosing bold/italic is re-opened inside, exactly as
-      # ~~strike~~ does above.
+      # still reads as a link.
       link = {
-        ln <- .md_css_inline_latex(
-          .md_cascade(style %||% markdown_style(), "a"), base)
-        if (!nzchar(ln$open)) {
-          .md_inline_to_tex(k, spans, bare, sty, base, style)
-        } else {
-          paste0(ln$open, paste(sty, collapse = ""),
-                 .md_inline_to_tex(k, spans,
-                                   if (length(sty)) TRUE else bare,
-                                   sty, base, style),
-                 strrep("}", length(sty)), ln$close)
-        }
+        ln <- rule("a")
+        paste0(ln$open, inner(k), ln$close)
       },
       # A real inline image, or an error saying why it cannot be one. The
       # check is made here, not left to the resolver, so markdown_box_grob()
@@ -849,14 +762,10 @@
         } else NA_integer_
         if (is.na(n)) "" else paste0("\\textsuperscript{", n, "}")
       },
-      # A soft line break is a word space. In math mode it needs to be an
-      # explicit \text{ } box, because a bare space between two \text{}
-      # runs is discarded there and the words either side would run
-      # together ("islong"). Inside a text command a plain space is
-      # already a space, and \text{ } would reset the style.
-      softbreak     = if (bare) " " else "\\text{ }",
+      # A soft line break is a word space.
+      softbreak     = " ",
       # Anything else unknown: drop the markup, keep the text.
-      .md_text_node(xml2::xml_text(k), spans, bare = bare)
+      .md_text_node(xml2::xml_text(k), spans)
     )
   }
 
@@ -871,7 +780,8 @@
     ruby <<- NULL
     if (!nzchar(r$base)) return("")
     if (!nzchar(r$gloss)) return(r$base)
-    paste0("\\overset{\\scalebox{0.5}{", r$gloss, "}}{", r$base, "}")
+    # \overset is math; the base and the gloss are text in it.
+    paste0("$\\overset{\\text{\\scalebox{0.5}{", r$gloss, "}}}{\\text{", r$base, "}}$")
   }
 
   for (k in kids) {
@@ -886,7 +796,7 @@
     if (!is.null(ruby) && !identical(nm, "html_inline")) {
       # Captured exactly as it would render outside a ruby, because a
       # <ruby> with no <rt> falls back to emitting the base alone.
-      s <- emit_one(k, nm, cur_bare(), cur_styles())
+      s <- emit_one(k, nm)
       if (isTRUE(ruby$in_rt)) ruby$gloss <- paste0(ruby$gloss, s)
       else ruby$base <- paste0(ruby$base, s)
       next
@@ -906,34 +816,16 @@
       # way to write a blank line: "one<br>\n<br>\ntwo".
       blank <- identical(nm, "softbreak") ||
         (identical(nm, "text") && !nzchar(trimws(xml2::xml_text(k))))
-      s <- emit_one(k, nm, cur_bare(), cur_styles())
+      s <- emit_one(k, nm)
       if (!blank && nzchar(s)) row_empty <- FALSE
       out <- c(out, s)
       next
     }
-    tg <- .md_html_tag(xml2::xml_text(k), cur_bare(), base, style, spans)
+    tg <- .md_html_tag(xml2::xml_text(k), base, style, spans)
     if (identical(tg$kind, "open")) {
-      sty <- cur_styles()
-      # The font-style commands this tag contributes: \textbf, \textit,
-      # \texttt and the like. A <span> can bring several (font-family);
-      # everything else brings its own open string or none. Captured
-      # before `bare` is rewritten below.
-      adds <- if (!is.null(tg$style)) tg$style
-              else if (isTRUE(tg$bare)) tg$open
-              else character(0)
-      if (isTRUE(tg$reset) && length(sty)) {
-        # Re-open the font-style commands inside, so the rule (or script)
-        # does not strip the bold/italic/mono it is nested in.
-        out <- c(out, tg$open, sty)
-        tg$close <- paste0(strrep("}", length(sty)), tg$close)
-        tg$bare <- TRUE
-      } else {
-        out <- c(out, tg$open)
-      }
+      out <- c(out, tg$open)
       open_tags <- c(open_tags, tg$tag)
       open_close <- c(open_close, tg$close)
-      open_bare <- c(open_bare, tg$bare)
-      open_style <- c(open_style, list(adds))
     } else if (identical(tg$kind, "close")) {
       # Close the innermost matching tag. Anything opened inside it that
       # was never closed is closed here too, so the braces stay balanced
@@ -944,8 +836,6 @@
         out <- c(out, rev(open_close[seq(i, length(open_close))]))
         open_tags <- open_tags[seq_len(i - 1L)]
         open_close <- open_close[seq_len(i - 1L)]
-        open_bare <- open_bare[seq_len(i - 1L)]
-        open_style <- open_style[seq_len(i - 1L)]
       }
       # An unmatched closing tag is just stray markup: drop it.
     } else if (identical(tg$kind, "break")) {
@@ -1008,11 +898,12 @@
   invisible(md)
 }
 
-# Convert markdown to a single LaTeX string for input_mode = "math",
-# flattening block structure: paragraphs are joined with `\\` line
-# breaks and headings/lists/quotes lose their block formatting. This is
-# what markdown_grob() uses. markdown_box_grob() keeps block structure
-# by stacking each block as its own grob instead.
+# Convert markdown to a single string of LaTeX text, flattening block
+# structure: paragraphs are joined with `\\` line breaks and
+# headings/lists/quotes lose their block formatting. This is what
+# markdown_grob() reads in document mode (.md_document()).
+# markdown_box_grob() keeps block structure by stacking each block as its
+# own grob instead.
 .md_to_tex <- function(md, base = 20, style = NULL) {
   parsed <- .md_parse_doc(md)
   blocks <- xml2::xml_children(parsed$doc)
@@ -1046,13 +937,7 @@
     st <- style %||% markdown_style()
     ilat <- .md_css_inline_latex(
       .md_cascade(st, tag, inherited = .md_cascade(st, "body")), base)
-    # A text-mode command resets the style of a nested \text{}, so the
-    # content goes in bare when one is open -- the same rule the span
-    # path follows.
-    inner <- .md_inline_to_tex(b, parsed$spans,
-                               bare = length(ilat$style) > 0L,
-                               styles = ilat$style, base = base,
-                               style = style)
+    inner <- .md_inline_to_tex(b, parsed$spans, base = base, style = style)
     if (!nzchar(inner)) return("")
     paste0(ilat$open, inner, ilat$close)
   }, character(1))
@@ -1183,10 +1068,11 @@ markdown_grob <- function(md, style = NULL, ...) {
     stop("`input_mode` is not accepted by markdown_grob(): markdown ",
          "decides for itself what is prose and what is math.", call. = FALSE)
   }
-  # The walker has already produced \text{}-wrapped LaTeX, so bypass
-  # latex_wrap() -- running it again would double-wrap the prose.
-  latex_grob(.md_to_tex(md, .md_base_size(list(...)$gp), .md_as_style(style)),
-             input_mode = "math", ...)
+  # A document's figures are lenient (a paper's PDFs); a label's are not.
+  .images_strict(
+    latex_grob(.md_document(.md_to_tex(md, .md_base_size(list(...)$gp), .md_as_style(style))),
+               input_mode = "document", ...)
+  )
 }
 
 #' @rdname markdown_grob

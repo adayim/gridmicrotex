@@ -779,6 +779,8 @@ struct Expander::Impl {
         open.tok.environment = !transparent             ? (isDisplayEnvironment(name) ? 3 : 1)
                                : isFloatEnvironment(name) ? 4
                                : name == "center"        ? 5
+                               : name == "flushleft"     ? 6
+                               : name == "flushright"    ? 7
                                                           : 2;
       }
       frames.back().pushback.push_back(std::move(open));

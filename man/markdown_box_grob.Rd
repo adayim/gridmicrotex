@@ -87,15 +87,17 @@ subset, works inside every block.
 }
 \details{
 Where \code{\link{markdown_grob}} flattens everything into a single
-run, this stacks one grob per block. That is what makes headings, list
-indentation, block-quote rules and background fills possible:
-MicroTeX has no concept of any of them, and its line breaking does not
-reach inside the cells it uses for list and table layout.
+run, this stacks one grob per block, which is what makes margins,
+padding, background fills, borders and block-quote rules possible. Each
+block's content is LaTeX text laid out by the engine, so it wraps,
+coloured, sized, underlined and highlighted spans included, and a
+block's \code{text-align} aligns each of its lines.
 
-Two consequences worth knowing. Table cells and code lines are not
-wrapped, so a wide table overflows rather than reflowing. And list
-items are stacked here rather than handed to MicroTeX's
-\code{itemize}, which is what gives them a proper hanging indent.
+A table is as wide as its content when that fits the box. When it does
+not, its wide columns share the width the others leave and their cells
+wrap, as an HTML table shrinks to its container; \code{table-layout:
+fixed} divides the width evenly between the columns instead. Code lines
+are not wrapped.
 
 An image on a line of its own is drawn as a block, scaled to fit the
 column but never enlarged past its natural size (pixels are read at

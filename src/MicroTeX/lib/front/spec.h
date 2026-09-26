@@ -124,6 +124,10 @@ bool isCitation(const std::string& name);
  *  it ends the row it is in. */
 bool isRule(const std::string& name);
 
+/** \centering, \raggedleft or \raggedright: they align a document's lines
+ *  to the end of their group, and do nothing in a label. */
+bool isLineAlignment(const std::string& name);
+
 }  // namespace microtex::front
 
 #endif

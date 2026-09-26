@@ -174,9 +174,10 @@
 #'   `\bibliographystyle` draw nothing wherever they are;
 #' * title and cross-reference metadata: `\maketitle`, `\title{}`,
 #'   `\author{}`, `\label{}`;
-#' * alignment: `\raggedright`, `\raggedleft`, `\flushleft`, `\flushright`
-#'   and `\relax` do nothing, and in a label neither does `\centering` (a
-#'   label is placed by `hjust`).
+#' * alignment: in a label, `\centering`, `\raggedleft` and `\raggedright`
+#'   do nothing (a label is placed by `hjust`), nor do `\flushleft`,
+#'   `\flushright` and `\relax`. A document aligns each line of the
+#'   paragraphs they are in, and of `center`, `flushleft` and `flushright`.
 #'
 #' In a label the content of a `table` or `figure` float is set in the line
 #' like any other. A document sets a float where it is written, apart from

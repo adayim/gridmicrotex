@@ -65,3 +65,18 @@ test_that("a macro defined in terms of itself is still stopped, and quickly", {
     expect_lt(as.numeric(Sys.time() - t0, units = "secs"), 5)
   }
 })
+
+test_that("a runaway inside an optional argument is stopped as quickly", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Each expansion opens a \sqrt[ that is never closed, so the argument
+  # collects everything up to the cap -- and the parser used to read it all
+  # again at every level it nested, after the error: 35 to 100 s each.
+  for (tex in c("\\newcommand{\\a}{x\\sqrt[\\a}\\a",
+                "\\newcommand{\\a}[1]{#1#1\\sqrt[\\a{#1}}\\a{xy}",
+                "\\def\\a{\\sqrt[\\a\\a}\\a")) {
+    t0 <- Sys.time()
+    expect_error(latex_dims(tex, input_mode = "math"), "macro defined in terms of itself",
+                 label = tex)
+    expect_lt(as.numeric(Sys.time() - t0, units = "secs"), 5)
+  }
+})

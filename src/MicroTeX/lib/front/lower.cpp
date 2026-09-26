@@ -1,6 +1,8 @@
 #include "front/lower.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -359,7 +361,7 @@ private:
     }
     // Only the lines of a label have indents to suppress; elsewhere it is
     // what it was when the prelude dropped it.
-    if (name == "noindent" || name == "centering") return nullptr;
+    if (name == "noindent" || isLineAlignment(name)) return nullptr;
     // What LaTeX draws for a reference it cannot resolve: a bold ??.
     const auto bold = [](const std::string& s) {
       return sptrOf<FontStyleAtom>(FontStyle::bf, false, literalText(s));
@@ -855,6 +857,20 @@ private:
         const color c = ColorAtom::getColor(rawOf(child(id, 0)));
         return sptrOf<ColorAtom>(body(), TRANSPARENT, c);
       }
+      if (name == "relscale") {
+        // relsize's: a size relative to the one around it, which still
+        // breaks with its text, as \large's does.
+        const std::string raw = rawOf(child(id, 0));
+        char* end = nullptr;
+        const float factor = std::strtof(raw.c_str(), &end);
+        auto a = body();
+        if (a == nullptr) a = sptrOf<EmptyAtom>();
+        if (end == raw.c_str() || !std::isfinite(factor) || factor <= 0) {
+          _diags.warn(x.span, "\\relscale: `" + raw + "' is not a positive number; the size is kept");
+          return a;
+        }
+        return sized(a, factor);
+      }
       // \displaystyle and kin
       auto g = body();
       return sptrOf<StyleAtom>(texStyleOf(name), g == nullptr ? sptrOf<EmptyAtom>() : g);
@@ -1121,10 +1137,11 @@ private:
     bool afterHeading = false;
     /** A document, not a label: its displays go on lines of their own. */
     bool document = false;
-    /** Lines set now are centred: center, or \centering in a document. */
-    bool centring = false;
-    /** The current line was set while centring: centre it when it ends. */
-    bool lineCentred = false;
+    /** How lines set now are aligned, in a document: centred (center,
+     *  \centering), to the right (flushright, \raggedleft), or as usual. */
+    Alignment align = Alignment::left;
+    /** How the current line was set: aligned so when it ends. */
+    Alignment lineAlign = Alignment::left;
     /** Declarations (\small, \color) whose body a document reads line by
      *  line (blockGroup): each part of it set on a line is set under them. */
     std::vector<NodeId> decls;
@@ -1199,19 +1216,21 @@ private:
   }
 
   /** The indent a paragraph opens with, once something goes on its line.
-   *  A centred line has none. */
+   *  A centred or right-aligned line has none. */
   void indentIfNeeded(Label& l) {
     if (!l.indentNext) return;
     l.indentNext = false;
-    if (!l.centring && l.indents) l.line->add(parIndent());
+    // \centering and \raggedleft set \parindent to 0, as LaTeX's do.
+    if (l.align == Alignment::left && l.indents) l.line->add(parIndent());
   }
 
-  /** The current line is done: centred, if it was set while centring. */
+  /** The current line is done: centred or put to the right, if it was set
+   *  so. */
   void finishLine(Label& l) {
-    if (l.lineCentred && l.line->_root != nullptr) {
-      l.line->_root = sptrOf<DisplayAtom>(l.line->_root);
+    if (l.lineAlign != Alignment::left && l.line->_root != nullptr) {
+      l.line->_root = sptrOf<DisplayAtom>(l.line->_root, l.lineAlign);
     }
-    l.lineCentred = false;
+    l.lineAlign = Alignment::left;
   }
 
   Formula& prose(Label& l) {
@@ -1244,7 +1263,7 @@ private:
       l.line->add(wrap(l, sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root)));
       l.drawn = true;
       l.afterHeading = false;
-      if (l.centring) l.lineCentred = true;
+      if (l.align != Alignment::left) l.lineAlign = l.align;
     }
     l.prose.reset();
   }
@@ -1264,7 +1283,7 @@ private:
     indentIfNeeded(l);
     l.drawn = true;
     l.afterHeading = false;
-    if (l.centring) l.lineCentred = true;
+    if (l.align != Alignment::left) l.lineAlign = l.align;
   }
 
   void lineBreak(Label& l, NodeId brk = kNoNode) {
@@ -1305,7 +1324,7 @@ private:
    *  own, so a label sets their content as if they were not there. */
   bool isTransparentGroup(NodeId id) const {
     const Node& x = node(id);
-    return x.kind == NodeKind::group && (x.aux == 2 || x.aux == 4 || x.aux == 5);
+    return x.kind == NodeKind::group && (x.aux == 2 || (x.aux >= 4 && x.aux <= 7));
   }
 
   /** itemize or enumerate, which a document sets apart from its text. */
@@ -1395,17 +1414,17 @@ private:
   /** The content of a group a document sets apart from its paragraphs,
    *  `skip` above and below: a float (table, figure) where it is written,
    *  as LaTeX's [h] placement sets one, with \intextsep's 12pt; or center,
-   *  its lines centred, with \topsep's 8pt. A \centering in either lasts
-   *  to its end. */
-  void blockLines(Label& l, NodeId id, bool centred, const char* skip) {
+   *  flushleft or flushright, their lines aligned so, with \topsep's 8pt.
+   *  A \centering in any of them lasts to its end. */
+  void blockLines(Label& l, NodeId id, Alignment align, const char* skip) {
     lineBreak(l);
     if (l.drawn) l.gap = skip;
     l.indentNext = false;
-    const bool centring = l.centring;
-    l.centring = centred;
+    const Alignment was = l.align;
+    l.align = align;
     feedLines(l, child(id, 0));
     lineBreak(l);
-    l.centring = centring;
+    l.align = was;
     l.gap = skip;
     l.indentNext = false;
   }
@@ -1454,7 +1473,7 @@ private:
         break;
       case NodeKind::command:
         found = !x.flag && ((isBreakNode(x) && x.aux == 1) || isHeading(x.text) ||
-                            x.text == "noindent" || x.text == "centering");
+                            x.text == "noindent" || isLineAlignment(x.text));
         break;
       case NodeKind::environment:
         found = isList(id) || isDisplayEnvironment(x.text);
@@ -1480,12 +1499,12 @@ private:
     // What came before is set without the declaration.
     beforeProse(l);
     endProse(l);
-    const bool centring = l.centring;
+    const Alignment was = l.align;
     if (declaration) l.decls.push_back(id);
     feedLines(l, declaration ? child(id, count(id) - 1) : child(id, 0));
     endProse(l);
     if (declaration) l.decls.pop_back();
-    l.centring = centring;
+    l.align = was;
   }
 
   /** The items of `list` onto the label's lines. */
@@ -1518,13 +1537,17 @@ private:
   void feedItem(Label& l, NodeId id) {
     const Node& x = node(id);
     {
-      if (l.document && x.kind == NodeKind::group && (x.aux == 4 || x.aux == 5)) {
-        blockLines(l, id, x.aux == 5, x.aux == 5 ? "0.8em" : "1.2em");
+      if (l.document && x.kind == NodeKind::group && x.aux >= 4 && x.aux <= 7) {
+        // A float (4), center (5), flushleft (6) or flushright (7).
+        const Alignment align = x.aux == 5 ? Alignment::center
+                                : x.aux == 7 ? Alignment::right
+                                             : Alignment::left;
+        blockLines(l, id, align, x.aux == 4 ? "1.2em" : "0.8em");
       } else if (isTransparentGroup(id)) {
         // \centering lasts to the end of the group it is in.
-        const bool centring = l.centring;
+        const Alignment was = l.align;
         feedLines(l, child(id, 0));
-        l.centring = centring;
+        l.align = was;
       } else if (l.document && (x.kind == NodeKind::declaration ||
                                 (x.kind == NodeKind::group && x.aux == 0)) && hasBlock(id)) {
         blockGroup(l, id);
@@ -1551,11 +1574,15 @@ private:
       } else if (x.kind == NodeKind::command && !x.flag && x.text == "noindent") {
         // LaTeX's one way to say this paragraph is not indented.
         l.indentNext = false;
-      } else if (x.kind == NodeKind::command && !x.flag && x.text == "centering") {
-        // Centres the paragraph it is in and those after it, to the end of
+      } else if (x.kind == NodeKind::command && !x.flag && isLineAlignment(x.text)) {
+        // Aligns the paragraph it is in and those after it, to the end of
         // the group; a label is a grob's own business, so only a document's.
-        l.centring = l.document;
-        if (l.document && !l.broken) l.lineCentred = true;
+        if (l.document) {
+          l.align = x.text == "centering"    ? Alignment::center
+                    : x.text == "raggedleft" ? Alignment::right
+                                             : Alignment::left;
+          if (!l.broken) l.lineAlign = l.align;
+        }
       } else if (x.kind == NodeKind::command && !x.flag && isHeadingLine(x.text)) {
         headingLine(l, id);
       } else if (isSpace(x)) {

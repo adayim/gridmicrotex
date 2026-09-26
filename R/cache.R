@@ -158,10 +158,19 @@ latex_cache_info <- function() {
                                 tex_style = "", text_family = "",
                                 justify = FALSE, optimal_break = FALSE,
                                 input_mode = "math") {
+  # One figure that cannot be drawn -- a PDF, say, as most papers' are --
+  # must not cost a whole document: it warns and draws the file's name.
+  # A label, where the figure is the point, still stops, markdown's too
+  # (.images_strict()). Which of the two is part of the key: a layout with
+  # a file's name in place of its figure must not answer for a parse that
+  # would have stopped.
+  lenient <- !.image_state$strict ||
+    (identical(input_mode, "document") && !isTRUE(.image_state$label))
   key <- .parse_cache_key(tex, text_size, line_space, fg_color, max_width,
                           math_font, main_font, text_family, use_path,
                           tex_style, justify, optimal_break,
-                          device = .cache_device(), input_mode = input_mode)
+                          device = .cache_device(),
+                          input_mode = paste0(input_mode, if (lenient) "+lenient"))
   hit <- .cache_get(key, valid = .images_current)
   if (!is.null(hit)) return(hit)
   # Measuring needs a device. With none open, one pdf(NULL) serves the
@@ -184,10 +193,7 @@ latex_cache_info <- function() {
     main_font = main_font, use_path = use_path, tex_style = tex_style,
     justify = justify, optimal_break = optimal_break, input_mode = input_mode
   )
-  # One figure that cannot be drawn -- a PDF, say, as most papers' are --
-  # must not cost a whole document: it warns and draws the file's name.
-  # A label, where the figure is the point, still stops.
-  layout <- if (identical(input_mode, "document")) .images_lenient(parse()) else parse()
+  layout <- if (lenient) .images_lenient(parse()) else parse()
   if (length(used$stamps)) attr(layout, "images") <- used$stamps
   .cache_put(key, layout)
   layout

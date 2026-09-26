@@ -382,11 +382,22 @@
 # so only a file gone since then reaches this.
 .image_state <- new.env(parent = emptyenv())
 .image_state$strict <- TRUE
+.image_state$label <- FALSE
 
 .images_lenient <- function(expr) {
   old <- .image_state$strict
   .image_state$strict <- FALSE
   on.exit(.image_state$strict <- old)
+  expr
+}
+
+# A markdown label is read as a document but is a label: an image in it
+# that cannot be drawn stays an error, as in any label, rather than taking
+# a document's leniency (.parse_latex_cached()).
+.images_strict <- function(expr) {
+  old <- .image_state$label
+  .image_state$label <- TRUE
+  on.exit(.image_state$label <- old)
   expr
 }
 

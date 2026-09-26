@@ -72,7 +72,8 @@ test_that("every command is read by the front end or has a handler, and no handl
                      "href", "huge", "Huge", "it", "kern", "large", "Large", "LARGE",
                      "left", "limits", "makeatletter", "makeatother", "noindent",
                      "nolimits", "normal", "normalsize", "over", "overwithdelims",
-                     "pageref", "par", "paragraph", "ref", "right", "rm", "scriptscriptstyle",
+                     "pageref", "par", "paragraph", "raggedleft", "raggedright", "ref",
+                     "relscale", "right", "rm", "scriptscriptstyle",
                      "scriptsize", "scriptstyle", "section", "sf", "small", "subsection",
                      "subsubsection", "textstyle", "tiny", "tt", "url"))
 })

@@ -86,6 +86,25 @@ sptr<Atom> specAtom(const SpecArgument& a) {
   return row;
 }
 
+// A paragraph cell, `box` broken to the column's width `w`, with each of
+// its lines aligned in it as `>{\centering}` or `>{\raggedleft}` sets them.
+sptr<Box> alignedCell(const sptr<Box>& box, float w, Alignment align) {
+  const auto lines = dynamic_pointer_cast<VBox>(box);
+  if (align == Alignment::left || lines == nullptr || !lines->_lines) {
+    return sptrOf<HBox>(box, w, align);
+  }
+  auto out = sptrOf<VBox>();
+  out->_lines = true;
+  for (const auto& line : lines->_children) {
+    if (dynamic_pointer_cast<HBox>(line) != nullptr) {
+      out->add(sptrOf<HBox>(line, w, align));
+    } else {
+      out->add(line);  // the space between lines
+    }
+  }
+  return sptrOf<HBox>(out, w, Alignment::left);
+}
+
 }  // namespace
 
 void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
@@ -95,6 +114,7 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
   // clear first
   lpos.clear();
   _fillCols.clear();
+  _lineAligns.clear();
   while (pos < len) {
     ch = opt[pos];
     switch (ch) {
@@ -145,6 +165,16 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
       case '>': {
         const SpecArgument a = specArgument(opt, pos + 1);
         _columnSpecifiers[lpos.size()] = specAtom(a);
+        // array's `>{\centering\arraybackslash}p{3cm}`: the declaration that
+        // aligns the lines of the column's paragraphs.
+        const int col = static_cast<int>(lpos.size());
+        if (a.text.find("\\centering") != string::npos) {
+          _lineAligns[col] = Alignment::center;
+        } else if (a.text.find("\\raggedleft") != string::npos) {
+          _lineAligns[col] = Alignment::right;
+        } else if (a.text.find("\\raggedright") != string::npos) {
+          _lineAligns[col] = Alignment::left;
+        }
         pos = a.end - 1;
       } break;
       case 'p':
@@ -202,6 +232,26 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
   }
 
   if (lpos.empty()) lpos.push_back(Alignment::center);
+
+  // A paragraph column's alignment is its lines': a cell that is one short
+  // line sits in the column as the lines of a long one do. (In an l, c or
+  // r column, whose cell is no paragraph, \centering does nothing.)
+  for (auto it = _lineAligns.begin(); it != _lineAligns.end();) {
+    const int col = it->first;
+    const bool paragraph = _colWidths.count(col) > 0 ||
+                           std::find(_fillCols.begin(), _fillCols.end(), col) != _fillCols.end();
+    if (!paragraph || col >= static_cast<int>(lpos.size())) {
+      it = _lineAligns.erase(it);
+      continue;
+    }
+    lpos[col] = it->second;
+    ++it;
+  }
+}
+
+Alignment MatrixAtom::lineAlign(int col) const {
+  const auto it = _lineAligns.find(col);
+  return it == _lineAligns.end() ? Alignment::left : it->second;
 }
 
 vector<float> MatrixAtom::getColumnSep(Env& env, float width) {
@@ -530,7 +580,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
           auto cell = boxarr[i][j];
           auto [wasSplit, splitBox] = BoxSplitter::split(cell, w, env.lineSpace());
           (void)wasSplit;
-          boxarr[i][j] = sptrOf<HBox>(splitBox, w, Alignment::left);
+          boxarr[i][j] = alignedCell(splitBox, w, lineAlign(j));
         }
       }
 
@@ -556,11 +606,13 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   }
 
   // `X`: what the other columns and the space between them leave of the
-  // text width, shared by the X columns. A cell wider than that is made
-  // again at that width -- so a list or a table inside it fits in turn --
-  // with the word-level runs the breaker needs, and broken to it as p{}
-  // is. A column whose cells all fit is left as it was: a short list in a
-  // label keeps its own width, which is what `hjust` places.
+  // text width, shared by the X columns. A column whose cells all fit its
+  // share is left as it was -- a short list in a label keeps its own
+  // width, which is what `hjust` places -- and what it does not use goes
+  // to the others, as an HTML table shares its width. A cell wider than
+  // its column's share is made again at that width -- so a list or a table
+  // inside it fits in turn -- with the word-level runs the breaker needs,
+  // and broken to it as p{} is.
   if (!_fillCols.empty() && env.textWidth() != POS_INF) {
     float used = 0;
     for (int j = 0; j < cols; j++) {
@@ -574,13 +626,33 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
       const auto it = _vlines.find(j);
       if (it != _vlines.end()) used += it->second->getWidth(env);
     }
-    const float xw = (env.textWidth() - used) / static_cast<float>(_fillCols.size());
+    float avail = env.textWidth() - used;
+    vector<int> wide;
+    for (const int j : _fillCols) {
+      if (j < cols) wide.push_back(j);
+    }
+    // Those that fit an equal share keep their width; the share of the
+    // rest grows by what they left, until none more fit.
+    for (bool fitted = true; fitted && !wide.empty();) {
+      fitted = false;
+      const float share = avail / static_cast<float>(wide.size());
+      for (auto it = wide.begin(); it != wide.end();) {
+        if (colWidth[*it] <= share) {
+          avail -= colWidth[*it];
+          it = wide.erase(it);
+          fitted = true;
+        } else {
+          ++it;
+        }
+      }
+    }
+    const float xw = wide.empty() ? 0.f : avail / static_cast<float>(wide.size());
     if (xw > 0) {
       for (int i = 0; i < rows; i++) {
         const int size = _matrix->_array[i].size();
         bool made = false;
-        for (const int j : _fillCols) {
-          if (j >= size || j >= cols || colWidth[j] <= xw) continue;
+        for (const int j : wide) {
+          if (j >= size) continue;
           const sptr<Atom>& atom = _matrix->_array[i][j];
           if (atom == nullptr || boxarr[i][j]->_type != AtomType::none) continue;
           if (boxarr[i][j]->_width <= xw) continue;
@@ -591,7 +663,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
           }
           const auto [wasSplit, splitBox] = BoxSplitter::split(cell, xw, env.lineSpace());
           (void)wasSplit;
-          boxarr[i][j] = sptrOf<HBox>(splitBox, xw, Alignment::left);
+          boxarr[i][j] = alignedCell(splitBox, xw, lineAlign(j));
           made = true;
         }
         if (!made) continue;
@@ -602,9 +674,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
           lineDepth[i] = max(boxarr[i][j]->_depth, lineDepth[i]);
         }
       }
-      for (const int j : _fillCols) {
-        if (j < cols) colWidth[j] = min(colWidth[j], xw);
-      }
+      for (const int j : wide) colWidth[j] = min(colWidth[j], xw);
     }
   }
 
