@@ -1,59 +1,9 @@
 # gridmicrotex 0.2.0
 
-- LaTeX is read by a new parser that follows TeX's rules, and long input is several times faster to read.
-- PNG and JPEG figures load about ten times faster, and text is measured about twice as fast.
-- New `input_mode = "document"` reads a LaTeX document body: a line end is a space, a blank line or `\par` starts an indented paragraph, `\section` to `\paragraph` are numbered headings, display math is centred on a line of its own, and lists and floats are set apart from the text. See `vignette("documents")`.
-- Malformed LaTeX no longer stops a label: the rest is drawn, with one warning listing each problem at its line:col.
-- New `latex_options(device_math = TRUE)` renders `$…$` math in labels drawn to the graphics device, so **base** graphics gets real LaTeX — `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()` — with no other change to your code. It intercepts the device, so grid, ggplot2 and lattice text is covered too.
-- `latex_options()` now resets an option passed as `NULL`, as `options()` does, so the list it returns can be passed back with `do.call()` to restore those settings.
-- An image that cannot be drawn is now an error saying why, and names the package to install when a reader is missing. This covers a missing file, a URL, an unsupported format or an unreadable file, in `\includegraphics`, markdown `![]()` and `<img>`. It used to draw the file name or the alt text. Base-graphics labels are unchanged, and a document (`input_mode = "document"`) warns and draws the file name, so that one figure does not cost the whole document.
-- A space after a command is dropped, as in TeX: `\LaTeX is` draws "LaTeXis"; write `\LaTeX{} is` or `\LaTeX\ is`. A run of spaces is one space.
-- In labels, `_`, `^`, `#` and `&` outside math are drawn with a warning, as LaTeX refuses them there: write `$x^2$`, or `\_`, `\#`, `\&` for the character.
-- The items of `itemize` and `enumerate` and the cells of `tabular` are text, as in LaTeX: put math in them between `$…$`. With `input_mode = "math"` they are math, as before.
-- `--` and `---` in text are dashes, and `` ` `` and `'`, single or doubled, are curly quotes, as in TeX, except in `\texttt{}`, `\tt` and `\url{}`. Markdown prose keeps its quotes and hyphens, as CommonMark does.
-- A prime is TeX's `^{\prime}`, and `` ` `` and `"` in math are those characters, not a backprime and a double prime.
-- `\|` is ‖, as in LaTeX, so `Vmatrix` has double bars.
-- `\ref`, `\eqref`, `\pageref`, `\cite` and `\footnote` warn and draw what LaTeX draws when it cannot resolve them (a bold `??` or `[?]`, the note's text), instead of their names in red; so do natbib's `\citep`, `\citet` and `\citealp`.
-- A pasted paper's `abstract`, `thebibliography` (with `\bibitem` and `\newblock`), `\em`, `\boldmath` and booktabs' `\specialrule` are read, and `\textwidth`, `\linewidth` and `\columnwidth` work in lengths (`0.5\textwidth`). In a whole LaTeX file the preamble is read for its definitions and not drawn, and what follows `\end{document}` is ignored, as in LaTeX.
-- `\definecolor` takes xcolor's `RGB` (0–255) and `HTML` (hexadecimal) models.
-- Text under `\large`, `\small` and the other sizes, `\color` or `\textcolor` wraps at `max_width`, and so do a list item, hanging under its own text, and a heading, hanging from its number; they used to run past it. List labels of different widths are set right, as in LaTeX.
-- `minipage` sets its paragraphs to its width (and height, if given), placed by its `[t]`, `[c]` or `[b]` position, so figures can sit side by side.
-- `\raggedleft`, `\raggedright`, `flushleft` and `flushright` align a document's lines, and `>{\centering\arraybackslash}` or `>{\raggedleft\arraybackslash}` before a `p{}` or `X` column aligns the lines of its cells.
-- New `\uline` (ulem), `\textscale` and `\relscale` (relsize); `\sout` wraps with its text, and `\bgcolor` too.
-- `\text`, `\mbox` and `\textsuperscript` keep the bold or italic around them, and `\underline` and `\phantom` of text are text, as in LaTeX.
-- Markdown is read as LaTeX text, as pandoc writes it: a paragraph keeps within its box, coloured, sized, underlined and highlighted spans wrap, each line of a centred or right-aligned block is aligned, and bold and italic reach code blocks. A table wider than its box shares the width between its columns and wraps their cells.
-- A definition inside `{…}` ends with the group, as in TeX; `\gdef` is global.
-- An unknown environment draws its body instead of its name in red: as text in prose, as LaTeX does, and as an array in math. An unclosed environment is closed at the end, and a stray `\end{…}` is dropped.
-- Starred forms work (`\operatorname*`, `\newcommand*`, `\DeclareMathOperator*`, `\hspace*`, `\\*`), as do `\def` with delimited parameters, `\let`, `\providecommand`, `\newenvironment` with arguments, and `\ensuremath`.
-- Bug fix: `\cline{a-b}` naming a column past a table's last read past the end of its column widths.
-- Bug fix: a line ran past `max_width` when its last break was the space ending a run of text, as before `\textbf{}` or inline math; markdown paragraphs did so almost always.
-- Bug fix: `\underline{…}` as a whole label was broken at `max_width`, its rule left at full width; a box is kept whole, as in LaTeX.- Bug fix: math drawn to base `pdf()` used a font the file did not embed, so it was garbled in any viewer without that font; `pdf()` and `postscript()` now draw it as outlines. Use `cairo_pdf()` for selectable math.
-- Bug fix: an argument without braces took one byte rather than one character, garbling `\frac αβ` and `\hat é`.
-- Bug fix: a macro argument's own `#2` was replaced by the macro's second argument.
-- Bug fix: a `define_macro("RR", …)` macro also replaced the `\RR` in `\\RR`.
-- Bug fix: `\\[len]` drew "[len]" instead of adding the space.
-- Bug fix: `\color` after `\\` did not colour what followed it.
-- Bug fix: `\middle` failed with a named delimiter such as `\vert`, and a delimiter that is not one failed the whole label.
-- Bug fix: a `\left` with no `\right` did not stretch its delimiter.
-- Bug fix: `\textsuperscript`, `\textsubscript` and `\degree` in text drew a literal `^`.
-- Bug fix: `\#`, `\$`, `\%`, `\&` and `\_` in text were drawn as math symbols.
-- Bug fix: `\url{}` did not draw `~` and `\` as written.
-- Bug fix: a line holding only definitions (`\newcommand`, `\definecolor`, …) left a gap in the label.
-- Bug fix: an `<img>` alone on its line in markdown was dropped.
-- Bug fix: a markdown image whose file name contains a `$…$` pair or a brace drew its alt text instead of the image, as did an `<img>` whose `src` was unquoted, upper-case or padded with spaces.
-- Bug fix: a commented-out `% \includegraphics{…}` warned that its file was missing.
-- Bug fix: an error inside a command's argument, such as `\text{}` or `\frac{}{}`, silently dropped the rest of that argument; now only the bad part is lost, with a warning.
-- Bug fix: `\newcommand` or `\def` of a built-in command such as `\frac` broke it in every later label. `\newcommand` of an existing command is now refused with a warning, as in LaTeX, and `\renewcommand` or `\def` redefines it for that label only.
-- Bug fix: `reset_latex_options()` left a math font set with `latex_options(math_font = )` in effect.
-- Bug fix: a colour at 50% opacity or more was drawn black on Windows.
-- Bug fix: a macro defined in terms of itself hung R; it is now an error.
-- Bug fix: a layout measured on one device was reused on a device of the same kind at a different resolution.
-- Bug fix: `geom_latex()` and `geom_markdown()` failed when a mapped `alpha` was `NA`.
-- Bug fix: `annotate("latex")` and `annotate("markdown")` ignored `latex_options()`: a label was drawn in the default input mode, math font and render mode. They, and `geom_latex()` and `geom_markdown()`, now read the options when the plot is drawn.
-- Bug fix: CSS `border: none` or `border: 0` still drew a frame or table rule, and a `body` border with no colour was not drawn.
-- Bug fix: `clear_macros()` given a number removed an unrelated macro.
-- Bug fix: Ctrl-C was ignored while text in a formula was being measured.
-- Hardened the font reader and the TrueType Collection splitter against malformed input.
+- LaTeX is read by a new, faster parser that follows TeX's rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write `\LaTeX{} is`), and `_`, `^`, `#` and `&` outside math warn.
+- New `input_mode = "document"` renders a LaTeX document body, or a whole pasted paper, wrapped at `max_width` (see `vignette("documents")`). Markdown is now laid out the same way, so its paragraphs, styled spans and tables stay within their box.
+- New `latex_options(device_math = TRUE)` renders `$…$` math in base graphics labels.
+- An image that cannot be drawn is now an error saying why, figures load about ten times faster, and many bugs are fixed.
 
 
 # gridmicrotex 0.1.1
