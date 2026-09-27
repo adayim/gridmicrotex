@@ -92,7 +92,7 @@ Input that LaTeX would stop on does not stop a label. What can be read
 is drawn, and a single warning lists each problem with its line and
 column; an unknown command is drawn in red, so it is easy to find:
 
-```{r malformed, fig.height=0.7, fig.width=4, out.width="55%"}
+```{r malformed, fig.height=0.7, fig.width=5, out.width="55%"}
 grid.newpage()
 grid.latex(r"(Area $\pi r^2$, see \nosuchcommand{here})")
 ```

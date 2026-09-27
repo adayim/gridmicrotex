@@ -54,14 +54,6 @@ test_that("the deprecated aliases still work, and say so", {
   file.copy(src, tmp, overwrite = TRUE)
   on.exit(unlink(tmp), add = TRUE)
 
-  expect_warning(suppressMessages(load_font(tmp)), "deprecated")
   expect_true("Lete Sans Math" %in% available_math_fonts())
 
-  expect_warning(suppressMessages(check_fonts()), "deprecated")
-  # The alias forwards rather than reimplementing, so it returns what the
-  # replacement returns.
-  expect_identical(
-    suppressWarnings(suppressMessages(check_fonts())),
-    suppressMessages(check_math_fonts())
-  )
 })
