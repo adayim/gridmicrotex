@@ -3,6 +3,7 @@
 #include "atom/atom_basic.h"
 #include "atom/atom_delim.h"
 #include "env/units.h"
+#include "front/lower.h"
 #include "utils/string_utils.h"
 #include "utils/utf.h"
 
@@ -131,6 +132,25 @@ sptr<Box> StrikeThroughAtom::createBox(Env& env) {
   return hb;
 }
 
+sptr<Box> RuleDecorAtom::createBox(Env& env) {
+  const auto b = (_base == nullptr ? sptrOf<EmptyAtom>() : _base)->createBox(env);
+  // One height for the whole run, so a broken rule is straight: under
+  // the run's depth, where \underline puts its rule, or through the middle
+  // of lowercase letters, where \cancel's horizontal stroke goes.
+  float raise, thickness;
+  if (_under) {
+    thickness = env.mathConsts().underbarRuleThickness() * env.scale();
+    const float gap = env.mathConsts().underbarVerticalGap() * env.scale();
+    raise = -(b->_depth + gap + thickness / 2);
+  } else {
+    thickness = env.mathConsts().fractionRuleThickness() * env.scale();
+    raise = env.xHeight() / 2;
+  }
+  auto box = sptrOf<RuleDecorBox>(b, raise, thickness);
+  box->_openable = true;
+  return box;
+}
+
 sptr<Box> VCenterAtom::createBox(Env& env) {
   auto b = _base->createBox(env);
   auto a = env.mathConsts().axisHeight() * env.scale();
@@ -150,7 +170,7 @@ LongDivAtom::LongDivAtom(long divisor, long dividend) : _divisor(divisor), _divi
 
   const int s = results.size();
   for (int i = 0; i < s; i++) {
-    auto num = Formula(results[i])._root;
+    auto num = front::buildFragment(results[i]);
     if (i == 1) {
       string divisor = toString(_divisor);
       auto rparen = SymbolAtom::get("rparen");
@@ -159,7 +179,7 @@ LongDivAtom::LongDivAtom(long divisor, long dividend) : _divisor(divisor), _divi
       auto row = sptrOf<RowAtom>(raise);
       row->add(num);
       auto o = sptrOf<OverUnderBar>(row, true);
-      auto r = sptrOf<RowAtom>(Formula(divisor, false)._root);
+      auto r = sptrOf<RowAtom>(front::buildFragment(divisor));
       r->add(sptrOf<SpaceAtom>(SpaceType::thinMuSkip));
       r->add(o);
       append(r);

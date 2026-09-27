@@ -92,6 +92,14 @@ available_math_fonts <- function() {
   invisible(TRUE)
 }
 
+# Internal: put MicroTeX back on the math font .onLoad() started it with.
+.reset_math_font <- function() {
+  if (microtex_is_inited()) {
+    microtex_set_default_math_font(resolve_math_font("lete"))
+  }
+  invisible()
+}
+
 #' Load a math font from an OTF file
 #'
 #' Loads an OTF/TTF \strong{math} font (one carrying an OpenType MATH

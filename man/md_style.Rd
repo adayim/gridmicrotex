@@ -34,8 +34,8 @@ means it needs \code{\link{markdown_box_grob}}.
 \code{color} \tab inline + block \tab \cr
 \code{font_size} \tab inline + block \tab \cr
 \code{font_family} \tab inline + block \tab \cr
-\code{font_weight} \tab inline + block \tab prose blocks only, see below \cr
-\code{font_style} \tab inline + block \tab prose blocks only, see below \cr
+\code{font_weight} \tab inline + block \tab \cr
+\code{font_style} \tab inline + block \tab \cr
 \code{text_decoration} \tab inline + block \tab \code{underline},
 \code{overline}, \code{line-through} \cr
 \code{background} \tab inline + block \tab a fill behind the text \cr
@@ -63,7 +63,7 @@ to four lengths, in CSS's order \cr
 \code{border_bottom} \tab \code{tr} \tab a rule under each table row \cr
 \code{border_color} \tab \code{table} \tab colour of the table's rules \cr
 \code{table_layout} \tab \code{table} \tab \code{fixed} divides the
-width between the columns so a wide table wraps \cr
+width evenly between the columns \cr
 \code{height} \tab block \tab the band an \code{hr} sits in \cr
 \code{bullet} \tab \code{ul} \tab raw LaTeX for the marker glyph \cr
 \code{marker_gap} \tab \code{ul}, \code{ol} \tab marker to text \cr
@@ -90,15 +90,6 @@ inline style wins in CSS.
 
 Anything else is an error: unlike a pasted stylesheet, where an
 unknown property is ignored the way a browser ignores it.
-
-\strong{One limitation worth knowing.} \code{font_weight} and
-\code{font_style} apply to blocks whose content is prose: paragraphs,
-headings, list items, block quotes, table cells and \code{<div>}s. They
-do \emph{not} apply to \code{pre} or an image's alt text, which build
-their own LaTeX and impose their own font handling. This is a MicroTeX
-constraint rather than a choice: \code{\\text\{\}} resets the font
-style, so emphasis has to be decided when the content is generated,
-not wrapped around it afterwards.
 
 \strong{What cannot be styled at all.} There is no small-caps
 (\code{\\textsc} is not a MicroTeX command), no

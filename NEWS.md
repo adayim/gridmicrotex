@@ -1,6 +1,9 @@
 # gridmicrotex 0.2.0
 
-- New `latex_options(device_math = TRUE)` renders `$…$` math in labels drawn to the graphics device, so **base** graphics gets real LaTeX — `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()` — with no other change to your code. It intercepts the device, so grid, ggplot2 and lattice text is covered too.
+- LaTeX is read by a new, faster parser that follows TeX's rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write `\LaTeX{} is`), and `_`, `^`, `#` and `&` outside math warn.
+- New `input_mode = "document"` renders a LaTeX document body, or a whole pasted paper, wrapped at `max_width` (see `vignette("documents")`). Markdown is now laid out the same way, so its paragraphs, styled spans and tables stay within their box.
+- New `latex_options(device_math = TRUE)` renders `$…$` math in base graphics labels.
+- An image that cannot be drawn is now an error saying why, figures load about ten times faster, and many bugs are fixed.
 
 
 # gridmicrotex 0.1.1

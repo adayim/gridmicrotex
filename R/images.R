@@ -10,9 +10,10 @@
 # is fixed early, but the choice of rasterGrob vs grImport2 pictureGrob is
 # made late, and a new reader never needs an engine change.
 #
-# .resolve_graphics() rewrites
+# The parser asks .image_resolver() what stands for each
 #     \includegraphics[width=2cm]{fig.png}
-# into the private, fully-resolved
+# as it meets one -- after macros are expanded, and never in a comment --
+# and gets the private, fully-resolved
 #     \gmgraphics{<hex>}{<width_bp>}{<height_bp>}
 # which src/MicroTeX/lib/atom/image_atom.cpp turns into a box and an IMAGE draw record.
 
@@ -20,9 +21,9 @@
 #
 # The payload is hex because a real path is hostile to everything between
 # here and MicroTeX: Windows paths hold backslashes, paths hold spaces,
-# .strip_document_wrappers() eats `%`-to-end-of-line, and .expand_macros()
-# would rewrite `\Users` or `\Temp` mid-path for anyone who had defined a
-# macro by that name. Hex is [0-9a-f]+ and survives all of it.
+# `%` starts a comment, and the macro expander would rewrite `\Users` or
+# `\Temp` mid-path for anyone who had defined a macro by that name. Hex is
+# [0-9a-f]+ and survives all of it.
 #
 # mtime and size ride along so the layout cache -- which keys on the tex
 # string and holds no file metadata -- misses when a figure is edited in
@@ -139,24 +140,31 @@
   list(tex = tex, dirs = dirs[nzchar(dirs)])
 }
 
-# Intrinsic size in big points, or NULL when the file cannot be read.
-# `px` is a list(w, h) of pixels for bitmaps and NULL for vector sources,
-# so the caller knows whether an effective-dpi warning makes sense.
+# Intrinsic size in big points, or an error saying why the file cannot be
+# drawn: the reader's own wherever there is a reader to ask, since it
+# knows the format better than a guess made here. `px` is a list(w, h) of
+# pixels for bitmaps and NULL for vector sources, so the caller knows
+# whether an effective-dpi warning makes sense.
 .image_dims <- function(path) {
-  if (!nzchar(path) || !file.exists(path)) return(NULL)
+  # Checked before any reader runs: xml2 and rsvg would download a URL,
+  # and rsvg's message for a missing file does not say it is missing.
+  if (!file.exists(path)) stop("file not found", call. = FALSE)
+  if (dir.exists(path)) stop("it is a directory, not a file", call. = FALSE)
   ext <- .image_ext(path)
   if (ext == "svg") {
     # Both draw-time routes go through rsvg -- grImport2 needs it to
     # normalise to Cairo SVG, and the raster fallback *is* it. Without it
     # nothing can be drawn, so refuse the size too: reserving a box we
     # cannot fill would leave a silent hole where the figure belongs.
-    if (!requireNamespace("rsvg", quietly = TRUE)) return(NULL)
+    loadNamespace("rsvg")
     d <- .svg_dims_bp(path)
-    if (is.null(d)) return(NULL)
+    if (is.null(d)) stop("it has no readable width and height", call. = FALSE)
     return(list(w = d$w, h = d$h, px = NULL))
   }
+  if (!ext %in% c("png", "jpg", "jpeg")) {
+    stop("not a PNG, JPEG or SVG file", call. = FALSE)
+  }
   ras <- .image_raster(path)
-  if (is.null(ras)) return(NULL)
   # 96 dpi, the screen convention this package already uses for block
   # images in markdown.
   list(w = ras$w_px * 72 / 96, h = ras$h_px * 72 / 96,
@@ -168,12 +176,18 @@
 # `width='216.00pt'` (3in), while the normalised form writes a bare `216`,
 # which is user units (px) and would be 2.25in.
 .svg_dims_bp <- function(path) {
-  x <- tryCatch(xml2::read_xml(path), error = function(e) NULL)
-  if (is.null(x)) return(NULL)
+  x <- xml2::read_xml(path)
   # Well-formed XML is not an SVG. Without this a `.svg` holding anything
   # else with width/height attributes would size a box that no reader can
-  # then fill.
-  if (!identical(xml2::xml_name(x), "svg")) return(NULL)
+  # then fill. That includes an <svg> in some other namespace, which rsvg
+  # rejects: an SVG root is either in the SVG namespace or in none.
+  ns <- xml2::xml_ns(x)
+  qname <- xml2::xml_name(x, ns)
+  uri <- if (grepl(":", qname, fixed = TRUE)) ns[[sub(":.*", "", qname)]] else ""
+  if (!identical(xml2::xml_name(x), "svg") ||
+      !uri %in% c("", "http://www.w3.org/2000/svg")) {
+    stop("it has no <svg> root element", call. = FALSE)
+  }
   one <- function(a) {
     v <- xml2::xml_attr(x, a)
     if (is.na(v) || !nzchar(v)) return(NA_real_)
@@ -216,26 +230,18 @@
   paste(path, as.numeric(i$mtime), i$size, sep = "\x1f")
 }
 
-# Read a bitmap. Moved here from R/markdown-box.R unchanged so the inline
-# and block paths share one loader; png and jpeg stay Suggests, so a
-# missing reader degrades rather than becoming a hard dependency.
+# Read a PNG or JPEG, or fail with the reader's own error. The inline and
+# block paths share this one loader. png and jpeg stay Suggests, needed
+# only by a figure in their format; when one is missing, `::` says which.
+# A nativeRaster (packed integers), which rasterGrob draws as it is: ten
+# times faster to read than as.raster()'s one colour string per pixel.
 .image_raster <- function(path) {
-  if (is.null(path) || is.na(path) || !nzchar(path)) return(NULL)
-  if (!file.exists(path)) return(NULL)
   key <- paste0("ras\x1f", .image_stamp(path))
   hit <- .image_cache[[key]]
   if (!is.null(hit)) return(hit)
-  reader <- switch(.image_ext(path),
-    png = if (requireNamespace("png", quietly = TRUE)) png::readPNG else NULL,
-    jpg = ,
-    jpeg = if (requireNamespace("jpeg", quietly = TRUE)) jpeg::readJPEG else NULL,
-    NULL
-  )
-  if (is.null(reader)) return(NULL)
-  ras <- tryCatch(reader(path), error = function(e) NULL)
-  if (is.null(ras) || length(dim(ras)) < 2L) return(NULL)
-  out <- list(raster = grDevices::as.raster(ras),
-              w_px = dim(ras)[2], h_px = dim(ras)[1])
+  ras <- if (.image_ext(path) == "png") png::readPNG(path, native = TRUE)
+         else jpeg::readJPEG(path, native = TRUE)
+  out <- list(raster = ras, w_px = dim(ras)[2], h_px = dim(ras)[1])
   .image_cache[[key]] <- out
   out
 }
@@ -280,7 +286,8 @@
 #      one thing that cannot be decided when the file is written
 #   3. PNG / JPEG
 #
-# NULL when nothing can read it; the resolver has already drawn the name.
+# NULL when nothing can read it, which after .image_check() means the file
+# changed since the layout was measured (see .image_warn_gone()).
 .image_grob <- function(path, w_bp, h_bp,
                         x = grid::unit(0, "bigpts"),
                         y = grid::unit(0, "bigpts"), name = NULL,
@@ -337,20 +344,72 @@
     }
     return(NULL)
   }
-  ras <- .image_raster(path)
+  ras <- tryCatch(.image_raster(path), error = function(e) NULL)
   if (is.null(ras)) return(NULL)
   grid::rasterGrob(ras$raster, x = place$x, y = place$y,
                    width = place$width, height = place$height,
                    just = c("left", "top"), interpolate = TRUE, name = name)
 }
 
-# Can this reference actually be drawn? Used by the markdown paths, which
-# must decide *before* emitting: a drawable file becomes
-# `\includegraphics{}`, and anything else -- a web URL, a missing file, an
-# unsupported format -- keeps its alt text and stays silent, which is what
-# markdown has always done and what stops a remote image warning.
-.image_drawable <- function(path) {
-  !is.null(path) && !is.na(path) && nzchar(path) && !is.null(.image_dims(path))
+# Intrinsic size of a file that can be drawn, or an error naming it and
+# saying why not. Every way of asking for a figure -- \includegraphics,
+# markdown's ![](), <img> -- goes through here, so all of them fail alike:
+# a figure that was asked for and cannot be drawn stops, rather than
+# leaving a stand-in that is easy to miss.
+#
+# Inside .images_lenient() it warns and returns NULL instead, and the
+# caller draws the file's name.
+.image_check <- function(path, named = path) {
+  tryCatch(.image_dims(path), error = function(e) {
+    .image_fail(named, conditionMessage(e),
+                paste0("miss\x1f", .image_stamp(path)))
+    NULL
+  })
+}
+
+.image_fail <- function(named, why, key) {
+  msg <- paste0("Cannot draw image '", named, "': ", why)
+  if (.image_state$strict) stop(msg, call. = FALSE)
+  .image_warn_once(key, paste0(msg, "; drawing the file name instead."))
+}
+
+# Three callers need an image that cannot be drawn to warn instead, because
+# an error there does more harm than the missing figure: base graphics,
+# where a device callback turns any error into the whole label drawn as
+# literal text, a markdown box laying out as it is drawn, where an error
+# leaves half a page, and a document, where one PDF figure would cost a
+# whole pasted paper. A box's images were all checked when it was built,
+# so only a file gone since then reaches this.
+.image_state <- new.env(parent = emptyenv())
+.image_state$strict <- TRUE
+.image_state$label <- FALSE
+
+.images_lenient <- function(expr) {
+  old <- .image_state$strict
+  .image_state$strict <- FALSE
+  on.exit(.image_state$strict <- old)
+  expr
+}
+
+# A markdown label is read as a document but is a label: an image in it
+# that cannot be drawn stays an error, as in any label, rather than taking
+# a document's leniency (.parse_latex_cached()).
+.images_strict <- function(expr) {
+  old <- .image_state$label
+  .image_state$label <- TRUE
+  on.exit(.image_state$label <- old)
+  expr
+}
+
+# The one failure left after the check: a file readable when the layout
+# was measured and not by the time it is drawn -- deleted since, or a
+# reader that parsed the header and then choked on the body. An error in
+# the middle of drawing would leave half a page, so this only warns.
+.image_warn_gone <- function(path) {
+  .image_warn_once(paste0("draw\x1f", .image_stamp(path)),
+                   paste0("Cannot draw '", path, "' now, though it was ",
+                          "readable when the layout was measured; ",
+                          "leaving it blank."))
 }
 
 # --- the resolver ------------------------------------------------------
@@ -442,39 +501,70 @@
   list(w = w, h = h)
 }
 
-# Rewrite every \includegraphics in `tex`. Idempotent: the output is
-# \gmgraphics, which this never matches.
-#
-# Runs twice in .parse_from_gp() -- once at the very top, before
-# .strip_document_wrappers() and .expand_macros() can mangle a path, and
-# once after macro expansion to catch an \includegraphics a user macro
-# produced. A third case, \newcommand expanded inside MicroTeX's own
-# parser, is out of reach of both and is handled by the C++ override in
-# src/MicroTeX/lib/atom/image_atom.cpp, which draws the file's name.
-.resolve_graphics <- function(tex, fontsize = 20, max_width = 0) {
+# Is position `pos` of `s` inside a `%` comment? It is when a `%` comes
+# before it on its line with an even run of backslashes (none included)
+# in front of it: `\%` is a percent sign, but `\\%` is a line break and
+# then a comment.
+.in_tex_comment <- function(s, pos) {
+  line <- sub("(?s)^.*\n", "", substr(s, 1L, pos - 1L), perl = TRUE)
+  grepl("(?<!\\\\)(?:\\\\\\\\)*%", line, perl = TRUE)
+}
+
+# What the parser is to draw for `\includegraphics[options]{path}`: the
+# front end calls this (through register_image_resolver()) for each one it
+# lowers, after macros are expanded, so one a \newcommand, \def or
+# define_macro() produces is read like any other, and one in a comment is
+# never seen. `dirs` are those the last \graphicspath named. The files
+# read, with their stamps, go into `used$stamps` for the layout cache.
+.image_resolver <- function(fontsize, max_width, used) {
+  used$stamps <- character(0)
+  function(path, options, dirs) {
+    # Markdown escapes a brace in a file name so the argument still ends at
+    # the right one; the name itself has none.
+    path <- gsub("\\\\([{}])", "\\1", path)
+    found <- .image_find(path, dirs)
+    used$stamps[[found]] <- .image_stamp(found)
+    .resolve_one_graphic(path, options, fontsize, max_width, dirs)
+  }
+}
+
+# Whether every image a cached layout read is as it was then.
+.images_current <- function(layout) {
+  st <- attr(layout, "images")
+  is.null(st) || identical(unname(vapply(names(st), .image_stamp, "")), unname(st))
+}
+
+# Read every \includegraphics in `tex`, failing on one that cannot be
+# drawn, and change nothing. Markdown calls it when a grob is built, since
+# a box lays out only when it is drawn and an error then would leave half a
+# page; everything else meets its images while it is parsed.
+.check_graphics <- function(tex) {
   gp <- .extract_graphicspath(tex)
   out <- gp$tex
-  if (!grepl("\\includegraphics", out, fixed = TRUE)) return(out)
+  if (!grepl("\\includegraphics", out, fixed = TRUE)) return(invisible(NULL))
   from <- 1L
   repeat {
-    # The starred form clips to the bounding box; there is nothing outside
-    # the box to clip here, so it differs from the plain form only in being
-    # spelled with a `*`.
     m <- regexpr("\\\\includegraphics\\*?", substr(out, from, nchar(out)), perl = TRUE)
     if (m == -1L) break
     start <- from + m - 1L
+    # A commented-out figure is routine in LaTeX, and a missing draft
+    # figure must not stop the render.
+    if (.in_tex_comment(out, start)) { from <- start + 1L; next }
+    # Nor is `\\includegraphics` the command: it is a line break and then
+    # the word. The backslash that starts a match must not itself be escaped.
+    if (grepl("(?<!\\\\)(?:\\\\\\\\)*\\\\$", substr(out, 1L, start - 1L),
+              perl = TRUE)) {
+      from <- start + 1L; next
+    }
     i <- start + attr(m, "match.length")
     n <- nchar(out)
     skip_ws <- function(k) { while (k <= n && grepl("^[ \t\r\n]$", substr(out, k, k))) k <- k + 1L; k }
     i <- skip_ws(i)
-    opt <- character(0)
-    bad <- FALSE
     # Up to two bracket groups: the graphicx `[key=val]` and the older
-    # `[llx,lly][urx,ury]` spelling, whose bare numbers simply parse as no
-    # recognised key.
-    while (i <= n && substr(out, i, i) == "[" && length(opt) < 2L) {
-      # Scan to the matching `]`, ignoring one inside braces so
-      # `[width={0.5\textwidth}]` survives.
+    # `[llx,lly][urx,ury]` spelling.
+    bad <- FALSE
+    groups <- 0L
+    while (i <= n && substr(out, i, i) == "[" && groups < 2L) {
       j <- i + 1L; depth <- 0L
       while (j <= n) {
         ch <- substr(out, j, j)
@@ -484,22 +574,23 @@
         j <- j + 1L
       }
       if (j > n) { bad <- TRUE; break }
-      opt <- c(opt, substr(out, i + 1L, j - 1L))
+      groups <- groups + 1L
       i <- skip_ws(j + 1L)
     }
     if (bad) break
     if (i > n || substr(out, i, i) != "{") { from <- start + 1L; next }
     close <- .find_close_brace(out, i + 1L)
     if (is.na(close)) break
-    path <- trimws(substr(out, i + 1L, close - 1L))
-
-    rep <- .resolve_one_graphic(path, paste(opt, collapse = ","),
-                                fontsize, max_width, gp$dirs)
-    out <- paste0(substr(out, 1L, start - 1L), rep,
-                  substr(out, close + 1L, nchar(out)))
-    from <- start + nchar(rep)
+    path <- gsub("\\\\([{}])", "\\1", trimws(substr(out, i + 1L, close - 1L)))
+    # `#1` is a macro parameter in a \newcommand or \def body, not a file.
+    # This check reads the source as written, before anything is expanded;
+    # the parser meets the expansion later and asks the resolver about the
+    # real path then.
+    if (grepl("#[0-9]", path)) { from <- close + 1L; next }
+    .image_check(.image_find(path, gp$dirs), path)
+    from <- close + 1L
   }
-  out
+  invisible(NULL)
 }
 
 # graphicx keys that change what is drawn but that a fixed box cannot
@@ -514,42 +605,8 @@
   named <- path
   path <- .image_find(path, dirs)
   fallback <- function() paste0("\\text{", .md_escape_tex(basename(named)), "}")
-  dims <- .image_dims(path)
-  if (is.null(dims)) {
-    ext <- .image_ext(path)
-    why <- if (!file.exists(path)) {
-      "file not found"
-    } else if (dir.exists(path)) {
-      "it is a directory, not a file"
-    } else if (ext %in% c("pdf", "eps", "ps")) {
-      paste0("'", ext, "' is not supported; save the figure as SVG instead")
-    } else if (ext %in% c("png", "jpg", "jpeg")) {
-      # "no dimensions" has two causes and they need different answers:
-      # the reader is absent, or the reader is present and the bytes are
-      # not what the extension claims.
-      pkg <- if (ext == "png") "png" else "jpeg"
-      if (!requireNamespace(pkg, quietly = TRUE)) {
-        paste0("the '", pkg, "' package is needed to read it")
-      } else {
-        paste0("the '", pkg, "' package could not read it -- the file may be ",
-               "empty, truncated, or not really ", toupper(ext))
-      }
-    } else if (!nzchar(ext)) {
-      "it has no extension, and no .svg, .png, .jpg or .jpeg of that name exists"
-    } else if (ext == "svg") {
-      if (!requireNamespace("rsvg", quietly = TRUE)) {
-        "drawing an SVG needs the 'rsvg' package"
-      } else {
-        "it has no <svg> root element, or no readable size on it"
-      }
-    } else {
-      paste0("'", ext, "' is not a supported image format (PNG, JPEG, SVG)")
-    }
-    .image_warn_once(paste0("miss\x1f", .image_stamp(path)),
-                     paste0("Cannot draw '", named, "': ", why,
-                            ". Drawing the file name instead."))
-    return(fallback())
-  }
+  dims <- .image_check(path, named)
+  if (is.null(dims)) return(fallback())
 
   opts <- .parse_graphics_opts(opt)
 

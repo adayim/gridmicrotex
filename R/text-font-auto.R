@@ -74,8 +74,8 @@
   cached_fam <- .text_font_registered[[otf_path]]
   if (!is.null(cached_fam)) return(cached_fam)
 
-  # C++ parses the OTF, synthesises CLM bytes in memory, and registers
-  # with MicroTeX in one call. Empty string on failure.
+  # C++ reads the OTF and registers it with MicroTeX in one call. Empty
+  # string on failure.
   fam_name <- microtex_add_font_from_otf(otf_path, 0L)
   if (!is.character(fam_name) || !nzchar(fam_name)) return("")
 

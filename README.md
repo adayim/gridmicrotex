@@ -1,15 +1,13 @@
----
-output: github_document
----
-
-
 
 # gridmicrotex
 
 <!-- badges: start -->
+
 [![R-CMD-check](https://github.com/adayim/gridmicrotex/workflows/R-CMD-check/badge.svg)](https://github.com/adayim/gridmicrotex/actions)
-[![CRAN status](https://www.r-pkg.org/badges/version/gridmicrotex)](https://CRAN.R-project.org/package=gridmicrotex)
-[![CRAN download](https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex)](https://cran.r-project.org/package=gridmicrotex)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/gridmicrotex)](https://CRAN.R-project.org/package=gridmicrotex)
+[![CRAN
+download](https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex)](https://cran.r-project.org/package=gridmicrotex)
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
@@ -17,26 +15,33 @@ Render LaTeX math in [**base R** plots](#base-graphics) and as native R
 **grid** graphics objects (markdown included), with no external LaTeX
 installation required.
 
-gridmicrotex embeds the [MicroTeX](https://github.com/NanoMichael/MicroTeX)
-C++ layout engine to parse LaTeX, compute the full box model, and produce
-resolution-independent vector output (paths, lines, rectangles) that works on
-any R graphics device.
+gridmicrotex embeds the
+[MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ layout engine to
+parse LaTeX, compute the full box model, and produce
+resolution-independent vector output (paths, lines, rectangles) that
+works on any R graphics device.
 
 ## Disclaimer
-**A note on development**: This package was developed as a proof of concept for AI-assisted package creation. I designed the architecture and specification, and the core C++ integration (via [MicroTeX](https://github.com/NanoMichael/MicroTeX)) was largely facilitated by AI, with my review and oversight of the design and final outputs. I am sharing it because it works, and I hope that others will find it useful. Contributions, bug reports and improvements from the community are very welcome.
 
+**A note on development**: This package was developed as a proof of
+concept for AI-assisted package creation. I designed the architecture
+and specification, and the core C++ integration (via
+[MicroTeX](https://github.com/NanoMichael/MicroTeX)) was largely
+facilitated by AI, with my review and oversight of the design and final
+outputs. I am sharing it because it works, and I hope that others will
+find it useful. Contributions, bug reports and improvements from the
+community are very welcome.
 
 ## Installation
 
 Install the development version from GitHub:
 
-```r
+``` r
 # install.packages("devtools")
 devtools::install_github("adayim/gridmicrotex")
 ```
 
 ## Examples
-
 
 ``` r
 library(gridmicrotex)
@@ -47,19 +52,19 @@ grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}",
            gp = grid::gpar(fontsize = 30))
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-basic-1.png" alt="plot of chunk example-basic" width="50%" />
-<p class="caption">plot of chunk example-basic</p>
-</div>
+<img src="man/figures/README-example-basic-1.png" alt="" width="50%" />
 
-
-By default, the input is treated as LaTeX math mode ("mixed" mode), which wraps non-math text in `\text{}` and preserves math expressions as-is. Use `$...$` or `\\(...\\)` delimiters to render math. The `"x = "` in the equation above treated as text. Use `input_mode = "math"` to treat the whole string as math mode and render text with `\\text{}`. You can change this with global option `latex_options(input_mode = "math")`.
-
+By default a string is read as a label (`input_mode = "mixed"`): text,
+as in a LaTeX paragraph, with math between `$...$` or `\(...\)` — which
+is why the `"x = "` above is set as text. `input_mode = "math"` reads
+the whole string as math, and `input_mode = "document"` reads a LaTeX
+document body, with paragraphs, headings, displayed equations and lists
+(`vignette("documents")`). Change the default with
+`latex_options(input_mode = "math")`.
 
 ### Composing with other grobs
 
 The grob can be placed alongside other grid objects:
-
 
 ``` r
 latex_options(input_mode = "math")
@@ -77,13 +82,9 @@ grid.rect(
 grid.draw(g)
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-compose-1.png" alt="plot of chunk example-compose" width="30%" />
-<p class="caption">plot of chunk example-compose</p>
-</div>
+<img src="man/figures/README-example-compose-1.png" alt="" width="30%" />
 
 ### Multiple expressions
-
 
 ``` r
 exprs <- c(
@@ -104,16 +105,13 @@ for (i in seq_along(exprs)) {
 }
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-multiple-1.png" alt="plot of chunk example-multiple" width="40%" />
-<p class="caption">plot of chunk example-multiple</p>
-</div>
+<img src="man/figures/README-example-multiple-1.png" alt="" width="40%" />
 
 ### Mixed text and math
 
-You can use `r"()"` raw strings to write LaTeX with regular newlines and quotes without escaping. Use `\text{}` to embed regular text within math expressions:
-
-
+You can use `r"()"` raw strings to write LaTeX with regular newlines and
+quotes without escaping. Use `\text{}` to embed regular text within math
+expressions:
 
 ``` r
 grid.newpage()
@@ -123,21 +121,40 @@ grid.latex(
 )
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-mixed-definition-1.png" alt="plot of chunk example-mixed-definition" width="50%" />
-<p class="caption">plot of chunk example-mixed-definition</p>
-</div>
+<img src="man/figures/README-example-mixed-definition-1.png" alt="" width="50%" />
+
+``` r
+reset_latex_options()  # back to input_mode = "mixed" for what follows
+```
+
+### Documents
+
+`input_mode = "document"` sets the body of a LaTeX document —
+paragraphs, headings, displayed equations, lists and tables — broken
+into lines at `max_width`, ready for a PDF page. See
+`vignette("documents")`.
+
+``` r
+grid.newpage()
+grid.latex(r"(\section{Results}
+The slope is positive --- the fitted line is
+\[ \hat{y} = 1.2 + 0.42\,x, \]
+and its residuals show no pattern.)",
+  input_mode = "document", max_width = 5.6 * 72,
+  x = 0.02, y = 0.95, hjust = 0, vjust = 1, gp = gpar(fontsize = 12))
+```
+
+<img src="man/figures/README-example-document-1.png" alt="" width="80%" />
 
 ## Base graphics
 
-R's own plotting system gets math too. Set
+R’s own plotting system gets math too. Set
 `latex_options(device_math = TRUE)` and any label containing `$...$` is
-typeset by MicroTeX: `main`, `xlab`, `ylab`, `text()`, `mtext()`, `legend()`,
-and anything built on them such as `hist()`. Nothing else in your plotting
-code changes. The switch acts at the device, so it reaches lattice, grid,
-ggplot2 and other packages' plot methods as well: a plain `geom_text()` label
-picks up math without any gridmicrotex function.
-
+typeset by MicroTeX: `main`, `xlab`, `ylab`, `text()`, `mtext()`,
+`legend()`, and anything built on them such as `hist()`. Nothing else in
+your plotting code changes. The switch acts at the device, so it reaches
+lattice, grid, ggplot2 and other packages’ plot methods as well: a plain
+`geom_text()` label picks up math without any gridmicrotex function.
 
 ``` r
 latex_options(device_math = TRUE)
@@ -149,24 +166,19 @@ plot(1:10, (1:10)^2,
 text(3, 80, "$\\int_0^\\infty e^{-x^2}\\,dx$", col = "steelblue")
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-base-1.png" alt="plot of chunk example-base" width="80%" />
-<p class="caption">plot of chunk example-base</p>
-</div>
-
-
+<img src="man/figures/README-example-base-1.png" alt="" width="80%" />
 
 Everyday labels are left alone, which is why the x-axis title above
-renders as written. Because the switch is session-wide it has side effects
-worth knowing (a tall formula can overflow the space R reserved for it, and
-showtext overrides it); `vignette("base-graphics")` lists them.
-
+renders as written. Because the switch is session-wide it has side
+effects worth knowing (a tall formula can overflow the space R reserved
+for it, and showtext overrides it); `vignette("base-graphics")` lists
+them.
 
 ## Markdown
 
-`grid.markdown()` renders markdown, with `$math$` inline. Unlike the other
-markdown-in-grid packages, the maths is real LaTeX rather than plotmath:
-
+`grid.markdown()` renders markdown, with `$math$` inline. Unlike the
+other markdown-in-grid packages, the maths is real LaTeX rather than
+plotmath:
 
 ``` r
 grid.newpage()
@@ -176,14 +188,10 @@ grid.markdown(
 )
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-markdown-1.png" alt="plot of chunk example-markdown" width="70%" />
-<p class="caption">plot of chunk example-markdown</p>
-</div>
+<img src="man/figures/README-example-markdown-1.png" alt="" width="70%" />
 
-Colour, font and size come from inline HTML, as they must: markdown itself
-defines no syntax for them.
-
+Colour, font and size come from inline HTML, as they must: markdown
+itself defines no syntax for them.
 
 ``` r
 grid.newpage()
@@ -195,72 +203,62 @@ grid.markdown(
 )
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-markdown-html-1.png" alt="plot of chunk example-markdown-html" width="70%" />
-<p class="caption">plot of chunk example-markdown-html</p>
-</div>
+<img src="man/figures/README-example-markdown-html-1.png" alt="" width="70%" />
 
-`markdown_box_grob()` lays out a whole document --- headings, lists, quotes,
-code, tables and images --- as a stack of grobs. See
+`markdown_box_grob()` lays out a whole document — headings, lists,
+quotes, code, tables and images — as a stack of grobs. See
 `vignette("markdown")`.
-
 
 ## ggplot2 integration
 
 Use `geom_latex()` to place LaTeX labels at data coordinates, and
 `element_latex()` for LaTeX-rendered axis titles:
 
-
 ``` r
 library(ggplot2)
-# Add a LaTeX table as an annotation
-tab_str <- r"(\begin{tabular}{c|c} \text{A} & B^2 \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
+# Add a LaTeX table as an annotation: its cells are text, as in LaTeX
+tab_str <- r"(\begin{tabular}{c|c} A & $B^2$ \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 
 df <- data.frame(x = 1:3, y = 1:3,
-                 eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
-ggplot(df, aes(x, y, label = eq)) + 
+                 eq = c("$x^2$", "$\\frac{a}{b}$", "$\\sum_{i=1}^n x_i$"))
+ggplot(df, aes(x, y, label = eq)) +
   geom_latex() +
-  annotate("latex", x = 1, y = 2.7, label = tab_str, size = 12) +
+  annotate("latex", x = 1.15, y = 2.7, label = tab_str, size = 12) +
   labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
   theme(axis.title.x = element_latex())
 ```
 
-<div class="figure">
-<img src="man/figures/README-example-ggplot2-geom-1.png" alt="plot of chunk example-ggplot2-geom" width="80%" />
-<p class="caption">plot of chunk example-ggplot2-geom</p>
-</div>
+<img src="man/figures/README-example-ggplot2-geom-1.png" alt="" width="80%" />
 
-
-ggplot2 is a soft dependency --- the core functions work without it.
-See `vignette("ggplot2-integration")` for more examples.
-
+ggplot2 is a soft dependency — the core functions work without it. See
+`vignette("ggplot2-integration")` for more examples.
 
 ## Comparison
 
-| Approach       | LaTeX required? | Device independent? | Math coverage | Markdown |
-|:---------------|:---------------:|:-------------------:|:-------------:|:--------:|
-| `tikzDevice`   | Yes             | No                  | Full          | No       |
-| `xdvir`        | Yes             | No                  | Full          | No       |
-| `latexpdf`     | Yes             | No                  | Full (tables) | No       |
-| `latex2exp`    | No              | Yes                 | Limited       | No       |
-| `plotmath`     | No              | Yes                 | Limited       | No       |
-| `gridtext`     | No              | Yes                 | None          | Yes      |
-| `marquee`      | No              | Yes                 | None          | Yes      |
-| **gridmicrotex** | **No**       | **Yes**             | **Broad**     | **Yes**  |
-
+| Approach         | LaTeX required? | Device independent? | Math coverage | Markdown |
+|:-----------------|:---------------:|:-------------------:|:-------------:|:--------:|
+| `tikzDevice`     |       Yes       |         No          |     Full      |    No    |
+| `xdvir`          |       Yes       |         No          |     Full      |    No    |
+| `latexpdf`       |       Yes       |         No          | Full (tables) |    No    |
+| `latex2exp`      |       No        |         Yes         |    Limited    |    No    |
+| `plotmath`       |       No        |         Yes         |    Limited    |    No    |
+| `gridtext`       |       No        |         Yes         |     None      |   Yes    |
+| `marquee`        |       No        |         Yes         |     None      |   Yes    |
+| **gridmicrotex** |     **No**      |       **Yes**       |   **Broad**   | **Yes**  |
 
 ## How it works
 
-MicroTeX parses the LaTeX and computes the full TeX box model; a recorder
-captures every draw operation with exact coordinates, and R turns those
-into native grid primitives. Nothing is rasterised, so the output stays
-sharp at any resolution on any device.
+The LaTeX is read by TeX’s rules — macros expanded, commands and
+environments parsed — and MicroTeX computes the full TeX box model; a
+recorder captures every draw operation with exact coordinates, and R
+turns those into native grid primitives. Nothing is rasterised, so the
+output stays sharp at any resolution on any device.
 
 Glyphs are drawn either as native text (which keeps PDF and SVG output
 selectable and searchable) or as filled vector paths, which work
-everywhere. `render_mode` chooses, and falls back to paths by itself on a
-device that cannot embed fonts. `vignette("getting-started")` covers the
-trade-off.
+everywhere. `render_mode` chooses, and falls back to paths by itself on
+a device that cannot embed fonts. `vignette("getting-started")` covers
+the trade-off.
 
 ## Graphics backend
 
@@ -268,15 +266,13 @@ The default graphics device on Windows (`windows()`) and macOS
 (`quartz()`) may not find the bundled math fonts, producing warnings
 like:
 
-```
-font family not found in Windows font database
-```
+    font family not found in Windows font database
 
 To avoid this, switch to a modern graphics backend that uses
 [systemfonts](https://CRAN.R-project.org/package=systemfonts) for font
 resolution:
 
-```r
+``` r
 # For knitr / R Markdown — add to your setup chunk:
 knitr::opts_chunk$set(dev = "ragg_png")
 
@@ -286,13 +282,12 @@ options(device = function(...) ragg::agg_png(tempfile(fileext = ".png"), ...))
 
 Recommended backends:
 
-| Backend               | Format | Package               |
-|:----------------------|:-------|:----------------------|
-| `ragg::agg_png()`     | PNG    | [ragg](https://CRAN.R-project.org/package=ragg)       |
-| `svglite::svglite()`  | SVG    | [svglite](https://CRAN.R-project.org/package=svglite) |
-| `grDevices::cairo_pdf()` | PDF | Base R (Cairo build)  |
+| Backend | Format | Package |
+|:---|:---|:---|
+| `ragg::agg_png()` | PNG | [ragg](https://CRAN.R-project.org/package=ragg) |
+| `svglite::svglite()` | SVG | [svglite](https://CRAN.R-project.org/package=svglite) |
+| `grDevices::cairo_pdf()` | PDF | Base R (Cairo build) |
 
-Alternatively, use `render_mode = "path"` to bypass font lookup
-entirely — glyphs are drawn as vector paths, which works on all
-devices but produces non-selectable text in PDF/SVG.
-
+Alternatively, use `render_mode = "path"` to bypass font lookup entirely
+— glyphs are drawn as vector paths, which works on all devices but
+produces non-selectable text in PDF/SVG.

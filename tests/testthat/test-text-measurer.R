@@ -19,6 +19,27 @@ test_that("text measurer creates, measures, and handles styles", {
   expect_equal(gridmicrotex:::.resolve_text_face(NA_integer_), "plain")
 })
 
+test_that("a layout measured at one resolution is not reused at another", {
+  on.exit(latex_cache_clear(), add = TRUE)
+  tex <- "\\text{WAVY fi MM 12345}"
+  measure_at <- function(res) {
+    f <- tempfile(fileext = ".png")
+    grDevices::png(f, width = 400, height = 200, res = res)
+    on.exit({ grDevices::dev.off(); unlink(f) })
+    grid::convertWidth(latex_dims(tex)$width, "bigpts", TRUE)
+  }
+  latex_cache_clear()
+  measure_at(72)
+  at_300_after_72 <- measure_at(300)
+  latex_cache_clear()
+  at_300 <- measure_at(300)
+  # Text is measured on the device, and one png() measured this phrase at
+  # 175bp at 72dpi and 174bp at 300. Keyed on the device name alone, the
+  # second device reused the first one's layout. (macOS's png() measures
+  # it alike at both, and reports the same resolution for both.)
+  expect_equal(at_300_after_72, at_300)
+})
+
 test_that("\\texttt renders and measures in a monospace family", {
   # Bit 128 is MicroTeX's \texttt. It has to reach the *measurer* as well
   # as the renderer: measuring in one family and drawing in another puts
@@ -154,6 +175,24 @@ test_that("\\textrm returns to the caller's font", {
   df <- latex_grob("\\textsf{\\textbf{a\\textrm{b}c}}", input_mode = "math",
                    gp = grid::gpar(fontsize = 20))$layout_df
   expect_true(all(bitwAnd(df$font_style[df$type == "text"], 2L) != 0L))
+})
+
+test_that("\\textnormal sets the normal font, whatever is around it", {
+  # LaTeX's \normalfont: upright, medium, in the caller's family. It was
+  # \text{}, which keeps the style around it, so it came out bold in bold.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  styles <- function(tex) {
+    df <- latex_grob(tex, gp = grid::gpar(fontsize = 20))$layout_df
+    df <- df[df$type == "text", ]
+    stats::setNames(df$font_style, trimws(df$text))
+  }
+  plain <- styles("\\text{b}")[["b"]]
+  for (around in c("\\textbf{a \\textnormal{b}}", "\\textit{\\textsf{a \\textnormal{b}}}",
+                   "\\texttt{a \\textnormal{b}}", "\\gmfontfamily{Georgia}{a \\textnormal{b}}")) {
+    expect_equal(styles(around)[["b"]], plain, info = around)
+  }
+  # What is around it keeps its own.
+  expect_equal(bitwAnd(styles("\\textbf{a \\textnormal{b}}")[["a"]], 2L), 2L)
 })
 
 test_that("\\textrm is measured in the font it is drawn in", {
@@ -297,4 +336,21 @@ test_that("a cached layout is not reused across graphics devices", {
   latex_dims(tex, input_mode = "math")
   grDevices::dev.off()
   expect_equal(on_agg(), alone)
+})
+
+test_that("with no device open, a parse opens one for its length and a cache hit none", {
+  # Measuring needs a device. A cached layout measures nothing, so opening
+  # one for it is waste that latex_dims() in a loop, or markdown measuring
+  # a label several times over, paid on every call.
+  skip_if(!is.null(grDevices::dev.list()), "a device is already open")
+  opened <- 0L
+  suppressMessages(trace("pdf", where = asNamespace("grDevices"),
+                         tracer = function() opened <<- opened + 1L, print = FALSE))
+  on.exit(suppressMessages(untrace("pdf", where = asNamespace("grDevices"))), add = TRUE)
+  latex_cache_clear()
+  latex_dims("\\text{a word}", input_mode = "math")
+  expect_identical(opened, 1L)
+  expect_null(grDevices::dev.list())  # and closed again
+  for (i in 1:5) latex_dims("\\text{a word}", input_mode = "math")
+  expect_identical(opened, 1L)
 })

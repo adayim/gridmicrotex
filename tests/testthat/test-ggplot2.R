@@ -13,7 +13,7 @@ layer_grobs <- function(p, i = 1L) ggplot2::layer_grob(p, i)[[1]]
 
 test_that("geom_latex contributes one rendered grob per row", {
   df <- data.frame(x = 1:3, y = 1:3,
-                   eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
+                   eq = c("$x^2$", "\\frac{a}{b}", "$\\sum_{i=1}^n x_i$"))
   gs <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
                       geom_latex())
   expect_length(gs, 3L)
@@ -24,7 +24,7 @@ test_that("geom_latex contributes one rendered grob per row", {
 })
 
 test_that("geom_latex passes colour and size down to the grob", {
-  df <- data.frame(x = 1, y = 1, eq = "x^2")
+  df <- data.frame(x = 1, y = 1, eq = "$x^2$")
   base <- ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq))
 
   red <- layer_grobs(base + geom_latex(colour = "red"))[[1]]
@@ -32,29 +32,38 @@ test_that("geom_latex passes colour and size down to the grob", {
 
   big   <- layer_grobs(base + geom_latex(fontsize = 20))[[1]]
   small <- layer_grobs(base + geom_latex(fontsize = 8))[[1]]
-  expect_equal(unique(big$layout_df$font_size), 20)
-  expect_equal(unique(small$layout_df$font_size), 8)
+  # The base size; the exponent is set smaller.
+  expect_equal(max(big$layout_df$font_size), 20)
+  expect_equal(max(small$layout_df$font_size), 8)
   expect_gt(big$bbox_w, small$bbox_w)
+})
+
+test_that("geom_latex treats a missing alpha as opaque", {
+  # A mapped alpha can be NA, and `NA < 1` made the layer fail to build.
+  df <- data.frame(x = 1, y = 1, eq = "$x^2$", a = NA_real_)
+  g <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq, alpha = a)) +
+                     geom_latex(colour = "red"))[[1]]
+  expect_equal(g$gp$col, "red")
 })
 
 test_that("geom_latex draws nothing for an empty or missing label", {
   # Without the guard in draw_panel these render the literal "NA", or an
   # empty formula that still reserves space.
-  df <- data.frame(x = 1:2, y = 1:2, eq = c("x^2", ""))
+  df <- data.frame(x = 1:2, y = 1:2, eq = c("$x^2$", ""))
   gs <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
                       geom_latex())
   expect_s3_class(gs[[1]], "latexgrob")
   expect_s3_class(gs[[2]], "null")
 
   # na.rm drops the row before it ever reaches us.
-  df_na <- data.frame(x = 1:2, y = 1:2, eq = c("x^2", NA))
+  df_na <- data.frame(x = 1:2, y = 1:2, eq = c("$x^2$", NA))
   gs_na <- layer_grobs(ggplot2::ggplot(df_na, ggplot2::aes(x, y, label = eq)) +
                          geom_latex(na.rm = TRUE))
   expect_length(gs_na, 1L)
 })
 
 test_that("geom_latex fontsize parameter sets size when the aesthetic is unmapped", {
-  df <- data.frame(x = 1, y = 1, eq = "x^2")
+  df <- data.frame(x = 1, y = 1, eq = "$x^2$")
 
   # fontsize parameter fills the size column
   p20 <- ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
@@ -75,7 +84,7 @@ test_that("annotate('latex') adds a rendered layer of its own", {
   p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
     ggplot2::geom_point() +
     ggplot2::annotate("latex", x = 4, y = 30,
-                      label = "\\hat{y} = \\beta_0 + \\beta_1 x",
+                      label = "$\\hat{y} = \\beta_0 + \\beta_1 x$",
                       size = 12, colour = "red")
   # Layer 2 is the annotation; the geom has to be reachable by name for
   # annotate() to find it at all.
@@ -83,6 +92,48 @@ test_that("annotate('latex') adds a rendered layer of its own", {
   expect_s3_class(g, "latexgrob")
   expect_gt(nrow(g$layout_df), 0)
   expect_equal(g$gp$col, "red")
+})
+
+test_that("annotate('latex') follows latex_options(), as geom_latex() does", {
+  # annotate() never calls geom_latex(), so the layer's own defaults were
+  # what it got: a mixed label in the default font, whatever the options.
+  on.exit(reset_latex_options(), add = TRUE)
+  latex_options(input_mode = "math", math_font = "stix")
+  base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
+  geom <- layer_grobs(base + geom_latex(ggplot2::aes(label = "x^2")))[[1]]
+  ann <- layer_grobs(base + ggplot2::annotate("latex", x = 1, y = 1, label = "x^2"))[[1]]
+  # The same formula in the same font, not the text "x^2".
+  expect_identical(ann$layout_df, geom$layout_df)
+  expect_true(all(grepl("STIX", ann$layout_df$font_file)))
+  # An argument given to annotate() still wins over the options.
+  expect_warning(
+    mixed <- layer_grobs(base + ggplot2::annotate("latex", x = 1, y = 1, label = "x^2",
+                                                  input_mode = "mixed"))[[1]],
+    "outside math")
+  expect_identical(mixed$layout_df$text, "x^2")
+})
+
+test_that("geom_latex() and annotate('latex') read the options when drawn", {
+  # Both take them when the plot is drawn, so a plot made under one set of
+  # options and printed under another draws both layers alike.
+  on.exit(reset_latex_options(), add = TRUE)
+  base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
+  latex_options(input_mode = "math")
+  p <- base + geom_latex(ggplot2::aes(label = "x^2")) +
+    ggplot2::annotate("latex", x = 1, y = 1, label = "x^2")
+  reset_latex_options()
+  # Drawn in the default mode now: "x^2" as text, with its warning.
+  g1 <- suppressWarnings(layer_grobs(p, 1L))[[1]]
+  g2 <- suppressWarnings(layer_grobs(p, 2L))[[1]]
+  expect_identical(g1$layout_df, g2$layout_df)
+  expect_identical(g1$layout_df$text, "x^2")
+  # Neither says it was asked for typeface when it was not, so the fallback
+  # message follows the same rule for both.
+  expect_null(p$layers[[1]]$geom_params$render_mode)
+  expect_identical(p$layers[[1]]$geom_params$input_mode, NULL)
+  # What the caller does give is checked when the layer is made.
+  expect_error(geom_latex(input_mode = "bogus"), "should be one of")
+  expect_identical(geom_latex(render_mode = "path")$geom_params$render_mode, "path")
 })
 
 # --- element_latex() ---
@@ -133,6 +184,6 @@ test_that(".element_grob_latex handles edge cases and multiple labels", {
 
   # Multiple labels with NA/empty skipped
   result_multi <- gridmicrotex:::.element_grob_latex(
-    element_latex(), label = c("x_1", NA, "", "x_4"))
+    element_latex(), label = c("$x_1$", NA, "", "$x_4$"))
   expect_equal(length(result_multi$children), 2)
 })

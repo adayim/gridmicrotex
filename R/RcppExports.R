@@ -6,11 +6,39 @@ gm_base_set_enabled <- function(on, layout_fn) {
 }
 
 gm_base_teardown <- function() {
-    invisible(.Call(`_gridmicrotex_gm_base_teardown`))
+    .Call(`_gridmicrotex_gm_base_teardown`)
+}
+
+gm_base_release_pending <- function() {
+    .Call(`_gridmicrotex_gm_base_release_pending`)
 }
 
 gm_base_armed_count <- function() {
     .Call(`_gridmicrotex_gm_base_armed_count`)
+}
+
+persistent_macro_set_cpp <- function(name, body) {
+    invisible(.Call(`_gridmicrotex_persistent_macro_set_cpp`, name, body))
+}
+
+persistent_macro_remove_cpp <- function(name) {
+    .Call(`_gridmicrotex_persistent_macro_remove_cpp`, name)
+}
+
+persistent_macro_clear_cpp <- function() {
+    invisible(.Call(`_gridmicrotex_persistent_macro_clear_cpp`))
+}
+
+persistent_macro_list_cpp <- function() {
+    .Call(`_gridmicrotex_persistent_macro_list_cpp`)
+}
+
+persistent_macro_generation_cpp <- function() {
+    .Call(`_gridmicrotex_persistent_macro_generation_cpp`)
+}
+
+math_env_names_cpp <- function() {
+    .Call(`_gridmicrotex_math_env_names_cpp`)
 }
 
 register_text_measurer <- function(fn) {
@@ -21,16 +49,16 @@ clear_text_measurer <- function() {
     invisible(.Call(`_gridmicrotex_clear_text_measurer`))
 }
 
-microtex_init <- function(clm_path, otf_path) {
-    invisible(.Call(`_gridmicrotex_microtex_init`, clm_path, otf_path))
+register_image_resolver <- function(fn) {
+    invisible(.Call(`_gridmicrotex_register_image_resolver`, fn))
+}
+
+clear_image_resolver <- function() {
+    invisible(.Call(`_gridmicrotex_clear_image_resolver`))
 }
 
 microtex_init_from_otf <- function(otf_path, index = 0L) {
     invisible(.Call(`_gridmicrotex_microtex_init_from_otf`, otf_path, index))
-}
-
-microtex_add_font <- function(clm_path, otf_path) {
-    invisible(.Call(`_gridmicrotex_microtex_add_font`, clm_path, otf_path))
 }
 
 microtex_math_font_names <- function() {
@@ -65,19 +93,11 @@ microtex_main_font_families <- function() {
     .Call(`_gridmicrotex_microtex_main_font_families`)
 }
 
-ot_math_table_bytes <- function(path, index = 0L) {
-    .Call(`_gridmicrotex_ot_math_table_bytes`, path, index)
-}
-
-otf_to_clm_bytes <- function(path, index = 0L) {
-    .Call(`_gridmicrotex_otf_to_clm_bytes`, path, index)
-}
-
 microtex_add_font_from_otf <- function(otf_path, index = 0L) {
     .Call(`_gridmicrotex_microtex_add_font_from_otf`, otf_path, index)
 }
 
-parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "", justify = FALSE, optimal_break = FALSE) {
-    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break)
+parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "", justify = FALSE, optimal_break = FALSE, input_mode = "math") {
+    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break, input_mode)
 }
 

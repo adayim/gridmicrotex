@@ -1,6 +1,8 @@
 #ifndef MICROTEX_MACRO_BOXES_H
 #define MICROTEX_MACRO_BOXES_H
 
+#include <algorithm>
+
 #include "atom/atom_box.h"
 #include "atom/atom_misc.h"
 #include "macro/macro_decl.h"
@@ -8,59 +10,65 @@
 
 namespace microtex {
 
-inline macro(rotatebox) {
+inline cmdmacro(rotatebox) {
   float angle = 0;
-  if (!args[1].empty()) valueOf(args[1], angle);
-  return sptrOf<RotateAtom>(Formula(tp, args[2])._root, angle, args[3]);
+  if (!args.text(1).empty()) valueOf(args.text(1), angle);
+  return sptrOf<RotateAtom>(args.formula(2, true, true), angle, args.text(3));
 }
 
-inline macro(reflectbox) {
-  return sptrOf<ReflectAtom>(Formula(tp, args[1])._root);
+inline cmdmacro(reflectbox) {
+  return sptrOf<ReflectAtom>(orEmpty(args.formula(1, true, true)));
 }
 
-inline macro(scalebox) {
+inline cmdmacro(scalebox) {
   float sx = 1, sy = 1;
-  valueOf(args[1], sx);
+  valueOf(args.text(1), sx);
 
-  if (args[3].empty())
+  if (args.text(3).empty())
     sy = sx;
   else
-    valueOf(args[3], sy);
+    valueOf(args.text(3), sy);
 
   if (sx == 0) sx = 1;
   if (sy == 0) sy = 1;
-  return sptrOf<ScaleAtom>(Formula(tp, args[2], false, tp.isMathMode())._root, sx, sy);
+  // TeX's largest dimension is 16383.99998pt: past that as a factor, a
+  // scaled size is `Dimension too large' there, and here a font size no
+  // renderer can measure.
+  constexpr float most = 16384.f;
+  sx = std::max(-most, std::min(sx, most));
+  sy = std::max(-most, std::min(sy, most));
+  return sptrOf<ScaleAtom>(args.formula(2, args.isMathMode()), sx, sy);
 }
 
-inline macro(resizebox) {
-  const std::string& ws = args[1];
-  const std::string& hs = args[2];
-  return sptrOf<ResizeAtom>(Formula(tp, args[3])._root, ws, hs, ws == "!" || hs == "!");
+inline cmdmacro(resizebox) {
+  const std::string& ws = args.text(1);
+  const std::string& hs = args.text(2);
+  return sptrOf<ResizeAtom>(args.formula(3, true, true), ws, hs, ws == "!" || hs == "!");
 }
 
-inline macro(shadowbox) {
-  return sptrOf<ShadowAtom>(Formula(tp, args[1])._root);
+inline cmdmacro(shadowbox) {
+  return sptrOf<ShadowAtom>(args.formula(1, true, true));
 }
 
-inline macro(ovalbox) {
-  return sptrOf<OvalAtom>(Formula(tp, args[1])._root);
+inline cmdmacro(ovalbox) {
+  return sptrOf<OvalAtom>(args.formula(1, true, true));
 }
 
-inline macro(cornersize) {
+inline cmdmacro(cornersize) {
   float size = 0.5f;
-  valueOf(args[1], size);
+  valueOf(args.text(1), size);
   if (size <= 0 || size > 0.5f) size = 0.5f;
   OvalAtom::_multiplier = size;
   OvalAtom::_diameter = 0;
   return nullptr;
 }
 
-inline macro(doublebox) {
-  return sptrOf<DoubleFramedAtom>(Formula(tp, args[1])._root);
+inline cmdmacro(doublebox) {
+  return sptrOf<DoubleFramedAtom>(args.formula(1, true, true));
 }
 
-inline macro(fbox) {
-  return sptrOf<FBoxAtom>(Formula(tp, args[1], false)._root);
+inline cmdmacro(fbox) {
+  return sptrOf<FBoxAtom>(args.formula(1));
 }
 
 }  // namespace microtex

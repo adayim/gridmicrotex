@@ -3,10 +3,10 @@
 # halfway through.
 
 test_that("a release / re-init cycle leaves the macro registry usable", {
-  # MicroTeX::release() is MacroInfo::_free_() + NewCommandMacro::_free_(),
-  # i.e. final teardown: it empties the macro registries, which are only
-  # ever repopulated from inside MicroTeX::init(). microtex_release() is
-  # not paired with a re-init, so it must leave them alone and drop only
+  # MicroTeX::release() is MacroInfo::_free_(), i.e. final teardown: it
+  # empties the macro registry, which is only ever repopulated from inside
+  # MicroTeX::init(). microtex_release() is not paired with a re-init, so
+  # it must leave the registry alone and drop only
   # per-session state -- see src/init.cpp. (Historically _free_() deleted
   # every value in the static _commands map without erasing it, so the
   # next MacroInfo::add() double-freed a built-in; that is fixed at the

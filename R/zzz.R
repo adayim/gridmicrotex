@@ -6,9 +6,8 @@
   requireNamespace("systemfonts", quietly = TRUE)
 
   # Initialize MicroTeX with Lete Sans Math as the default font --- it pairs
-  # naturally with R's sans-serif default for plot text. The CLM metrics
-  # are synthesised in C++ from the OTF's OpenType MATH table at load
-  # time; no companion .clm2 file is shipped.
+  # naturally with R's sans-serif default for plot text. C++ reads its
+  # metrics and OpenType MATH table from the OTF itself at load time.
   otf_path <- system.file("fonts", "LeteSansMath.otf", package = pkgname)
 
   if (nchar(otf_path) == 0) {
@@ -44,12 +43,17 @@
 .onUnload <- function(libpath) {
   # Must come before library.dynam.unload(): an armed device holds
   # function pointers into this DLL, and unmapping it under them turns
-  # the next plot or window resize into a jump to freed memory.
-  gm_base_teardown()
+  # the next plot or window resize into a jump to freed memory. A device
+  # another package has wrapped since (showtext does) cannot be restored
+  # without clobbering that wrapper, and still calls into us, so then the
+  # DLL has to stay.
+  stranded <- gm_base_teardown()
+  removeTaskCallback(.gm_release_task)
   microtex_release()
-  # Hand the shared object back as well. R does not do this for us, and
-  # R_unload_gridmicrotex() (src/init.cpp) -- which frees the macro
-  # registries and releases the preserved text-measurer callback -- runs
-  # from nowhere else.
+  if (stranded > 0L) return(invisible())
+  # Hand the shared object back as well; R does not do this for us.
+  # Unloading runs R_unload_gridmicrotex() (src/init.cpp), and unmapping
+  # runs the static destructors that free the macro registries (end of
+  # macro_def.cpp).
   library.dynam.unload("gridmicrotex", libpath)
 }

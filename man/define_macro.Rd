@@ -28,17 +28,20 @@ macro names to their expansions. Empty if no macros are defined.
 }
 }
 \description{
-Registers a zero-argument shorthand that is expanded by text
-substitution before the expression reaches the MicroTeX parser.
-Useful for domain-specific notation (e.g. \code{\\RR} for
+Registers a zero-argument shorthand that every later expression can use,
+expanded by the parser as a \code{\\newcommand} without arguments would
+be. Useful for domain-specific notation (e.g. \code{\\RR} for
 \code{\\mathbb\{R\}}) you reuse across many plots.
 }
 \section{Choosing between this and \code{\\newcommand}}{
 
-MicroTeX also accepts \code{\\newcommand} and plain-TeX \code{\\def}
-written inside the expression itself, and those are the more capable
-form: they take up to nine arguments, which \code{define_macro()} does
-not: it substitutes text and nothing else.
+An expression can also define macros itself, as LaTeX does:
+\code{\\newcommand}, \code{\\renewcommand}, \code{\\providecommand},
+\code{\\def} (delimited parameters included), \code{\\let},
+\code{\\DeclareMathOperator} and \code{\\newenvironment}. Those are the
+more capable form: they take up to nine arguments, which
+\code{define_macro()} does not. As in TeX, a definition made inside
+\code{\{...\}} ends with the group, and \code{\\gdef} is global.
 
 \preformatted{
   # parameterised, but local to this one expression
@@ -46,12 +49,12 @@ not: it substitutes text and nothing else.
                 \\norm{\\vec{v}})")
 }
 
-What they cannot do is persist: the user-macro table is cleared at the
-start of every parse, so a \code{\\newcommand} written in one call is
-gone by the next. That is the one thing \code{define_macro()} is for.
+What they cannot do is persist: a \code{\\newcommand} written in one call
+is gone by the next (\code{\\gdef} included). That is the one thing \code{define_macro()} is for.
 Use \code{\\newcommand} / \code{\\def} for an abbreviation local to a
 single label, and \code{define_macro()} for notation you want available
-to every label in a script.
+to every label in a script. A \code{\\renewcommand} in one label
+overrides a \code{define_macro()} macro for that label only.
 }
 
 \examples{

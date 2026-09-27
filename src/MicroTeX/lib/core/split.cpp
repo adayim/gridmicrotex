@@ -14,6 +14,159 @@
 using namespace std;
 using namespace microtex;
 
+namespace {
+
+// A colour, a size, a highlight or ulem's underline and strike-out is one
+// box around the run it applies to, and the splitter breaks only inside
+// rows (HBox): text in them never wrapped. Opening such a box puts it
+// around each piece of its row instead (DecorBox::around()). A colour on
+// every piece draws what it drew on the whole; so does scaling every piece
+// about its own origin, as a row sets its pieces side by side, each at its
+// (scaled) shift. A space stays a GlueBox, which the line builder looks
+// for -- scaled, not wrapped, under a size -- except under a decoration
+// that marks it (an underline, a highlight), which runs on under the
+// space. Only a line that is broken is opened, so every other layout is
+// exactly as it was. Only a box made to be opened is (DecorBox::_openable,
+// set where it is made): \scalebox, \resizebox, \colorbox and \underline
+// are boxes in LaTeX, and stay whole.
+
+const DecorBox* decoration(const sptr<Box>& b) {
+  const auto* d = dynamic_cast<const DecorBox*>(b.get());
+  if (d == nullptr || !d->_openable) return nullptr;
+  const auto* s = dynamic_cast<const ScaleBox*>(d);
+  if (s != nullptr && (s->sx() <= 0 || s->sy() <= 0)) return nullptr;
+  return dynamic_pointer_cast<HBox>(d->_base) != nullptr ? d : nullptr;
+}
+
+const ScaleBox* scaling(const sptr<Box>& b) {
+  return dynamic_cast<const ScaleBox*>(decoration(b));
+}
+
+// A row rebuilt from `from`'s children keeps `from`'s size, scaled by
+// `sy` (and `sx`) as a wrapper around it scales it: adding the children
+// again would compute it afresh, and lose a size set by hand (\smash,
+// \raisebox's [h][d]).
+void keepSize(HBox& row, const Box& from, float sx = 1, float sy = 1) {
+  row._width = from._width * sx;
+  row._height = from._height * sy;
+  row._depth = from._depth * sy;
+}
+
+bool openable(const sptr<Box>& b) {
+  return decoration(b) != nullptr;
+}
+
+sptr<Box> wrapPiece(const sptr<Box>& w, sptr<Box> piece);
+
+// `row`'s pieces, each inside the wrapper `w`, as a row at `shift`. The
+// breaks, their hyphens and the bidi levels are per child, and a child
+// maps to one piece, so they carry over as they are.
+sptr<HBox> wrapRow(const sptr<Box>& w, const sptr<HBox>& row, float shift) {
+  auto out = sptrOf<HBox>();
+  for (const auto& c : row->_children) out->add(wrapPiece(w, c));
+  out->_breakPositions = row->_breakPositions;
+  for (const auto& [pos, b] : row->_breakBoxes) out->_breakBoxes[pos] = wrapPiece(w, b);
+  out->_childLevels = row->_childLevels;
+  out->_shift = shift;
+  out->_type = row->_type;
+  const ScaleBox* s = scaling(w);
+  keepSize(*out, *row, s != nullptr ? s->sx() : 1, s != nullptr ? s->sy() : 1);
+  return out;
+}
+
+// The wrapper `w` opened: its row, piece by piece.
+sptr<HBox> openWrapper(const sptr<Box>& w) {
+  const auto row = static_pointer_cast<HBox>(static_pointer_cast<DecorBox>(w)->_base);
+  return wrapRow(w, row, w->_shift);
+}
+
+sptr<Box> wrapPiece(const sptr<Box>& w, sptr<Box> piece) {
+  // A wrapper inside this one is opened first, so both reach the words.
+  if (openable(piece)) piece = openWrapper(piece);
+  const DecorBox* d = decoration(w);
+  const ScaleBox* s = scaling(w);
+  if (const auto row = dynamic_pointer_cast<HBox>(piece)) {
+    // Down to the words: a row wrapped whole is one more box the splitter
+    // cannot enter.
+    return wrapRow(w, row, s != nullptr ? row->_shift * s->sy() : row->_shift);
+  }
+  if (const auto glue = dynamic_pointer_cast<GlueBox>(piece)) {
+    if (s != nullptr) {
+      return sptrOf<GlueBox>(glue->_width * s->sx(), glue->_stretch * s->sx(),
+                             glue->_shrink * s->sx());
+    }
+    if (!d->marksSpaces()) return glue;
+  }
+  return d->around(piece);
+}
+
+// The glue a line's leaf is: bare, or the space under an underline or a
+// highlight, which a colour may wrap in turn. Null for anything else -- a
+// space under \scalebox is not as wide as its glue.
+sptr<GlueBox> glueOf(const sptr<Box>& leaf) {
+  sptr<Box> b = leaf;
+  while (dynamic_pointer_cast<ColorBox>(b) != nullptr ||
+         dynamic_pointer_cast<RuleDecorBox>(b) != nullptr) {
+    b = static_pointer_cast<DecorBox>(b)->_base;
+  }
+  return dynamic_pointer_cast<GlueBox>(b);
+}
+
+// Sets a leaf's width and that of the glue in it: the boxes around a space
+// are as wide as the space.
+void setWidth(const sptr<Box>& leaf, float width) {
+  for (sptr<Box> b = leaf; b != nullptr;) {
+    b->_width = width;
+    const auto d = dynamic_pointer_cast<DecorBox>(b);
+    b = d != nullptr ? d->_base : nullptr;
+  }
+}
+
+// A line ends with the space it broke at. An underline or a highlight
+// stops short of it, as ulem's and soul's do: that space is left bare.
+void bareTrailingSpace(const sptr<HBox>& line) {
+  sptr<HBox> h = line;
+  while (h != nullptr && !h->_children.empty()) {
+    auto& last = h->_children.back();
+    if (const auto row = dynamic_pointer_cast<HBox>(last)) {
+      h = row;
+      continue;
+    }
+    if (const auto glue = glueOf(last)) last = glue;
+    return;
+  }
+}
+
+// `row` with every colour or size box in it opened, at any depth; `row`
+// itself when it holds none.
+sptr<HBox> openRow(const sptr<HBox>& row) {
+  bool changed = false;
+  vector<sptr<Box>> children;
+  children.reserve(row->_children.size());
+  for (const auto& c : row->_children) {
+    sptr<Box> d = c;
+    if (openable(c)) {
+      d = openWrapper(c);
+    } else if (const auto h = dynamic_pointer_cast<HBox>(c)) {
+      d = openRow(h);
+    }
+    changed = changed || d != c;
+    children.push_back(d);
+  }
+  if (!changed) return row;
+  auto out = sptrOf<HBox>();
+  for (const auto& c : children) out->add(c);
+  out->_breakPositions = row->_breakPositions;
+  out->_breakBoxes = row->_breakBoxes;
+  out->_childLevels = row->_childLevels;
+  out->_shift = row->_shift;
+  out->_type = row->_type;
+  keepSize(*out, *row);
+  return out;
+}
+
+}  // namespace
+
 #ifdef HAVE_LOG
 
 static void printBox(const sptr<Box>& b, int dep, vector<bool>& lines, int max = 0) {
@@ -194,16 +347,18 @@ bool BoxSplitter::justifyLine(const sptr<Box>& line, float width) {
   }
   if (last < 0) return false;  // nothing but spaces
 
+  // The spaces, bare or under an underline or a highlight, whose boxes
+  // widen with them (setWidth()).
   float trailing = 0;
-  std::vector<sptr<GlueBox>> glue;
+  std::vector<sptr<Box>> glue;
   for (int i = 0; i < static_cast<int>(leaves.size()); i++) {
-    auto g = std::dynamic_pointer_cast<GlueBox>(leaves[i]);
+    const auto g = glueOf(leaves[i]);
     if (g == nullptr) continue;
     if (i > last) {
       trailing += g->_width;
-      g->_width = 0;
+      setWidth(leaves[i], 0);
     } else {
-      glue.push_back(g);
+      glue.push_back(leaves[i]);
     }
   }
 
@@ -216,14 +371,15 @@ bool BoxSplitter::justifyLine(const sptr<Box>& line, float width) {
   }
 
   float total = 0;
-  for (const auto& g : glue) total += g->_stretch;
+  for (const auto& leaf : glue) total += glueOf(leaf)->_stretch;
   if (total <= PREC) {
     if (trailing > 0) recomputeHBoxWidth(line);
     return trailing > 0;
   }
 
-  for (const auto& g : glue) {
-    g->_width += slack * (g->_stretch / total);
+  for (const auto& leaf : glue) {
+    const auto g = glueOf(leaf);
+    setWidth(leaf, g->_width + slack * (g->_stretch / total));
   }
   recomputeHBoxWidth(line);
   return true;
@@ -239,7 +395,12 @@ std::pair<bool, sptr<Box>> BoxSplitter::splitDispatch(
   auto h = dynamic_pointer_cast<HBox>(b);
   if (h != nullptr) return split(h, width, lineSpace);
   auto v = dynamic_pointer_cast<VBox>(b);
-  if (v != nullptr) return split(v, width, lineSpace, depth);
+  if (v != nullptr && v->_rows) return split(v, width, lineSpace, depth);
+  // A label that is all \large or \color is that box, not a row.
+  if (openable(b) && width > 0 && b->_width > width) {
+    const auto [splitted, box] = split(openWrapper(b), width, lineSpace);
+    return {splitted, splitted ? box : b};
+  }
   return {false, b};
 }
 
@@ -369,15 +530,17 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
   // raw owner leaked the VBox when it did (valgrind: 6 blocks from
   // BoxSplitter::split over one test run).
   auto vbox = sptrOf<VBox>();
+  vbox->_lines = true;
   sptr<HBox> first, second;
-  sptr<HBox> hbox = hb;
+  // Colour and size boxes opened, so the text in them can be broken too.
+  sptr<HBox> hbox = openRow(hb);
   bool splitted = false;
 
   // Per-line target widths when breaking by total fit. Empty means
   // greedy, in which case every line simply targets the full measure and
   // the behaviour is exactly what it was.
   const std::vector<float> targets =
-    _optimalBreak ? optimalLineTargets(hb, width) : std::vector<float>();
+    _optimalBreak ? optimalLineTargets(hbox, width) : std::vector<float>();
   size_t line = 0;
 
   while (hbox->_width > width) {
@@ -457,6 +620,7 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
       first = hboxes.first;
       second = hboxes.second;
     }
+    bareTrailingSpace(first);
     // Visual order before justification: justifyLine() drops the spaces
     // that end the line and stretches the rest, and which spaces those
     // are depends on the direction.
@@ -478,50 +642,107 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
     return {splitted, vbox};
   }
 
-  return {splitted, hbox};
+  // Nothing broke: the row as it came, not its opened copy.
+  return {splitted, hb};
 }
+
+namespace {
+
+// A break inside child `index` of `row`: the child's own positions `sub`
+// (innermost on top) go on `s` after the one that splits the row around
+// that child.
+void pushInside(stack<BoxSplitter::Position>& s, const sptr<HBox>& row, int index,
+                stack<BoxSplitter::Position>& sub) {
+  s.push(BoxSplitter::Position(index - 1, row));
+  vector<BoxSplitter::Position> p;
+  while (!sub.empty()) {
+    p.push_back(sub.top());
+    sub.pop();
+  }
+  for (auto it = p.rbegin(); it != p.rend(); it++) s.push(*it);
+}
+
+}  // namespace
 
 float BoxSplitter::canBreak(stack<Position>& s, const sptr<HBox>& hbox, const float width) {
   const vector<sptr<Box>>& children = hbox->_children;
   const int count = children.size();
-  // Cumulative width
-  auto* cumWidth = new float[count + 1]();
-  cumWidth[0] = 0;
+  vector<float> cumWidth(count + 1, 0.f);
   for (int i = 0; i < count; i++) {
-    auto box = children[i];
+    const auto& box = children[i];
     cumWidth[i + 1] = cumWidth[i] + box->_width;
     if (cumWidth[i + 1] <= width) continue;
-    int pos = getBreakPosition(hbox, i, cumWidth, width);
-    auto h = dynamic_pointer_cast<HBox>(box);
-    if (h != nullptr) {
-      stack<Position> sub;
-      float w = canBreak(sub, h, width - cumWidth[i]);
-      if (w != box->_width && (cumWidth[i] + w <= width || pos == -1)) {
-        s.push(Position(i - 1, hbox));
-        // add to stack
-        vector<Position> p;
-        while (!sub.empty()) {
-          p.push_back(sub.top());
-          sub.pop();
-        }
-        for (auto it = p.rbegin(); it != p.rend(); it++) s.push(*it);
-        // release cum-width
-        float x = cumWidth[i] + w;
-        delete[] cumWidth;
-        return x;
+    const int pos = getBreakPosition(hbox, i, cumWidth.data(), width);
+    // A break inside this child that fits is the latest there is.
+    stack<Position> sub;
+    const auto h = dynamic_pointer_cast<HBox>(box);
+    const float w = h != nullptr ? canBreak(sub, h, width - cumWidth[i]) : box->_width;
+    const bool inside = h != nullptr && w != box->_width;
+    if (inside && cumWidth[i] + w <= width) {
+      pushInside(s, hbox, i, sub);
+      return cumWidth[i] + w;
+    }
+    // Otherwise the last break before it: in this row, or inside a child
+    // after that one -- the space that ends a run of text
+    // (`\text{a }\textbf{b}`), or the prose before inline math in a label.
+    // TeX sees one list, where either is simply the last break; here it is
+    // a level down, and was missed, so the line ran on to a later break.
+    for (int j = i - 1; j >= std::max(pos, 0); j--) {
+      const auto hj = dynamic_pointer_cast<HBox>(children[j]);
+      // Off the baseline (a script, a raised box) is no place for the
+      // line to end.
+      if (hj == nullptr || hj->_shift != 0) continue;
+      stack<Position> last;
+      const float x = lastBreak(last, hj, width - cumWidth[j]);
+      if (x >= 0 && cumWidth[j] + x > 0) {
+        pushInside(s, hbox, j, last);
+        return cumWidth[j] + x;
       }
     }
-
     if (pos != -1) {
       s.push(Position(pos, hbox));
-      float x = cumWidth[pos];
-      delete[] cumWidth;
-      return x;
+      return cumWidth[pos];
+    }
+    // Nothing fits: an overfull line, broken inside this child if it can be.
+    if (inside) {
+      pushInside(s, hbox, i, sub);
+      return cumWidth[i] + w;
     }
   }
-
-  delete[] cumWidth;
   return hbox->_width;
+}
+
+float BoxSplitter::lastBreak(stack<Position>& s, const sptr<HBox>& hb, const float limit) {
+  const vector<sptr<Box>>& children = hb->_children;
+  const int count = children.size();
+  vector<float> cum(count + 1, 0.f);
+  for (int i = 0; i < count; i++) cum[i + 1] = cum[i] + children[i]->_width;
+  const auto& bp = hb->_breakPositions;
+  // A break before child b ends the line at cum[b], plus what it draws
+  // (a hyphen). One before everything would leave an empty line.
+  const auto fits = [&](int b) {
+    if (b <= 0 || b > count) return false;
+    if (std::find(bp.begin(), bp.end(), b) == bp.end()) return false;
+    const auto extra = hb->breakBoxAt(b);
+    return cum[b] + (extra != nullptr ? extra->_width : 0.f) <= limit;
+  };
+  // From the end: the break after child j, then any inside child j.
+  for (int j = count - 1; j >= 0; j--) {
+    if (fits(j + 1)) {
+      s.push(Position(j + 1, hb));
+      return cum[j + 1];
+    }
+    const auto h = dynamic_pointer_cast<HBox>(children[j]);
+    // Not into a script's box: the line ends on its baseline.
+    if (h == nullptr || h->_shift != 0) continue;
+    stack<Position> sub;
+    const float x = lastBreak(sub, h, limit - cum[j]);
+    if (x >= 0 && cum[j] + x > 0) {
+      pushInside(s, hb, j, sub);
+      return cum[j] + x;
+    }
+  }
+  return -1;
 }
 
 int BoxSplitter::getBreakPosition(

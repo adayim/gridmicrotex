@@ -25,14 +25,35 @@ test_that("itemize puts each item on its own row, marker then content", {
 test_that("math inside an item is still set as math", {
   # Flattened to text these would come out as the literal characters, so
   # assert the two things only a math setter produces: a radical rule,
-  # and a superscript set smaller than its base.
-  g <- latex_grob("\\begin{enumerate}\\item x^2 \\item \\sqrt{y}\\end{enumerate}",
-                  render_mode = "path")
-  expect_true("line" %in% g$layout_df$type)
+  # and a superscript set smaller than its base. An item is text, as in
+  # LaTeX, so its math is between $...$; in math mode it is math anyway.
+  for (mode in c("mixed", "math")) {
+    src <- if (mode == "math") "\\begin{enumerate}\\item x^2 \\item \\sqrt{y}\\end{enumerate}"
+           else "\\begin{enumerate}\\item $x^2$ \\item $\\sqrt{y}$\\end{enumerate}"
+    g <- latex_grob(src, render_mode = "path", input_mode = mode)
+    expect_true("line" %in% g$layout_df$type, info = mode)
+    r <- latex_tree(src, input_mode = mode)$records
+    r <- r[!is.na(r$font_size), ]
+    expect_length(unique(r$font_size), 2L)
+    expect_lt(min(r$font_size), max(r$font_size))
+  }
+})
 
-  r <- items("\\begin{enumerate}\\item x^2\\end{enumerate}")
-  expect_length(unique(r$font_size), 2L)
-  expect_lt(min(r$font_size), max(r$font_size))
+test_that("an item is text, as in LaTeX, when the list is met in text", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- items("\\begin{itemize}\n\\item First point\n\\item Second\n\\end{itemize}")
+  # One run of text per item, its words kept apart and the spaces either
+  # end of it dropped, as TeX drops them.
+  expect_identical(r$text[r$type == "text"], c("First point", "Second"))
+  expect_identical(latex_tree("\\begin{itemize}\\item First point\\end{itemize}",
+                              input_mode = "document")$records$text[2], "First point")
+  # In math, an item is math, as it always was: letters one glyph each.
+  m <- latex_tree("\\begin{itemize}\\item ab\\end{itemize}", input_mode = "math")$records
+  expect_false(any(m$type == "text"))
+  # A problem in an item is reported, at the list, since the item is read
+  # again from its text: `^` outside math, as anywhere in text.
+  expect_warning(latex_grob("\\begin{itemize}\\item x^2\\end{itemize}"),
+                 "1:1: \\\\begin\\{itemize\\}: \\^ outside math")
 })
 
 test_that("the optional [label] changes the marker", {
@@ -73,6 +94,20 @@ test_that("a nested list is indented past its parent", {
   expect_gt(max(left), min(left))
 })
 
+test_that("a nested list after an item's text goes below it, as in LaTeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  row_of <- function(r, word) r$y[r$type == "text" & r$text == word]
+  r <- items("\\begin{itemize}\\item outer \\begin{itemize}\\item inner\\end{itemize}\\end{itemize}")
+  expect_gt(row_of(r, "inner"), row_of(r, "outer"))
+  # Level with the outer item's text, not its marker.
+  expect_gte(min(r$x[r$y > row_of(r, "outer") + 1]), r$x[r$text %in% "outer"])
+  # One that opens the item shares its line, as LaTeX sets it.
+  r <- items("\\begin{itemize}\\item \\begin{itemize}\\item inner\\end{itemize}\\end{itemize}")
+  expect_lt(diff(range(r$y[r$type == "glyph"])), 5)
+  # A `}` that closes nothing cannot end the item's text early.
+  expect_identical(items("\\begin{itemize}\\item {a}} b\\end{itemize}")$text[2], "a b")
+})
+
 test_that("empty list does not error", {
   g <- latex_grob("\\begin{itemize}\\end{itemize}", render_mode = "path")
   expect_s3_class(g, "latexgrob")
@@ -84,11 +119,65 @@ test_that("lists survive default (mixed) input mode", {
   # body is wrapped in \text{} and split around nested environments.
   wrapped <- latex_wrap("\\begin{itemize}\\item a\\end{itemize}")
   expect_false(any(grepl("\\\\text\\{", wrapped)))
-  src <- paste0("\\begin{enumerate}\\item x^2 \\item \\text{T:}\\ ",
-                "\\begin{array}{|c|c|}a&b\\\\c&d\\end{array}\\end{enumerate}")
-  g_mixed <- latex_grob(src, render_mode = "path")
-  g_math <- latex_grob(src, render_mode = "path", input_mode = "math")
-  # mixed mode must not mangle the body: identical layout to math mode
-  expect_equal(g_mixed$bbox_h, g_math$bbox_h)
-  expect_equal(nrow(g_mixed$layout_df), nrow(g_math$layout_df))
+  # A label keeps a list whole, environment and all, whatever is inside.
+  src <- paste0("\\begin{enumerate}\\item $x^2$ \\item T: ",
+                "$\\begin{array}{|c|c|}a&b\\\\c&d\\end{array}$\\end{enumerate}")
+  r <- items(src)
+  expect_true("T: " %in% r$text)
+  expect_true(any(r$type == "line"))  # the array's rules
+})
+
+test_that("a list item wraps at max_width, hanging under its own text", {
+  # A list is a marker column and an X column, which takes what the marker
+  # leaves of the text width. Items used to be one line each, whatever
+  # the measure, and ran off the page.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  long <- paste(rep("word", 30), collapse = " ")
+  for (mode in c("document", "mixed")) {
+    t <- latex_tree(sprintf("\\begin{itemize}\\item %s \\item short\\end{itemize}", long),
+                    input_mode = mode, max_width = 200)
+    r <- t$records[t$records$type == "text", ]
+    expect_lte(t$bbox[["width"]], 200, label = mode)
+    expect_gt(length(unique(round(r$y))), 5L, label = mode)
+    # Every line of the item starts where its first word does.
+    expect_identical(unique(round(r$x[r$text == "word" & r$x < 60], 2)),
+                     round(min(r$x[r$text == "word"]), 2), label = mode)
+  }
+  # A nested list wraps too, at its own, deeper indent.
+  nested <- sprintf("\\begin{itemize}\\item a \\begin{itemize}\\item %s\\end{itemize}\\end{itemize}",
+                    long)
+  t <- latex_tree(nested, input_mode = "document", max_width = 220)
+  expect_lte(t$bbox[["width"]], 220)
+  text <- t$records[t$records$type == "text", ]
+  expect_gt(min(text$x[text$text == "word"]), text$x[1])  # deeper than the outer item's "a"
+})
+
+test_that("an item's text may end in a control space before a nested list", {
+  # Trimmed, `\ ` left a backslash that joined the row's `\\` and ate the
+  # next row's start: "hphantomII." was drawn as letters, and later the
+  # nested list's cell became a literal `&`.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  tex <- paste0("\\begin{enumerate}[\\Roman*.]\\item \\text{A:}\\ ",
+                "\\begin{itemize}\\item x\\end{itemize}\\end{enumerate}")
+  r <- latex_tree(tex, input_mode = "math")$records
+  plain <- latex_tree("\\begin{enumerate}[\\Roman*.]\\item \\text{A:}\\ \\end{enumerate}",
+                      input_mode = "math")$records
+  # The item's own glyphs, then the nested bullet and x: nothing else.
+  expect_identical(nrow(r), nrow(plain) + 2L)
+  expect_false(7 %in% r$glyph)  # `&`
+  nested <- r[(nrow(plain) + 1):nrow(r), ]
+  expect_gt(min(nested$x), min(plain$x[plain$type == "text"]))
+})
+
+test_that("a short list keeps its own width, and labels are set right", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # A label is placed by its width (hjust), so a list that fits must not
+  # grow to max_width.
+  short <- "\\begin{itemize}\\item a \\item b\\end{itemize}"
+  expect_identical(latex_tree(short, max_width = 400)$bbox, latex_tree(short, max_width = 0)$bbox)
+  # Labels of different widths end level, as LaTeX sets them, so every
+  # item's text starts at the same place.
+  r <- items(paste0("\\begin{enumerate}", paste(sprintf("\\item i%d", 1:10), collapse = " "),
+                    "\\end{enumerate}"))
+  expect_length(unique(round(r$x[r$type == "text"], 2)), 1L)
 })

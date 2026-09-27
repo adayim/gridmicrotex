@@ -4,37 +4,13 @@
 #include "atom/atom_char.h"
 #include "atom/atom_fence.h"
 #include "atom/atom_vrow.h"
+#include "front/front.h"
+#include "front/lower.h"
 #include "utils/string_utils.h"
 #include "utils/utf.h"
 
 using namespace std;
 using namespace microtex;
-
-map<string, sptr<Formula>> Formula::_predefFormulas;
-
-Formula::Formula() : _parser("", this, false) {}
-
-Formula::Formula(const Parser& tp, const string& latex, bool preprocess, bool isMathMode)
-    : _parser(tp.isPartial(), latex, this, preprocess, isMathMode) {
-  if (tp.isPartial()) {
-    try {
-      _parser.parse();
-    } catch (exception& e) {
-      if (_root == nullptr) _root = sptrOf<EmptyAtom>();
-    }
-  } else {
-    _parser.parse();
-  }
-}
-
-Formula::Formula(const string& latex, bool preprocess) : _parser(latex, this, preprocess) {
-  _parser.parse();
-}
-
-void Formula::setLaTeX(const string& latex) {
-  _parser.reset(latex);
-  if (!latex.empty()) _parser.parse();
-}
 
 const std::vector<sptr<MiddleAtom>>& Formula::middle() {
   return _middle;
@@ -62,23 +38,25 @@ Formula* Formula::add(const sptr<Atom>& a) {
   return this;
 }
 
-sptr<Box> Formula::createBox(Env& env) {
-  if (_root == nullptr) return StrutBox::empty();
-  return _root->createBox(env);
-}
-
 sptr<Formula> Formula::get(const string& name) {
-  auto it = _predefFormulas.find(name);
-  if (it != _predefFormulas.end()) return it->second;
-
   auto i = _predefFormulaStrs.find(name);
   if (i == _predefFormulaStrs.end()) return nullptr;
 
-  auto tf = sptrOf<Formula>(i->second);
-  auto* ra = dynamic_cast<RowAtom*>(tf->_root.get());
-  if (ra == nullptr) {
-    _predefFormulas[name] = tf;
+  // Read once by the front end, as math, without define_macro()'s macros:
+  // the definitions are the engine's, as \sin is LaTeX's, and read cleanly,
+  // so there is nothing in them to report. The tree is what is kept; each
+  // use lowers atoms of its own, which it may change (`\sin\limits`).
+  static map<string, front::Ast> trees;
+  front::Diagnostics unreported;
+  auto it = trees.find(name);
+  if (it == trees.end()) {
+    it = trees
+           .emplace(name, front::parseLatex(i->second, front::Mode::math, unreported, false,
+                                            false, 0, UINT32_MAX, false))
+           .first;
   }
+  auto tf = sptrOf<Formula>();
+  front::lowerInto(it->second, *tf, unreported);
   return tf;
 }
 
@@ -136,6 +114,10 @@ void ArrayFormula::addRowSpecifier(const sptr<CellSpecifier>& spe) {
   _rowSpecifiers[_row].push_back(spe);
 }
 
+void ArrayFormula::addRowGap(const Dimen& gap) {
+  _rowGaps[static_cast<int>(_row)] = gap;
+}
+
 void ArrayFormula::addCellSpecifier(const sptr<CellSpecifier>& spe) {
   string str = toString(_row) + toString(_col);
   auto it = _cellSpecifiers.find(str);
@@ -156,8 +138,10 @@ int ArrayFormula::cols() const {
 sptr<VRowAtom> ArrayFormula::getAsVRow() {
   auto vr = sptrOf<VRowAtom>();
   vr->setAddInterline(true);
-  for (auto& c : _array) {
-    for (auto& j : c) vr->append(j);
+  for (std::size_t r = 0; r < _array.size(); r++) {
+    for (auto& j : _array[r]) vr->append(j);
+    const auto gap = _rowGaps.find(static_cast<int>(r));
+    if (gap != _rowGaps.end()) vr->addGapAfterLast(gap->second);
   }
   return vr;
 }

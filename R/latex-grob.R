@@ -1,11 +1,12 @@
 #' Create a grid grob from a LaTeX expression
 #'
-#' Parses a LaTeX math expression and returns a grid grob object
-#' that renders the formula using native grid graphics primitives.
-#' The grob supports standard grid queries such as \code{grobWidth()},
-#' \code{grobHeight()}, \code{grobX()}, and \code{grobY()}.
+#' Reads LaTeX -- a formula, a label mixing text and math, or a document
+#' body -- and returns a grid grob object that draws it with native grid
+#' graphics primitives. The grob supports standard grid queries such as
+#' \code{grobWidth()}, \code{grobHeight()}, \code{grobX()}, and
+#' \code{grobY()}.
 #'
-#' @param tex Character string of LaTeX math code.
+#' @param tex Character string of LaTeX, read as \code{input_mode} says.
 #' @param x,y Position in grid coordinates.
 #' @param default.units Units for x, y if given as numeric.
 #' @param hjust,vjust Horizontal/vertical justification. Accepts the
@@ -27,16 +28,18 @@
 #'   (default; let the parser decide), \code{"display"}, \code{"text"},
 #'   \code{"script"}, or \code{"scriptscript"}. See
 #'   \code{\link{latex_grob}} for the semantics of each value.
-#' @param input_mode How \code{tex} is interpreted before being parsed.
-#'   \code{"mixed"} (default) wraps the input in \code{\\text{...}} so the
-#'   string reads as ordinary text and \code{$...$} (or \code{\\(...\\)})
-#'   opens math mode, matching document-level LaTeX semantics. Useful for
-#'   labels that arrive from external sources mixing prose and math without
-#'   explicit \code{\\text{}} markers. \code{"math"} is the classic
-#'   MicroTeX behaviour: the whole string is treated as math, so unwrapped
-#'   prose renders as spaced math italics. The default can be changed globally via
-#'   \code{\link{latex_options}(input_mode = "math")}. See \code{\link{latex_wrap}}
-#'  for details on the wrapping process.
+#' @param input_mode How \code{tex} is read.
+#'   \code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
+#'   with math between \code{$...$} or \code{\\(...\\)}, and a newline
+#'   starts a new line, as \code{"\\n"} does in R.
+#'   \code{"math"} reads the whole string as math, as between \code{$...$},
+#'   so a word is set as italic letters; write text as \code{\\text{...}}.
+#'   \code{"document"} reads a LaTeX document body by LaTeX's own rules: a
+#'   newline is a space, a blank line (or \code{\\par}) starts an indented
+#'   paragraph, \code{\\section} and its kin are numbered headings, and
+#'   display math is centred on a line of its own. Give \code{max_width} to
+#'   break the paragraphs into lines. The default can be set for the
+#'   session with \code{\link{latex_options}(input_mode = )}.
 #' @param render_mode Character string: \code{"typeface"} (default) renders
 #'   glyphs as native text using the math font, producing
 #'   selectable/accessible text in PDF and SVG output.
@@ -44,7 +47,8 @@
 #'   are read directly from their OTF files: no system-wide font
 #'   install is required.
 #'   Falls back to path mode automatically on devices that lack the
-#'   R \eqn{\geq} 4.3 glyph engine (e.g., the base \code{pdf()} device).
+#'   R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
+#'   \code{postscript()}, which cannot embed the math font.
 #'   For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
 #'   \code{"path"} renders math symbols as filled vector paths (works on
 #'   all devices but text is not selectable in PDF/SVG).
@@ -144,41 +148,78 @@
 #' - `lineheight`: controls multi-line spacing (default 1.2). The
 #'   inter-line gap is `(lineheight - 1) * fontsize` big points.
 #'
-#' ## LaTeX document-level wrappers
+#' ## Malformed input
 #'
-#' The parser accepts raw output from \code{print.xtable()},
-#' \code{knitr::kable()}, and similar functions that emit complete
-#' `tabular` LaTeX. The following document-level constructs are
-#' recognized and rewritten silently before the input reaches MicroTeX:
+#' LaTeX that TeX would stop on is read as far as it can be and the rest
+#' is drawn, with one warning listing each problem at its line and column
+#' in `tex`: an unknown command (drawn as its name, in red), an unbalanced
+#' brace, `&` outside an alignment, `_` or `^` outside math, and so on.
+#' Only a macro that expands without end, or input nested 400 levels deep,
+#' is an error.
 #'
-#' **Removed (no visual effect):**
-#' * `%`-to-end-of-line comments (escaped `\%` is preserved)
-#' * preamble: `\documentclass[...]{...}`, `\usepackage[...]{...}`,
-#'   `\begin{document}` / `\end{document}`
-#' * title metadata: `\maketitle`, `\title{...}`, `\author{...}`
-#' * cross-reference labels: `\label{...}`
-#' * float wrappers: `\begin{table}` / `\end{table}`, `\begin{figure}` /
-#'   `\end{figure}` (and starred variants)
-#' * layout scopes: `\centering`, `\raggedright`, `\raggedleft`,
-#'   `\flushleft`, `\flushright`
+#' ## Pasted LaTeX and documents
 #'
-#' **Rewritten:**
-#' * booktabs rules: `\toprule`, `\midrule`, `\bottomrule`, `\cmidrule`
-#'   are mapped to `\hline`. The optional column-range and trim
-#'   arguments of `\cmidrule` are discarded (MicroTeX has no concept of
-#'   partial-column rules).
-#' * `\caption[short]{X}` is extracted as `\text{X}\\` at its source
-#'   position, so a caption written after `\includegraphics` renders below
-#'   the figure and one written before a `tabular` renders above the table.
-#'   Full LaTeX instead positions the caption by float type regardless of
-#'   source order, and numbers it from a counter; there is no counter here.
-#'   Wrap the figure and its caption in `\begin{array}{c}...\end{array}` to
-#'   centre them on each other (`\centering` is dropped: a grob has no
-#'   page to centre against).
-#' * `\graphicspath{{dir/}}` and `\DeclareGraphicsExtensions{...}` are
-#'   consumed rather than typeset; the former's directories are searched.
+#' LaTeX written for a document can be given as it is, whole or in part:
+#' output of \code{print.xtable()} or \code{knitr::kable()}, a `table`
+#' float, or a paper's body with `input_mode = "document"`. What a grob has
+#' no use for is read and dropped:
 #'
-#' **Images:**
+#' * the preamble: in a whole LaTeX file, everything before
+#'   `\begin{document}` is read for its definitions (`\newcommand`,
+#'   `\definecolor`, ...) and not drawn, as LaTeX draws nothing there; a
+#'   size, colour or environment begun there ends at `\begin{document}`.
+#'   What follows `\end{document}` is ignored. Package settings a grob
+#'   cannot honour are not warned about. `\documentclass`, `\usepackage`
+#'   (which loads nothing: every supported command is built in) and
+#'   `\bibliographystyle` draw nothing wherever they are;
+#' * title and cross-reference metadata: `\maketitle`, `\title{}`,
+#'   `\author{}`, `\label{}`;
+#' * alignment: in a label, `\centering`, `\raggedleft` and `\raggedright`
+#'   do nothing (a label is placed by `hjust`), nor do `\flushleft`,
+#'   `\flushright` and `\relax`. A document aligns each line of the
+#'   paragraphs they are in, and of `center`, `flushleft` and `flushright`.
+#'
+#' In a label the content of a `table` or `figure` float is set in the line
+#' like any other. A document sets a float where it is written, apart from
+#' its paragraphs, as LaTeX's `[h]` placement would, and a `center`
+#' environment or a `\centering` centres its lines.
+#'
+#' Some commands are their nearest equivalent. `\emph` is `\textit`, `\em`
+#' is `\it`, and `\newline` is `\\`. Booktabs' `\toprule` and
+#' `\bottomrule` are thick rules, `\midrule` a plain one, `\cmidrule` a
+#' partial one and `\specialrule{w}{a}{b}` one `w` thick. `\boldmath` sets
+#' the math that follows in its group in bold. A grob has
+#' no glue to stretch, so `\smallskip`, `\medskip` and `\bigskip` are 0.25,
+#' 0.5 and 1 em of space, `\hfill` is a quad and `\vfill` 1 em. And
+#' `\caption{X}` is a line of text where it is written, unnumbered, so a
+#' caption written before a `tabular` is set above it.
+#'
+#' `\textwidth`, `\linewidth` and `\columnwidth` in a length
+#' (`0.5\textwidth`) are `max_width`, or with none the 345pt of LaTeX's
+#' article class. An `abstract` is set as article sets it, under a centred
+#' heading, and `thebibliography` as a "References" heading over a list
+#' numbered `[1]`, `[2]`, ... (`\bibitem`'s key has nothing to point at, and
+#' `\newblock` is a space).
+#'
+#' A `tabular`'s cells and the items of `itemize` and `enumerate` are
+#' text, as in LaTeX, when the table or list is met in text; met in math
+#' (`input_mode = "math"`, or between `$...$`) they are math. A list item
+#' wraps at `max_width`, as a `p{}` cell does; a cell in an `l`, `c` or `r`
+#' column is one line. A `minipage` sets its paragraphs to its width, and
+#' to its optional height, as LaTeX does. A heading too long for
+#' `max_width` wraps, its title hanging from its number.
+#'
+#' Commands that need the rest of a document warn and draw what LaTeX
+#' draws when it cannot resolve them: `\ref` and `\pageref` are a bold
+#' `??`, `\eqref` is `(??)`, `\cite{key}` and natbib's `\citep{key}` are
+#' `[?]` (`\citet` is `(author?) [?]`, `\citealp` a bare `?`), and a
+#' `\footnote`'s text is set where it is written. Equations are not numbered. Not supported:
+#' `\tag`, \code{\\verb}, `\textsc`, the declarations `\bfseries`, `\itshape` and
+#' their kin (use `\textbf{}`, `\textit{}` or `\bf`, `\it`), the
+#' `description` list, theorem environments, and TikZ.
+#'
+#' ## Images
+#'
 #' * `\includegraphics[opts]{file}` draws a PNG, JPEG or SVG inline. The
 #'   starred form is accepted and behaves identically. `width`, `height`
 #'   and `scale` take any LaTeX length (`\textwidth` resolves against
@@ -195,13 +236,20 @@
 #' * An SVG is drawn as real vector and stays sharp at any output
 #'   resolution; a bitmap does not, and warns when it would be shown below
 #'   150 dpi. PDF and EPS are not supported: save the figure as SVG
-#'   instead. A file that cannot be read (missing, unsupported, or an
-#'   SVG with no `rsvg` installed) warns and draws its name rather than
-#'   disappearing.
-#'
-#' Anything not in this list is passed to MicroTeX unchanged. An unknown
-#' command is not an error: MicroTeX typesets its name in red, which
-#' makes unsupported markup easy to spot in the output.
+#'   instead.
+#' * The file must be local; a URL is not downloaded. A file that cannot
+#'   be drawn -- missing, a URL, an unsupported format, or unreadable --
+#'   is an error saying why; in a document (`input_mode = "document"`) it
+#'   warns and draws the file's name, so that one figure does not cost the
+#'   whole document. Each format needs its reader, all
+#'   *Suggests*: `png` for PNG, `jpeg` for JPEG and `rsvg` for SVG; the
+#'   error names the one to install.
+#' * The file is read when the parser meets the command, after macros are
+#'   expanded, so one a macro produces (`\newcommand`, `\def` or
+#'   [define_macro()]) works like any other. A commented-out
+#'   `% \includegraphics{...}` is ignored.
+#' * `\graphicspath{{dir/}}` names the directories searched, as in LaTeX,
+#'   and `\DeclareGraphicsExtensions{}` is read and dropped.
 #'
 #' ## Parallelism
 #' The MicroTeX engine keeps mutable C++ state for font caching and text
@@ -240,6 +288,17 @@
 #'   grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
 #'              x = grid::unit(0.6, "npc"),
 #'              y = grid::unit(0.8, "npc"),)
+#'
+#'   # A document body: a heading, paragraphs and a display, broken into
+#'   # lines at max_width (in big points).
+#'   grid::grid.newpage()
+#'   doc <- r"(\section{Results}
+#' The fitted line is
+#' \[ \hat{y} = \beta_0 + \beta_1 x, \]
+#' and its slope, $\beta_1$, is positive.)"
+#'   grid.latex(doc, input_mode = "document", max_width = 250,
+#'              x = 0.05, y = 0.95, hjust = 0, vjust = 1,
+#'              gp = grid::gpar(fontsize = 12))
 #' }
 latex_grob <- function(tex,
                        x = grid::unit(0.5, "npc"),
@@ -251,7 +310,7 @@ latex_grob <- function(tex,
                        math_font = "",
                        max_width = 0,
                        tex_style = "",
-                       input_mode = c("mixed", "math"),
+                       input_mode = c("mixed", "math", "document"),
                        render_mode = c("typeface", "path"),
                        justify = FALSE,
                        line_break = c("greedy", "optimal"),
@@ -481,7 +540,7 @@ grobMark <- function(grob, name) {
   # Patterns are registered on first use, not at load.
   .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
-  input_mode <- match.arg(input_mode, c("math", "mixed"))
+  input_mode <- match.arg(input_mode, c("math", "mixed", "document"))
   if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
 
   # Font size is needed before anything else now, because `em`/`ex` in an
@@ -489,20 +548,9 @@ grobMark <- function(grob, name) {
   fontsize <- gp$fontsize %||% 20
   if (!is.null(gp$cex)) fontsize <- fontsize * gp$cex
 
-  # Images are resolved first, before any other rewriting, because both of
-  # the steps below would corrupt a file path: .strip_document_wrappers()
-  # eats `%`-to-end-of-line, and .expand_macros() would rewrite `\Users` or
-  # `\Temp` mid-path for anyone who had defined a macro by that name. The
-  # second pass catches an \includegraphics that a macro produced; it is a
-  # no-op when the first pass already consumed them all.
-  tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
-  tex <- .strip_document_wrappers(tex)
-  tex <- .expand_macros(tex)
-  tex <- .resolve_graphics(tex, fontsize = fontsize, max_width = max_width)
-  # The user-facing `tex` stays as the macro-expanded source so that
-  # editDetails() can re-parse without doubling up the \text{} wrap.
-  # `parse_input` is the actual string handed to the MicroTeX parser.
-  parse_input <- latex_wrap(tex, input_mode = input_mode)
+  # The parser reads UTF-8 bytes; a Latin-1 string would reach it as
+  # invalid ones.
+  tex <- enc2utf8(tex)
   math_font <- resolve_math_font(math_font)
 
   fg_color <- if (!is.null(gp$col)) {
@@ -546,21 +594,23 @@ grobMark <- function(grob, name) {
   text_family <- text_gp$fontfamily %||% ""
 
   layout <- .parse_latex_cached(
-    tex = parse_input, text_size = fontsize, line_space = line_space,
+    tex = tex, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
     tex_style = tex_style, text_family = text_family, justify = justify,
-    optimal_break = identical(line_break, "optimal")
+    optimal_break = identical(line_break, "optimal"), input_mode = input_mode
   )
+  # Read off the layout rather than the parse, so a cached one says it too.
+  .warn_diagnostics(attr(layout, "diagnostics"))
 
   path_layout <- NULL
   if (with_path_fallback && render_mode == "typeface") {
     path_layout <- .parse_latex_cached(
-      tex = parse_input, text_size = fontsize, line_space = line_space,
+      tex = tex, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style,
       text_family = text_family, justify = justify,
-      optimal_break = identical(line_break, "optimal")
+      optimal_break = identical(line_break, "optimal"), input_mode = input_mode
     )
   }
 
@@ -576,14 +626,36 @@ grobMark <- function(grob, name) {
   )
 }
 
+# What the parser recovered from -- it drew the rest -- as one warning,
+# each problem at its line:col in the string the parser was given.
+.warn_diagnostics <- function(d) {
+  if (is.null(d) || !NROW(d)) return(invisible(NULL))
+  d <- d[order(d$line, d$col), , drop = FALSE]
+  lines <- sprintf("%d:%d: %s", d$line, d$col, d$message)
+  dropped <- attr(d, "dropped") %||% 0
+  if (dropped > 0) lines <- c(lines, sprintf("... and %d more", as.integer(dropped)))
+  warning(
+    "LaTeX input: ",
+    if (length(lines) == 1L) lines else paste0("\n  ", lines, collapse = ""),
+    call. = FALSE
+  )
+}
 
-# Check whether the current graphics device supports rendering glyphGrob
-# objects via the dev->glyph() graphics engine interface (R >= 4.3).
-# Uses dev.capabilities()$glyphs when a device is open; returns TRUE
-# when no device is open (layout-only / measurement context).
+
+# Check whether the current graphics device can set glyphGrob objects as
+# text via the dev->glyph() graphics engine interface (R >= 4.3). Uses
+# dev.capabilities()$glyphs when a device is open; returns TRUE when no
+# device is open (layout-only / measurement context).
+#
+# Base pdf() and postscript() are refused by name. pdf() does report
+# glyphs, but it names the font in the file without embedding it, so the
+# math is garbled in any viewer that lacks the font -- nearly all of them,
+# as the math fonts are bundled rather than installed ("FFN(x)" read as
+# "DDL&..."). Outlines draw right everywhere; cairo_pdf() embeds.
 .device_supports_typeface_glyphs <- function() {
   cur <- grDevices::dev.cur()
   if (cur == 1L) return(TRUE)  # null device (no drawing)
+  if (names(cur) %in% c("pdf", "postscript")) return(FALSE)
 
   caps <- grDevices::dev.capabilities()
   isTRUE(caps[["glyphs"]])
@@ -615,7 +687,7 @@ grobMark <- function(grob, name) {
   # done the sensible thing. A warning would also be escalated to an error
   # under options(warn = 2), which some CI setups use.
   message(
-    "Current graphics device does not support glyph rendering; falling ",
+    "Current graphics device cannot set the math font as text; falling ",
     "back to path mode, so math is drawn as outlines rather than text. ",
     "On a vector device -- svglite::svglite() or grDevices::cairo_pdf() ",
     "-- it stays selectable."
@@ -860,7 +932,7 @@ grid.latex <- function(tex, ...) {
 #' latex_dims("\\frac{a}{b}")
 latex_dims <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
-                       input_mode = c("mixed", "math"),
+                       input_mode = c("mixed", "math", "document"),
                        render_mode = c("typeface", "path"),
                        justify = FALSE,
                        line_break = c("greedy", "optimal"),
@@ -890,24 +962,62 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
 }
 
 
-# On some Windows locale/font combinations, measuring can error for CJK text.
-# Keep layout flowing with a simple width fallback instead of failing hard.
-# `tg` is a textGrob carrying the measurement gp; `em` is the font size the
-# measurement runs at (the measurer's ref_size).
+# The measurer's grob, carrying the measurement gp and, per call, the label.
+#
+# grid evaluates a grob's size with the device locked (R >= 4.6), and an
+# error that unwinds out of that evaluation leaves the lock on: R's
+# eval_with_gd() sets the hook that lifts it before begincontext(), which
+# clears it. Every later dev.off() of the device then warns "Killing locked
+# device". pdf() raises such errors for text outside its encoding under
+# R CMD check --as-cran (_R_CHECK_MBCS_CONVERSION_FAILURE_), so a textGrob
+# measured in tryCatch() left 15 of them in a check's test log. These
+# methods ask the device through string units instead, which grid
+# evaluates in C, and catch a failure before it leaves grid's evaluation:
+# what the device cannot measure reads as NA.
+.measure_extent <- function(size, convert, label) {
+  grid::unit(tryCatch(convert(size(label), "bigpts", valueOnly = TRUE),
+                      error = function(e) NA_real_), "bigpts")
+}
+
+#' @method widthDetails gridmicrotex_measure
+#' @export
+widthDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringWidth, grid::convertWidth, x$label)
+}
+
+#' @method heightDetails gridmicrotex_measure
+#' @export
+heightDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringHeight, grid::convertHeight, x$label)
+}
+
+#' @method ascentDetails gridmicrotex_measure
+#' @export
+ascentDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringAscent, grid::convertHeight, x$label)
+}
+
+#' @method descentDetails gridmicrotex_measure
+#' @export
+descentDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringDescent, grid::convertHeight, x$label)
+}
+
+# The whole string's width, or where the device cannot measure it (pdf()
+# for CJK text on some Windows locales, or outside its encoding under
+# --as-cran), a simple estimate that keeps the layout flowing. `tg` is the
+# measurer's grob; `em` is the font size the measurement runs at (the
+# measurer's ref_size).
 .measure_text_bigpts <- function(tg, text, em = 72) {
-  out <- tryCatch(
-    grid::convertWidth(grid::grobWidth(tg), "bigpts", valueOnly = TRUE),
-    error = function(e) {
-      w <- tryCatch(base::nchar(text, type = "width"), error = function(...) NA_real_)
-      if (is.na(w)) {
-        w <- base::nchar(text, type = "chars")
-      }
-      # Half an em per terminal width cell: narrow chars ~0.5 em, CJK
-      # (2 cells) ~1 em — matching the C++ heuristic in src/init.cpp.
-      as.numeric(w) * 0.5 * em
-    }
-  )
-  as.numeric(out)
+  out <- grid::convertWidth(grid::grobWidth(tg), "bigpts", valueOnly = TRUE)
+  if (!is.na(out)) return(as.numeric(out))
+  w <- tryCatch(base::nchar(text, type = "width"), error = function(...) NA_real_)
+  if (is.na(w)) {
+    w <- base::nchar(text, type = "chars")
+  }
+  # Half an em per terminal width cell: narrow chars ~0.5 em, CJK
+  # (2 cells) ~1 em — matching the C++ heuristic in src/init.cpp.
+  as.numeric(w) * 0.5 * em
 }
 
 
@@ -937,12 +1047,77 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
   # repeated span.
   cache <- new.env(parent = emptyenv())
 
-  # `font_family` is the family named by a \gmfontfamily span, passed in by
-  # TextLayout_R. Defaulted, so the two-argument calls that predate it --
-  # including register_text_measurer() users -- keep working.
-  function(text, font_style, font_family = "") {
+  # A layout measures each distinct word of its prose once (the engine
+  # caches the rest), so a paper's vocabulary is some two thousand calls
+  # and each one's cost is what a long document waits on. What does not
+  # depend on the word is kept per font (style x family): the gpar, a grob
+  # to carry it, and each character's ascent and descent.
+  fonts <- new.env(parent = emptyenv())
+  font_for <- function(style, family) {
+    fkey <- paste0(style, "\x1f", family)
+    f <- fonts[[fkey]]
+    if (!is.null(f)) return(f)
+    gp <- grid::gpar(fontsize = ref_size, fontface = .resolve_text_face(style))
+    fam <- .resolve_text_family(style, text_gp$fontfamily, family)
+    if (!is.null(fam)) {
+      gp$fontfamily <- fam
+    }
+    f <- new.env(parent = emptyenv())
+    # Carry the font settings on a throwaway grob rather than pushing a
+    # viewport. pushViewport() writes to the device's display list (6
+    # records per push/pop), which makes a caller's device look like it
+    # holds a plot: knitr then snapshots that page as a spurious blank
+    # figure before the real plot's grid.newpage(). grob* queries below
+    # only read metrics, through the size methods of its class
+    # (widthDetails.gridmicrotex_measure). Its label is set per call.
+    f$grob <- grid::grob(label = "", gp = gp, cl = "gridmicrotex_measure")
+    f$chars <- new.env(parent = emptyenv())
+    fonts[[fkey]] <- f
+    f
+  }
+  if (has_ascent_fn) {
+    grob_ascent <- get("grobAscent", envir = asNamespace("grid"))
+    grob_descent <- get("grobDescent", envir = asNamespace("grid"))
+  }
+  # A one-line string's ascent and descent are the largest of its
+  # characters' -- the rule R's own GEStrMetric() applies -- so each
+  # character is measured once per font and the word's are read off.
+  # NULL when the device cannot answer, and the caller measures the whole
+  # string instead.
+  char_extent <- function(f, text) {
+    # By code point, not strsplit(): the engine hands over its text marked
+    # "unknown", and on Windows strsplit() then cut a character outside the
+    # BMP (an emoji, a mathematical script letter) into an extra, empty
+    # piece.
+    cps <- utf8ToInt(text)
+    if (anyNA(cps)) return(NULL)
+    cps <- unique(cps)
+    if (!length(cps)) return(c(0, 0))
+    keys <- as.character(cps)
+    ext <- matrix(NA_real_, 2L, length(cps))
+    for (i in seq_along(cps)) {
+      ad <- f$chars[[keys[i]]]
+      if (is.null(ad)) {
+        tg <- f$grob
+        tg$label <- intToUtf8(cps[i])
+        ad <- c(
+          grid::convertHeight(grob_ascent(tg), "bigpts", valueOnly = TRUE),
+          grid::convertHeight(grob_descent(tg), "bigpts", valueOnly = TRUE)
+        )
+        if (anyNA(ad)) return(NULL)
+        f$chars[[keys[i]]] <- ad
+      }
+      ext[, i] <- ad
+    }
+    c(max(ext[1, ]), max(ext[2, ]))
+  }
+
+  measure <- function(text, font_style, font_family) {
     key <- paste0(as.integer(font_style), "\x1f", font_family, "\x1f", text)
-    hit <- cache[[key]]
+    # The key becomes a variable name, which R caps at 10000 bytes, so a
+    # long run is measured every time rather than cached.
+    cacheable <- nchar(key, type = "bytes") <= 2048L
+    hit <- if (cacheable) cache[[key]]
     if (!is.null(hit)) return(hit)
 
     # MicroTeX probes C-style escapes while tokenising \text{} content
@@ -953,66 +1128,68 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     # device.
     if (grepl("^[[:cntrl:]]*$", text)) {
       result <- c(0, 0.8, 1)
-      cache[[key]] <- result
+      if (cacheable) cache[[key]] <- result
       return(result)
     }
 
-    face <- .resolve_text_face(as.integer(font_style))
-
-    gp <- grid::gpar(fontsize = ref_size, fontface = face)
-    fam <- .resolve_text_family(as.integer(font_style), text_gp$fontfamily,
-                                font_family)
-    if (!is.null(fam)) {
-      gp$fontfamily <- fam
-    }
-
-    # Ensure a graphics device is available for measurement
+    # Ensure a graphics device is available for measurement. A parse opens
+    # one for its whole length (.parse_latex_cached()), so this is a
+    # safety net.
     needs_dev <- grDevices::dev.cur() == 1L
     if (needs_dev) {
       grDevices::pdf(NULL)
       on.exit(grDevices::dev.off(), add = TRUE)
     }
 
-    # Carry the font settings on a throwaway textGrob rather than pushing a
-    # viewport. pushViewport() writes to the device's display list (6 records
-    # per push/pop), which makes a caller's device look like it holds a plot:
-    # knitr then snapshots that page as a spurious blank figure before the
-    # real plot's grid.newpage(). grob* queries below only read metrics.
-    tg <- grid::textGrob(text, gp = gp)
+    f <- font_for(as.integer(font_style), font_family)
+    tg <- f$grob
+    tg$label <- text
 
     # Measuring is per *character*, so a device that cannot resolve the
     # family -- base pdf() has no named families, only what pdfFonts()
     # declares -- would warn dozens of times for one label. Stay quiet
     # here: the same device warns again when the text is actually drawn,
     # which is the once-per-run, user-actionable copy of the message.
+    # The width is the whole string's, which kerning makes other than
+    # the sum of its characters'.
     w <- suppressWarnings(.measure_text_bigpts(tg, text, em = ref_size))
 
-    # Measure ascent and descent (with Windows/CJK locale fallback)
-    ad <- suppressWarnings(tryCatch({
-      if (has_ascent_fn) {
-        asc <- grid::convertHeight(
-          get("grobAscent", envir = asNamespace("grid"))(tg),
-          "bigpts", valueOnly = TRUE
-        )
-        desc <- grid::convertHeight(
-          get("grobDescent", envir = asNamespace("grid"))(tg),
-          "bigpts", valueOnly = TRUE
-        )
-      } else {
-        h <- grid::convertHeight(grid::grobHeight(tg), "bigpts", valueOnly = TRUE)
-        asc <- h * 0.8
-        desc <- h - asc
-      }
-      c(asc, desc)
-    }, error = function(e) {
-      # Approximate: 80% of font size for ascent, 20% for descent
-      c(ref_size * 0.8, ref_size * 0.2)
-    }))
+    # Measure ascent and descent
+    ad <- suppressWarnings(if (has_ascent_fn) {
+      # Characters, except in a string of several lines, where
+      # GEStrMetric() reads the first line's ascent and the last's
+      # descent instead.
+      per_char <- if (!grepl("\n", text, fixed = TRUE)) char_extent(f, text)
+      per_char %||% c(
+        grid::convertHeight(grob_ascent(tg), "bigpts", valueOnly = TRUE),
+        grid::convertHeight(grob_descent(tg), "bigpts", valueOnly = TRUE)
+      )
+    } else {
+      h <- grid::convertHeight(grid::grobHeight(tg), "bigpts", valueOnly = TRUE)
+      asc <- h * 0.8
+      c(asc, h - asc)
+    })
+    # Where the device cannot measure, approximate: 80% of the font size
+    # for ascent, 20% for descent.
+    if (anyNA(ad)) ad <- c(ref_size * 0.8, ref_size * 0.2)
     asc  <- ad[1]
     desc <- ad[2]
 
     result <- c(w / ref_size, asc / ref_size, (asc + desc) / ref_size)
-    cache[[key]] <- result
+    if (cacheable) cache[[key]] <- result
     result
+  }
+
+  # `font_family` is the family named by a \gmfontfamily span, passed in by
+  # TextLayout_R. Defaulted, so the two-argument calls that predate it --
+  # including register_text_measurer() users -- keep working.
+  #
+  # An error becomes an empty result, which TextLayout_R::getBounds()
+  # answers with its own width estimate. It has to be caught here: Rcpp
+  # hands an R error to C++ as the same jump as an interrupt, and
+  # getBounds() lets jumps through so that Ctrl-C stops the layout.
+  function(text, font_style, font_family = "") {
+    tryCatch(measure(text, font_style, font_family),
+             error = function(e) numeric(0))
   }
 }

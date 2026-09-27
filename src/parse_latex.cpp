@@ -4,12 +4,37 @@
 #include "graphic/graphic.h"
 #include "graphic/graphic_recorder.h"
 #include "atom/font_family_atom.h"
+#include "atom/image_atom.h"
 #include "macro/macro.h"
 #include "core/split.h"
 #include "atom/atom_row.h"
+#include "front/front.h"
 
 using namespace microtex;
 using namespace Rcpp;
+
+// The front end's diagnostics for the parse just done, one row each:
+// line, col, severity, message.
+static Rcpp::DataFrame diagnostics_of_last_parse() {
+    const auto& items = front::lastDiagnostics().items();
+    const R_xlen_t n = static_cast<R_xlen_t>(items.size());
+    Rcpp::IntegerVector line(n), col(n);
+    Rcpp::CharacterVector severity(n), message(n);
+    for (R_xlen_t i = 0; i < n; i++) {
+        const auto& d = items[static_cast<std::size_t>(i)];
+        line[i] = static_cast<int>(d.span.line);
+        col[i] = static_cast<int>(d.span.col);
+        severity[i] = d.severity == front::Severity::error ? "error" : "warning";
+        message[i] = Rcpp::String(d.message, CE_UTF8);
+    }
+    Rcpp::DataFrame out = Rcpp::DataFrame::create(
+        Rcpp::Named("line") = line, Rcpp::Named("col") = col,
+        Rcpp::Named("severity") = severity, Rcpp::Named("message") = message,
+        Rcpp::Named("stringsAsFactors") = false);
+    const std::size_t dropped = front::lastDiagnostics().dropped();
+    out.attr("dropped") = static_cast<double>(dropped);
+    return out;
+}
 
 // RAII guard: restores the global render-mode flag on scope exit
 struct RenderModeGuard {
@@ -65,19 +90,17 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            bool use_path = true,
                            std::string tex_style = "",
                            bool justify = false,
-                           bool optimal_break = false) {
+                           bool optimal_break = false,
+                           std::string input_mode = "math") {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
     }
 
-    // Each parse starts from a clean slate of user-defined macros so that
-    // (a) \newcommand/\def in one R call doesn't leak into the next and
-    // (b) the typeface mode's automatic path-fallback parse doesn't fail
-    // with "Command already exists!" when re-processing the same input.
-    NewCommandMacro::clearUserMacros();
-    // The \gmfontfamily registry is per-parse too: indices are only
-    // meaningful against the names collected during this parse.
+    // A label's own \newcommand and \def need no clearing: they live in the
+    // front end's per-parse layer, made new for every parse. The
+    // \gmfontfamily registry is per-parse too, but lives here: its indices
+    // are only meaningful against the names collected during this parse.
     clear_font_families();
 
     // Toggle glyph rendering mode (guard restores default on any exit)
@@ -112,7 +135,10 @@ Rcpp::List parse_latex_cpp(std::string tex,
             true,                                   // fillWidth
             resolve_tex_style(tex_style),           // overrideTeXStyle
             math_font,                              // mathFontName
-            main_font                               // mainFontFamily
+            main_font,                              // mainFontFamily
+            input_mode == "mixed"      ? InputMode::mixed
+            : input_mode == "document" ? InputMode::document
+                                       : InputMode::math
         ));
     } catch (const std::exception& e) {
         Rcpp::stop(std::string("LaTeX parse error: ") + e.what());
@@ -452,6 +478,10 @@ Rcpp::List parse_latex_cpp(std::string tex,
         marks_df.attr("row.names") = Rcpp::IntegerVector::create();
     }
     result.attr("marks") = marks_df;
+
+    // What the new front end found wrong with the input and recovered
+    // from; R turns it into warnings.
+    result.attr("diagnostics") = diagnostics_of_last_parse();
 
     return result;
 }
