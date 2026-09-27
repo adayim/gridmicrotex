@@ -1,0 +1,146 @@
+# Typesetting a document
+
+A grid page saved as PDF is a document. With `input_mode = "document"`,
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+and
+[`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+read the body of a LaTeX document — paragraphs, headings, displayed
+equations, lists and tables — by LaTeX’s own rules, so a methods
+section, a report’s appendix or a long caption can be set in R without a
+LaTeX installation.
+
+## A document body
+
+This is ordinary LaTeX, as it would sit between `\begin{document}` and
+`\end{document}`:
+
+``` r
+
+body <- r"(\section{Methods}
+We fit a straight line to $n$ observations $(x_i, y_i)$ by least
+squares, which chooses the intercept and slope that minimise the sum
+of squared residuals
+\[ S(\beta_0, \beta_1) = \sum_{i=1}^{n} (y_i - \beta_0 - \beta_1 x_i)^2. \]
+Setting both partial derivatives to zero gives the estimates
+\begin{align*}
+  \hat\beta_1 &= \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \\
+  \hat\beta_0 &= \bar y - \hat\beta_1 \bar x.
+\end{align*}
+
+The fitted values are $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$, and
+the residuals $e_i = y_i - \hat y_i$ are what is left over.
+
+\subsection{Assumptions}
+The errors are taken to be
+\begin{itemize}
+  \item independent of one another,
+  \item of constant variance $\sigma^2$, and
+  \item normally distributed --- which matters only for the tests.
+\end{itemize}
+)"
+```
+
+`max_width` is the text width, in big points (1/72 inch). Paragraphs are
+broken to it and displays are centred in it:
+
+``` r
+
+grid.newpage()
+grid.latex(body, input_mode = "document", max_width = 5.6 * 72,
+           x = 0.03, y = 0.97, hjust = 0, vjust = 1,
+           gp = gpar(fontsize = 11))
+```
+
+![](documents_files/figure-html/draw-body-1.png)
+
+## How the body is read
+
+As LaTeX reads it, with nothing of our own:
+
+- **Paragraphs.** A line end is a space. A blank line, or `\par`, starts
+  a paragraph, whose first line is indented by TeX’s `\parindent` (1.5
+  em); there is no space between paragraphs. `\noindent` leaves one
+  flush.
+- **Headings.** `\section`, `\subsection` and `\subsubsection` are
+  numbered 1, 1.1, 1.1.1 and set bold, on a line of their own;
+  `\paragraph` runs into its paragraph. A starred heading has no number.
+  The paragraph after a heading is not indented.
+- **Math.** `$…$` and `\(…\)` are inline. `\[…\]`, `$$…$$` and the
+  display environments — `equation`, `align`, `gather`, `multline`,
+  `eqnarray`, starred or not — are centred on a line of their own, and
+  the paragraph goes on after them unindented, as in LaTeX. Equations
+  are not numbered.
+- **Lists and tables.** `itemize` and `enumerate` are set as blocks;
+  their items, like a `tabular`’s cells, are text, with math between
+  `$…$`.
+- **Text.** `--` and `---` are dashes, `` ` `` and `'` (single or
+  doubled) curly quotes, and `~` a space the line is not broken at.
+  `\centering` and the `center` environment centre their lines, and a
+  `table` or `figure` is set apart where it is written, with its
+  `\caption` on a line of its own.
+
+Anything LaTeX would stop on is drawn as well as it can be, and one
+warning lists each problem with its line and column in the body.
+
+## The text width
+
+Without `max_width` every paragraph is a single line, however long. With
+it, lines are filled one at a time and left ragged; `justify = TRUE`
+stretches every line but a paragraph’s last to the full width, and
+`line_break = "optimal"` chooses a paragraph’s breaks together, as TeX
+does:
+
+``` r
+
+para <- r"(Least squares has a closed form, which is why it was the
+method of choice long before computers made iterative fitting cheap. It
+is also optimal among unbiased linear estimators when the errors are
+uncorrelated with equal variance: the Gauss--Markov theorem.)"
+grid.newpage()
+grid.latex(para, input_mode = "document", max_width = 5.6 * 72,
+           justify = TRUE, line_break = "optimal",
+           x = 0.03, y = 0.95, hjust = 0, vjust = 1,
+           gp = gpar(fontsize = 11))
+```
+
+![](documents_files/figure-html/justify-1.png)
+
+## Saving a PDF
+
+A document is one grob, so it goes on a page like any other. Use
+[`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) rather than
+[`pdf()`](https://rdrr.io/r/grDevices/pdf.html): its text stays text,
+which can be selected and searched, where base
+[`pdf()`](https://rdrr.io/r/grDevices/pdf.html) falls back to drawing
+glyphs as outlines.
+[`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md)
+gives the size the body needs, to size the page from:
+
+``` r
+
+d <- latex_dims(body, input_mode = "document", max_width = 5.5 * 72,
+                gp = gpar(fontsize = 11))
+height <- as.numeric(d$height) / 72 + 1   # inches, with margins
+
+cairo_pdf("methods.pdf", width = 6.5, height = height)
+grid.latex(body, input_mode = "document", max_width = 5.5 * 72,
+           x = unit(0.5, "in"), y = unit(1, "npc") - unit(0.5, "in"),
+           hjust = 0, vjust = 1, gp = gpar(fontsize = 11))
+dev.off()
+```
+
+A body longer than the page does not flow onto the next one: a grob is
+one piece. Split a long document at its paragraph breaks and draw each
+part on a page of its own.
+
+## What a single grob cannot do
+
+A document’s cross-references need the rest of the document, so they
+warn and are drawn as LaTeX draws them when it cannot resolve one:
+`\ref` and `\pageref` as a bold `??`, `\eqref` as `(??)` and
+`\cite{key}` as `[?]`. A `\footnote` has no foot of a page to go to, so
+its text is set where it is written. The preamble, `\maketitle` and
+`\label` are read and dropped, and a `table` or `figure` is set where it
+is written, as a float placed “here” would be.
+[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)
+lists what is not supported at all.

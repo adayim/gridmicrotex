@@ -5,6 +5,11 @@
 - [Introduction to
   gridmicrotex](https://adayim.github.io/gridmicrotex/articles/getting-started.md):
 
+### Documents
+
+- [Typesetting a
+  document](https://adayim.github.io/gridmicrotex/articles/documents.md):
+
 ### Base R graphics
 
 - [LaTeX math in base R

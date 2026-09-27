@@ -170,9 +170,10 @@ were checked separately.
 A dollar sign is far too common in a real axis label to treat as a
 delimiter on sight: `"Cost $5-$10 per unit"` has to survive as plain
 text. So a label is intercepted only when **every** delimiter in it is
-closed *and* **every** `$...$` pair wraps something that actually looks
-like math (a command, a script, or a lone variable). The delimiters are
-the ones
+closed, *and* either the whole label is one formula or **every** `$...$`
+pair wraps something that actually looks like math (a command, a script,
+or a lone variable). A `$` straight after a name is R’s column accessor,
+never a delimiter. The delimiters are the ones
 [`latex_wrap()`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
 uses everywhere else: `$...$`, `$$...$$`, `\(...\)` and `\[...\]`.
 
@@ -182,8 +183,10 @@ uses everywhere else: `$...$`, `$$...$$`, `\(...\)` and `\[...\]`.
 | `"Price is $5 today"` | text | one unclosed `$` |
 | `"Cost $5-$10"` | text | closed, but `5-` is not math |
 | `"Budget $1,000 to $5,000 with $x$ shown"` | text | `1,000 to` is not math |
+| `"Histogram of df$a_b - df$c_d"` | text | `$` after a name is column access |
 | `"$x$"` | math | a lone variable |
 | `"$x^2$"` | math | a script |
+| `"$y = 2x + 1$"` | math | the whole label is one formula |
 | `"Slope $\\hat{\\beta}_1$"` | math | a command |
 | `"\\(\\alpha\\)"` | math | explicit delimiters |
 

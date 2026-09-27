@@ -35,6 +35,8 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Documents</h6></li>
+    <li><a class="dropdown-item" href="../articles/documents.html">Typesetting a document</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
     <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
@@ -234,12 +236,13 @@ like vector text.</li>
 <p>A dollar sign is far too common in a real axis label to treat as a
 delimiter on sight: <code>"Cost $5-$10 per unit"</code> has to survive
 as plain text. So a label is intercepted only when
-<strong>every</strong> delimiter in it is closed <em>and</em>
-<strong>every</strong> <code>$...$</code> pair wraps something that
-actually looks like math (a command, a script, or a lone variable). The
-delimiters are the ones <code><a href="../reference/latex_wrap.html">latex_wrap()</a></code> uses everywhere else:
-<code>$...$</code>, <code>$$...$$</code>, <code>\(...\)</code> and
-<code>\[...\]</code>.</p>
+<strong>every</strong> delimiter in it is closed, <em>and</em> either
+the whole label is one formula or <strong>every</strong>
+<code>$...$</code> pair wraps something that actually looks like math (a
+command, a script, or a lone variable). A <code>$</code> straight after
+a name is R’s column accessor, never a delimiter. The delimiters are the
+ones <code><a href="../reference/latex_wrap.html">latex_wrap()</a></code> uses everywhere else: <code>$...$</code>,
+<code>$$...$$</code>, <code>\(...\)</code> and <code>\[...\]</code>.</p>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -276,14 +279,25 @@ delimiters are the ones <code><a href="../reference/latex_wrap.html">latex_wrap(
 <code>1,000 to</code> is not math</td>
 </tr>
 <tr class="odd">
+<td align="left"><code>"Histogram of df$a_b - df$c_d"</code></td>
+<td align="left">text</td>
+<td align="left">
+<code>$</code> after a name is column access</td>
+</tr>
+<tr class="even">
 <td align="left"><code>"$x$"</code></td>
 <td align="left">math</td>
 <td align="left">a lone variable</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left"><code>"$x^2$"</code></td>
 <td align="left">math</td>
 <td align="left">a script</td>
+</tr>
+<tr class="even">
+<td align="left"><code>"$y = 2x + 1$"</code></td>
+<td align="left">math</td>
+<td align="left">the whole label is one formula</td>
 </tr>
 <tr class="odd">
 <td align="left"><code>"Slope $\\hat{\\beta}_1$"</code></td>

@@ -46,14 +46,11 @@ reset_latex_options()
 
 - input_mode:
 
-  How the input string is interpreted before being handed to MicroTeX.
-  `"mixed"` (default) wraps the string in `\text{...}` so it reads as
-  ordinary text, with `$...$` (and `\(...\)`) opening math mode: the
-  document-level LaTeX convention. Useful when consuming labels from
-  other packages that mix prose and math without explicit `\text{}`
-  markers. `"math"` treats the whole string as math: the classic
-  MicroTeX behaviour, where letters render as math italics and unwrapped
-  prose looks wrong.
+  How the input string is read: `"mixed"` (the default) as a label, text
+  with math between `$...$` and a newline for a new line; `"math"` as a
+  formula throughout; or `"document"` as a LaTeX document body, with
+  paragraphs, headings and displays. See
+  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 - justify:
 
@@ -109,10 +106,12 @@ reset_latex_options()
   [`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
   already uses: `$...$`, `$$...$$`, `\(...\)`, `\[...\]`, with `\$` a
   literal dollar sign. A label is intercepted only when *every*
-  delimiter in it is closed and the content looks like math, so
-  `"Revenue ($)"`, `"Cost $5-$10"` and `"Budget $1,000 to $5,000"` are
-  passed through untouched. Anything that cannot be laid out is drawn as
-  plain text rather than raising an error.
+  delimiter in it is closed, and either the label is a single formula or
+  every `$...$` pair wraps something that looks like math. So
+  `"Revenue ($)"`, `"Cost $5-$10"`, `"Budget $1,000 to $5,000"` and R's
+  own `"Histogram of df$a_b - df$c_d"` are passed through untouched.
+  Anything that cannot be laid out is drawn as plain text rather than
+  raising an error.
 
   **Height is the one thing that cannot be corrected.** R computes text
   height from the font, never from the string, and a graphics device has
@@ -183,7 +182,11 @@ returns the current settings visibly.
 
 Calling `latex_options()` with no arguments returns the current settings
 (a list whose `NULL` entries mean "use the built-in default"). Supply
-one or more named arguments to update them.
+one or more named arguments to update them. An argument set to `NULL`
+resets that option to its default, as with
+[`options`](https://rdrr.io/r/base/options.html), so either list
+`latex_options()` returns can be passed back with
+`do.call(latex_options, old)` to restore those settings.
 
 Font size and line spacing are controlled via `gp` parameters
 (`fontsize`, `cex`, `lineheight`) at the grob level; see
@@ -198,10 +201,10 @@ Font size and line spacing are controlled via `gp` parameters
 
 ``` r
 # \donttest{
-  latex_options(math_font = "stix", render_mode = "typeface")
+  old <- latex_options(math_font = "stix", render_mode = "typeface")
   grid.latex("$\\sum_{i=1}^{n} i^{2}$", gp = grid::gpar(fontsize = 14))
 
-  reset_latex_options()
+  do.call(latex_options, old)
 
   # Math in base graphics, with no other change to the plotting code.
   latex_options(device_math = TRUE)

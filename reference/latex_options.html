@@ -28,6 +28,8 @@ supplied at the call site, so explicit arguments always win."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Documents</h6></li>
+    <li><a class="dropdown-item" href="../articles/documents.html">Typesetting a document</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
     <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
@@ -98,15 +100,11 @@ look like display equations.</p></dd>
 
 
 <dt id="arg-input-mode">input_mode<a class="anchor" aria-label="anchor" href="#arg-input-mode"></a></dt>
-<dd><p>How the input string is interpreted before being
-handed to MicroTeX. <code>"mixed"</code> (default) wraps the string in
-<code>\text{...}</code> so it reads as ordinary text, with <code>$...$</code>
-(and <code>\(...\)</code>) opening math mode: the document-level
-LaTeX convention. Useful when consuming labels from other packages
-that mix prose and math without explicit <code>\text{}</code> markers.
-<code>"math"</code> treats the whole string as math: the classic
-MicroTeX behaviour, where letters render as math italics and
-unwrapped prose looks wrong.</p></dd>
+<dd><p>How the input string is read: <code>"mixed"</code> (the
+default) as a label, text with math between <code>$...$</code> and a
+newline for a new line; <code>"math"</code> as a formula throughout; or
+<code>"document"</code> as a LaTeX document body, with paragraphs,
+headings and displays. See <code><a href="latex_grob.html">latex_grob</a></code>.</p></dd>
 
 
 <dt id="arg-justify">justify<a class="anchor" aria-label="anchor" href="#arg-justify"></a></dt>
@@ -153,9 +151,11 @@ grob, layer or theme element, and measure its height correctly.</p>
 <p>The convention is the one <code><a href="latex_wrap.html">latex_wrap</a></code> already uses:
 <code>$...$</code>, <code>$$...$$</code>, <code>\(...\)</code>, <code>\[...\]</code>,
 with <code>\$</code> a literal dollar sign. A label is intercepted only
-when <em>every</em> delimiter in it is closed and the content looks
-like math, so <code>"Revenue ($)"</code>, <code>"Cost $5-$10"</code> and
-<code>"Budget $1,000 to $5,000"</code> are passed through untouched.
+when <em>every</em> delimiter in it is closed, and either the label is
+a single formula or every <code>$...$</code> pair wraps something that
+looks like math. So <code>"Revenue ($)"</code>, <code>"Cost $5-$10"</code>,
+<code>"Budget $1,000 to $5,000"</code> and R's own
+<code>"Histogram of df$a_b - df$c_d"</code> are passed through untouched.
 Anything that cannot be laid out is drawn as plain text rather than
 raising an error.</p>
 <p><strong>Height is the one thing that cannot be corrected.</strong> R computes
@@ -213,7 +213,11 @@ arguments, returns the current settings visibly.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Calling <code>latex_options()</code> with no arguments returns the current
 settings (a list whose <code>NULL</code> entries mean "use the built-in
-default"). Supply one or more named arguments to update them.</p>
+default"). Supply one or more named arguments to update them. An
+argument set to <code>NULL</code> resets that option to its default, as with
+<code><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></code>, so either list <code>latex_options()</code>
+returns can be passed back with <code>do.call(latex_options, old)</code> to
+restore those settings.</p>
 <p>Font size and line spacing are controlled via <code>gp</code> parameters
 (<code>fontsize</code>, <code>cex</code>, <code>lineheight</code>) at the grob level;
 see <code><a href="latex_grob.html">latex_grob</a></code>.</p>
@@ -226,10 +230,10 @@ see <code><a href="latex_grob.html">latex_grob</a></code>.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span>  <span class="fu">latex_options</span><span class="op">(</span>math_font <span class="op">=</span> <span class="st">"stix"</span>, render_mode <span class="op">=</span> <span class="st">"typeface"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">old</span> <span class="op">&lt;-</span> <span class="fu">latex_options</span><span class="op">(</span>math_font <span class="op">=</span> <span class="st">"stix"</span>, render_mode <span class="op">=</span> <span class="st">"typeface"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">"$\\sum_{i=1}^{n} i^{2}$"</span>, gp <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="latex_options-1.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span>  <span class="fu">reset_latex_options</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">latex_options</span>, <span class="va">old</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Math in base graphics, with no other change to the plotting code.</span></span></span>
 <span class="r-in"><span>  <span class="fu">latex_options</span><span class="op">(</span>device_math <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>

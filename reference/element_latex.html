@@ -24,6 +24,8 @@ as LaTeX math and rendered via MicroTeX."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Documents</h6></li>
+    <li><a class="dropdown-item" href="../articles/documents.html">Typesetting a document</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
     <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
@@ -61,7 +63,7 @@ as LaTeX math and rendered via MicroTeX.</p>
 <span>  fontsize <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lineheight <span class="op">=</span> <span class="fl">1.2</span>,</span>
 <span>  max_width <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  input_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"math"</span><span class="op">)</span>,</span>
+<span>  input_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mixed"</span>, <span class="st">"math"</span>, <span class="st">"document"</span><span class="op">)</span>,</span>
 <span>  render_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"typeface"</span>, <span class="st">"path"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -96,16 +98,18 @@ line wrapping.  Use <code>0</code> (default) for no wrapping.</p></dd>
 
 
 <dt id="arg-input-mode">input_mode<a class="anchor" aria-label="anchor" href="#arg-input-mode"></a></dt>
-<dd><p>How <code>tex</code> is interpreted before being parsed.
-<code>"mixed"</code> (default) wraps the input in <code>\text{...}</code> so the
-string reads as ordinary text and <code>$...$</code> (or <code>\(...\)</code>)
-opens math mode, matching document-level LaTeX semantics. Useful for
-labels that arrive from external sources mixing prose and math without
-explicit <code>\text{}</code> markers. <code>"math"</code> is the classic
-MicroTeX behaviour: the whole string is treated as math, so unwrapped
-prose renders as spaced math italics. The default can be changed globally via
-<code><a href="latex_options.html">latex_options</a>(input_mode = "math")</code>. See <code><a href="latex_wrap.html">latex_wrap</a></code>
-for details on the wrapping process.</p></dd>
+<dd><p>How <code>tex</code> is read.
+<code>"mixed"</code> (default) reads a label: text, as in a LaTeX paragraph,
+with math between <code>$...$</code> or <code>\(...\)</code>, and a newline
+starts a new line, as <code>"\n"</code> does in R.
+<code>"math"</code> reads the whole string as math, as between <code>$...$</code>,
+so a word is set as italic letters; write text as <code>\text{...}</code>.
+<code>"document"</code> reads a LaTeX document body by LaTeX's own rules: a
+newline is a space, a blank line (or <code>\par</code>) starts an indented
+paragraph, <code>\section</code> and its kin are numbered headings, and
+display math is centred on a line of its own. Give <code>max_width</code> to
+break the paragraphs into lines. The default can be set for the
+session with <code><a href="latex_options.html">latex_options</a>(input_mode = )</code>.</p></dd>
 
 
 <dt id="arg-render-mode">render_mode<a class="anchor" aria-label="anchor" href="#arg-render-mode"></a></dt>
@@ -116,7 +120,8 @@ Bundled math fonts and any registered via <code><a href="load_math_font.html">lo
 are read directly from their OTF files: no system-wide font
 install is required.
 Falls back to path mode automatically on devices that lack the
-R \(\geq\) 4.3 glyph engine (e.g., the base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> device).
+R \(\geq\) 4.3 glyph engine, and on base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> and
+<code><a href="https://rdrr.io/r/grDevices/postscript.html" class="external-link">postscript()</a></code>, which cannot embed the math font.
 For selectable PDF output, prefer <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf</a></code>.
 <code>"path"</code> renders math symbols as filled vector paths (works on
 all devices but text is not selectable in PDF/SVG).</p></dd>

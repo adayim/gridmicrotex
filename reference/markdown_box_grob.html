@@ -32,6 +32,8 @@ subset, works inside every block."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Documents</h6></li>
+    <li><a class="dropdown-item" href="../articles/documents.html">Typesetting a document</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
     <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
@@ -176,21 +178,25 @@ and <code>vjust</code>, so those are then ignored.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Where <code><a href="markdown_grob.html">markdown_grob</a></code> flattens everything into a single
-run, this stacks one grob per block. That is what makes headings, list
-indentation, block-quote rules and background fills possible:
-MicroTeX has no concept of any of them, and its line breaking does not
-reach inside the cells it uses for list and table layout.</p>
-<p>Two consequences worth knowing. Table cells and code lines are not
-wrapped, so a wide table overflows rather than reflowing. And list
-items are stacked here rather than handed to MicroTeX's
-<code>itemize</code>, which is what gives them a proper hanging indent.</p>
-<p>An image on a line of its own is drawn as a raster, scaled to fit the
+run, this stacks one grob per block, which is what makes margins,
+padding, background fills, borders and block-quote rules possible. Each
+block's content is LaTeX text laid out by the engine, so it wraps,
+coloured, sized, underlined and highlighted spans included, and a
+block's <code>text-align</code> aligns each of its lines.</p>
+<p>A table is as wide as its content when that fits the box. When it does
+not, its wide columns share the width the others leave and their cells
+wrap, as an HTML table shrinks to its container; <code>table-layout:
+fixed</code> divides the width evenly between the columns instead. Code lines
+are not wrapped.</p>
+<p>An image on a line of its own is drawn as a block, scaled to fit the
 column but never enlarged past its natural size (pixels are read at
-96 dpi). PNG needs the <span class="pkg">png</span> package and JPEG needs <span class="pkg">jpeg</span>,
-both <em>Suggests</em>: when the reader is not installed, the file is
-missing, or the format is anything else, the image degrades to its alt
-text. An image <em>within</em> a sentence stays inline, where only its
-alt text survives.</p>
+96 dpi); an image <em>within</em> a sentence is drawn inline, and so is an
+<code>&lt;img&gt;</code> tag, even alone on its line. It must be
+a local PNG, JPEG or SVG file, read by <span class="pkg">png</span>, <span class="pkg">jpeg</span> or
+<span class="pkg">rsvg</span> respectively, all <em>Suggests</em> and needed only for their
+own format. An image that cannot be drawn – a missing file, a URL,
+another format, or a reader that is not installed – is an error when
+the grob is built, saying which.</p>
 <p>The layout is computed at draw time, so an open device is required,
 which is what lets a relative <code>width</code> and the measured height of
 the text resolve against the viewport the box is actually drawn in.</p>

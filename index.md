@@ -43,18 +43,15 @@ grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}",
            gp = grid::gpar(fontsize = 30))
 ```
 
-![plot of chunk
-example-basic](reference/figures/README-example-basic-1.png)
+![](reference/figures/README-example-basic-1.png)
 
-plot of chunk example-basic
-
-By default, the input is treated as LaTeX math mode (“mixed” mode),
-which wraps non-math text in `\text{}` and preserves math expressions
-as-is. Use `$...$` or `\\(...\\)` delimiters to render math. The
-`"x = "` in the equation above treated as text. Use
-`input_mode = "math"` to treat the whole string as math mode and render
-text with `\\text{}`. You can change this with global option
-`latex_options(input_mode = "math")`.
+By default a string is read as a label (`input_mode = "mixed"`): text,
+as in a LaTeX paragraph, with math between `$...$` or `\(...\)` — which
+is why the `"x = "` above is set as text. `input_mode = "math"` reads
+the whole string as math, and `input_mode = "document"` reads a LaTeX
+document body, with paragraphs, headings, displayed equations and lists
+([`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md)).
+Change the default with `latex_options(input_mode = "math")`.
 
 ### Composing with other grobs
 
@@ -77,10 +74,7 @@ grid.rect(
 grid.draw(g)
 ```
 
-![plot of chunk
-example-compose](reference/figures/README-example-compose-1.png)
-
-plot of chunk example-compose
+![](reference/figures/README-example-compose-1.png)
 
 ### Multiple expressions
 
@@ -104,10 +98,7 @@ for (i in seq_along(exprs)) {
 }
 ```
 
-![plot of chunk
-example-multiple](reference/figures/README-example-multiple-1.png)
-
-plot of chunk example-multiple
+![](reference/figures/README-example-multiple-1.png)
 
 ### Mixed text and math
 
@@ -124,10 +115,32 @@ grid.latex(
 )
 ```
 
-![plot of chunk
-example-mixed-definition](reference/figures/README-example-mixed-definition-1.png)
+![](reference/figures/README-example-mixed-definition-1.png)
 
-plot of chunk example-mixed-definition
+``` r
+
+reset_latex_options()  # back to input_mode = "mixed" for what follows
+```
+
+### Documents
+
+`input_mode = "document"` sets the body of a LaTeX document —
+paragraphs, headings, displayed equations, lists and tables — broken
+into lines at `max_width`, ready for a PDF page. See
+[`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md).
+
+``` r
+
+grid.newpage()
+grid.latex(r"(\section{Results}
+The slope is positive --- the fitted line is
+\[ \hat{y} = 1.2 + 0.42\,x, \]
+and its residuals show no pattern.)",
+  input_mode = "document", max_width = 5.6 * 72,
+  x = 0.02, y = 0.95, hjust = 0, vjust = 1, gp = gpar(fontsize = 12))
+```
+
+![](reference/figures/README-example-document-1.png)
 
 ## Base graphics
 
@@ -155,10 +168,7 @@ plot(1:10, (1:10)^2,
 text(3, 80, "$\\int_0^\\infty e^{-x^2}\\,dx$", col = "steelblue")
 ```
 
-![plot of chunk
-example-base](reference/figures/README-example-base-1.png)
-
-plot of chunk example-base
+![](reference/figures/README-example-base-1.png)
 
 Everyday labels are left alone, which is why the x-axis title above
 renders as written. Because the switch is session-wide it has side
@@ -182,10 +192,7 @@ grid.markdown(
 )
 ```
 
-![plot of chunk
-example-markdown](reference/figures/README-example-markdown-1.png)
-
-plot of chunk example-markdown
+![](reference/figures/README-example-markdown-1.png)
 
 Colour, font and size come from inline HTML, as they must: markdown
 itself defines no syntax for them.
@@ -201,10 +208,7 @@ grid.markdown(
 )
 ```
 
-![plot of chunk
-example-markdown-html](reference/figures/README-example-markdown-html-1.png)
-
-plot of chunk example-markdown-html
+![](reference/figures/README-example-markdown-html-1.png)
 
 [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
 lays out a whole document — headings, lists, quotes, code, tables and
@@ -222,22 +226,19 @@ for LaTeX-rendered axis titles:
 ``` r
 
 library(ggplot2)
-# Add a LaTeX table as an annotation
-tab_str <- r"(\begin{tabular}{c|c} \text{A} & B^2 \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
+# Add a LaTeX table as an annotation: its cells are text, as in LaTeX
+tab_str <- r"(\begin{tabular}{c|c} A & $B^2$ \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 
 df <- data.frame(x = 1:3, y = 1:3,
-                 eq = c("x^2", "\\frac{a}{b}", "\\sum_{i=1}^n x_i"))
-ggplot(df, aes(x, y, label = eq)) + 
+                 eq = c("$x^2$", "$\\frac{a}{b}$", "$\\sum_{i=1}^n x_i$"))
+ggplot(df, aes(x, y, label = eq)) +
   geom_latex() +
-  annotate("latex", x = 1, y = 2.7, label = tab_str, size = 12) +
+  annotate("latex", x = 1.15, y = 2.7, label = tab_str, size = 12) +
   labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
   theme(axis.title.x = element_latex())
 ```
 
-![plot of chunk
-example-ggplot2-geom](reference/figures/README-example-ggplot2-geom-1.png)
-
-plot of chunk example-ggplot2-geom
+![](reference/figures/README-example-ggplot2-geom-1.png)
 
 ggplot2 is a soft dependency — the core functions work without it. See
 [`vignette("ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md)
@@ -258,7 +259,8 @@ for more examples.
 
 ## How it works
 
-MicroTeX parses the LaTeX and computes the full TeX box model; a
+The LaTeX is read by TeX’s rules — macros expanded, commands and
+environments parsed — and MicroTeX computes the full TeX box model; a
 recorder captures every draw operation with exact coordinates, and R
 turns those into native grid primitives. Nothing is rasterised, so the
 output stays sharp at any resolution on any device.
@@ -276,7 +278,9 @@ The default graphics device on Windows (`windows()`) and macOS
 ([`quartz()`](https://rdrr.io/r/grDevices/quartz.html)) may not find the
 bundled math fonts, producing warnings like:
 
-    font family not found in Windows font database
+``` R
+font family not found in Windows font database
+```
 
 To avoid this, switch to a modern graphics backend that uses
 [systemfonts](https://CRAN.R-project.org/package=systemfonts) for font

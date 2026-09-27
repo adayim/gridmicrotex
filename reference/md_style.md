@@ -40,8 +40,8 @@ which has no block layout; *block* means it needs
 | `color` | inline + block |  |
 | `font_size` | inline + block |  |
 | `font_family` | inline + block |  |
-| `font_weight` | inline + block | prose blocks only, see below |
-| `font_style` | inline + block | prose blocks only, see below |
+| `font_weight` | inline + block |  |
+| `font_style` | inline + block |  |
 | `text_decoration` | inline + block | `underline`, `overline`, `line-through` |
 | `background` | inline + block | a fill behind the text |
 | `border` | inline | a frame; the inset is fixed |
@@ -62,7 +62,7 @@ which has no block layout; *block* means it needs
 | `border_top` | block | the `hr` rule |
 | `border_bottom` | `tr` | a rule under each table row |
 | `border_color` | `table` | colour of the table's rules |
-| `table_layout` | `table` | `fixed` divides the width between the columns so a wide table wraps |
+| `table_layout` | `table` | `fixed` divides the width evenly between the columns |
 | `height` | block | the band an `hr` sits in |
 | `bullet` | `ul` | raw LaTeX for the marker glyph |
 | `marker_gap` | `ul`, `ol` | marker to text |
@@ -90,14 +90,6 @@ wins over the rule, the way an inline style wins in CSS.
 
 Anything else is an error: unlike a pasted stylesheet, where an unknown
 property is ignored the way a browser ignores it.
-
-**One limitation worth knowing.** `font_weight` and `font_style` apply
-to blocks whose content is prose: paragraphs, headings, list items,
-block quotes, table cells and `<div>`s. They do *not* apply to `pre` or
-an image's alt text, which build their own LaTeX and impose their own
-font handling. This is a MicroTeX constraint rather than a choice:
-`\text{}` resets the font style, so emphasis has to be decided when the
-content is generated, not wrapped around it afterwards.
 
 **What cannot be styled at all.** There is no small-caps (`\textsc` is
 not a MicroTeX command), no `font-variant-numeric`, no right-to-left or

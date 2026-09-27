@@ -1,8 +1,8 @@
 # Create a grid grob from a LaTeX expression
 
-Parses a LaTeX math expression and returns a grid grob object that
-renders the formula using native grid graphics primitives. The grob
-supports standard grid queries such as
+Reads LaTeX – a formula, a label mixing text and math, or a document
+body – and returns a grid grob object that draws it with native grid
+graphics primitives. The grob supports standard grid queries such as
 [`grobWidth()`](https://rdrr.io/r/grid/grobWidth.html),
 [`grobHeight()`](https://rdrr.io/r/grid/grobWidth.html),
 [`grobX()`](https://rdrr.io/r/grid/grobX.html), and
@@ -26,7 +26,7 @@ latex_grob(
   math_font = "",
   max_width = 0,
   tex_style = "",
-  input_mode = c("mixed", "math"),
+  input_mode = c("mixed", "math", "document"),
   render_mode = c("typeface", "path"),
   justify = FALSE,
   line_break = c("greedy", "optimal"),
@@ -88,18 +88,17 @@ grid.latex(tex, ...)
 
 - input_mode:
 
-  How `tex` is interpreted before being parsed. `"mixed"` (default)
-  wraps the input in `\text{...}` so the string reads as ordinary text
-  and `$...$` (or `\(...\)`) opens math mode, matching document-level
-  LaTeX semantics. Useful for labels that arrive from external sources
-  mixing prose and math without explicit `\text{}` markers. `"math"` is
-  the classic MicroTeX behaviour: the whole string is treated as math,
-  so unwrapped prose renders as spaced math italics. The default can be
-  changed globally via
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "math")`.
-  See
-  [`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
-  for details on the wrapping process.
+  How `tex` is read. `"mixed"` (default) reads a label: text, as in a
+  LaTeX paragraph, with math between `$...$` or `\(...\)`, and a newline
+  starts a new line, as `"\n"` does in R. `"math"` reads the whole
+  string as math, as between `$...$`, so a word is set as italic
+  letters; write text as `\text{...}`. `"document"` reads a LaTeX
+  document body by LaTeX's own rules: a newline is a space, a blank line
+  (or `\par`) starts an indented paragraph, `\section` and its kin are
+  numbered headings, and display math is centred on a line of its own.
+  Give `max_width` to break the paragraphs into lines. The default can
+  be set for the session with
+  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = )`.
 
 - render_mode:
 
@@ -109,9 +108,10 @@ grid.latex(tex, ...)
   [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
   are read directly from their OTF files: no system-wide font install is
   required. Falls back to path mode automatically on devices that lack
-  the R \\\geq\\ 4.3 glyph engine (e.g., the base
-  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) device). For
-  selectable PDF output, prefer
+  the R \\\geq\\ 4.3 glyph engine, and on base
+  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) and
+  [`postscript()`](https://rdrr.io/r/grDevices/postscript.html), which
+  cannot embed the math font. For selectable PDF output, prefer
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`
   renders math symbols as filled vector paths (works on all devices but
   text is not selectable in PDF/SVG).
@@ -241,51 +241,80 @@ sub-expression from within `tex`, use the inline TeX commands
 - `lineheight`: controls multi-line spacing (default 1.2). The
   inter-line gap is `(lineheight - 1) * fontsize` big points.
 
-### LaTeX document-level wrappers
+### Malformed input
 
-The parser accepts raw output from `print.xtable()`,
-[`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html), and
-similar functions that emit complete `tabular` LaTeX. The following
-document-level constructs are recognized and rewritten silently before
-the input reaches MicroTeX:
+LaTeX that TeX would stop on is read as far as it can be and the rest is
+drawn, with one warning listing each problem at its line and column in
+`tex`: an unknown command (drawn as its name, in red), an unbalanced
+brace, `&` outside an alignment, `_` or `^` outside math, and so on.
+Only a macro that expands without end, or input nested 400 levels deep,
+is an error.
 
-**Removed (no visual effect):**
+### Pasted LaTeX and documents
 
-- `%`-to-end-of-line comments (escaped `\%` is preserved)
+LaTeX written for a document can be given as it is, whole or in part:
+output of `print.xtable()` or
+[`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html), a `table`
+float, or a paper's body with `input_mode = "document"`. What a grob has
+no use for is read and dropped:
 
-- preamble: `\documentclass[...]{...}`, `\usepackage[...]{...}`,
-  `\begin{document}` / `\end{document}`
+- the preamble: in a whole LaTeX file, everything before
+  `\begin{document}` is read for its definitions (`\newcommand`,
+  `\definecolor`, ...) and not drawn, as LaTeX draws nothing there; a
+  size, colour or environment begun there ends at `\begin{document}`.
+  What follows `\end{document}` is ignored. Package settings a grob
+  cannot honour are not warned about. `\documentclass`, `\usepackage`
+  (which loads nothing: every supported command is built in) and
+  `\bibliographystyle` draw nothing wherever they are;
 
-- title metadata: `\maketitle`, `\title{...}`, `\author{...}`
+- title and cross-reference metadata: `\maketitle`, `\title{}`,
+  `\author{}`, `\label{}`;
 
-- cross-reference labels: `\label{...}`
+- alignment: in a label, `\centering`, `\raggedleft` and `\raggedright`
+  do nothing (a label is placed by `hjust`), nor do `\flushleft`,
+  `\flushright` and `\relax`. A document aligns each line of the
+  paragraphs they are in, and of `center`, `flushleft` and `flushright`.
 
-- float wrappers: `\begin{table}` / `\end{table}`, `\begin{figure}` /
-  `\end{figure}` (and starred variants)
+In a label the content of a `table` or `figure` float is set in the line
+like any other. A document sets a float where it is written, apart from
+its paragraphs, as LaTeX's `[h]` placement would, and a `center`
+environment or a `\centering` centres its lines.
 
-- layout scopes: `\centering`, `\raggedright`, `\raggedleft`,
-  `\flushleft`, `\flushright`
+Some commands are their nearest equivalent. `\emph` is `\textit`, `\em`
+is `\it`, and `\newline` is `\\`. Booktabs' `\toprule` and `\bottomrule`
+are thick rules, `\midrule` a plain one, `\cmidrule` a partial one and
+`\specialrule{w}{a}{b}` one `w` thick. `\boldmath` sets the math that
+follows in its group in bold. A grob has no glue to stretch, so
+`\smallskip`, `\medskip` and `\bigskip` are 0.25, 0.5 and 1 em of space,
+`\hfill` is a quad and `\vfill` 1 em. And `\caption{X}` is a line of
+text where it is written, unnumbered, so a caption written before a
+`tabular` is set above it.
 
-**Rewritten:**
+`\textwidth`, `\linewidth` and `\columnwidth` in a length
+(`0.5\textwidth`) are `max_width`, or with none the 345pt of LaTeX's
+article class. An `abstract` is set as article sets it, under a centred
+heading, and `thebibliography` as a "References" heading over a list
+numbered `[1]`, `[2]`, ... (`\bibitem`'s key has nothing to point at,
+and `\newblock` is a space).
 
-- booktabs rules: `\toprule`, `\midrule`, `\bottomrule`, `\cmidrule` are
-  mapped to `\hline`. The optional column-range and trim arguments of
-  `\cmidrule` are discarded (MicroTeX has no concept of partial-column
-  rules).
+A `tabular`'s cells and the items of `itemize` and `enumerate` are text,
+as in LaTeX, when the table or list is met in text; met in math
+(`input_mode = "math"`, or between `$...$`) they are math. A list item
+wraps at `max_width`, as a `p{}` cell does; a cell in an `l`, `c` or `r`
+column is one line. A `minipage` sets its paragraphs to its width, and
+to its optional height, as LaTeX does. A heading too long for
+`max_width` wraps, its title hanging from its number.
 
-- `\caption[short]{X}` is extracted as `\text{X}\\` at its source
-  position, so a caption written after `\includegraphics` renders below
-  the figure and one written before a `tabular` renders above the table.
-  Full LaTeX instead positions the caption by float type regardless of
-  source order, and numbers it from a counter; there is no counter here.
-  Wrap the figure and its caption in `\begin{array}{c}...\end{array}` to
-  centre them on each other (`\centering` is dropped: a grob has no page
-  to centre against).
+Commands that need the rest of a document warn and draw what LaTeX draws
+when it cannot resolve them: `\ref` and `\pageref` are a bold `??`,
+`\eqref` is `(??)`, `\cite{key}` and natbib's `\citep{key}` are `[?]`
+(`\citet` is `(author?) [?]`, `\citealp` a bare `?`), and a
+`\footnote`'s text is set where it is written. Equations are not
+numbered. Not supported: `\tag`, `\verb`, `\textsc`, the declarations
+`\bfseries`, `\itshape` and their kin (use `\textbf{}`, `\textit{}` or
+`\bf`, `\it`), the `description` list, theorem environments, and TikZ.
 
-- `\graphicspath{{dir/}}` and `\DeclareGraphicsExtensions{...}` are
-  consumed rather than typeset; the former's directories are searched.
-
-**Images:**
+### Images
 
 - `\includegraphics[opts]{file}` draws a PNG, JPEG or SVG inline. The
   starred form is accepted and behaves identically. `width`, `height`
@@ -305,13 +334,24 @@ the input reaches MicroTeX:
 - An SVG is drawn as real vector and stays sharp at any output
   resolution; a bitmap does not, and warns when it would be shown below
   150 dpi. PDF and EPS are not supported: save the figure as SVG
-  instead. A file that cannot be read (missing, unsupported, or an SVG
-  with no `rsvg` installed) warns and draws its name rather than
-  disappearing.
+  instead.
 
-Anything not in this list is passed to MicroTeX unchanged. An unknown
-command is not an error: MicroTeX typesets its name in red, which makes
-unsupported markup easy to spot in the output.
+- The file must be local; a URL is not downloaded. A file that cannot be
+  drawn – missing, a URL, an unsupported format, or unreadable – is an
+  error saying why; in a document (`input_mode = "document"`) it warns
+  and draws the file's name, so that one figure does not cost the whole
+  document. Each format needs its reader, all *Suggests*: `png` for PNG,
+  `jpeg` for JPEG and `rsvg` for SVG; the error names the one to
+  install.
+
+- The file is read when the parser meets the command, after macros are
+  expanded, so one a macro produces (`\newcommand`, `\def` or
+  [`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md))
+  works like any other. A commented-out `% \includegraphics{...}` is
+  ignored.
+
+- `\graphicspath{{dir/}}` names the directories searched, as in LaTeX,
+  and `\DeclareGraphicsExtensions{}` is read and dropped.
 
 ### Parallelism
 
@@ -358,6 +398,18 @@ instead.
   grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
              x = grid::unit(0.6, "npc"),
              y = grid::unit(0.8, "npc"),)
+
+
+  # A document body: a heading, paragraphs and a display, broken into
+  # lines at max_width (in big points).
+  grid::grid.newpage()
+  doc <- r"(\section{Results}
+The fitted line is
+\[ \hat{y} = \beta_0 + \beta_1 x, \]
+and its slope, $\beta_1$, is positive.)"
+  grid.latex(doc, input_mode = "document", max_width = 250,
+             x = 0.05, y = 0.95, hjust = 0, vjust = 1,
+             gp = grid::gpar(fontsize = 12))
 
 # }
 ```

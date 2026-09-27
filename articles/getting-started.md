@@ -7,7 +7,8 @@ and as native R `grid` graphics objects, embedding the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ engine. For a
 grob, the pipeline is:
 
-1.  MicroTeX parses the LaTeX into a TeX box model
+1.  The LaTeX is read by TeX’s rules — macros expanded, commands and
+    environments parsed — and MicroTeX lays it out as a TeX box model
 2.  A custom `Graphics2D` recorder captures every draw operation — glyph
     paths, lines, rectangles — with exact coordinates
 3.  That layout crosses the C++/R boundary as a data frame
@@ -59,12 +60,13 @@ LaTeX’s own row separator `\\` becomes a bewildering `\\\\`.
 
 ### Mixing text and math
 
-The default `input_mode = "mixed"` reads the string as prose and
-typesets only what sits inside `$…$` or `\(…\)` as math, which is why
-`Famous:` below needs no markup. It saves typing, but the split is
-heuristic. `input_mode = "math"` treats the whole string as math, so
-prose must be wrapped in `\text{}`; that suits heavy math and pasted
-LaTeX. These two render identically:
+The default `input_mode = "mixed"` reads the string as a LaTeX paragraph
+reads it: text, with math inside `$…$` or `\(…\)`, which is why
+`Famous:` below needs no markup. Its one departure from LaTeX is that a
+newline starts a new line, as `"\n"` does in any R label.
+`input_mode = "math"` treats the whole string as math, so prose must be
+wrapped in `\text{}`; that suits heavy math. These two render
+identically:
 
 ``` r
 
@@ -77,7 +79,28 @@ grid.latex(r"(\text{Famous: } E = mc^2)", input_mode = "math",
 
 ![](getting-started_files/figure-html/modes-1.png)
 
-Set the mode for a whole session with `latex_options(input_mode = )`.
+Set the mode for a whole session with `latex_options(input_mode = )`. A
+third mode, `input_mode = "document"`, reads a whole LaTeX document body
+— paragraphs, headings, displayed equations — and has a vignette of its
+own,
+[`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md).
+
+### When the LaTeX is wrong
+
+Input that LaTeX would stop on does not stop a label. What can be read
+is drawn, and a single warning lists each problem with its line and
+column; an unknown command is drawn in red, so it is easy to find:
+
+``` r
+
+grid.newpage()
+grid.latex(r"(Area $\pi r^2$, see \nosuchcommand{here})")
+#> Warning: LaTeX input: 1:21: unknown command \nosuchcommand: drawn as its name
+```
+
+![](getting-started_files/figure-html/malformed-1.png)
+
+Only a macro that expands without end is an error.
 
 ## Base graphics
 
@@ -362,9 +385,9 @@ are supported, sized with `width`, `height` or `scale` in any LaTeX
 length; give one of width/height and the aspect ratio is kept, or both
 plus `keepaspectratio` to fit inside them. As in LaTeX the extension may
 be omitted (`{plots/fig}` finds `plots/fig.svg` or `plots/fig.png`), and
-`\graphicspath{{figs/}}` adds a directory to search. `angle` rotates the
-figure, like `\rotatebox`; `trim` and `clip` are recognised but not
-applied, and say so.
+`\graphicspath{{figs/}}` names the directories to search. `angle`
+rotates the figure, like `\rotatebox`; `trim` and `clip` are recognised
+but not applied, and say so.
 
 ``` r
 
@@ -622,8 +645,8 @@ reset_latex_options()  # back to built-in defaults
 ### User-defined macros
 
 [`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-registers zero-argument shorthands, expanded by text substitution before
-the expression reaches MicroTeX:
+registers zero-argument shorthands that every later label can use,
+expanded as a `\newcommand` without arguments would be:
 
 ``` r
 
@@ -642,16 +665,18 @@ grid.latex(r"(\forall \eps > 0, \eps \in \RR)")
 clear_macros()
 ```
 
-Names must be ASCII letters, and expansion iterates to a fixed point so
-macros can reference each other.
+Names must be ASCII letters, and macros can use each other.
 [`list_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
 shows what is registered;
 [`clear_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
 drops everything.
 
-For parameterised macros (0–9 arguments) MicroTeX also accepts plain-TeX
-`\def`. These live only for the expression they appear in, so use them
-for an abbreviation local to one label and
+A label can define macros itself, as LaTeX does: `\newcommand`,
+`\renewcommand`, `\providecommand`, `\def` (delimited parameters
+included), `\let` and `\newenvironment`, with up to nine arguments.
+These live only for the expression they appear in — and, as in TeX, only
+to the end of the `{...}` group they are made in — so use them for an
+abbreviation local to one label and
 [`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
 for one that should persist:
 
@@ -694,22 +719,24 @@ grid.latex(r"($x^{2} + y_{i}$)", debug = TRUE)
 
 ## LaTeX reference
 
-MicroTeX is a **math formula renderer**, not a document typesetter. It
-covers the vast majority of notation used in plots and figures, but does
-not replace a LaTeX installation. This section is the boundary.
+gridmicrotex covers the vast majority of the notation used in plots and
+figures, and reads a document body too, but it draws one grob, not
+pages: it does not replace a LaTeX installation. This section is the
+boundary.
 
 ### Lists
 
 `itemize` and `enumerate` lay their items out as a left-aligned column,
-one per row — `itemize` prefixes a bullet, `enumerate` numbers them:
+one per row — `itemize` prefixes a bullet, `enumerate` numbers them. An
+item is text, as in LaTeX, with its math between `$…$`:
 
 ``` r
 
 grid.newpage()
 grid.latex(r"(\begin{enumerate}
-  \item e^{i\pi} + 1 = 0
-  \item \begin{itemize}
-          \item \alpha \item \beta
+  \item Euler: $e^{i\pi} + 1 = 0$
+  \item Two letters: \begin{itemize}
+          \item $\alpha$ \item $\beta$
         \end{itemize}
 \end{enumerate})", gp = gpar(fontsize = 20))
 ```
@@ -720,21 +747,20 @@ An optional `[…]` argument customises the marker. For `itemize` it is
 the literal marker (`\begin{itemize}[\star]`); for `enumerate` it is a
 counter template containing one of `\arabic*`, `\alph*`, `\Alph*`,
 `\roman*` or `\Roman*` (e.g. `\begin{enumerate}[\Roman*.]`). Lists nest,
-and an item may contain any math, including a `\begin{array}` table.
+and an item may hold a table as well as math.
 
-Because MicroTeX is a math engine, each item is a **math-mode,
-single-line** expression: no paragraph flow, no line wrapping, and prose
-inside an item needs `\text{}` (`\item \text{First point}`). The
-`description` environment is not supported.
+With `input_mode = "math"` an item is math instead, as everything in
+that mode is. Either way an item is **one line**: `max_width` does not
+wrap it. The `description` environment is not supported.
 
 ### Pasting LaTeX from other sources
 
 Input generated by other tools — ready-to-compile `tabular` snippets,
 fragments copied out of a `.tex` file — usually arrives wrapped in
-document-level constructs MicroTeX does not implement. Rather than
-refusing it, gridmicrotex rewrites or removes a small set of well-known
-wrappers before parsing, so `knitr::kable(format = "latex")` and
-`xtable::print.xtable()` output can be pasted in unedited:
+document-level constructs a single grob has no use for. They are read
+and dropped, or read as their nearest equivalent, so
+`knitr::kable(format = "latex")` and `xtable::print.xtable()` output can
+be pasted in unedited:
 
 ``` r
 
@@ -765,13 +791,11 @@ Six things were handled without any editing: the `%` comment and the
 line above the table, `\toprule`/`\bottomrule` became thick rules,
 `\midrule` a plain one, and `\emph` became italic.
 
-Note that the cell text is set in math italics. A `tabular` is a math
-environment, so its contents are math whichever `input_mode` you choose
-— the two modes give an identical layout for the snippet above. What
-`"mixed"` buys you here is the prose *outside* the environment, such as
-the caption. For upright cell text, wrap the cells in `\text{}`.
+The cells are text, as in LaTeX, with any math in them between `$…$`.
+With `input_mode = "math"` a `tabular`’s cells are math instead, like an
+`array`’s.
 
-**Removed silently (no visual effect):**
+**Read and dropped (no visual effect):**
 
 | Construct | Why |
 |----|----|
@@ -781,16 +805,15 @@ the caption. For upright cell text, wrap the cells in `\text{}`.
 | `\maketitle`, `\title{…}`, `\author{…}` | title-page metadata, no body output |
 | `\label{…}` | cross-reference target, never rendered in LaTeX either |
 | `\begin{table}[…]` / `\end{table}`, `\begin{figure}[…]` / `\end{figure}` (and starred variants) | float wrappers; the contents stay |
-| `\centering`, `\raggedright`, `\raggedleft`, `\flushleft`, `\flushright` | alignment scope declarations |
-| `\noindent`, `\relax` | content-free declarations |
+| `\raggedright`, `\raggedleft`, `\flushleft`, `\flushright`, and `\centering` outside a document | alignment scope declarations |
+| `\relax`, and `\noindent` outside a document | content-free declarations |
 
-**Rewritten to a MicroTeX equivalent:**
+**Read as their nearest equivalent:**
 
 | Construct | Becomes |
 |----|----|
 | `\emph{X}` | `\textit{X}` |
-| `\textnormal{X}` | `\text{X}` |
-| `\par`, `\newline` | `\\` (line break) |
+| `\newline`, and `\par` outside a document | `\\` (line break) |
 | `\toprule`, `\bottomrule` | `\thickhline` (rendered ~2× thickness) |
 | `\midrule` | `\hline` |
 | `\cmidrule[trim]?(parenarg)?{a-b}` | `\cline{a-b}` — partial-column rule |
@@ -809,32 +832,31 @@ amount. And `\hfill` / `\vfill` are *rubber* lengths with nothing to
 fill in a fixed-size grob, so they become a static 1 em gap — right
 position, no elasticity.
 
-**Not honored** — rendered as literal text, which is intentional: it
-makes unsupported markup easy to spot.
+**Drawn as LaTeX draws them when there is nothing to resolve them
+against**, with a warning: `\ref{…}` and `\pageref{…}` as a bold `??`,
+`\eqref{…}` as `(??)`, `\cite{key}` as `[?]`, and a `\footnote{…}`’s
+text where it is written, since a grob has no foot of the page.
+
+**Not supported** — drawn in red with a warning, which makes them easy
+to spot:
 
 - Declarative font scopes: `\bfseries`, `\itshape`, `\ttfamily`,
-  `\sffamily`, `\rmfamily`. These affect text within their group in
-  LaTeX, which needs scope tracking we do not implement. Use the
-  argument-bearing forms instead — `\textbf{…}`, `\textit{…}`,
-  `\texttt{…}`, `\textsf{…}`, `\textrm{…}` — all of which nest. To
-  choose the text font itself, set `gp$fontfamily` or use
-  `\gmfontfamily{…}{…}`.
-- References: `\ref{…}`, `\cite{…}` — there is nothing to resolve
-  against.
-- Footnotes: `\footnote{…}` — the positioning machinery is page-bound.
+  `\sffamily`, `\rmfamily`. Use the argument-bearing forms instead —
+  `\textbf{…}`, `\textit{…}`, `\texttt{…}`, `\textsf{…}`, `\textrm{…}` —
+  all of which nest, or TeX’s older `\bf` and `\it`. To choose the text
+  font itself, set `gp$fontfamily` or use `\gmfontfamily{…}{…}`.
 - Small caps: `\textsc{…}` — MicroTeX has no small-caps glyphs.
 
 ### What is not supported
 
-These need a real document compiler and are outside a formula renderer’s
-scope: document structure (`\section`, page layout, `\tableofcontents`);
+These need a real document compiler: pages and page layout,
+`\tableofcontents`, and anything numbered across a document —
+references, bibliographies, `\tag` and equation numbers. Nor are
 automatic hyphenation (`\-` marks a break point yourself, and
-`max_width` / `justify` do handle line breaking); TikZ/PGF;
-cross-references and bibliographies; theorem environments; the
-`description` list environment (`itemize` and `enumerate` *are*
-supported); and `\tag` / equation numbering. `\usepackage{…}` is
-accepted but loads nothing — every supported command is built into
-MicroTeX.
+`max_width` / `justify` do handle line breaking), TikZ/PGF, theorem
+environments, `\verb`, and the `description` list environment (`itemize`
+and `enumerate` *are* supported). `\usepackage{…}` is accepted but loads
+nothing — every supported command is built in.
 
 For axis labels, annotations, legends and in-plot formulas, the
 supported set is more than sufficient.

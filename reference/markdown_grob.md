@@ -114,7 +114,10 @@ what a browser shows for the ones (`<a>`, `<abbr>`, `<span>` without a
 style) that have no default rendering.
 
 Not every markdown feature has a MicroTeX equivalent. Links keep their
-text and drop the destination, and images keep their alt text.
+text and drop the destination. An image is drawn inline from a local
+PNG, JPEG or SVG file, and one that cannot be drawn is an error, as for
+`\includegraphics` in
+[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 Everything is flattened into a single run here, with paragraphs joined
 by line breaks: there is no block layout, so indentation, list markers

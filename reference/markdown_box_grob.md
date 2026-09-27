@@ -118,23 +118,26 @@ A `markdownbox` gTree.
 
 Where
 [`markdown_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-flattens everything into a single run, this stacks one grob per block.
-That is what makes headings, list indentation, block-quote rules and
-background fills possible: MicroTeX has no concept of any of them, and
-its line breaking does not reach inside the cells it uses for list and
-table layout.
+flattens everything into a single run, this stacks one grob per block,
+which is what makes margins, padding, background fills, borders and
+block-quote rules possible. Each block's content is LaTeX text laid out
+by the engine, so it wraps, coloured, sized, underlined and highlighted
+spans included, and a block's `text-align` aligns each of its lines.
 
-Two consequences worth knowing. Table cells and code lines are not
-wrapped, so a wide table overflows rather than reflowing. And list items
-are stacked here rather than handed to MicroTeX's `itemize`, which is
-what gives them a proper hanging indent.
+A table is as wide as its content when that fits the box. When it does
+not, its wide columns share the width the others leave and their cells
+wrap, as an HTML table shrinks to its container; `table-layout: fixed`
+divides the width evenly between the columns instead. Code lines are not
+wrapped.
 
-An image on a line of its own is drawn as a raster, scaled to fit the
+An image on a line of its own is drawn as a block, scaled to fit the
 column but never enlarged past its natural size (pixels are read at 96
-dpi). PNG needs the png package and JPEG needs jpeg, both *Suggests*:
-when the reader is not installed, the file is missing, or the format is
-anything else, the image degrades to its alt text. An image *within* a
-sentence stays inline, where only its alt text survives.
+dpi); an image *within* a sentence is drawn inline, and so is an `<img>`
+tag, even alone on its line. It must be a local PNG, JPEG or SVG file,
+read by png, jpeg or rsvg respectively, all *Suggests* and needed only
+for their own format. An image that cannot be drawn – a missing file, a
+URL, another format, or a reader that is not installed – is an error
+when the grob is built, saying which.
 
 The layout is computed at draw time, so an open device is required,
 which is what lets a relative `width` and the measured height of the

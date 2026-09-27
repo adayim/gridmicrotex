@@ -1,12 +1,14 @@
 # Wrap standard text for math-first LaTeX renderers
 
-Parses character strings to safely isolate standard natural language
-from LaTeX math environments. Standard text is wrapped in `\text{}`
-blocks, while equations, display math, and specific LaTeX environments
-are preserved verbatim. This is heavily optimized for passing
-mixed-content strings (like plot titles or axis labels) to pure-math
-typesetting engines like MicroTex. The conversion is not perfect, but it
-should handle most common cases without user intervention.
+Turns a label that mixes text and math into a formula: the text is
+wrapped in `\text{}` blocks, while equations, display math and math
+environments are kept verbatim.
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+does not need this, as it reads such a label itself
+(`input_mode = "mixed"`); it is for handing a label to something that
+takes only math, such as `latex_grob(input_mode = "math")` or another
+math renderer. The conversion is not perfect, but it should handle most
+common cases without user intervention.
 
 ## Usage
 

@@ -2,14 +2,20 @@
 
 ## gridmicrotex 0.2.0
 
-- New `latex_options(device_math = TRUE)` renders `$…$` math in labels
-  drawn to the graphics device, so **base** graphics gets real LaTeX —
-  `main`, `xlab`, `ylab`,
-  [`text()`](https://rdrr.io/r/graphics/text.html),
-  [`mtext()`](https://rdrr.io/r/graphics/mtext.html),
-  [`legend()`](https://rdrr.io/r/graphics/legend.html) — with no other
-  change to your code. It intercepts the device, so grid, ggplot2 and
-  lattice text is covered too.
+- LaTeX is read by a new, faster parser that follows TeX’s rules, so
+  macros, environments and starred forms work as in LaTeX, and malformed
+  input is drawn with a warning giving its line:col instead of failing.
+  As in TeX, a space after a command is dropped (write `\LaTeX{} is`),
+  and `_`, `^`, `#` and `&` outside math warn.
+- New `input_mode = "document"` renders a LaTeX document body, or a
+  whole pasted paper, wrapped at `max_width` (see
+  [`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md)).
+  Markdown is now laid out the same way, so its paragraphs, styled spans
+  and tables stay within their box.
+- New `latex_options(device_math = TRUE)` renders `$…$` math in base
+  graphics labels.
+- An image that cannot be drawn is now an error saying why, figures load
+  about ten times faster, and many bugs are fixed.
 
 ## gridmicrotex 0.1.1
 
@@ -81,12 +87,10 @@ CRAN release: 2026-08-21
   sharp at any output resolution.
 - New `p{len}` column type gives `tabular` fixed-width, wrapping cells.
 - `\url{}` and `\href{}{}` render as styled text instead of literally.
-- [`load_font()`](https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.md)
-  is renamed
+- `load_font()` is renamed
   [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md);
   the old name is deprecated.
-- [`check_fonts()`](https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.md)
-  is renamed
+- `check_fonts()` is renamed
   [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md);
   the old name is deprecated.
 - Bug fix: `\rotatebox` past a quarter turn drew text and glyphs 180
@@ -165,10 +169,8 @@ CRAN release: 2026-06-01
 
 CRAN release: 2026-05-18
 
-- Self-contained
-  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/gridmicrotex-deprecated.md)
-  example so CRAN’s donttest additional checks no longer fail on the
-  unreliable CTAN font download.
+- Self-contained `load_font()` example so CRAN’s donttest additional
+  checks no longer fail on the unreliable CTAN font download.
 - New commands.
 
 ## gridmicrotex 0.0.2

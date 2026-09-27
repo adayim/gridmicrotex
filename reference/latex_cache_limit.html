@@ -6,14 +6,16 @@ rendering of the same expressions, especially in loops or
 interactive sessions. The default limit is 512 entries, which
 should be sufficient for most use cases. When the limit is
 exceeded, the least recently used entries are automatically
-evicted."><meta property="og:description" content="The cache stores parsed layout information for recently rendered
+evicted. The same limit, and latex_cache_clear(), also apply to
+a smaller memo of pre-processed input kept alongside the layouts."><meta property="og:description" content="The cache stores parsed layout information for recently rendered
 LaTeX expressions, keyed by the expression and relevant rendering
 parameters (font, size, macros, etc.). This speeds up repeated
 rendering of the same expressions, especially in loops or
 interactive sessions. The default limit is 512 entries, which
 should be sufficient for most use cases. When the limit is
 exceeded, the least recently used entries are automatically
-evicted."></head><body>
+evicted. The same limit, and latex_cache_clear(), also apply to
+a smaller memo of pre-processed input kept alongside the layouts."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -34,6 +36,8 @@ evicted."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><h6 class="dropdown-header" data-toc-skip>Getting started</h6></li>
     <li><a class="dropdown-item" href="../articles/getting-started.html">Introduction to gridmicrotex</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Documents</h6></li>
+    <li><a class="dropdown-item" href="../articles/documents.html">Typesetting a document</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Base R graphics</h6></li>
     <li><a class="dropdown-item" href="../articles/base-graphics.html">LaTeX math in base R graphics</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>Markdown</h6></li>
@@ -66,7 +70,8 @@ rendering of the same expressions, especially in loops or
 interactive sessions. The default limit is 512 entries, which
 should be sufficient for most use cases. When the limit is
 exceeded, the least recently used entries are automatically
-evicted.</p>
+evicted. The same limit, and <code>latex_cache_clear()</code>, also apply to
+a smaller memo of pre-processed input kept alongside the layouts.</p>
     </div>
 
     <div class="section level2">

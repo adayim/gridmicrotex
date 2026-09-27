@@ -12,7 +12,7 @@ element_latex(
   fontsize = NULL,
   lineheight = 1.2,
   max_width = 0,
-  input_mode = c("mixed", "math"),
+  input_mode = c("mixed", "math", "document"),
   render_mode = c("typeface", "path"),
   ...
 )
@@ -46,18 +46,17 @@ element_latex(
 
 - input_mode:
 
-  How `tex` is interpreted before being parsed. `"mixed"` (default)
-  wraps the input in `\text{...}` so the string reads as ordinary text
-  and `$...$` (or `\(...\)`) opens math mode, matching document-level
-  LaTeX semantics. Useful for labels that arrive from external sources
-  mixing prose and math without explicit `\text{}` markers. `"math"` is
-  the classic MicroTeX behaviour: the whole string is treated as math,
-  so unwrapped prose renders as spaced math italics. The default can be
-  changed globally via
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = "math")`.
-  See
-  [`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
-  for details on the wrapping process.
+  How `tex` is read. `"mixed"` (default) reads a label: text, as in a
+  LaTeX paragraph, with math between `$...$` or `\(...\)`, and a newline
+  starts a new line, as `"\n"` does in R. `"math"` reads the whole
+  string as math, as between `$...$`, so a word is set as italic
+  letters; write text as `\text{...}`. `"document"` reads a LaTeX
+  document body by LaTeX's own rules: a newline is a space, a blank line
+  (or `\par`) starts an indented paragraph, `\section` and its kin are
+  numbered headings, and display math is centred on a line of its own.
+  Give `max_width` to break the paragraphs into lines. The default can
+  be set for the session with
+  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = )`.
 
 - render_mode:
 
@@ -67,9 +66,10 @@ element_latex(
   [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
   are read directly from their OTF files: no system-wide font install is
   required. Falls back to path mode automatically on devices that lack
-  the R \\\geq\\ 4.3 glyph engine (e.g., the base
-  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) device). For
-  selectable PDF output, prefer
+  the R \\\geq\\ 4.3 glyph engine, and on base
+  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) and
+  [`postscript()`](https://rdrr.io/r/grDevices/postscript.html), which
+  cannot embed the math font. For selectable PDF output, prefer
   [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`
   renders math symbols as filled vector paths (works on all devices but
   text is not selectable in PDF/SVG).
