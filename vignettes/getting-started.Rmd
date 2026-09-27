@@ -714,7 +714,6 @@ With `input_mode = "math"` a `tabular`'s cells are math instead, like an
 | Construct | Becomes |
 |---|---|
 | `\emph{X}` | `\textit{X}` |
-| `\textnormal{X}` | `\text{X}` |
 | `\newline`, and `\par` outside a document | `\\` (line break) |
 | `\toprule`, `\bottomrule` | `\thickhline` (rendered ~2× thickness) |
 | `\midrule` | `\hline` |

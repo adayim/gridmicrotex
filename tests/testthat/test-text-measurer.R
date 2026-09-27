@@ -177,6 +177,24 @@ test_that("\\textrm returns to the caller's font", {
   expect_true(all(bitwAnd(df$font_style[df$type == "text"], 2L) != 0L))
 })
 
+test_that("\\textnormal sets the normal font, whatever is around it", {
+  # LaTeX's \normalfont: upright, medium, in the caller's family. It was
+  # \text{}, which keeps the style around it, so it came out bold in bold.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  styles <- function(tex) {
+    df <- latex_grob(tex, gp = grid::gpar(fontsize = 20))$layout_df
+    df <- df[df$type == "text", ]
+    stats::setNames(df$font_style, trimws(df$text))
+  }
+  plain <- styles("\\text{b}")[["b"]]
+  for (around in c("\\textbf{a \\textnormal{b}}", "\\textit{\\textsf{a \\textnormal{b}}}",
+                   "\\texttt{a \\textnormal{b}}", "\\gmfontfamily{Georgia}{a \\textnormal{b}}")) {
+    expect_equal(styles(around)[["b"]], plain, info = around)
+  }
+  # What is around it keeps its own.
+  expect_equal(bitwAnd(styles("\\textbf{a \\textnormal{b}}")[["a"]], 2L), 2L)
+})
+
 test_that("\\textrm is measured in the font it is drawn in", {
   # Measuring in mono while drawing in the body font puts glyphs where they
   # do not fit, so the reset has to reach the measurer too.

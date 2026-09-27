@@ -125,7 +125,6 @@ test_that("text commands a grob has no equivalent for are drawn as the nearest",
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_draws_as("\\emph{stress}", "\\textit{stress}")
   expect_draws_as("\\emph{a $x_{i}$ b}", "\\textit{a $x_{i}$ b}")
-  expect_draws_as("\\textnormal{plain}", "\\text{plain}")
   expect_draws_as("a\\par b", "a\\\\b")
   expect_draws_as("a\\newline b", "a\\\\b")
   # Fixed space: a grob has no glue to fill. A space after a command word
@@ -143,6 +142,25 @@ test_that("a caption is a line of text where it is written", {
   expect_draws_as("a \\caption{Hi} b", "a \\text{Hi}\\\\ b")
   expect_draws_as("\\caption[short]{Long}", "\\text{Long}\\\\")
   expect_draws_as("\\caption{Foo $x_{i}$}", "\\text{Foo $x_{i}$}\\\\")
+})
+
+test_that("a caption, note or run-in heading is set once per line it runs over", {
+  # As \textbf{a\\b} is. They were rebuilt through the handlers, which do
+  # not know them, and drawn as red names with their text lost.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_draws_as("\\caption{one\\\\two}", "\\text{one}\\\\\\text{two}\\\\")
+  expect_draws_as("\\paragraph{One\\\\Two} text", "\\paragraph{One}\\\\\\paragraph{Two} text")
+  # \footnote warns that it has no page, once per note, so the two are
+  # compared without their warnings.
+  drawn <- function(tex, mode) {
+    l <- suppressWarnings(layout_of(tex, mode))
+    attr(l$records, "diagnostics") <- NULL
+    l
+  }
+  for (mode in c("mixed", "document")) {
+    expect_identical(drawn("Value\\footnote{see\\\\below} end", mode),
+                     drawn("Value\\footnote{see}\\\\\\footnote{below} end", mode), info = mode)
+  }
 })
 
 test_that("links look like LaTeX's, and a URL is drawn as written", {

@@ -504,6 +504,25 @@ test_that("a path is found the way graphicx finds one", {
                "file not found")
 })
 
+test_that("\\graphicspath reaches a list's items and a column's @{}", {
+  skip_if_not_installed("ragg"); skip_if_not_installed("png")
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  dir <- tempfile("gfx"); dir.create(file.path(dir, "sub"), recursive = TRUE)
+  file.copy(mk_png(300, 200), file.path(dir, "sub", "fig.png"))
+  old <- setwd(dir); on.exit(setwd(old), add = TRUE)
+
+  # Both are lowered apart from the rest, and began without the
+  # directories: an R error in a label, the file's name in a document.
+  item <- "\\graphicspath{{sub/}}\\begin{itemize}\\item \\includegraphics{fig}\\end{itemize}"
+  for (mode in c("mixed", "document")) {
+    expect_true("image" %in% latex_tree(item, input_mode = mode)$records$type, info = mode)
+  }
+  column <- "\\graphicspath{{sub/}}\\begin{array}{@{\\includegraphics{fig}}c}a\\end{array}"
+  expect_true("image" %in% latex_tree(column, input_mode = "math")$records$type)
+  # The directories are the input's own: the next one starts without them.
+  expect_error(latex_tree("\\includegraphics{fig}", input_mode = "math"), "file not found")
+})
+
 test_that("the starred and two-argument spellings are the same command", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)

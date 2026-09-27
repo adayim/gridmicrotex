@@ -3,8 +3,8 @@
 # macro that expands forever -- is an error (see test-latex-grob.R).
 
 # What is drawn, leaving out the problems found (the layout carries them).
-layout_quietly <- function(tex) {
-  t <- suppressWarnings(latex_tree(tex, input_mode = "math", render_mode = "path"))
+layout_quietly <- function(tex, mode = "math") {
+  t <- suppressWarnings(latex_tree(tex, input_mode = mode, render_mode = "path"))
   records <- t$records
   attr(records, "diagnostics") <- NULL
   list(records = records, bbox = t$bbox)
@@ -62,6 +62,20 @@ test_that("a stray \\end is left out, with a warning", {
                    sprintf("\\end{%s} without \\begin ignored", env), fixed = TRUE)
     expect_identical(layout_quietly(tex), layout_quietly("x y"), info = env)
   }
+})
+
+test_that("an \\end of another name ends a list, as in LaTeX", {
+  # A list's body is kept as text for its builder, and only its own \end
+  # was looked for: the rest of the input was read into the last item.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  wrong <- "\\begin{itemize}\\item a\\end{enumerate}\n\nAfter."
+  expect_warning(latex_grob(wrong, input_mode = "document"),
+                 "\\end{enumerate} ends \\begin{itemize}", fixed = TRUE)
+  expect_identical(layout_quietly(wrong, "document"),
+                   layout_quietly("\\begin{itemize}\\item a\\end{itemize}\n\nAfter.", "document"))
+  # A list in it still ends its own.
+  expect_silent(latex_grob(paste0("\\begin{itemize}\\item a\\begin{enumerate}\\item b",
+                                  "\\end{enumerate}\\end{itemize} c"), input_mode = "document"))
 })
 
 test_that("an unknown environment draws its body, with a warning", {
