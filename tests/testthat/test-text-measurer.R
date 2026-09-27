@@ -26,19 +26,18 @@ test_that("a layout measured at one resolution is not reused at another", {
     f <- tempfile(fileext = ".png")
     grDevices::png(f, width = 400, height = 200, res = res)
     on.exit({ grDevices::dev.off(); unlink(f) })
-    list(key = gridmicrotex:::.cache_device(),
-         width = grid::convertWidth(latex_dims(tex)$width, "bigpts", TRUE))
+    grid::convertWidth(latex_dims(tex)$width, "bigpts", TRUE)
   }
   latex_cache_clear()
-  at_72 <- measure_at(72)
+  measure_at(72)
   at_300_after_72 <- measure_at(300)
   latex_cache_clear()
   at_300 <- measure_at(300)
   # Text is measured on the device, and one png() measured this phrase at
   # 175bp at 72dpi and 174bp at 300. Keyed on the device name alone, the
-  # second device reused the first one's layout.
-  expect_false(identical(at_72$key, at_300$key))
-  expect_equal(at_300_after_72$width, at_300$width)
+  # second device reused the first one's layout. (macOS's png() measures
+  # it alike at both, and reports the same resolution for both.)
+  expect_equal(at_300_after_72, at_300)
 })
 
 test_that("\\texttt renders and measures in a monospace family", {

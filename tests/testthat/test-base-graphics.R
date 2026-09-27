@@ -399,7 +399,10 @@ test_that("a time limit stops an armed plot", {
     grDevices::dev.off()
   }, add = TRUE)
   local_mocked_bindings(.gm_base_layout_impl = function(...) {
-    Sys.sleep(2)
+    # Busy rather than Sys.sleep(): on Linux and macOS a sleep never looks
+    # at the limit, so the label finished and the plot went on.
+    t0 <- proc.time()[["elapsed"]]
+    while (proc.time()[["elapsed"]] - t0 < 2) NULL
     NULL
   })
   latex_options(device_math = TRUE)

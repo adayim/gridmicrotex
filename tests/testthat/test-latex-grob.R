@@ -82,7 +82,11 @@ test_that("device support detection and typeface fallback work", {
   # cairo_pdf() embeds the font, so the math stays text.
   skip_if_not(capabilities("cairo"))
   tf <- tempfile(fileext = ".pdf")
-  grDevices::cairo_pdf(tf)
+  open_before <- length(grDevices::dev.list())
+  # A Mac without XQuartz reports cairo, but loading it fails with a
+  # warning and no device opens.
+  suppressWarnings(grDevices::cairo_pdf(tf))
+  skip_if(length(grDevices::dev.list()) == open_before, "cairo_pdf() opened no device")
   on.exit({ grDevices::dev.off(); unlink(tf) }, add = TRUE)
   expect_true(gridmicrotex:::.device_supports_typeface_glyphs())
   expect_true("glyphgrob" %in% kinds(frac()))
@@ -92,9 +96,13 @@ test_that("the text measurer's ascent and descent are the device's own", {
   # It reads them off per-character caches -- R's own rule for one line
   # (GEStrMetric) -- so they must equal measuring the whole string. The
   # engine hands its text over marked "unknown", which once split an emoji
-  # into an extra, empty piece.
+  # into an extra, empty piece. On png(), which can set all of these:
+  # pdf() cannot encode them, and under R CMD check --as-cran that is an
+  # error.
   skip_if(getRversion() < "4.4.0")
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  tf <- tempfile(fileext = ".png")
+  grDevices::png(tf)
+  on.exit({ grDevices::dev.off(); unlink(tf) }, add = TRUE)
   m <- .make_text_measurer(grid::gpar())
   for (s in c("Transformer", "gy", "a b", "é", intToUtf8(c(0x1F916, 0xFE0F)),
               intToUtf8(0x1D4B6))) {

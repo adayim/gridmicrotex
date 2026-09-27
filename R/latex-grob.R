@@ -962,24 +962,62 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
 }
 
 
-# On some Windows locale/font combinations, measuring can error for CJK text.
-# Keep layout flowing with a simple width fallback instead of failing hard.
-# `tg` is a textGrob carrying the measurement gp; `em` is the font size the
-# measurement runs at (the measurer's ref_size).
+# The measurer's grob, carrying the measurement gp and, per call, the label.
+#
+# grid evaluates a grob's size with the device locked (R >= 4.6), and an
+# error that unwinds out of that evaluation leaves the lock on: R's
+# eval_with_gd() sets the hook that lifts it before begincontext(), which
+# clears it. Every later dev.off() of the device then warns "Killing locked
+# device". pdf() raises such errors for text outside its encoding under
+# R CMD check --as-cran (_R_CHECK_MBCS_CONVERSION_FAILURE_), so a textGrob
+# measured in tryCatch() left 15 of them in a check's test log. These
+# methods ask the device through string units instead, which grid
+# evaluates in C, and catch a failure before it leaves grid's evaluation:
+# what the device cannot measure reads as NA.
+.measure_extent <- function(size, convert, label) {
+  grid::unit(tryCatch(convert(size(label), "bigpts", valueOnly = TRUE),
+                      error = function(e) NA_real_), "bigpts")
+}
+
+#' @method widthDetails gridmicrotex_measure
+#' @export
+widthDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringWidth, grid::convertWidth, x$label)
+}
+
+#' @method heightDetails gridmicrotex_measure
+#' @export
+heightDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringHeight, grid::convertHeight, x$label)
+}
+
+#' @method ascentDetails gridmicrotex_measure
+#' @export
+ascentDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringAscent, grid::convertHeight, x$label)
+}
+
+#' @method descentDetails gridmicrotex_measure
+#' @export
+descentDetails.gridmicrotex_measure <- function(x) {
+  .measure_extent(grid::stringDescent, grid::convertHeight, x$label)
+}
+
+# The whole string's width, or where the device cannot measure it (pdf()
+# for CJK text on some Windows locales, or outside its encoding under
+# --as-cran), a simple estimate that keeps the layout flowing. `tg` is the
+# measurer's grob; `em` is the font size the measurement runs at (the
+# measurer's ref_size).
 .measure_text_bigpts <- function(tg, text, em = 72) {
-  out <- tryCatch(
-    grid::convertWidth(grid::grobWidth(tg), "bigpts", valueOnly = TRUE),
-    error = function(e) {
-      w <- tryCatch(base::nchar(text, type = "width"), error = function(...) NA_real_)
-      if (is.na(w)) {
-        w <- base::nchar(text, type = "chars")
-      }
-      # Half an em per terminal width cell: narrow chars ~0.5 em, CJK
-      # (2 cells) ~1 em — matching the C++ heuristic in src/init.cpp.
-      as.numeric(w) * 0.5 * em
-    }
-  )
-  as.numeric(out)
+  out <- grid::convertWidth(grid::grobWidth(tg), "bigpts", valueOnly = TRUE)
+  if (!is.na(out)) return(as.numeric(out))
+  w <- tryCatch(base::nchar(text, type = "width"), error = function(...) NA_real_)
+  if (is.na(w)) {
+    w <- base::nchar(text, type = "chars")
+  }
+  # Half an em per terminal width cell: narrow chars ~0.5 em, CJK
+  # (2 cells) ~1 em — matching the C++ heuristic in src/init.cpp.
+  as.numeric(w) * 0.5 * em
 }
 
 
@@ -1025,13 +1063,14 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
       gp$fontfamily <- fam
     }
     f <- new.env(parent = emptyenv())
-    # Carry the font settings on a throwaway textGrob rather than pushing a
+    # Carry the font settings on a throwaway grob rather than pushing a
     # viewport. pushViewport() writes to the device's display list (6
     # records per push/pop), which makes a caller's device look like it
     # holds a plot: knitr then snapshots that page as a spurious blank
     # figure before the real plot's grid.newpage(). grob* queries below
-    # only read metrics. Its label is set per call.
-    f$grob <- grid::textGrob("", gp = gp)
+    # only read metrics, through the size methods of its class
+    # (widthDetails.gridmicrotex_measure). Its label is set per call.
+    f$grob <- grid::grob(label = "", gp = gp, cl = "gridmicrotex_measure")
     f$chars <- new.env(parent = emptyenv())
     fonts[[fkey]] <- f
     f
@@ -1061,11 +1100,11 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
       if (is.null(ad)) {
         tg <- f$grob
         tg$label <- intToUtf8(cps[i])
-        ad <- tryCatch(c(
+        ad <- c(
           grid::convertHeight(grob_ascent(tg), "bigpts", valueOnly = TRUE),
           grid::convertHeight(grob_descent(tg), "bigpts", valueOnly = TRUE)
-        ), error = function(e) NULL)
-        if (length(ad) != 2L || anyNA(ad)) return(NULL)
+        )
+        if (anyNA(ad)) return(NULL)
         f$chars[[keys[i]]] <- ad
       }
       ext[, i] <- ad
@@ -1115,26 +1154,24 @@ latex_dims <- function(tex, math_font = "", max_width = 0,
     # the sum of its characters'.
     w <- suppressWarnings(.measure_text_bigpts(tg, text, em = ref_size))
 
-    # Measure ascent and descent (with Windows/CJK locale fallback)
-    ad <- suppressWarnings(tryCatch({
-      if (has_ascent_fn) {
-        # Characters, except in a string of several lines, where
-        # GEStrMetric() reads the first line's ascent and the last's
-        # descent instead.
-        per_char <- if (!grepl("\n", text, fixed = TRUE)) char_extent(f, text)
-        per_char %||% c(
-          grid::convertHeight(grob_ascent(tg), "bigpts", valueOnly = TRUE),
-          grid::convertHeight(grob_descent(tg), "bigpts", valueOnly = TRUE)
-        )
-      } else {
-        h <- grid::convertHeight(grid::grobHeight(tg), "bigpts", valueOnly = TRUE)
-        asc <- h * 0.8
-        c(asc, h - asc)
-      }
-    }, error = function(e) {
-      # Approximate: 80% of font size for ascent, 20% for descent
-      c(ref_size * 0.8, ref_size * 0.2)
-    }))
+    # Measure ascent and descent
+    ad <- suppressWarnings(if (has_ascent_fn) {
+      # Characters, except in a string of several lines, where
+      # GEStrMetric() reads the first line's ascent and the last's
+      # descent instead.
+      per_char <- if (!grepl("\n", text, fixed = TRUE)) char_extent(f, text)
+      per_char %||% c(
+        grid::convertHeight(grob_ascent(tg), "bigpts", valueOnly = TRUE),
+        grid::convertHeight(grob_descent(tg), "bigpts", valueOnly = TRUE)
+      )
+    } else {
+      h <- grid::convertHeight(grid::grobHeight(tg), "bigpts", valueOnly = TRUE)
+      asc <- h * 0.8
+      c(asc, h - asc)
+    })
+    # Where the device cannot measure, approximate: 80% of the font size
+    # for ascent, 20% for descent.
+    if (anyNA(ad)) ad <- c(ref_size * 0.8, ref_size * 0.2)
     asc  <- ad[1]
     desc <- ad[2]
 
