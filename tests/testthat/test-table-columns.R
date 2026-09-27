@@ -106,6 +106,38 @@ test_that("a tabular met in text has text cells, as in LaTeX", {
   expect_length(cells("\\begin{tabular}{l}ab\\end{tabular}", input_mode = "math"), 0L)
 })
 
+test_that("a \\multirow reaching past the table's edge ends there", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Its span was written past the row heights (a crash).
+  glyphs <- function(tex) sum(latex_tree(tex, input_mode = "math")$records$type == "glyph")
+  expect_equal(glyphs("\\begin{array}{cc} a & b \\\\ \\multirow{3}{*}{\\frac{x}{y}} & c \\end{array}"), 5)
+  expect_equal(glyphs("\\begin{array}{cc} \\multirow{-3}{*}{\\frac{x}{y}} & c \\end{array}"), 3)
+})
+
+test_that("a column type defined in terms of itself, or a count past any table, ends", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_warning(latex_tree("\\newcolumntype{Y}{Y}\\begin{array}{Y}a\\end{array}", input_mode = "math"),
+                 "expands without end")
+  expect_warning(latex_tree("\\begin{array}{*{9999999999}{c}}a\\end{array}", input_mode = "math"),
+                 "expands without end")
+  t <- latex_tree("\\begin{array}{cc}\\hdotsfor{10000000}\\\\a&b\\end{array}", input_mode = "math")
+  expect_lt(nrow(t$records), 1e5)
+})
+
+test_that("\\multicolumn{1} spans its own column only", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- latex_tree("\\begin{tabular}{ll}\\multicolumn{1}{c}{Head} & Two \\\\ aaaa & bbbb\\end{tabular}")$records
+  expect_equal(r$x[r$text %in% "Two"], r$x[r$text %in% "bbbb"])
+})
+
+test_that("a tabular's [t|b|c] is its position, and tabular* drops its width", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_identical(latex_tree("\\begin{tabular}[t]{ll} a & b \\end{tabular}")$records,
+                   latex_tree("\\begin{tabular}{ll} a & b \\end{tabular}")$records)
+  expect_no_warning(t <- latex_tree("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}ll}a&b\\end{tabular*}"))
+  expect_identical(t$records$text[t$records$type == "text"], c("a", "b"))
+})
+
 # The release / re-init half of this lives in test-zz-release-cycle.R:
 # tearing MicroTeX down mid-suite strands the font registry that
 # test-text-font-auto.R depends on.

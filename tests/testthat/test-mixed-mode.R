@@ -16,7 +16,7 @@ test_that("a label lays out as its wrapped form did", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   for (s in c("Hello $x^2$ world", "Title\nSubtitle", "a\\\\b", "a \\\\ b",
               "\\textbf{one\\\\two} $x$", "\\textbf{one\ntwo}", "$$\\sum_i x_i$$",
-              "Cost: \\$100 for $x$ items", "The value $-x$ here",
+              "Cost: \\$100 for $x$ items",
               "\\textcolor{red}{a\nb} c", "{a\\\\b}", "\n\nTitle\n\n", "a\n\n\nb",
               "$a\\\\b$ c", "\\begin{matrix}a&b\\end{matrix} after",
               "A \\(x\\) B", "A \\[x\\] B")) {
@@ -26,6 +26,18 @@ test_that("a label lays out as its wrapped form did", {
   # the wrapped form kept them math.
   s <- "x\n\\begin{tabular}{l}p q\\end{tabular}"
   expect_identical(texts(s)$text, c("x", "p q"))
+})
+
+test_that("a span of math is a list of its own, as in TeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The wrapped form set it in the prose's list: a sign opening it was
+  # binary, and \over took the prose as its numerator.
+  x_of <- function(tex) { r <- records(tex); r$x[r$type == "glyph"] }
+  expect_equal(diff(x_of("The value $-x$ here")), diff(x_of("$-x$")), tolerance = 1e-4)
+  r <- records("Ratio: $a \\over b$ end")
+  expect_identical(r$font_size[r$type == "text"], c(20, 20))
+  # And a line end in the prose ends \over's denominator there.
+  expect_identical(texts("a \\over b\nnext line")$text, c("a ", "next line"))
 })
 
 test_that("a line end in the prose breaks the line, even after a command", {

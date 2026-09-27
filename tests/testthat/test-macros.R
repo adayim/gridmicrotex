@@ -52,3 +52,22 @@ test_that("clear_macros() rejects a name that is not a single string", {
   expect_error(clear_macros(c("RR", "SS")))
   expect_equal(names(list_macros()), "RR")
 })
+
+test_that("define_macro() does not reach the engine's own formulas, as in 0.1.1", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  on.exit(clear_macros(), add = TRUE)
+  # \sec was read with the macros defined at its first use and kept so for
+  # the session.
+  glyphs <- function(tex) latex_tree(tex, input_mode = "math", render_mode = "path")$records$glyph
+  plain <- glyphs("\\sec x")
+  define_macro("mathrm", "\\mathsf")
+  expect_identical(glyphs("\\sec x"), plain)
+})
+
+test_that("\\limits on a predefined formula changes that use of it only", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  size <- function(tex) latex_tree(tex, input_mode = "math")$bbox[c("height", "depth")]
+  before <- size("\\displaystyle \\sin_{q} x")
+  invisible(size("\\displaystyle \\sin\\limits_{q} y"))
+  expect_identical(size("\\displaystyle \\sin_{q} z"), before)
+})

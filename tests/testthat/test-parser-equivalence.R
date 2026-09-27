@@ -186,3 +186,21 @@ test_that("text arguments keep their words, braces and escapes", {
     "x^\\text{a b}"   = "x^{\\text{a b}}"
   ))
 })
+
+test_that("\\over and kin end at a \\\\ or \\cr, and the rows go on", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_same_layout(c(
+    "a \\over b \\\\ c"            = "{a \\over b} \\\\ c",
+    "a \\over b \\\\ c \\over d"   = "{a \\over b} \\\\ {c \\over d}",
+    "a \\choose b \\cr c"          = "{a \\choose b} \\cr c"
+  ))
+})
+
+test_that("an alignment's [t|b|c] is its position, not its columns", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_same_layout(c(
+    "\\begin{array}[t]{cc} a & b \\end{array}"  = "\\begin{array}{cc} a & b \\end{array}",
+    "\\begin{aligned}[b] a &= b \\end{aligned}" = "\\begin{aligned} a &= b \\end{aligned}",
+    "\\begin{gathered}[c] a \\end{gathered}"    = "\\begin{gathered} a \\end{gathered}"
+  ))
+})

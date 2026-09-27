@@ -334,3 +334,21 @@ test_that("content with nothing to break is unaffected", {
     tolerance = 1e-6
   )
 })
+
+test_that("a gather or multline with an empty line lays out at a width", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # An empty line's cell is null; the path taken at a width crashed on it.
+  glyphs <- function(tex) {
+    sum(latex_tree(tex, input_mode = "math", max_width = 300)$records$type == "glyph")
+  }
+  expect_equal(glyphs("\\begin{gather} \\\\ b \\end{gather}"), 1)
+  expect_equal(glyphs("\\begin{multline} a \\\\ \\\\ b \\end{multline}"), 2)
+})
+
+test_that("a line does not break inside a sub- or superscript", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- latex_tree("aaa $x_{\\text{p q}}$zzzzzzzz", max_width = 110, render_mode = "path")$records
+  r <- r[r$type == "text", ]
+  expect_equal(r$y[r$text == "p"], r$y[r$text == "q"])
+  expect_lt(r$y[r$text == "aaa"], r$y[r$text == "zzzzzzzz"])
+})

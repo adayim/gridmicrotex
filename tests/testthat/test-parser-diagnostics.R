@@ -231,3 +231,28 @@ test_that("a definition that cannot be made is dropped whole", {
     expect_identical(layout_quietly(tex), layout_quietly("z"), info = tex)
   }
 })
+
+test_that("nesting past 400 is an error however it nests", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # A command given as an argument with its own, a one-token argument, a
+  # raw argument read again and \ensuremath in math each nested with no
+  # count: deep enough, a stack overflow or minutes of work.
+  for (tex in c(strrep("\\emph", 500), paste0("$", strrep("\\frac", 500), "$"),
+                paste0("a", strrep("\\cite[{", 500), "x", strrep("}]{k}", 500)))) {
+    expect_error(latex_dims(tex), "nested too deeply", info = substr(tex, 1, 12))
+  }
+  deep <- paste0(strrep("\\ensuremath{", 500), "x", strrep("}", 500))
+  expect_error(latex_dims(deep, input_mode = "math"), "nested too deeply")
+  # One after another is not nesting.
+  side <- latex_tree(strrep("\\ensuremath{x}", 500), input_mode = "math")
+  expect_equal(sum(side$records$type == "glyph"), 500)
+})
+
+test_that("a runaway \\let, and long division of a negative number, end at once", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Each turn kept a copy of the 30 KB body for its group: gigabytes.
+  loop <- paste0("{\\def\\b{", strrep("x", 30000), "}\\def\\a{\\let\\c\\b\\a}\\a}")
+  expect_error(latex_dims(loop, input_mode = "math"), "too large")
+  expect_warning(latex_dims("\\longdiv{-2147483648}{-1}", input_mode = "math"),
+                 "must not be negative")
+})

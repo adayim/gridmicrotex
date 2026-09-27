@@ -446,3 +446,45 @@ test_that("a colour with alpha of 50% or more keeps its colour", {
   expect_equal(record_colour(0.3), "#FF00004D")
   expect_equal(record_colour(0.8), "#FF0000CC")
 })
+
+test_that("an empty argument is an empty box, as it was in 0.1.1", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # These wrapped the null an empty argument gives, and crashed R.
+  glyphs <- function(tex) sum(latex_tree(tex, input_mode = "math")$records$type == "glyph")
+  expect_equal(glyphs("\\mathop{}\\!\\mathrm{d}x"), 2)
+  expect_equal(glyphs("f\\mathopen{}\\left(x\\right)\\mathclose{}"), 4)
+  expect_equal(glyphs("a\\reflectbox{}b"), 2)
+  expect_equal(glyphs("a\\raisebox{1pt}{}b"), 2)
+})
+
+test_that("an argument read a second time keeps its text", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # \ensuremath in math and an optional argument read their tokens again,
+  # and an argument recorded the second time came out empty.
+  fills <- function(tex) {
+    r <- latex_tree(tex, input_mode = "math")$records
+    unique(r$color[r$type != "glyph"])
+  }
+  expect_identical(fills("\\ensuremath{\\colorbox{yellow}{x}}"), fills("\\colorbox{yellow}{x}"))
+  expect_true("#FF0000" %in% latex_tree("\\sqrt[\\textcolor{red}{3}]{x}", input_mode = "math")$records$color)
+})
+
+test_that("a number too large, or NaN, still gives a grob that draws", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (tex in c(paste0("a\\hspace{", strrep("9", 45), "pt}b"), "a\\scalebox{1e300}{x}b",
+                "a\\rotatebox{nan}{x}b")) {
+    expect_true(all(is.finite(unlist(latex_tree(tex, input_mode = "math")$bbox))), info = tex)
+  }
+  expect_true(all(is.finite(unlist(latex_tree("a \\relscale{1e30} b")$bbox))))
+})
+
+test_that("what a label defines is its own", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  invisible(latex_tree("\\definecolor{red}{rgb}{0,0,1}x"))
+  expect_identical(unique(latex_tree("\\textcolor{red}{still red}")$records$color), "#FF0000")
+  invisible(latex_tree("\\arrayrulecolor{blue}\\begin{array}{c}\\hline b\\end{array}", input_mode = "math"))
+  r <- latex_tree("\\begin{array}{c}\\hline still black\\end{array}", input_mode = "math")$records
+  expect_identical(unique(r$color[r$type != "glyph"]), "#000000")
+  invisible(latex_tree("\\breakEverywhere{true}x"))
+  expect_identical(nrow(latex_tree("one run of words")$records), 1L)
+})
