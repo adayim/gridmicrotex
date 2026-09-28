@@ -18,10 +18,8 @@ test_that("bundled STIX math font loads, resolves aliases, and renders", {
   expect_equal(gridmicrotex:::resolve_math_font("stix"), "STIX Two Math")
   expect_equal(gridmicrotex:::resolve_math_font("stix2"), "STIX Two Math")
 
-  # Switching the math font also switches MicroTeX's default in C++, so it
-  # must be undone. Left unrestored, every later test file renders in the
-  # wrong font -- which is exactly how the visual snapshots came to be
-  # recorded against STIX rather than the default Lete.
+  # Switching the math font also switches the engine's default, so it must
+  # be undone, or every later test file renders in STIX.
   old <- latex_options(math_font = "stix")
   expect_equal(latex_options()$math_font, "stix")
   do.call(latex_options, old)
@@ -46,16 +44,15 @@ test_that("restoring or resetting options puts the engine font back", {
   reset_latex_options()
   lete <- width()
 
-  # latex_options() ignored NULL, so replaying the settings it returned --
-  # all NULL before anything was set -- restored nothing.
+  # Replaying the settings latex_options() returned restores them, the
+  # unset (NULL) ones included.
   old <- latex_options(math_font = "stix")
   expect_false(isTRUE(all.equal(width(), lete)))
   do.call(latex_options, old)
   expect_null(latex_options()$math_font)
   expect_equal(width(), lete)
 
-  # reset_latex_options() cleared the R-side record and left the engine
-  # on STIX.
+  # reset_latex_options() resets the engine's font too.
   latex_options(math_font = "stix")
   reset_latex_options()
   expect_equal(width(), lete)

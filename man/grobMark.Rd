@@ -2,28 +2,23 @@
 % Please edit documentation in R/latex-grob.R
 \name{grobMark}
 \alias{grobMark}
-\title{Look up a named anchor inside a LaTeX grob}
+\title{Position of a named point in a LaTeX grob}
 \usage{
 grobMark(grob, name)
 }
 \arguments{
-\item{grob}{A \code{latexgrob} returned by \code{\link{latex_grob}}.}
+\item{grob}{A grob from \code{\link[=latex_grob]{latex_grob()}}.}
 
-\item{name}{The mark name (the argument to \code{\\mark\{...\}}).}
+\item{name}{The name given to \verb{\\mark\{\}}.}
 }
 \value{
-A list with elements \code{x} and \code{y}, each a
-\code{\link[grid]{unit}}. Mark coordinates are evaluated in the
-grob's parent viewport. They assume an unrotated grob: with
-\code{rot != 0} the returned position does not account for the
-rotation.
+A list with \code{x} and \code{y}, each a \code{\link[grid:unit]{grid::unit()}}. Rotation
+(\code{rot}) is not taken into account.
 }
 \description{
-Resolves a \code{\\mark\{name\}} that was placed inside the LaTeX
-source to a pair of \pkg{grid} units in the grob's parent viewport.
-The returned units already account for the grob's viewport position
-and \code{hjust}/\code{vjust}, so you can pass them directly to grid
-drawing functions to anchor other graphics on parts of the formula.
+Returns the position of a \verb{\\mark\{name\}} written in the LaTeX, as grid
+units that can be passed straight to other grid functions, for example
+to point an arrow at part of a formula.
 }
 \examples{
 \donttest{

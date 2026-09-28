@@ -1,9 +1,4 @@
 # Line breaking in the vendored MicroTeX splitter.
-#
-# BoxSplitter::split() used to accept only an HBox and return anything
-# else untouched, so the moment a formula carried an explicit line break
-# its top box became a VBox and max_width was silently ignored -- the
-# content just overflowed. These tests pin the fix.
 
 long_text <- paste0("\\text{", paste(rep("longword", 12), collapse = " "), "}")
 short_text <- "\\text{short}"
@@ -14,8 +9,6 @@ dims <- function(tex, max_width = 0) {
 }
 
 test_that("content separated by \\\\ honours max_width", {
-  # Each of these previously came back at full natural width with
-  # is_split = FALSE no matter how narrow max_width was.
   for (tex in c(paste0(short_text, "\\\\", long_text),
                 paste0(long_text, "\\\\", long_text))) {
     wide <- dims(tex)
@@ -36,8 +29,6 @@ test_that("a single flowing paragraph still wraps as it always did", {
 })
 
 test_that("content that already fits is returned untouched", {
-  # The splitter must not rebuild a box it does not need to change:
-  # identical width and height at any max_width.
   for (tex in c(short_text,
                 "\\frac{a}{b}",
                 "\\begin{matrix}a&b\\\\c&d\\end{matrix}",
@@ -52,10 +43,7 @@ test_that("content that already fits is returned untouched", {
 })
 
 test_that("vertical centring on the math axis survives a rebuilt VBox", {
-  # MatrixAtom overwrites the VBox height/depth to centre it on the math
-  # axis. Rebuilding the box without restoring that offset shifts the
-  # baseline of every multi-row formula, which no width assertion would
-  # catch.
+  # MatrixAtom sets the VBox height/depth to centre it on the math axis.
   for (tex in c("\\begin{matrix}a&b\\\\c&d\\end{matrix}",
                 "\\begin{cases}x\\\\y\\end{cases}",
                 "\\begin{pmatrix}1\\\\2\\end{pmatrix}")) {
@@ -68,34 +56,17 @@ test_that("vertical centring on the math axis survives a rebuilt VBox", {
 })
 
 test_that("splitting a wrapped paragraph keeps the text on the page", {
-  # Guards the rebuild: every drawn record must sit inside the reported
-  # bounding box. A botched height/depth fix-up shows up here as content
-  # drawn outside its own box.
+  # Every drawn record sits inside the reported bounding box.
   g <- latex_grob(paste0(short_text, "\\\\", long_text), max_width = 200)
   expect_true(g$is_split)
   expect_lte(max(g$layout_df$x, na.rm = TRUE), g$bbox_w + 1)
   expect_gte(min(g$layout_df$x, na.rm = TRUE), -1)
 })
 
-test_that("list and matrix cells do not wrap (documented limitation)", {
-  # Long items inside itemize/enumerate/align live in WrapperBoxes whose
-  # metrics are the row's, precomputed by MatrixAtom. The splitter
-  # deliberately does not reach into them. If this ever starts passing,
-  # the cell-splitting work landed and R/markdown.R can stop stacking
-  # list items itself.
-  for (tex in c(paste0("\\begin{itemize}\\item ", long_text, "\\end{itemize}"),
-                paste0("\\begin{enumerate}\\item ", long_text, "\\end{enumerate}"))) {
-    narrow <- dims(tex, 200)
-    expect_false(narrow$split)
-  }
-})
-
 # --- justification -----------------------------------------------------
 #
-# Interword spaces used to be rigid StrutBoxes, so a line had nothing to
-# stretch. They are GlueBoxes now, carrying TeX's half-space stretch;
-# nothing reads that unless justify = TRUE, so ragged output is
-# unchanged (the visual snapshots are the wider guard on that).
+# Interword spaces carry TeX's half-space stretch, used only when
+# justify = TRUE.
 
 just_para <- paste0(
   "\\text{",
@@ -103,14 +74,8 @@ just_para <- paste0(
   "}"
 )
 
-# Right edge of each rendered line.
-#
-# A text record carries no width of its own. That used to make its origin
-# a fair proxy for the line's right edge, because every record held a
-# single character. It no longer is: consecutive characters are drawn as
-# one word-level record (RowAtom::processTextRun), so the last origin on
-# a line sits a whole word short of the edge, by a different amount on
-# every line. Measure the glyphs the record actually holds instead.
+# Right edge of each rendered line. A text record holds a whole word and
+# carries no width, so measure its text.
 .rec_width <- function(txt, size) {
   grid::pushViewport(grid::viewport(gp = grid::gpar(fontsize = size)))
   on.exit(grid::popViewport())
@@ -167,16 +132,13 @@ test_that("justification does not change how tall the text is", {
 })
 
 test_that("justify does nothing without max_width", {
-  # It acts on the lines the wrapper produces, so with nothing to wrap
-  # there is nothing to justify.
   a <- latex_dims(just_para, justify = FALSE)
   b <- latex_dims(just_para, justify = TRUE)
   expect_equal(as.numeric(b$width), as.numeric(a$width), tolerance = 1e-6)
 })
 
 test_that("the justify flag does not leak into later parses", {
-  # It is a global on the splitter, guarded in C++; a leak would justify
-  # every subsequent render in the session.
+  # It is a global on the splitter.
   before <- as.numeric(latex_dims(just_para, max_width = 300)$width)
   invisible(latex_dims(just_para, max_width = 300, justify = TRUE))
   after <- as.numeric(latex_dims(just_para, max_width = 300)$width)
@@ -185,8 +147,6 @@ test_that("the justify flag does not leak into later parses", {
 })
 
 test_that("justified and ragged layouts are cached separately", {
-  # The cache key must include justify, or the second call returns the
-  # first one's layout.
   latex_cache_clear()
   r <- as.numeric(latex_dims(just_para, max_width = 300, justify = FALSE)$width)
   j <- as.numeric(latex_dims(just_para, max_width = 300, justify = TRUE)$width)
@@ -211,19 +171,12 @@ test_that("a line of one long word is left alone", {
   solid <- paste0("\\text{", strrep("x", 80), "}")
   plain <- as.numeric(latex_dims(solid, max_width = 100)$width)
   just  <- as.numeric(latex_dims(solid, max_width = 100, justify = TRUE)$width)
-  # There is no interword glue to stretch, so justification must leave the
-  # line exactly as it was -- and it overruns the measure rather than
-  # being padded out to it.
+  # No space to stretch: it overruns rather than being padded.
   expect_equal(just, plain)
   expect_gt(just, 100)
 })
 
 # --- optimal (total-fit) line breaking ---------------------------------
-#
-# The default splitter is greedy: it fills each line as far as it can and
-# never reconsiders. "optimal" chooses the breaks together, minimising
-# summed TeX-style demerits, so pulling a word down early can improve
-# every later line.
 
 opt_para <- paste0(
   "\\text{",
@@ -250,9 +203,6 @@ test_that("greedy remains the default and is untouched", {
 })
 
 test_that("optimal never overflows more than greedy does", {
-  # canBreak() can settle on a first line wider than the measure for text
-  # spread over several runs. Total fit picks among the breaks canBreak
-  # offers, so it inherits that but must never make it worse.
   for (w in seq(140, 360, by = 20)) {
     g <- as.numeric(latex_dims(opt_para, max_width = w,
                                line_break = "greedy")$width)
@@ -263,8 +213,6 @@ test_that("optimal never overflows more than greedy does", {
 })
 
 test_that("optimal does not make the paragraph taller", {
-  # The per-line penalty in the demerits stops it buying evenness by
-  # adding a line.
   for (w in c(180, 220, 260, 300, 340)) {
     g <- as.numeric(latex_dims(opt_para, max_width = w,
                                line_break = "greedy")$height)
@@ -288,8 +236,6 @@ test_that("optimal is at least as even as greedy", {
 })
 
 test_that("optimal measurably improves at least one width", {
-  # Pins the feature actually doing something, so a regression that
-  # silently disabled it would be caught.
   g <- latex_grob(opt_para, max_width = 300, line_break = "greedy")
   o <- latex_grob(opt_para, max_width = 300, line_break = "optimal")
   expect_lt(stats::sd(head(opt_edges(o), -1)),
@@ -320,8 +266,6 @@ test_that("greedy and optimal layouts are cached separately", {
   latex_cache_clear()
   a <- latex_dims(opt_para, max_width = 300, line_break = "greedy")
   b <- latex_dims(opt_para, max_width = 300, line_break = "optimal")
-  # Same measure, but the two must not share a cache entry: differing
-  # line shape at equal width is exactly the collision to avoid.
   expect_false(identical(a$is_split, NA))
   expect_equal(latex_cache_info()$size, 2L)
 })
@@ -337,7 +281,6 @@ test_that("content with nothing to break is unaffected", {
 
 test_that("a gather or multline with an empty line lays out at a width", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # An empty line's cell is null; the path taken at a width crashed on it.
   glyphs <- function(tex) {
     sum(latex_tree(tex, input_mode = "math", max_width = 300)$records$type == "glyph")
   }

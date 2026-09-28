@@ -55,11 +55,8 @@ test_that("device support detection and typeface fallback work", {
   frac <- function() latex_grob("\\frac{a}{b}", render_mode = "typeface",
                                 gp = grid::gpar(fontsize = 20))
 
-  # pdf() and postscript() fall back with a message. pdf() reports glyphs
-  # (R >= 4.3) but does not embed the font, which garbled the math in any
-  # viewer without it; postscript() has no glyphs at all.
-  # Each device is closed on every way out: one left open would be the
-  # device every later test measures and draws on.
+  # pdf() does not embed the font and postscript() has no glyphs, so both
+  # fall back with a message. Each device is closed on every way out.
   falls_back_on <- function(dev) {
     tf <- tempfile()
     get(dev, asNamespace("grDevices"))(tf)
@@ -72,8 +69,7 @@ test_that("device support detection and typeface fallback work", {
       grid::grid.newpage()
       grid::grid.draw(g)
     }, "falling back to path mode", info = dev)
-    # The fallback has to substitute the path layout, not merely warn: the
-    # children it draws must be outlines, not glyphs the device cannot set.
+    # And it draws outlines, not glyphs.
     expect_true("pathgrob" %in% kinds(g), info = dev)
     expect_false("glyphgrob" %in% kinds(g), info = dev)
   }
@@ -83,8 +79,7 @@ test_that("device support detection and typeface fallback work", {
   skip_if_not(capabilities("cairo"))
   tf <- tempfile(fileext = ".pdf")
   open_before <- length(grDevices::dev.list())
-  # A Mac without XQuartz reports cairo, but loading it fails with a
-  # warning and no device opens.
+  # A Mac without XQuartz reports cairo but opens no device.
   suppressWarnings(grDevices::cairo_pdf(tf))
   skip_if(length(grDevices::dev.list()) == open_before, "cairo_pdf() opened no device")
   on.exit({ grDevices::dev.off(); unlink(tf) }, add = TRUE)
@@ -93,12 +88,8 @@ test_that("device support detection and typeface fallback work", {
 })
 
 test_that("the text measurer's ascent and descent are the device's own", {
-  # It reads them off per-character caches -- R's own rule for one line
-  # (GEStrMetric) -- so they must equal measuring the whole string. The
-  # engine hands its text over marked "unknown", which once split an emoji
-  # into an extra, empty piece. On png(), which can set all of these:
-  # pdf() cannot encode them, and under R CMD check --as-cran that is an
-  # error.
+  # Equal to measuring the whole string. On png(): pdf() cannot encode
+  # these, which is an error under --as-cran.
   skip_if(getRversion() < "4.4.0")
   tf <- tempfile(fileext = ".png")
   grDevices::png(tf)
@@ -128,9 +119,6 @@ test_that("latex_grob handles empty input as a zero-size grob", {
 })
 
 test_that("an unknown command is set as its own name, not dropped, and warns", {
-  # MicroTeX is lenient rather than strict: \notavalidcommand comes out as
-  # the letters of its name followed by its argument. Rendering nothing
-  # would hide a typo completely, so assert the name is actually drawn.
   expect_warning(
     g <- latex_grob("\\notavalidcommand{x}", input_mode = "math"),
     "1:1: unknown command \\notavalidcommand", fixed = TRUE
@@ -146,9 +134,6 @@ test_that("editGrob re-parses when tex changes", {
   g2 <- grid::editGrob(g, tex = "$x^{2} + y^{2} + z^{2}$")
   expect_equal(g2$tex, "$x^{2} + y^{2} + z^{2}$")
   expect_true(g2$bbox_w > g$bbox_w)
-  # That the layout is genuinely rebuilt, without assuming how many
-  # records a given string produces -- consecutive text is drawn as one
-  # run when nothing wraps, so record count is not a proxy for length.
   expect_false(identical(g2$layout_df, g$layout_df))
   # viewport width/height tracked bbox
   expect_equal(
@@ -199,7 +184,6 @@ test_that("ascentDetails + descentDetails sum to heightDetails", {
   expect_equal(asc + desc, h, tolerance = 1e-6)
   expect_true(asc > 0)
   expect_true(desc >= 0)
-  # Descent matches the bbox_d field exposed for grob-to-grob alignment
   expect_equal(desc, g$bbox_d, tolerance = 1e-6)
 })
 
@@ -226,15 +210,12 @@ test_that("latex_dims respects math_font parameter", {
 # --- \def command ---
 
 test_that("\\def defines a zero-argument macro and renders identically to \\newcommand", {
-  # \def\mymacroA{x^2} should produce the same layout as \newcommand{\mymacroB}{x^2}
   layout_nc  <- parse_latex_cpp("\\newcommand{\\mymacroB}{x^2} \\mymacroB", text_size = 20)
   layout_def <- parse_latex_cpp("\\def\\mymacroA{x^2} \\mymacroA",           text_size = 20)
   expect_equal(nrow(layout_def), nrow(layout_nc))
 })
 
 test_that("\\def silently overwrites an existing macro, and the last wins", {
-  # \newcommand errors on redefinition; \def replaces. Asserting only that
-  # it does not error would pass if the *first* body were kept.
   got <- parse_latex_cpp(
     "\\def\\myoverwrite{x} \\def\\myoverwrite{y} \\myoverwrite", text_size = 20)
   expect_equal(got, parse_latex_cpp("y", text_size = 20))
@@ -243,10 +224,7 @@ test_that("\\def silently overwrites an existing macro, and the last wins", {
 
 test_that("an error inside a command's argument is reported, not swallowed", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # MicroTeX parsed every argument leniently and kept what came before an
-  # error, silently: \text{a <bad array> b} drew "a", and a fraction or a
-  # root lost its whole argument. It is a warning now, in an argument as at
-  # the top level, and the command it broke is drawn as its name, in red.
+  # It warns, and the broken command is drawn as its name, in red.
   for (tex in c("\\text{a \\begin{array}{q}x\\end{array} b}",
                 "\\frac{1}{\\begin{array}{q}x\\end{array}} + y",
                 "\\sqrt{\\begin{array}{q}x\\end{array}}",
@@ -261,9 +239,8 @@ test_that("an error inside a command's argument is reported, not swallowed", {
     "Invalid alignment"
   )
   expect_true(all(c("a ", " b") %in% d$text))
-  # The deliberate leniency stays: an unknown command is drawn in red, in
-  # an argument as at the top level, and the text around it survives (the
-  # space after it goes, as TeX drops a space after a control word).
+  # An unknown command in an argument is drawn in red; the space after it
+  # goes, as TeX drops a space after a control word.
   expect_warning(
     d <- latex_grob("\\text{a \\nosuchcmd b}", input_mode = "math")$layout_df,
     "unknown command \\nosuchcmd", fixed = TRUE
@@ -282,9 +259,7 @@ test_that("redefining a built-in lasts one label and never breaks the next", {
   latex_cache_clear(); on.exit(latex_cache_clear(), add = TRUE)
   expect_true(has_rule("\\frac{1}{2}"))
 
-  # As in LaTeX, \newcommand refuses a name that exists. It used to
-  # replace the built-in -- and the per-label cleanup then deleted it, so
-  # \frac stopped working in every later label of the session.
+  # As in LaTeX, \newcommand refuses a name that exists.
   expect_warning(rule <- has_rule("\\newcommand{\\frac}{Q}\\frac{1}{2}"), "already exists")
   expect_true(rule)
   latex_cache_clear()
@@ -302,8 +277,7 @@ test_that("redefining a built-in lasts one label and never breaks the next", {
   latex_cache_clear()
   expect_false("G" %in% text_of("90\\degree"))
 
-  # \renewcommand of something that does not exist warns and, as LaTeX
-  # does, defines it anyway.
+  # \renewcommand of something undefined warns and defines it, as LaTeX does.
   expect_warning(got <- text_of("\\renewcommand{\\nosuch}{\\text{Q}}\\nosuch"),
                  "\\nosuch was not defined; defined now", fixed = TRUE)
   expect_true("Q" %in% got)
@@ -320,12 +294,10 @@ test_that("a \\def with an invalid name warns and is dropped whole", {
 })
 
 test_that("\\def with sequential #1..#N parameters expands like \\newcommand[N]", {
-  # Single-arg form: \def\sq#1{#1^2} should match \newcommand{\sq}[1]{#1^2}
   layout_nc1  <- parse_latex_cpp("\\newcommand{\\sqB}[1]{#1^2} \\sqB{a}", text_size = 20)
   layout_def1 <- parse_latex_cpp("\\def\\sqA#1{#1^2} \\sqA{a}",           text_size = 20)
   expect_equal(nrow(layout_def1), nrow(layout_nc1))
 
-  # Two-arg form: \def\pair#1#2{#1+#2}
   layout_nc2  <- parse_latex_cpp("\\newcommand{\\pairB}[2]{#1+#2} \\pairB{a}{b}", text_size = 20)
   layout_def2 <- parse_latex_cpp("\\def\\pairA#1#2{#1+#2} \\pairA{a}{b}",         text_size = 20)
   expect_equal(nrow(layout_def2), nrow(layout_nc2))
@@ -333,8 +305,7 @@ test_that("\\def with sequential #1..#N parameters expands like \\newcommand[N]"
 
 test_that("\\def rejects non-sequential or malformed parameter patterns", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Each warns and is dropped whole, so only the trailing `y` is drawn --
-  # not the parameter text and body as stray characters.
+  # Each warns and is dropped whole, so only the trailing `y` is drawn.
   rejected <- c(
     "\\def\\bad#2#1{#1#2}y" = "parameters must be sequential",   # #2 before #1
     "\\def\\skip#1#3{#1#3}y" = "parameters must be sequential",  # #1 then #3
@@ -348,9 +319,6 @@ test_that("\\def rejects non-sequential or malformed parameter patterns", {
 })
 
 test_that("the typeface fallback warns once per device, not once per grob", {
-  # The condition belongs to the device, but makeContent() runs per grob and
-  # on every redraw, so a figure with several labels used to raise the same
-  # warning once per label.
   tf <- tempfile(fileext = ".ps")
   grDevices::postscript(tf)
   on.exit({ grDevices::dev.off(); unlink(tf) }, add = TRUE)
@@ -373,7 +341,7 @@ test_that("the typeface fallback warns once per device, not once per grob", {
   fallback <- grep("falling back to path mode", w, value = TRUE)
   expect_length(fallback, 1L)
 
-  # A different device is a different answer, so it is told too.
+  # A different device is told too.
   tf2 <- tempfile(fileext = ".ps")
   grDevices::postscript(tf2)
   w2 <- character(0)
@@ -385,9 +353,6 @@ test_that("the typeface fallback warns once per device, not once per grob", {
 })
 
 test_that("the fallback is reported only when typeface was asked for", {
-  # render_mode defaults to "typeface", so everyone lands in the fallback on
-  # a device without glyphs. Reporting that would reach users who never
-  # expressed a preference; only an unmet *explicit* request is worth a word.
   msgs <- function(expr) {
     got <- character(0)
     withCallingHandlers(expr, message = function(cond) {
@@ -419,9 +384,7 @@ test_that("the fallback is reported only when typeface was asked for", {
 })
 
 test_that("a macro that expands to itself is a parse error, not a hang", {
-  # Each expansion put the same text back and rewound to it, so the parser
-  # never finished. \def rather than \newcommand, which refuses to redefine
-  # and so would fail differently the second time the suite runs.
+  # \def, since \newcommand refuses to redefine on a second run.
   for (tex in c("\\def\\gmloop{\\gmloop}\\gmloop",
                 "\\def\\gmping{\\gmpong}\\def\\gmpong{\\gmping}\\gmping",
                 "\\def\\gmgrow{x\\gmgrow}\\gmgrow")) {
@@ -431,9 +394,6 @@ test_that("a macro that expands to itself is a parse error, not a hang", {
 })
 
 test_that("an unterminated $$ at the end of text mode lays out as empty", {
-  # getGroup() stepped past the end of the string and its caller read one
-  # character further. That read only shows under a sanitizer; this pins
-  # down that bounding it changed nothing visible.
   expect_equal(nrow(parse_latex_cpp("\\text{$$}", text_size = 20)), 0L)
   a <- parse_latex_cpp("\\text{a$$}", text_size = 20)
   b <- parse_latex_cpp("\\text{a}", text_size = 20)
@@ -449,15 +409,13 @@ test_that("a colour with alpha of 50% or more keeps its colour", {
       gp = grid::gpar(fontsize = 20, col = grDevices::rgb(1, 0, 0, alpha)))
     unique(p$layout$color)
   }
-  # Eight hex digits overflow a signed 32-bit long, which is what `long` is
-  # on Windows, so every such colour came back opaque black.
+  # Eight hex digits overflow a 32-bit long (Windows).
   expect_equal(record_colour(0.3), "#FF00004D")
   expect_equal(record_colour(0.8), "#FF0000CC")
 })
 
 test_that("an empty argument is an empty box, as it was in 0.1.1", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # These wrapped the null an empty argument gives, and crashed R.
   glyphs <- function(tex) sum(latex_tree(tex, input_mode = "math")$records$type == "glyph")
   expect_equal(glyphs("\\mathop{}\\!\\mathrm{d}x"), 2)
   expect_equal(glyphs("f\\mathopen{}\\left(x\\right)\\mathclose{}"), 4)
@@ -467,8 +425,6 @@ test_that("an empty argument is an empty box, as it was in 0.1.1", {
 
 test_that("an argument read a second time keeps its text", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # \ensuremath in math and an optional argument read their tokens again,
-  # and an argument recorded the second time came out empty.
   fills <- function(tex) {
     r <- latex_tree(tex, input_mode = "math")$records
     unique(r$color[r$type != "glyph"])

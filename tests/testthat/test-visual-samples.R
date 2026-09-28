@@ -1,19 +1,8 @@
-# Visual samples.
-#
-# Two figures, not seven. Each sample used to have a snapshot of its own,
-# which meant a change to shared layout code arrived as seven separate
-# diffs to open and compare -- more work to review, not less, and easy to
-# accept in bulk without looking. Grouping them puts every sample in one
-# image, so one look answers "did anything move?".
-#
-# Every sample is drawn at the size it had when it was its own file, so
-# what is under test is unchanged; only the composition is.
-#
-# These do not run on CRAN, so they cannot stand in for unit coverage --
-# see test-text-runs.R for the assertions behind the direction figure.
+# Visual samples, grouped into two figures so one look shows whether
+# anything moved. They do not run on CRAN; test-text-runs.R holds the
+# assertions behind the direction figure.
 
-# Draws one labelled sample, positioned in points from the top-left of the
-# page so the samples cannot collide as they would under a null layout.
+# Draws one labelled sample, positioned in points from the top-left.
 place <- function(x, y, label, tex, fontsize, ...) {
   top <- function(dy) grid::unit(1, "npc") - grid::unit(dy, "pt")
   grid::grid.text(label, x = grid::unit(x, "pt"), y = top(y),
@@ -69,9 +58,7 @@ test_that("visual: math gallery", {
       "\\end{array}"
     ), 12)
 
-    # One enumerate exercising a \Roman* counter, a nested itemize, a
-    # nested enumerate with an \alph* counter, and an item whose content
-    # is an array using the \thickhline and \cline rules.
+    # \Roman* and \alph* counters, nested lists, and \thickhline and \cline.
     place(24, 275, "lists and table rules", paste0(
       "\\begin{enumerate}[\\Roman*.]",
       "  \\item \\text{Limit: }\\forall\\varepsilon>0\\ \\exists\\eta>0",
@@ -114,40 +101,19 @@ test_that("visual: math gallery", {
 test_that("visual: text direction", {
   skip_if_not_installed("vdiffr")
   skip_on_os("mac")
-  # Unlike the gallery, this figure is drawn with system fonts rather than
-  # bundled outlines, so it needs the machine to have a Perso-Arabic and a
-  # Hebrew face. A CI image that lacks one would fail on the missing font
-  # rather than on anything we changed. Drop this line if the runners are
-  # known to have them.
+  # Needs Perso-Arabic and Hebrew system fonts, which CI images may lack.
   skip_on_ci()
 
-  # Escaped so the source file stays ASCII, which is what R CMD check
-  # wants.
-  #
-  # Uyghur, in the Perso-Arabic script: "xush keldingiz" (welcome) and
-  # "bu dunyagha" (to this world). It is written right to left and its
-  # letters join, like Arabic, but it reaches further into the Arabic
-  # block for the vowels Arabic does not write -- U+06C7, U+06D5, U+06AD
-  # here -- so the shaping is a little more demanding than Arabic alone.
-  # Hebrew, which does not join, stays as the second script:
-  # "shalom olam".
-  hello <- "\u062e\u06c7\u0634 \u0643\u06d5\u0644\u062f\u0649\u06ad\u0649\u0632"
-  more  <- "\u0628\u06c7 \u062f\u06c7\u0646\u064a\u0627\u063a\u0627"
-  heb   <- "\u05e9\u05dc\u05d5\u05dd \u05e2\u05d5\u05dc\u05dd"
+  # Uyghur "xush keldingiz" and "bu dunyagha", and Hebrew "shalom olam".
+  hello <- "خۇش كەلدىڭىز"
+  more  <- "بۇ دۇنياغا"
+  heb   <- "שלום עולם"
 
-  # Only unwrapped rows here. Wrapped right-to-left is correct, but this
-  # figure cannot show it: vdiffr's device measures a Perso-Arabic run
-  # about twice as wide as the truth, so the words land at meaningless
-  # offsets
-  # and the picture records the device's font handling rather than ours.
-  # The wrapped case is asserted on coordinates in test-text-runs.R,
-  # which is unaffected by how wide the device thinks the words are.
+  # Unwrapped rows only: vdiffr's device measures Perso-Arabic about twice
+  # too wide, so wrapped rows would record the device, not the layout.
   vdiffr::expect_doppelganger("text-direction", function() {
-    # Every row is drawn twice: ours on the left, grid.text() on the
-    # right. The device implements the bidirectional algorithm and we do
-    # not -- we hand it a whole run and let it order the run. So the two
-    # columns must read alike, and that is visible here rather than
-    # inferred from coordinates.
+    # Each row twice: ours on the left, grid.text() on the right. The two
+    # columns must read alike.
     ref <- function(y, s) {
       grid::grid.text(s, x = grid::unit(380, "pt"),
                       y = grid::unit(1, "npc") - grid::unit(y + 13, "pt"),
@@ -167,15 +133,12 @@ test_that("visual: text direction", {
       list(24,  "left-to-right (control)", "Hello world"),
       list(74,  "right-to-left, Uyghur", hello),
       list(124, "right-to-left, Hebrew", heb),
-      # A right-to-left run inside a left-to-right sentence and the other
-      # way round: the paragraph direction is resolved from the first
-      # strong character, so these two must not come out alike.
+      # The first strong character sets the direction, so these two differ.
       list(174, "right-to-left inside left-to-right",
            paste("The greeting", hello, "means welcome")),
       list(224, "left-to-right inside right-to-left",
            paste(hello, "and", more)),
-      # Digits are their own class in the bidirectional algorithm -- they
-      # run left to right inside a right-to-left line.
+      # Digits run left to right inside a right-to-left line.
       list(274, "digits inside right-to-left",
            paste(hello, "2026", more))
     )

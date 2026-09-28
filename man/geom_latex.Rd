@@ -70,47 +70,34 @@ to use \code{position_jitter()}, give the position as \code{"jitter"}.
 \link[ggplot2:layer_positions]{layer position} documentation.
 }}
 
-\item{...}{Other arguments passed to \code{\link[ggplot2]{layer}}.}
+\item{...}{Passed to \code{\link[ggplot2:layer]{ggplot2::layer()}}.}
 
-\item{fontsize}{Default font size in points. Overridden by the \code{size}
-aesthetic if mapped.}
+\item{fontsize}{Font size in points, unless \code{size} is mapped.}
 
-\item{math_font}{Name of the math font to use (e.g., \code{"stix"}).}
+\item{math_font}{Math font, such as \code{"stix"}.}
 
-\item{lineheight}{Multi-line height multiplier (default 1.2), matching
-\code{grid::gpar()} semantics.}
+\item{lineheight}{Line spacing (default 1.2).}
 
-\item{max_width}{Maximum width in big points for automatic line
-wrapping (default: 0, no wrapping).}
+\item{max_width}{Width in big points at which lines wrap. \code{0}, the
+default, does not wrap.}
 
-\item{input_mode}{How \code{tex} is read.
-\code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
-with math between \code{$...$} or \code{\\(...\\)}, and a newline
-starts a new line, as \code{"\\n"} does in R.
-\code{"math"} reads the whole string as math, as between \code{$...$},
-so a word is set as italic letters; write text as \code{\\text{...}}.
-\code{"document"} reads a LaTeX document body by LaTeX's own rules: a
-newline is a space, a blank line (or \code{\\par}) starts an indented
-paragraph, \code{\\section} and its kin are numbered headings, and
-display math is centred on a line of its own. Give \code{max_width} to
-break the paragraphs into lines. The default can be set for the
-session with \code{\link{latex_options}(input_mode = )}.}
+\item{input_mode}{How \code{tex} is read:
+\itemize{
+\item \code{"mixed"} (default): text, with math between \verb{$...$} or \verb{\\(...\\)}.
+A newline starts a new line.
+\item \code{"math"}: everything is math; write text in \verb{\\text\{\}}.
+\item \code{"document"}: a LaTeX document body, with paragraphs, numbered
+headings and displayed equations. Use it with \code{max_width}.
+}}
 
-\item{render_mode}{Character string: \code{"typeface"} (default) renders
-glyphs as native text using the math font, producing
-selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_math_font}}
-are read directly from their OTF files: no system-wide font
-install is required.
-Falls back to path mode automatically on devices that lack the
-R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
-\code{postscript()}, which cannot embed the math font.
-For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
-\code{"path"} renders math symbols as filled vector paths (works on
-all devices but text is not selectable in PDF/SVG).}
+\item{render_mode}{\code{"typeface"} (default) draws glyphs as text, which
+can be selected in PDF and SVG output. It needs a device such as
+ragg, svglite or \code{\link[grDevices:cairo]{grDevices::cairo_pdf()}}, and falls back to
+\code{"path"} on others, such as \code{pdf()}. \code{"path"} draws glyphs as
+outlines, which works on every device.}
 
-\item{na.rm}{If \code{FALSE}, the default, missing values are removed with
-a warning. If \code{TRUE}, missing values are silently removed.}
+\item{na.rm}{If \code{FALSE} (default), missing values are removed with a
+warning; if \code{TRUE}, silently.}
 
 \item{show.legend}{logical. Should this layer be included in the legends?
 \code{NA}, the default, includes if any aesthetics are mapped.
@@ -129,9 +116,8 @@ the default plot specification, e.g. \code{\link[ggplot2:annotation_borders]{ann
 A ggplot2 layer.
 }
 \description{
-Renders LaTeX math expressions as native grid grobs within a ggplot2 plot.
-Each label is parsed and laid out by MicroTeX, producing resolution-independent
-vector output.
+Like \code{\link[ggplot2:geom_text]{ggplot2::geom_text()}}, with labels written in LaTeX. The \code{$}
+signs are optional. \code{annotate("latex", ...)} adds a single label.
 }
 \section{Aesthetics}{
 
@@ -140,13 +126,13 @@ are in bold):
 \itemize{
 \item \strong{\code{x}}
 \item \strong{\code{y}}
-\item \strong{\code{label}} — LaTeX math string
-\item \code{size} — font size in points (default: 11)
-\item \code{colour} — text colour (default: \code{"black"})
-\item \code{angle} — rotation angle in degrees (default: 0)
-\item \code{hjust} — horizontal justification, 0–1 (default: 0.5)
-\item \code{vjust} — vertical justification, 0–1 (default: 0.5)
-\item \code{alpha} — transparency (default: 1)
+\item \strong{\code{label}}: LaTeX string
+\item \code{size}: font size in points (default: 11)
+\item \code{colour}: text colour (default: \code{"black"})
+\item \code{angle}: rotation angle in degrees (default: 0)
+\item \code{hjust}: horizontal justification, 0-1 (default: 0.5)
+\item \code{vjust}: vertical justification, 0-1 (default: 0.5)
+\item \code{alpha}: transparency (default: 1)
 }
 }
 

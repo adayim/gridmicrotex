@@ -13,7 +13,6 @@ test_that("latex_wrap converts correctly", {
 })
 
 test_that("latex_wrap is vectorized over its input", {
-  # Documented contract: vector in, vector of the same length out.
   expect_equal(
     latex_wrap(c("plain text", "It is $x^2$", "")),
     c("\\text{plain text}", "\\text{It is }x^2", "")
@@ -42,22 +41,18 @@ test_that(".find_close_brace balances nested and escaped braces", {
 })
 
 test_that("every break lands at the formula level, not inside the text", {
-  # A break kept inside the \text{} makes a multi-line text *box*, and a
-  # box is one item in the enclosing row -- so anything after it was set
-  # beside the whole box rather than on the line it was written on.
+  # A break inside \text{} makes one multi-line box, and what follows it
+  # would sit beside the whole box.
   expect_equal(latex_wrap("Title\n$x^2$"), "\\text{Title}\\\\x^2")
   expect_equal(latex_wrap("Caption\n\\begin{array}{l}a\\end{array}"),
                "\\text{Caption}\\\\\\begin{array}{l}a\\end{array}")
-  # Interior breaks too, which is what puts trailing math on the right
-  # line instead of centring it between the two.
   expect_equal(latex_wrap("Line 1\nLine 2"), "\\text{Line 1}\\\\\\text{Line 2}")
   expect_equal(latex_wrap("a\nb $x$"), "\\text{a}\\\\\\text{b }x")
   # A literal \\ is a break like any other.
   expect_equal(latex_wrap("a\\\\b"), "\\text{a}\\\\\\text{b}")
   # Nothing but breaks between two math spans is a separator, not text.
   expect_equal(latex_wrap("$a$\n$b$"), "a\\\\b")
-  # A break with nothing on one side of it would only add a blank first
-  # or last row.
+  # No blank first or last row.
   expect_equal(latex_wrap("\n\nTitle\n"), "\\text{Title}")
   # A run collapses to one, the way consecutive blank lines do in LaTeX.
   expect_equal(latex_wrap("a\n\n\n$x$"), "\\text{a}\\\\x")
@@ -67,7 +62,6 @@ test_that("every break lands at the formula level, not inside the text", {
 })
 
 test_that("splitting a prose run does not move it", {
-  # The split is only free if the two forms lay out identically.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   xy <- function(tex) {
     d <- latex_grob(tex, input_mode = "math",
@@ -79,10 +73,6 @@ test_that("splitting a prose run does not move it", {
 })
 
 test_that("a pasted caption sits above its table, not beside it", {
-  # End to end, because the regression was invisible in the wrapped string
-  # alone: \caption becomes \text{X}\\, and in mixed mode that trailing
-  # break used to be swallowed into the surrounding \text{}, leaving the
-  # caption as a box to the LEFT of the tabular.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   snippet <- paste(
     "\\begin{table}[ht]", "\\centering", "\\caption{Model coefficients}",
@@ -95,8 +85,7 @@ test_that("a pasted caption sits above its table, not beside it", {
   cap <- d[!is.na(d$text) & grepl("Model", d$text), ]
   rules <- d[d$type == "line", ]
   expect_equal(nrow(cap), 1L)
-  # Above: the caption's baseline is higher up the page than the top rule
-  # (y grows downward), and it starts at the same left edge.
+  # Above the top rule (y grows downward), at the same left edge.
   expect_lt(cap$y, min(rules$y))
   expect_equal(cap$x, min(rules$x))
 })
@@ -125,8 +114,6 @@ test_that("latex_grob renders kable booktabs-style tabular", {
 })
 
 test_that("starred alignment environments render", {
-  # End-to-end: starred align/eqnarray previously errored on '&' because
-  # MicroTeX didn't recognise the env and never entered array mode.
   alignment_cases <- list(
     "\\begin{align*} a &= b \\end{align*}",
     "\\begin{eqnarray*} a & = & b \\end{eqnarray*}",
@@ -141,9 +128,7 @@ test_that("starred alignment environments render", {
 })
 
 test_that("latex_wrap passes every MicroTeX-registered env verbatim", {
-  # These are the environments registered in
-  # src/MicroTeX/lib/macro/macro_def.cpp; mixed mode must not wrap them
-  # in \text{} or split them at $-delimiters.
+  # Not wrapped in \text{}, nor split at $-delimiters.
   envs <- c("array", "tabular", "matrix", "smallmatrix",
             "pmatrix", "bmatrix", "Bmatrix", "vmatrix", "Vmatrix",
             "eqnarray", "align", "flalign", "alignat", "aligned",
@@ -159,7 +144,7 @@ test_that("latex_wrap passes every MicroTeX-registered env verbatim", {
 })
 
 test_that("the math environments R scans for come from the C++ tables", {
-  # The list that used to be kept by hand, in step with macro_def.cpp.
+  # The list once kept by hand.
   old <- c("array", "tabular", "tabular*", "matrix", "smallmatrix", "pmatrix",
            "bmatrix", "Bmatrix", "vmatrix", "Vmatrix", "equation", "equation*",
            "math", "displaymath", "align", "align*", "flalign", "flalign*",
@@ -167,9 +152,8 @@ test_that("the math environments R scans for come from the C++ tables", {
            "eqnarray", "eqnarray*", "multline", "multline*", "gather", "gather*",
            "gathered", "split", "cases", "rcases", "itemize", "enumerate")
   expect_identical(setdiff(old, gridmicrotex:::.math_envs()), character(0))
-  # But an environment that only wraps content is not math: its body is
-  # prose. R masks a math span from CommonMark, so counting `document` as
-  # one hid a whole markdown document from the parser that reads it.
+  # An environment that only wraps prose is not math: markdown would hide
+  # its content from CommonMark.
   expect_identical(
     intersect(gridmicrotex:::.math_envs(),
               c("document", "table", "table*", "figure", "figure*")),
@@ -177,17 +161,13 @@ test_that("the math environments R scans for come from the C++ tables", {
 })
 
 test_that("tabular is treated as a math environment in mixed mode", {
-  # Regression: `$...$` inside cells used to chop the tabular into text
-  # chunks because latex_wrap didn't know `tabular` was an array env.
+  # `$...$` inside cells must not split the tabular.
   src <- "\\begin{tabular}{rr}a & Pr($>$F) \\\\ 1 & 2 \\end{tabular}"
   out <- latex_wrap(src, input_mode = "mixed")
-  # The whole tabular block should pass through verbatim, not be wrapped
-  # in \text{} or split at the $ toggles.
   expect_false(grepl("\\\\text\\{", out))
   expect_equal(out, src)
 
-  # End-to-end: an xtable-style table with $-delimited math in a header
-  # renders without collapsing into a single column.
+  # End-to-end: it keeps its columns.
   d <- latex_dims(src)
   expect_gt(as.numeric(d$width),  50)
   expect_gt(as.numeric(d$height), 0)
@@ -215,8 +195,7 @@ test_that("\\cmidrule renders end-to-end via \\cline", {
 })
 
 test_that("document commands emit no messages", {
-  # The rules sit in a table, where they are valid: outside one, LaTeX and
-  # now MicroTeX reject them.
+  # The rules are inside a table, where they are valid.
   msgs <- testthat::capture_messages(
     latex_dims(paste0("\\caption{X}\\usepackage{amsmath}",
                       "\\begin{tabular}{c}\\toprule x \\\\ \\bottomrule\\end{tabular}"))
@@ -226,11 +205,6 @@ test_that("document commands emit no messages", {
 
 test_that("an ampersand in prose is drawn, with TeX's warning", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # MicroTeX once read a bare `&` as an alignment tab even inside \text{}
-  # and dropped everything after it, so "Treatment & Control" rendered as
-  # "Treatment ". Now the whole label is drawn, `&` as a character of the
-  # text, and TeX's refusal is a warning at its position. `\&` is the
-  # same character, and says so on purpose.
   drawn <- function(s) {
     d <- latex_grob(s, gp = grid::gpar(fontsize = 14))$layout_df
     paste(d$text[d$type == "text" & !is.na(d$text)], collapse = "")
@@ -255,15 +229,10 @@ test_that("an ampersand in prose is drawn, with TeX's warning", {
 })
 
 test_that("a line break inside a group re-opens the group on the next line", {
-  # Each segment becomes its own \text{}, so a break inside \textbf{}
-  # used to leave the group open at the end of one segment and unopened
-  # at the start of the next: the second line came out unstyled and any
-  # text after the group escaped the \text{} wrapper entirely.
   expect_equal(latex_wrap("Hello \\textbf{big\nbold} world"),
                "\\text{Hello \\textbf{big}}\\\\\\text{\\textbf{bold} world}")
 
-  # The re-opener carries the command's arguments, not just its name --
-  # matching only `\textcolor` reopened a plain `{two}` and lost the colour.
+  # The re-opener carries the command's arguments, not just its name.
   expect_equal(latex_wrap("\\textcolor{red}{one\ntwo}"),
                "\\text{\\textcolor{red}{one}}\\\\\\text{\\textcolor{red}{two}}")
 
@@ -293,7 +262,7 @@ test_that("the styling really survives the break, not just the source", {
   # FontStyle is a bitmask: 1 = rm, +2 = bold, +4 = italic.
   f <- face("Hello \\textbf{big\nbold} world")
   expect_equal(unname(f[["big"]]), 3L)
-  expect_equal(unname(f[["bold"]]), 3L)   # was 1L: the emphasis was lost
+  expect_equal(unname(f[["bold"]]), 3L)
   expect_equal(unname(f[["Hello "]]), 1L)
 
   f <- face("a \\textbf{\\textit{p\nq}} b")
@@ -312,9 +281,7 @@ test_that("the styling really survives the break, not just the source", {
 
 test_that("tabular* renders instead of erroring on its width argument", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # `tabular*` takes a target width before the column spec. Stripping only
-  # the star left the width where the alignment belonged, and MicroTeX
-  # rejected it outright with "Invalid alignment in array environment".
+  # `tabular*` takes a width before the column spec.
   starred <- latex_dims("\\begin{tabular*}{\\textwidth}{lcr}a&b&c\\end{tabular*}")
   plain <- latex_dims("\\begin{tabular}{lcr}a&b&c\\end{tabular}")
   expect_equal(as.numeric(starred$width), as.numeric(plain$width))
@@ -322,8 +289,6 @@ test_that("tabular* renders instead of erroring on its width argument", {
 
 test_that("Latin-1 text is read as the characters it holds", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # The parser reads UTF-8; a Latin-1 string reached it as invalid bytes,
-  # each drawn as U+FFFD with a warning.
   latin <- iconv("café crème", "UTF-8", "latin1")
   expect_no_warning(r <- latex_tree(latin)$records)
   expect_equal(paste(r$text[!is.na(r$text)], collapse = ""), "café crème")

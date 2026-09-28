@@ -25,117 +25,82 @@ markdown_box_grob(
 )
 }
 \arguments{
-\item{md}{Character string of markdown.}
+\item{md}{Markdown, as a character string.}
 
-\item{x, y}{Position of the box in the parent viewport.}
+\item{x, y}{Position of the box.}
 
-\item{width}{Width of the box, including \code{margin}. \code{NULL}
-sizes the box to its content, so nothing wraps: useful where the
-available width is not known, as in a ggplot2 theme element.}
+\item{width}{Width of the box. \code{NULL} fits the box to its content, with
+no wrapping.}
 
-\item{height}{Fixed height, or \code{NULL} (default) to take whatever
-height the content needs.}
+\item{height}{Height of the box. \code{NULL} (default) fits the content.}
 
-\item{hjust, vjust}{Justification of the whole box about \code{x} and
-\code{y}.}
+\item{hjust, vjust}{Justification of the box about \code{x} and \code{y}.}
 
-\item{halign}{Horizontal alignment of blocks within the box:
-\code{0} left (default), \code{0.5} centred, \code{1} right.}
+\item{halign}{Alignment of blocks in the box: \code{0} left (default),
+\code{0.5} centre, \code{1} right.}
 
-\item{valign}{Vertical alignment of the content when \code{height}
-leaves room to spare: \code{1} top (default), \code{0} bottom.}
+\item{valign}{Vertical alignment of the content when \code{height} leaves
+room: \code{1} top (default), \code{0} bottom.}
 
-\item{padding, margin}{A \code{\link[grid]{unit}} of length 1 or 4
-giving top, right, bottom and left. Padding is inside the box,
-margin outside it. \code{NULL} (default) takes them from the
-stylesheet's \code{body} rule, and is zero if that says nothing.}
+\item{padding, margin}{A \code{\link[grid:unit]{grid::unit()}} of length 1, or 4 for top,
+right, bottom and left. Padding is inside the box, margin outside.
+\code{NULL} (default) uses the style's \code{body} rule.}
 
-\item{box_gp}{Graphical parameters for the box itself, e.g.
-\code{gpar(fill = "grey95", col = "black")}. \code{NULL} (default)
-takes the fill from \code{body \{ background \}} and the border from
-\code{body \{ border \}}, and draws no box if neither is set.}
+\item{box_gp}{Fill and border of the box, such as
+\code{gpar(fill = "grey95", col = "black")}. \code{NULL} (default) uses the
+style's \code{body} rule, and draws no box if it has none.}
 
-\item{r}{Corner radius; a non-zero value draws a rounded box.
-\code{NULL} (default) takes it from \code{body \{ border-radius \}}.}
+\item{r}{Corner radius. \code{NULL} (default) uses the style's \code{body} rule.}
 
-\item{style}{Appearance of the blocks: a \code{\link{markdown_style}}
-object, CSS text, or a path to a \code{.css} file. \code{NULL}
-(default) uses \code{latex_options("markdown_style")} if set, and
-the built-in defaults otherwise.}
+\item{style}{A \code{\link[=markdown_style]{markdown_style()}}, CSS text, or a path to a \code{.css}
+file. \code{NULL} (default) uses \code{latex_options("markdown_style")}, if
+set.}
 
-\item{name}{Optional grob name.}
+\item{name}{Grob name.}
 
-\item{gp}{Graphical parameters for the text. \code{fontsize} also sets
-the scale for block spacing and list indentation, and \code{cex}
-multiplies it as elsewhere in \pkg{grid}.}
+\item{gp}{Graphical parameters for the text. \code{fontsize} also scales
+the spacing between blocks.}
 
-\item{vp}{Optional viewport. Supplying one replaces the viewport built
-from \code{x}, \code{y}, \code{width}, \code{height}, \code{hjust}
-and \code{vjust}, so those are then ignored.}
+\item{vp}{A viewport. If given, \code{x}, \code{y}, \code{width}, \code{height}, \code{hjust}
+and \code{vjust} are ignored.}
 }
 \value{
-A \code{markdownbox} gTree.
+A grob of class \code{"markdownbox"}.
 }
 \description{
-Lays markdown out as a block document (headings, paragraphs, lists
-(including GFM task lists), block quotes, code blocks, tables,
-horizontal rules and images) inside an optional padded, filled and
-bordered box. Prose wraps to the requested width, and \code{$...$}
-math is typeset by MicroTeX as usual. All the inline formatting
-\code{\link{markdown_grob}} understands, including the inline HTML
-subset, works inside every block.
+Draws a markdown document (headings, paragraphs, lists, task lists,
+quotes, code, tables, rules and images) inside an optional box. Text
+wraps to \code{width}, and math goes between \verb{$...$}. Everything
+\code{\link[=markdown_grob]{markdown_grob()}} supports works inside each block.
 }
 \details{
-Where \code{\link{markdown_grob}} flattens everything into a single
-run, this stacks one grob per block, which is what makes margins,
-padding, background fills, borders and block-quote rules possible. Each
-block's content is LaTeX text laid out by the engine, so it wraps,
-coloured, sized, underlined and highlighted spans included, and a
-block's \code{text-align} aligns each of its lines.
+A table that is too wide for the box wraps its widest columns;
+\code{table-layout: fixed} gives the columns equal widths instead. Code
+lines do not wrap.
 
-A table is as wide as its content when that fits the box. When it does
-not, its wide columns share the width the others leave and their cells
-wrap, as an HTML table shrinks to its container; \code{table-layout:
-fixed} divides the width evenly between the columns instead. Code lines
-are not wrapped.
-
-An image on a line of its own is drawn as a block, scaled to fit the
-column but never enlarged past its natural size (pixels are read at
-96 dpi); an image \emph{within} a sentence is drawn inline, and so is an
-\code{<img>} tag, even alone on its line. It must be
-a local PNG, JPEG or SVG file, read by \pkg{png}, \pkg{jpeg} or
-\pkg{rsvg} respectively, all \emph{Suggests} and needed only for their
-own format. An image that cannot be drawn -- a missing file, a URL,
-another format, or a reader that is not installed -- is an error when
-the grob is built, saying which.
-
-The layout is computed at draw time, so an open device is required,
-which is what lets a relative \code{width} and the measured height of
-the text resolve against the viewport the box is actually drawn in.
+An image on its own line is a block, scaled down to fit; an image
+inside a sentence is inline. Images must be local PNG, JPEG or SVG
+files, and need the png or jpeg package, or rsvg and grImport2 for SVG.
+An image that cannot be drawn is an error.
 }
 \section{Styling}{
 
-Appearance comes from a small CSS cascade. \code{style} sets the house
-style for the whole document, by tag:
+\code{style} sets the look of each tag:
 
 \preformatted{markdown_box_grob(md, style = markdown_style(
   h1         = md_style(color = "steelblue", font_size = 2),
   blockquote = md_style(border_left = "3px solid grey60")
 ))}
 
-The same thing written as CSS, which \code{style} also takes directly,
-as text or as the path to a \code{.css} file:
+Or the same as CSS, as text or a \code{.css} file:
 
 \preformatted{markdown_box_grob(md, style = "
   h1 \{ color: steelblue; font-size: 2rem \}
   blockquote \{ border-left: 3px solid grey60 \}
 ")}
 
-To style one chunk rather than every block of a kind, wrap it in a
-\code{<div>} carrying a \code{class} or a \code{style}. \strong{Leave
-blank lines around the tags}: that is what makes CommonMark parse
-the markdown between them instead of treating the whole thing as raw
-HTML:
+To style one part, wrap it in a \verb{<div>} with a \code{class} or \code{style},
+with blank lines around the tags:
 
 \preformatted{<div class="note">
 
@@ -143,9 +108,8 @@ HTML:
 
 </div>}
 
-Inline runs take \code{class} as well as \code{style} on a
-\code{<span>}. See \code{\link{markdown_style}} for the tag names, the
-supported properties and how the cascade resolves.
+\verb{<span class="...">} works the same inside a line. See
+\code{\link[=markdown_style]{markdown_style()}} for tag names and \code{\link[=md_style]{md_style()}} for properties.
 }
 
 \examples{

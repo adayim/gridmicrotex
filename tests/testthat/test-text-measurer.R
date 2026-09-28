@@ -33,17 +33,12 @@ test_that("a layout measured at one resolution is not reused at another", {
   at_300_after_72 <- measure_at(300)
   latex_cache_clear()
   at_300 <- measure_at(300)
-  # Text is measured on the device, and one png() measured this phrase at
-  # 175bp at 72dpi and 174bp at 300. Keyed on the device name alone, the
-  # second device reused the first one's layout. (macOS's png() measures
-  # it alike at both, and reports the same resolution for both.)
+  # png() measures this phrase 1bp apart at 72 and 300 dpi.
   expect_equal(at_300_after_72, at_300)
 })
 
 test_that("\\texttt renders and measures in a monospace family", {
-  # Bit 128 is MicroTeX's \texttt. It has to reach the *measurer* as well
-  # as the renderer: measuring in one family and drawing in another puts
-  # the glyphs where they do not fit.
+  # Bit 128 is \texttt; measurer and renderer must agree on the family.
   fam <- gridmicrotex:::.resolve_text_family
   expect_equal(fam(128L), "mono")
   expect_equal(fam(130L), "mono")                 # bold monospace
@@ -53,8 +48,7 @@ test_that("\\texttt renders and measures in a monospace family", {
   expect_equal(fam(128L, "serif"), "mono")        # \texttt still wins
 
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # The measurer must answer with monospace metrics, which are the same
-  # for every character -- that is what makes the font monospace.
+  # Monospace: every character is the same width.
   m <- gridmicrotex:::.make_text_measurer(grid::gpar())
   expect_equal(m("i", 128L)[1], m("W", 128L)[1])
   expect_true(m("i", 1L)[1] < m("W", 1L)[1])
@@ -66,9 +60,7 @@ test_that("\\texttt renders and measures in a monospace family", {
 })
 
 test_that("a named font family travels from LaTeX to the layout", {
-  # MicroTeX has no channel for a font *name* -- a text run carries only
-  # FontStyle, a bitfield. \gmfontfamily packs an index into its unused
-  # high byte, which C++ resolves back to the name on the record.
+  # \gmfontfamily packs a family index into FontStyle's high byte.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   runs <- function(tex) {
     df <- latex_grob(tex, input_mode = "math",
@@ -82,13 +74,11 @@ test_that("a named font family travels from LaTeX to the layout", {
   # Ordinary text names no family, so gp$fontfamily still decides.
   expect_true(all(is.na(runs("\\text{ab}")$font_family)))
 
-  # Nesting must *replace*: two indices OR'd together would address a
-  # third, unrelated family, so "c" would come back as neither A nor B.
+  # Nesting replaces: two indices OR'd together would name a third family.
   nested <- runs("\\gmfontfamily{A}{a\\gmfontfamily{B}{b}c}")
   expect_equal(nested$font_family, c("A", "B", "A"))
 
-  # The family composes with emphasis instead of replacing it: the low
-  # byte keeps the bold bit, the high byte carries the index.
+  # Composes with emphasis: bold in the low byte, family in the high.
   bold <- runs("\\textbf{\\gmfontfamily{Georgia}{ab}}")
   expect_true(all(bitwAnd(bold$font_style, 2L) != 0L))
   expect_true(all(bold$font_family == "Georgia"))
@@ -98,31 +88,18 @@ test_that("a named font family travels from LaTeX to the layout", {
   # An empty name is a no-op rather than an error.
   expect_silent(runs("\\gmfontfamily{}{ab}"))
 
-  # Two families in one expression must be measured apart. The C++ cache
-  # used to key on the low byte of the style, which is where the family
-  # index is *not*, so they shared one set of metrics -- whichever was
-  # asked for first. Needs a device that resolves families.
+  # Two families in one expression are measured apart. Needs a device that
+  # resolves families.
   skip_if_not_installed("ragg")
   f <- tempfile(fileext = ".png")
   ragg::agg_png(f, width = 400, height = 120)
   on.exit({ dev.off(); unlink(f) }, add = TRUE)
-  # Measured large on purpose. Layout widths are whole big points, so at a
-  # normal size that quantum is several percent of a three-letter word: two
-  # genuinely different faces whose "Wig" differs by less than one point land
-  # on the same number, and the families look identical although nothing is
-  # wrong. That is what failed on a CRAN Debian box. It reproduces here at
-  # fontsize 10, where stock DejaVu mono and sans both measure 18; at 200 the
-  # same pair differs by 14.
+  # Measured large: widths are whole big points, and at fontsize 10 DejaVu
+  # mono and sans both measure "Wig" as 18 (CRAN Debian).
   w <- function(tex) as.numeric(latex_dims(tex, input_mode = "math",
                                            gp = grid::gpar(fontsize = 200))$width)
-  # A font set with no distinct monospace face resolves both names to one
-  # file, which no font size can separate. Probe with \texttt, which takes its
-  # family from the FontStyle bit rather than the \gmfontfamily registry, so
-  # this cannot mask a regression in the code under test: that would leave
-  # \texttt working and fail the assertions below.
-  #
-  # The message carries what the layout recorded, so a machine we cannot reach
-  # reports itself. Built lazily: skip_if() only forces it when it skips.
+  # Skip where mono and sans are one file. \texttt probes this without the
+  # \gmfontfamily code under test; the message reports what was recorded.
   tt <- w("\\texttt{Wig}")
   body <- w("\\text{Wig}")
   skip_if(isTRUE(all.equal(tt, body)), {
@@ -144,10 +121,7 @@ test_that("a named font family travels from LaTeX to the layout", {
 })
 
 test_that("\\textrm returns to the caller's font", {
-  # MicroTeX's own \textrm only ORs in FontStyle::rm -- the same bit a plain
-  # \text{} run already carries -- so it could never express "reset the
-  # family", and did nothing at all. The override names a reserved family
-  # instead; see src/MicroTeX/lib/atom/font_family_atom.h.
+  # See src/MicroTeX/lib/atom/font_family_atom.h.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   fam <- function(tex) {
     df <- latex_grob(tex, input_mode = "math",
@@ -164,22 +138,17 @@ test_that("\\textrm returns to the caller's font", {
   expect_equal(fam("\\gmfontfamily{Georgia}{a\\textrm{b}c}"),
                c("Georgia", "BODY", "Georgia"))
 
-  # On its own it is still ordinary body text, as it always was. One
-  # record, not one per letter: consecutive text characters are drawn as
-  # a word (see RowAtom::processTextRun). The three cases above stay
-  # one-per-record because each letter sits in a different font scope.
+  # Alone it is body text, drawn as one record.
   expect_equal(fam("\\textrm{ab}"), "BODY")
 
-  # Emphasis survives: the override keeps upstream's *nested* FontStyleAtom,
-  # so only the family is replaced, not the bold/italic bits.
+  # Only the family is reset; bold survives.
   df <- latex_grob("\\textsf{\\textbf{a\\textrm{b}c}}", input_mode = "math",
                    gp = grid::gpar(fontsize = 20))$layout_df
   expect_true(all(bitwAnd(df$font_style[df$type == "text"], 2L) != 0L))
 })
 
 test_that("\\textnormal sets the normal font, whatever is around it", {
-  # LaTeX's \normalfont: upright, medium, in the caller's family. It was
-  # \text{}, which keeps the style around it, so it came out bold in bold.
+  # As LaTeX's \normalfont: upright, medium, in the caller's family.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   styles <- function(tex) {
     df <- latex_grob(tex, gp = grid::gpar(fontsize = 20))$layout_df
@@ -196,8 +165,6 @@ test_that("\\textnormal sets the normal font, whatever is around it", {
 })
 
 test_that("\\textrm is measured in the font it is drawn in", {
-  # Measuring in mono while drawing in the body font puts glyphs where they
-  # do not fit, so the reset has to reach the measurer too.
   skip_if_not_installed("ragg")
   f <- tempfile(fileext = ".png")
   ragg::agg_png(f, width = 400, height = 100)
@@ -212,34 +179,35 @@ test_that("\\textrm is measured in the font it is drawn in", {
   expect_equal(w("\\textrm{Wig}"), body)
 })
 
-test_that("register/clear measurer lifecycle and integration", {
+test_that("text widths come from the measurer registered for the parse", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  m <- gridmicrotex:::.make_text_measurer(grid::gpar())
-  m2 <- gridmicrotex:::.make_text_measurer(grid::gpar(fontfamily = "mono"))
-  # The two closures must actually disagree, or "the second registration
-  # replaced the first" is unfalsifiable below.
-  expect_false(isTRUE(all.equal(m("Wig", 0L), m2("Wig", 0L))))
-
-  register_text_measurer(m)
-  clear_text_measurer()
-  # Double-register replaces the previous one rather than stacking.
-  register_text_measurer(m)
-  register_text_measurer(m2)
-  clear_text_measurer()
-
-  # CJK layout uses measurer for dimensions
-  if (.Platform$OS.type == "windows") {
-    expect_no_error(dims <- latex_dims("\\text{\u4F60\u597D\u4E16\u754C}", gp = grid::gpar(fontsize = 20)))
-  } else {
-    expect_silent(dims <- latex_dims("\\text{\u4F60\u597D\u4E16\u754C}", gp = grid::gpar(fontsize = 20)))
+  on.exit(latex_cache_clear(), add = TRUE)
+  width_with <- function(ratio) {
+    local_mocked_bindings(
+      .make_text_measurer = function(text_gp) {
+        function(text, font_style, family = NULL) c(ratio * nchar(text), 0.7, 1)
+      },
+      .package = "gridmicrotex")
+    latex_cache_clear()
+    as.numeric(latex_dims("\\text{abcd}", input_mode = "math",
+                          gp = grid::gpar(fontsize = 20))$width)
   }
-  expect_true(grid::convertWidth(dims$width, "bigpts", valueOnly = TRUE) > 0)
+  half <- width_with(0.5)
+  expect_equal(half, 0.5 * 4 * 20, tolerance = 1)
+  # A second registration replaces the first.
+  expect_equal(width_with(1), 2 * half, tolerance = 1)
+})
+
+test_that("CJK text is measured without warnings", {
+  f <- tempfile(fileext = ".png")
+  grDevices::png(f)
+  on.exit({ grDevices::dev.off(); unlink(f) }, add = TRUE)
+  expect_silent(dims <- latex_dims("\\text{\u4F60\u597D\u4E16\u754C}",
+                                   gp = grid::gpar(fontsize = 20)))
+  expect_gt(grid::convertWidth(dims$width, "bigpts", valueOnly = TRUE), 0)
 })
 
 test_that("measurer cache returns identical values to a fresh measurement", {
-  # Within one closure, repeat calls hit the cache; they must equal the
-  # first (un-cached) call bit-for-bit, and must also match a separate
-  # fresh closure's first (un-cached) call.
   txt <- "The quick brown fox jumps over the lazy dog"
   m1 <- gridmicrotex:::.make_text_measurer(grid::gpar())
   first  <- m1(txt, 0L)
@@ -258,10 +226,8 @@ test_that("measurer cache returns identical values to a fresh measurement", {
 })
 
 test_that("measuring leaves the caller's display list untouched", {
-  # Measuring used to pushViewport() on whatever device the caller had open.
-  # Viewport pushes are recorded on the graphics engine display list, so the
-  # device then looks like it holds a plot and knitr snapshots a spurious
-  # blank figure before the real plot's grid.newpage().
+  # A viewport push on the caller's device made knitr snapshot a spurious
+  # blank figure.
   dl_len <- function() length(grDevices::recordPlot()[[1]])
 
   pdf(NULL)
@@ -276,7 +242,6 @@ test_that("measuring leaves the caller's display list untouched", {
   m("Heterogeneity", 0L, "Georgia")
   expect_identical(dl_len(), 0L)
 
-  # Same for a full grob construction, which is what callers actually do.
   latex_grob("\\text{This is study A}\\\\\\text{This is study B}",
              input_mode = "math", render_mode = "path",
              gp = grid::gpar(fontsize = 8))
@@ -284,8 +249,6 @@ test_that("measuring leaves the caller's display list untouched", {
   latex_dims("\\text{measure me}", input_mode = "math")
   expect_identical(dl_len(), 0L)
 
-  # Markdown measures far more text than a formula does, and arrived after
-  # the fix above, so it needs its own guard.
   markdown_grob("**bold** and $x^2$")
   expect_identical(dl_len(), 0L)
   markdown_box_grob("# Title\n\nProse with $x^2$.\n\n- one\n- two",
@@ -297,7 +260,7 @@ test_that("measuring leaves the caller's display list untouched", {
                      "bigpts", valueOnly = TRUE)
   expect_identical(dl_len(), 0L)
 
-  # A drawing call *must* still record, or the assertions above are vacuous.
+  # Drawing must still record, or the assertions above are vacuous.
   grid::grid.newpage()
   grid::grid.draw(latex_grob("\\text{drawn}", input_mode = "math",
                              render_mode = "path"))
@@ -306,19 +269,14 @@ test_that("measuring leaves the caller's display list untouched", {
 
 test_that("a cached layout is not reused across graphics devices", {
   skip_if_not_installed("ragg")
-  # \text{} runs are sized by the R text-measurer, which measures through
-  # grid on the *current* device -- and devices disagree. Without the
-  # device in the cache key, a layout measured on the screen device was
-  # handed back verbatim to a later ggsave(), placing text at widths the
-  # output device never agreed to.
+  # Text is measured on the current device, and devices disagree.
   key <- gridmicrotex:::.parse_cache_key
   args <- list("\\text{x}", 20, 10, "#000000", 0, "", "", "", FALSE, "",
                FALSE, FALSE)
   expect_false(identical(do.call(key, c(args, device = "pdf")),
                          do.call(key, c(args, device = "agg_png"))))
 
-  # End to end: the width from a device must not depend on which device
-  # happened to parse the same expression first.
+  # End to end: the width must not depend on which device parsed first.
   f <- tempfile(fileext = ".png")
   on.exit(unlink(f), add = TRUE)
   tex <- "\\text{Hello world}"
@@ -339,9 +297,6 @@ test_that("a cached layout is not reused across graphics devices", {
 })
 
 test_that("with no device open, a parse opens one for its length and a cache hit none", {
-  # Measuring needs a device. A cached layout measures nothing, so opening
-  # one for it is waste that latex_dims() in a loop, or markdown measuring
-  # a label several times over, paid on every call.
   skip_if(!is.null(grDevices::dev.list()), "a device is already open")
   opened <- 0L
   suppressMessages(trace("pdf", where = asNamespace("grDevices"),

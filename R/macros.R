@@ -1,43 +1,18 @@
-#' Define a user-level LaTeX macro
+#' Define a LaTeX shorthand for every label
 #'
-#' Registers a zero-argument shorthand that every later expression can use,
-#' expanded by the parser as a \code{\\newcommand} without arguments would
-#' be. Useful for domain-specific notation (e.g. \code{\\RR} for
-#' \code{\\mathbb\{R\}}) you reuse across many plots.
+#' `define_macro()` adds a macro without arguments, such as `\RR` for
+#' `\mathbb{R}`, that every later label can use. `list_macros()` shows
+#' them and `clear_macros()` removes them.
 #'
-#' @section Choosing between this and \code{\\newcommand}:
-#' An expression can also define macros itself, as LaTeX does:
-#' \code{\\newcommand}, \code{\\renewcommand}, \code{\\providecommand},
-#' \code{\\def} (delimited parameters included), \code{\\let},
-#' \code{\\DeclareMathOperator} and \code{\\newenvironment}. Those are the
-#' more capable form: they take up to nine arguments, which
-#' \code{define_macro()} does not. As in TeX, a definition made inside
-#' \code{\{...\}} ends with the group, and \code{\\gdef} is global.
+#' A label can also define its own macros with `\newcommand`, `\def` and
+#' the like, including macros with arguments, but those last for that
+#' label only.
 #'
-#' \preformatted{
-#'   # parameterised, but local to this one expression
-#'   grid.latex(r"(\\def\\norm#1{\\left\\lVert #1 \\right\\rVert}
-#'                 \\norm{\\vec{v}})")
-#' }
-#'
-#' What they cannot do is persist: a \code{\\newcommand} written in one call
-#' is gone by the next (\code{\\gdef} included). That is the one thing \code{define_macro()} is for.
-#' Use \code{\\newcommand} / \code{\\def} for an abbreviation local to a
-#' single label, and \code{define_macro()} for notation you want available
-#' to every label in a script. A \code{\\renewcommand} in one label
-#' overrides a \code{define_macro()} macro for that label only.
-#'
-#' @param name Macro name \strong{without} the leading backslash. For
-#'   \code{clear_macros}, the macro name to drop, or \code{NULL}
-#'   (default) to clear all.
-#' @param definition LaTeX source the macro expands to.
-#' @return
-#' \itemize{
-#'   \item \code{define_macro}: Invisibly returns \code{NULL}.
-#'   \item \code{clear_macros}: Invisibly returns \code{NULL}.
-#'   \item \code{list_macros}: A named character vector mapping
-#'     macro names to their expansions. Empty if no macros are defined.
-#' }
+#' @param name Macro name, without the backslash. For `clear_macros()`,
+#'   `NULL` (default) removes all macros.
+#' @param definition The LaTeX the macro stands for.
+#' @return `list_macros()` returns a named character vector of macros and
+#'   their definitions. The others return `NULL`, invisibly.
 #' @seealso \code{\link{latex_grob}}, \code{\link{latex_options}}
 #' @export
 #'

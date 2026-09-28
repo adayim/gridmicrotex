@@ -1,11 +1,8 @@
-# Fixed-width, wrapping table columns: the `p{len}` column type added to
-# the vendored MicroTeX (atom_matrix.cpp). Before it, the spec parser knew
-# only `l r c | @ * >` and `p{}` was a hard parse error, so a wide table
-# could only overflow.
+# Fixed-width, wrapping table columns: `p{len}`, in the vendored MicroTeX
+# (atom_matrix.cpp).
 
 test_that("\\cline past the last column stays inside the table", {
-  # \cline{2-2} on a one-column table read past the column widths (found by
-  # the engine fuzzer); it clamps to the last column, as its end already did.
+  # \cline{2-2} on a one-column table clamps to the last column.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   t <- latex_tree("\\begin{array}{l}a\\\\ \\cline{2-2} b\\end{array}", input_mode = "math")
   rule <- t$records[t$records$type == "line", ]
@@ -14,9 +11,8 @@ test_that("\\cline past the last column stays inside the table", {
 })
 
 test_that("an empty \\multirow and numbers past any range draw, not crash", {
-  # All found by the engine fuzzer. An empty \multirow cell was a null atom
-  # that crashed R when laid out; a number past an int's range was
-  # converted as it was, which is undefined (\cline, \multirow's count).
+  # Found by the engine fuzzer: an empty \multirow cell, and numbers past
+  # an int's range (\cline, \multirow's count).
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   cells <- function(tex) {
     r <- suppressWarnings(latex_tree(tex, input_mode = "math"))$records
@@ -82,8 +78,7 @@ test_that("p{} does not disturb ordinary tables or leak between parses", {
   invisible(latex_dims(
     "\\begin{tabular}{p{3cm}}\\text{wrap me please}\\end{tabular}",
     input_mode = "math", gp = grid::gpar(fontsize = 16)))
-  # A fixed width is per-column state; it must not survive into the next
-  # parse the way a stray static would.
+  # A fixed width must not survive into the next parse.
   expect_equal(plain(), before)
 })
 
@@ -138,7 +133,5 @@ test_that("a tabular's [t|b|c] is its position, and tabular* drops its width", {
   expect_identical(t$records$text[t$records$type == "text"], c("a", "b"))
 })
 
-# The release / re-init half of this lives in test-zz-release-cycle.R:
-# tearing MicroTeX down mid-suite strands the font registry that
-# test-text-font-auto.R depends on.
+# The release / re-init half is in test-zz-release-cycle.R, which runs last.
 

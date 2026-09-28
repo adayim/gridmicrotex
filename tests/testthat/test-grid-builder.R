@@ -68,8 +68,7 @@ test_that("build_latex_children processes all layout types", {
     layout, attr(layout, "bbox_height"), render_mode = "path"
   )
   # One grob type per record type: glyph outlines as paths, the array's
-  # rules as segments, and \cancel's strike as a rect. "more than zero"
-  # would pass with the rules silently dropped.
+  # rules as segments, and \cancel's strike as a rect.
   expect_setequal(vapply(children, function(k) class(k)[1], character(1)),
                   c("pathgrob", "segments", "rect"))
 

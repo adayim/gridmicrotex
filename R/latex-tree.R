@@ -1,22 +1,17 @@
-#' Inspect the parsed layout of a LaTeX expression
+#' The layout of a LaTeX expression
 #'
-#' Returns the raw draw-record table produced by MicroTeX's layout pass
-#' together with the bounding-box metadata. Useful for debugging
-#' alignment issues, building custom grobs on top of the layout, or
-#' counting glyphs/paths/rules in a formula.
+#' Returns what a formula is drawn from: one row per glyph, line, rectangle
+#' or run of text, with its position. Useful for checking alignment or
+#' building your own grobs.
 #'
 #' @inheritParams latex_grob
-#' @return A list with class \code{"latex_tree"} containing:
-#'   \describe{
-#'     \item{\code{records}}{Data frame of draw records (one row per
-#'       glyph, path, line, rect, or text block). Columns include
-#'       \code{type}, \code{x}, \code{y}, \code{glyph}, \code{font_size},
-#'       \code{color}, \code{text}, \code{codepoint}, \code{font_file}.}
-#'     \item{\code{bbox}}{Named numeric vector with \code{width},
-#'       \code{height}, \code{depth}, \code{baseline} (all in big points).}
-#'     \item{\code{tex}}{The (macro-expanded) input string.}
-#'     \item{\code{render_mode}}{Rendering mode used for the layout.}
-#'   }
+#' @return A list of class `"latex_tree"`:
+#'   * `records`: a data frame with one row per drawn element, with
+#'     columns such as `type`, `x`, `y`, `glyph`, `font_size`, `color` and
+#'     `text`.
+#'   * `bbox`: `width`, `height`, `depth` and `baseline`, in big points.
+#'   * `tex`: the input.
+#'   * `render_mode`: the render mode used.
 #' @seealso \code{\link{latex_grob}}, \code{\link{latex_dims}}
 #' @export
 #'

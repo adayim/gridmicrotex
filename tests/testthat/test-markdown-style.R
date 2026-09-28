@@ -1,7 +1,5 @@
-# Styling: the cascade, its two constructors, and the two markup routes.
-
-# Lay a document out with a given style and hand back the items, so a
-# test can assert on positions rather than pixels.
+# Lay a document out with a given style and return the items, so a test
+# can assert on positions rather than pixels.
 lay_md <- function(md, style = NULL, size = 12, width = 300) {
   gp <- grid::gpar(fontsize = size)
   .md_layout(.md_parse_blocks(md, size, .md_as_style(style)),
@@ -13,11 +11,10 @@ lay_md <- function(md, style = NULL, size = 12, width = 300) {
 test_that("md_style() translates R names and rejects unknown properties", {
   s <- md_style(font_size = 2, margin_top = 1, color = "red")
   expect_named(unclass(s), c("font-size", "margin-top", "color"))
-  # The CSS spelling works too, for anyone copying a declaration across.
+  # The CSS spelling works too.
   expect_named(unclass(md_style(`font-size` = 2)), "font-size")
 
-  # A constructor can afford to be strict where a pasted stylesheet
-  # cannot: a typo here is a mistake, not a property we do not implement.
+  # Strict here, unlike a pasted stylesheet: a typo is a mistake.
   expect_error(md_style(colour = "red"), "colour")
   expect_error(md_style(bakground = "red"), "bakground")
   expect_error(md_style("red"), "must be named")
@@ -91,7 +88,7 @@ test_that("every bundled preset parses to a usable style", {
   for (p in presets) {
     s <- markdown_style(p)
     expect_s3_class(s, "gridmicrotex_markdown_style")
-    # A preset that contributes nothing is a preset with a typo in it.
+    # A preset that contributes nothing has a typo in it.
     expect_gt(length(s$rules), length(markdown_style()$rules))
     expect_false(is.null(.md_cascade(s, "h1")[["font-size"]]))
   }
@@ -146,8 +143,7 @@ test_that("lengths accept a bare number, a CSS string and a unit", {
 
 test_that("a unitless CSS string stays invalid, as it is in CSS", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # `font-size: 12` is ignored by a browser; only the R spelling
-  # md_style(font_size = 12) means a multiple.
+  # Only the R spelling md_style(font_size = 12) means a multiple.
   expect_null(.md_css_size("12", 20))
   expect_equal(.md_css_size(2.5, 20), 2.5)
   expect_equal(.md_css_size(grid::unit(10, "bigpts"), 20), 0.5)
@@ -202,7 +198,7 @@ test_that("each documented knob moves the thing it names", {
   expect_equal(wide$items[[1]]$x, lay_md("- one")$items[[1]]$x)
   expect_gt(wide$items[[2]]$x, lay_md("- one")$items[[2]]$x)
 
-  # bullet is the escape hatch for a marker glyph.
+  # bullet sets the marker glyph.
   expect_equal(lay_md("- one", "ul { bullet: Z }")$items[[1]]$grob$tex, "Z")
 
   # border-left is the quote bar.
@@ -246,8 +242,7 @@ test_that("a div with blank lines around it becomes a container block", {
   expect_equal(vapply(d$blocks, function(x) x$type, character(1)),
                c("heading", "paragraph"))
 
-  # Without blank lines cmark hands over one opaque block, which is
-  # dropped exactly as it was before divs meant anything.
+  # Without blank lines cmark gives one raw HTML block, which is dropped.
   expect_length(.md_parse_blocks("<div class=\"n\">\n**b**\n</div>"), 0L)
 })
 
@@ -278,8 +273,8 @@ test_that("a div styles the chunk inside it", {
   padded <- lay_md("<div style=\"padding-left: 3rem\">\n\nText.\n\n</div>")
   expect_equal(padded$items[[1]]$x - plain$items[[1]]$x, 36)
 
-  # A class matches the element carrying it and nothing else, as in CSS:
-  # the paragraph inside must not be indented a second time.
+  # A class matches only its own element: the paragraph inside is not
+  # indented a second time.
   once <- lay_md("<div class=\"note\">\n\nT.\n\n</div>",
                  ".note { padding-left: 2rem }")
   expect_equal(once$items[[1]]$x, 24)
@@ -307,8 +302,6 @@ test_that("a span resolves its class from the stylesheet", {
 })
 
 test_that("font-weight and font-style now work on a span", {
-  # Previously parsed and dropped: .md_parse_style() knew only colour,
-  # size, family and decoration.
   expect_match(.md_to_tex('<span style="font-weight: bold">b</span>'),
                "\\textbf{", fixed = TRUE)
   expect_match(.md_to_tex('<span style="font-weight: 700">b</span>'),
@@ -325,7 +318,6 @@ test_that("font-weight and font-style now work on a span", {
 # --- markdown_grob() and the global option -------------------------------
 
 test_that("markdown_grob() applies what compiles to LaTeX and ignores layout", {
-  # A heading had no size at all in the flattened path before this.
   expect_match(.md_to_tex("# H", 20, markdown_style()), "\\textscale{",
                fixed = TRUE)
   expect_match(.md_to_tex("# H", 20, .md_as_style("h1 { color: #FF0000 }")),
@@ -359,8 +351,7 @@ test_that("latex_options(markdown_style=) supplies a default both grobs use", {
 
 # --- emphasis actually renders (not just emitted) ------------------------
 
-# The font styles MicroTeX reports for a drawn document. 1 = plain,
-# 2 = bold, 4 = italic, 6 = both.
+# The font styles of a drawn document: 1 = plain, 2 = bold, 4 = italic.
 styles_of <- function(md, css = NULL, size = 12) {
   g <- markdown_box_grob(md, width = grid::unit(3, "in"), style = css,
                          gp = grid::gpar(fontsize = size))
@@ -393,15 +384,12 @@ test_that("emphasis inherits into quotes, list items and divs", {
 })
 
 test_that("emphasis applies to pre and to tables, as CSS says it should", {
-  # Code was once left plain: \text{} replaced the style around it. It
-  # keeps the text font it is in now, as LaTeX's does, so a bold `pre` is
-  # bold monospace (128 + 2 + 1).
+  # A bold `pre` is bold monospace (128 + 2 + 1).
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 131)
   expect_equal(styles_of("```\ncode\n```"), 129)
 
-  # Cell content is generated with its emphasis applied, so font-weight
-  # inherits from `table` into the cells.
+  # font-weight inherits from `table` into the cells.
   s <- styles_of("| a |\n|---|\n| 1 |", "table { font-weight: bold }")
   expect_true(all(bitwAnd(s, 2L) != 0L))
 })
@@ -485,14 +473,12 @@ test_that("a lone $$...$$ paragraph becomes a centred mathblock", {
   expect_identical(types("Before\n\n$$\\int_0^1 f(x)dx$$\n\nAfter"),
                    c("paragraph", "mathblock", "paragraph"))
 
-  # Inline math is untouched, and so is display math with prose beside it:
-  # the block form is only for a paragraph the span fills completely.
+  # Not when there is prose beside it.
   expect_identical(types("Inline $x^2$ here."), "paragraph")
   expect_identical(types("$$x$$ and text after"), "paragraph")
   expect_identical(types("Text $$x$$ before"), "paragraph")
 
-  # It is centred by default, where a paragraph states no alignment and
-  # inherits the box-wide halign instead.
+  # Centred by default; a paragraph has no alignment of its own.
   items <- lay_md("Before\n\n$$x^2$$\n\nAfter")$items
   expect_null(items[[1]]$align)
   expect_equal(items[[2]]$align, 0.5)
@@ -505,16 +491,14 @@ test_that("a markdown link is styled through the `a` tag", {
   tex <- function(md, style = NULL) .md_to_tex(md, style = .md_as_style(style))
   col <- gridmicrotex:::.MD_LINK_COLOR
 
-  # Blue and underlined by default, as a browser renders <a>, with ulem's
-  # underline, which wraps with the text as a browser's does.
+  # Blue and underlined by default, as a browser renders <a>.
   expect_equal(tex("[x](u)"), paste0("\\textcolor{", col, "}{\\uline{x}}"))
 
   # It is an ordinary tag, so a stylesheet overrides it.
   expect_match(tex("[x](u)", "a { color: red }"), "textcolor\\{#FF0000\\}",
                fixed = FALSE)
 
-  # The bold around it holds inside it, as LaTeX's does: nothing is
-  # re-opened.
+  # The bold around it holds inside it.
   expect_match(tex("**[x](u)**"), "\\textbf{\\textcolor{", fixed = TRUE)
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   fs <- markdown_grob("**[x](u)**")$layout_df$font_style
@@ -529,8 +513,7 @@ test_that("footnotes render markers inline and notes at the foot", {
                                character(1))
   md <- "Body[^one] more[^two].\n\n[^one]: First.\n\n[^two]: Second."
 
-  # CommonMark gathers the definitions at the end already, so the only
-  # thing added here is a single separator before the first one.
+  # A separator, then the notes.
   expect_identical(types(md),
                    c("paragraph", "thematic_break", "footnote", "footnote"))
 
@@ -538,8 +521,7 @@ test_that("footnotes render markers inline and notes at the foot", {
   expect_match(.md_to_tex("a[^x] b[^y]\n\n[^x]: f\n\n[^y]: s"),
                "textsuperscript\\{1\\}.*textsuperscript\\{2\\}")
 
-  # An inline label has no foot to put notes at: the marker stays, the
-  # definition is dropped.
+  # An inline label keeps the marker and drops the note.
   expect_match(.md_to_tex("Body[^one].\n\n[^one]: note"),
                "textsuperscript\\{1\\}")
   expect_false(grepl("note", .md_to_tex("Body[^one].\n\n[^one]: note"),
@@ -548,8 +530,7 @@ test_that("footnotes render markers inline and notes at the foot", {
   # A document without footnotes is completely unaffected.
   expect_identical(types("Just text."), "paragraph")
 
-  # A reference with no definition is left as the literal text CommonMark
-  # gives us, rather than erroring or emitting an empty superscript.
+  # A reference with no definition stays literal text.
   expect_silent(t <- .md_to_tex("dangling[^nope]"))
   expect_false(grepl("textsuperscript", t, fixed = TRUE))
 
@@ -572,13 +553,12 @@ tbl_tex <- function(style = NULL, avail = 0,
 }
 
 test_that("table CSS compiles to the tabular primitives MicroTeX has", {
-  # Row and cell fills are different primitives, as in HTML: tr is a row,
-  # td/th are cells.
+  # tr fills a row, td/th a cell.
   expect_match(tbl_tex("tr { background: #F6F8FA }"), "rowcolor{#F6F8FA}",
                fixed = TRUE)
   expect_match(tbl_tex("td { background: #DDDDDD }"), "cellcolor{#DDDDDD}",
                fixed = TRUE)
-  # A th fill is per-cell, and must not also emit a redundant row fill.
+  # A th fill is per-cell, with no redundant row fill.
   th <- tbl_tex("th { background: #EEEEEE }")
   expect_match(th, "cellcolor{#EEEEEE}", fixed = TRUE)
   expect_false(grepl("rowcolor", th, fixed = TRUE))
@@ -594,8 +574,6 @@ test_that("table CSS compiles to the tabular primitives MicroTeX has", {
 })
 
 test_that("a border of none or zero draws nothing", {
-  # .md_css_border() reports these as zero width, and both callers only
-  # asked whether a border had been declared at all.
   plain <- "{X>{\\raggedleft\\arraybackslash}X}"
   expect_match(tbl_tex("td { border-left: none }"), plain, fixed = TRUE)
   expect_match(tbl_tex("td { border-left: 0 }"), plain, fixed = TRUE)
@@ -613,8 +591,7 @@ test_that("a border of none or zero draws nothing", {
 
 test_that("tr border-bottom rules rows without doubling the bottom rule", {
   t <- tbl_tex("tr { border-bottom: 1px solid black }")
-  # One rule between the two body rows, and none before the closing
-  # \thickhline, which would otherwise draw two lines on top of each other.
+  # No rule directly before the closing \thickhline.
   expect_false(grepl("\\hline \\thickhline", t, fixed = TRUE))
   expect_match(t, "hline", fixed = TRUE)
 })
@@ -632,7 +609,7 @@ test_that("header cells are bold", {
 test_that("table-layout: fixed divides the measure into p{} columns", {
   # Content-sized by default: no p{} anywhere.
   expect_false(grepl("p{", tbl_tex(), fixed = TRUE))
-  # Without a known width there is nothing to divide, so it stays content-sized.
+  # Without a known width there is nothing to divide.
   expect_false(grepl("p{", tbl_tex("table { table-layout: fixed }", avail = 0),
                      fixed = TRUE))
   expect_match(tbl_tex("table { table-layout: fixed }", avail = 200),
@@ -655,8 +632,6 @@ test_that("a table fits the box, a fixed-layout one in even columns", {
   free <- meas(NULL)
   fixed <- meas("table { table-layout: fixed }")
 
-  # Both fit, their cells wrapping; the default's X columns share the width
-  # the table needs, the fixed one's divide the measure evenly.
   expect_lte(free[["w"]], free[["content"]] + 1)
   expect_lte(fixed[["w"]], fixed[["content"]] + 1)
 })
@@ -687,8 +662,7 @@ test_that("inline box properties compile to MicroTeX primitives", {
   expect_equal(span_tex("transform: rotate(45deg)"), "\\rotatebox{45}{hi}")
   expect_equal(span_tex("transform: scaleX(-1)"), "\\reflectbox{hi}")
 
-  # A border takes the background as \fcolorbox's fill, so \bgcolor must
-  # not paint it a second time.
+  # A border takes the background as \fcolorbox's fill, painted once.
   expect_equal(span_tex("border: 1px solid red; background: #EEEEEE"),
                "\\fcolorbox{#FF0000}{#EEEEEE}{hi}")
 })
@@ -739,8 +713,7 @@ test_that("a block background is a rect drawn behind the block", {
   expect_equal(length(bg$items), length(plain$items) + 2L)
   expect_s3_class(bg$items[[1]]$grob, "rect")
 
-  # It spans the column -- the thing no MicroTeX box command can do, since
-  # every one of them hugs its content.
+  # It spans the column, not just the text.
   expect_equal(bg$items[[1]]$w, 300)
 
   # And it covers the padding, not just the text.
@@ -753,8 +726,7 @@ test_that("strong and em are styleable tags, like code", {
   cols <- function(md, style) unique(stats::na.omit(
     markdown_grob(md, style = .md_as_style(style))$layout_df$color))
 
-  # The tag vocabulary is HTML's names, and ** / * produce strong / em,
-  # so a rule on those names has to reach them -- <code> always did.
+  # ** and * produce strong and em.
   expect_equal(cols("**b**", "strong { color: #B22222 }"), "#B22222")
   expect_equal(cols("*i*", "em { color: #1F6FB2 }"), "#1F6FB2")
 
@@ -767,7 +739,7 @@ test_that("strong and em are styleable tags, like code", {
   expect_match(tex, "\\textbf{", fixed = TRUE)
   expect_match(tex, "\\textcolor{#B22222}", fixed = TRUE)
 
-  # Unstyled output is byte-identical to before the tags were wired up.
+  # Unstyled output adds nothing.
   expect_equal(.md_to_tex("**b**"), "\\textbf{b}")
   expect_equal(.md_to_tex("*i*"), "\\textit{i}")
   expect_equal(.md_to_tex("***both***"), "\\textit{\\textbf{both}}")
@@ -775,10 +747,7 @@ test_that("strong and em are styleable tags, like code", {
 
 test_that("body {} styles the box itself", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # These are box properties, so .md_cascade() strips them out of the seed
-  # it hands the blocks -- a background on `body` must not become a
-  # background on every paragraph. That leaves the box as the only thing
-  # that can consume them.
+  # Box properties on `body` style the box, not every paragraph.
   plain <- .md_box_layout(markdown_box_grob("a note", width = grid::unit(3, "in")))
   expect_null(plain$box_gp)
   expect_equal(plain$padding, c(0, 0, 0, 0))
@@ -805,8 +774,7 @@ test_that("a body border with no colour of its own is still drawn", {
     .md_box_layout(markdown_box_grob("a note", width = grid::unit(3, "in"),
                                      style = css))$box_gp
   }
-  # CSS draws it in currentColor. It was dropped, because neither a fill
-  # nor a border colour had been given.
+  # CSS draws it in currentColor.
   plain <- box("body { border: 1px solid }")
   expect_false(is.null(plain))
   expect_null(plain$col)          # inherits the text colour
@@ -857,9 +825,6 @@ test_that("the padding/margin shorthand expands to the longhands", {
 
 test_that("background-color is accepted as a spelling of background", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # `background` is the shorthand this package stores; `background-color`
-  # is the real CSS property and what anyone writing a stylesheet types.
-  # It used to be dropped in silence, so the fill simply never appeared.
   fills <- function(...) {
     d <- markdown_grob(..., gp = grid::gpar(fontsize = 14))$layout_df
     sum(d$type %in% c("fill_rect", "fill_roundrect"))
@@ -875,16 +840,13 @@ test_that("background-color is accepted as a spelling of background", {
           style = ".hi { background-color: yellow; }"),
     1L)
 
-  # Both spellings land on one stored name, so nothing downstream has to
-  # know there were two.
+  # Both spellings are stored under one name.
   expect_equal(names(.md_parse_css("background-color: red")), "background")
   expect_equal(names(md_style(background_color = "red")), "background")
 })
 
 test_that("an unsupported property in a hand-written style= warns", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # md_style() errors on a misspelt property; a `style` attribute used to
-  # swallow it, so `colour: red` did nothing with no way to notice.
   expect_warning(
     markdown_grob("a <span style='colour:red'>S</span> c"),
     "colour")
@@ -897,9 +859,8 @@ test_that("an unsupported property in a hand-written style= warns", {
   expect_no_warning(markdown_grob("a <span style='color:red'>S</span> c"))
   expect_no_warning(markdown_grob("a <span style='background-color:red'>S</span> c"))
 
-  # A pasted stylesheet is deliberately exempt: it is expected to carry
-  # properties this package cannot honour, and warning about those would
-  # punish exactly the leniency that makes pasting one safe.
+  # A pasted stylesheet is exempt: it is expected to carry properties this
+  # package cannot honour.
   expect_no_warning(
     markdown_grob("a <span class='x'>S</span> c",
                   style = ".x { float: left; display: block; color: red; }"))

@@ -1158,64 +1158,38 @@ heightDetails.markdownbox <- function(x) {
 #' Render a markdown document as a boxed grid grob
 #'
 #' @description
-#' Lays markdown out as a block document (headings, paragraphs, lists
-#' (including GFM task lists), block quotes, code blocks, tables,
-#' horizontal rules and images) inside an optional padded, filled and
-#' bordered box. Prose wraps to the requested width, and \code{$...$}
-#' math is typeset by MicroTeX as usual. All the inline formatting
-#' \code{\link{markdown_grob}} understands, including the inline HTML
-#' subset, works inside every block.
+#' Draws a markdown document (headings, paragraphs, lists, task lists,
+#' quotes, code, tables, rules and images) inside an optional box. Text
+#' wraps to `width`, and math goes between `$...$`. Everything
+#' [markdown_grob()] supports works inside each block.
 #'
 #' @details
-#' Where \code{\link{markdown_grob}} flattens everything into a single
-#' run, this stacks one grob per block, which is what makes margins,
-#' padding, background fills, borders and block-quote rules possible. Each
-#' block's content is LaTeX text laid out by the engine, so it wraps,
-#' coloured, sized, underlined and highlighted spans included, and a
-#' block's \code{text-align} aligns each of its lines.
+#' A table that is too wide for the box wraps its widest columns;
+#' `table-layout: fixed` gives the columns equal widths instead. Code
+#' lines do not wrap.
 #'
-#' A table is as wide as its content when that fits the box. When it does
-#' not, its wide columns share the width the others leave and their cells
-#' wrap, as an HTML table shrinks to its container; \code{table-layout:
-#' fixed} divides the width evenly between the columns instead. Code lines
-#' are not wrapped.
-#'
-#' An image on a line of its own is drawn as a block, scaled to fit the
-#' column but never enlarged past its natural size (pixels are read at
-#' 96 dpi); an image \emph{within} a sentence is drawn inline, and so is an
-#' \code{<img>} tag, even alone on its line. It must be
-#' a local PNG, JPEG or SVG file, read by \pkg{png}, \pkg{jpeg} or
-#' \pkg{rsvg} respectively, all \emph{Suggests} and needed only for their
-#' own format. An image that cannot be drawn -- a missing file, a URL,
-#' another format, or a reader that is not installed -- is an error when
-#' the grob is built, saying which.
-#'
-#' The layout is computed at draw time, so an open device is required,
-#' which is what lets a relative \code{width} and the measured height of
-#' the text resolve against the viewport the box is actually drawn in.
+#' An image on its own line is a block, scaled down to fit; an image
+#' inside a sentence is inline. Images must be local PNG, JPEG or SVG
+#' files, and need the png or jpeg package, or rsvg and grImport2 for SVG.
+#' An image that cannot be drawn is an error.
 #'
 #' @section Styling:
-#' Appearance comes from a small CSS cascade. \code{style} sets the house
-#' style for the whole document, by tag:
+#' `style` sets the look of each tag:
 #'
 #' \preformatted{markdown_box_grob(md, style = markdown_style(
 #'   h1         = md_style(color = "steelblue", font_size = 2),
 #'   blockquote = md_style(border_left = "3px solid grey60")
 #' ))}
 #'
-#' The same thing written as CSS, which \code{style} also takes directly,
-#' as text or as the path to a \code{.css} file:
+#' Or the same as CSS, as text or a `.css` file:
 #'
 #' \preformatted{markdown_box_grob(md, style = "
 #'   h1 \{ color: steelblue; font-size: 2rem \}
 #'   blockquote \{ border-left: 3px solid grey60 \}
 #' ")}
 #'
-#' To style one chunk rather than every block of a kind, wrap it in a
-#' \code{<div>} carrying a \code{class} or a \code{style}. \strong{Leave
-#' blank lines around the tags}: that is what makes CommonMark parse
-#' the markdown between them instead of treating the whole thing as raw
-#' HTML:
+#' To style one part, wrap it in a `<div>` with a `class` or `style`,
+#' with blank lines around the tags:
 #'
 #' \preformatted{<div class="note">
 #'
@@ -1223,45 +1197,35 @@ heightDetails.markdownbox <- function(x) {
 #'
 #' </div>}
 #'
-#' Inline runs take \code{class} as well as \code{style} on a
-#' \code{<span>}. See \code{\link{markdown_style}} for the tag names, the
-#' supported properties and how the cascade resolves.
+#' `<span class="...">` works the same inside a line. See
+#' [markdown_style()] for tag names and [md_style()] for properties.
 #'
-#' @param md Character string of markdown.
-#' @param x,y Position of the box in the parent viewport.
-#' @param width Width of the box, including \code{margin}. \code{NULL}
-#'   sizes the box to its content, so nothing wraps: useful where the
-#'   available width is not known, as in a ggplot2 theme element.
-#' @param height Fixed height, or \code{NULL} (default) to take whatever
-#'   height the content needs.
-#' @param hjust,vjust Justification of the whole box about \code{x} and
-#'   \code{y}.
-#' @param halign Horizontal alignment of blocks within the box:
-#'   \code{0} left (default), \code{0.5} centred, \code{1} right.
-#' @param valign Vertical alignment of the content when \code{height}
-#'   leaves room to spare: \code{1} top (default), \code{0} bottom.
-#' @param padding,margin A \code{\link[grid]{unit}} of length 1 or 4
-#'   giving top, right, bottom and left. Padding is inside the box,
-#'   margin outside it. \code{NULL} (default) takes them from the
-#'   stylesheet's \code{body} rule, and is zero if that says nothing.
-#' @param box_gp Graphical parameters for the box itself, e.g.
-#'   \code{gpar(fill = "grey95", col = "black")}. \code{NULL} (default)
-#'   takes the fill from \code{body \{ background \}} and the border from
-#'   \code{body \{ border \}}, and draws no box if neither is set.
-#' @param r Corner radius; a non-zero value draws a rounded box.
-#'   \code{NULL} (default) takes it from \code{body \{ border-radius \}}.
-#' @param style Appearance of the blocks: a \code{\link{markdown_style}}
-#'   object, CSS text, or a path to a \code{.css} file. \code{NULL}
-#'   (default) uses \code{latex_options("markdown_style")} if set, and
-#'   the built-in defaults otherwise.
-#' @param name Optional grob name.
-#' @param gp Graphical parameters for the text. \code{fontsize} also sets
-#'   the scale for block spacing and list indentation, and \code{cex}
-#'   multiplies it as elsewhere in \pkg{grid}.
-#' @param vp Optional viewport. Supplying one replaces the viewport built
-#'   from \code{x}, \code{y}, \code{width}, \code{height}, \code{hjust}
-#'   and \code{vjust}, so those are then ignored.
-#' @return A \code{markdownbox} gTree.
+#' @param md Markdown, as a character string.
+#' @param x,y Position of the box.
+#' @param width Width of the box. `NULL` fits the box to its content, with
+#'   no wrapping.
+#' @param height Height of the box. `NULL` (default) fits the content.
+#' @param hjust,vjust Justification of the box about `x` and `y`.
+#' @param halign Alignment of blocks in the box: `0` left (default),
+#'   `0.5` centre, `1` right.
+#' @param valign Vertical alignment of the content when `height` leaves
+#'   room: `1` top (default), `0` bottom.
+#' @param padding,margin A [grid::unit()] of length 1, or 4 for top,
+#'   right, bottom and left. Padding is inside the box, margin outside.
+#'   `NULL` (default) uses the style's `body` rule.
+#' @param box_gp Fill and border of the box, such as
+#'   `gpar(fill = "grey95", col = "black")`. `NULL` (default) uses the
+#'   style's `body` rule, and draws no box if it has none.
+#' @param r Corner radius. `NULL` (default) uses the style's `body` rule.
+#' @param style A [markdown_style()], CSS text, or a path to a `.css`
+#'   file. `NULL` (default) uses `latex_options("markdown_style")`, if
+#'   set.
+#' @param name Grob name.
+#' @param gp Graphical parameters for the text. `fontsize` also scales
+#'   the spacing between blocks.
+#' @param vp A viewport. If given, `x`, `y`, `width`, `height`, `hjust`
+#'   and `vjust` are ignored.
+#' @return A grob of class `"markdownbox"`.
 #' @seealso \code{\link{markdown_grob}}, \code{\link{latex_grob}}
 #' @export
 #'

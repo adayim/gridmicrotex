@@ -7,27 +7,23 @@
 md_style(...)
 }
 \arguments{
-\item{...}{Named declarations.}
+\item{...}{Properties, as named arguments.}
 }
 \value{
 An object of class \code{gridmicrotex_md_style}.
 }
 \description{
-A set of CSS declarations, for use as a named argument to
-\code{\link{markdown_style}}. Argument names are the CSS property
-names with underscores in place of hyphens, so \code{font_size} sets
-\code{font-size}.
+CSS properties for one tag, for use in \code{\link[=markdown_style]{markdown_style()}}. Names are
+CSS property names with \verb{_} for \code{-}, so \code{font_size} sets \code{font-size}.
 }
 \details{
-Lengths accept three forms: a bare number is \code{rem}, a multiple of
-the body font size (\code{font_size = 2.5}); a string is whatever CSS
-says it is (\code{"2.5em"}, \code{"12pt"}, \code{"150\%"}); and a
-\code{\link[grid]{unit}} is absolute.
+A length can be a number, meaning a multiple of the body font size
+(\code{font_size = 2.5}); a CSS string such as \code{"2.5em"} or \code{"12pt"}; or a
+\code{\link[grid:unit]{grid::unit()}}.
 
-These are the supported properties, and where each one has an effect.
-\emph{Inline} means it also works on a \code{<span>} and in
-\code{\link{markdown_grob}}, which has no block layout; \emph{block}
-means it needs \code{\link{markdown_box_grob}}.
+The supported properties are below. \emph{Inline} ones also work on a
+\verb{<span>} and in \code{\link[=markdown_grob]{markdown_grob()}}; \emph{block} ones need
+\code{\link[=markdown_box_grob]{markdown_box_grob()}}.
 
 \tabular{lll}{
 \strong{property} \tab \strong{scope} \tab \strong{notes} \cr
@@ -69,33 +65,22 @@ width evenly between the columns \cr
 \code{marker_gap} \tab \code{ul}, \code{ol} \tab marker to text \cr
 }
 
-\code{font_size} also accepts CSS's keywords (\code{xx-small} through
-\code{xx-large}, plus \code{smaller} and \code{larger}), taken from the
-\code{\\tiny}..\code{\\Huge} ladder MicroTeX implements.
+\code{font_size} also takes the keywords \code{xx-small} to \code{xx-large},
+\code{smaller} and \code{larger}.
 
-\strong{The \code{body} rule styles the box itself.} On any other tag,
-\code{background}, \code{border}, \code{border_radius}, \code{padding}
-and \code{margin} apply to that block. On \code{body} they apply to the
-whole \code{\link{markdown_box_grob}}: its fill, its frame, its
-corner radius, and the space inside and outside it. That is the only
-way to give a \code{\link{element_markdown}} title a background, since
-the theme element takes no box arguments of its own:
+On \code{body}, \code{background}, \code{border}, \code{border_radius}, \code{padding} and
+\code{margin} style the box of \code{\link[=markdown_box_grob]{markdown_box_grob()}} or of an
+\code{\link[=element_markdown]{element_markdown()}} title:
 
 \preformatted{body \{ background: grey95; padding: 8px;
         border: 1px solid grey60; border-radius: 4px \}}
 
-An explicit \code{box_gp}, \code{padding}, \code{margin} or \code{r}
-argument to \code{markdown_box_grob()} wins over the rule, the way an
-inline style wins in CSS.
+The \code{box_gp}, \code{padding}, \code{margin} and \code{r} arguments of
+\code{markdown_box_grob()} override this rule.
 
-Anything else is an error: unlike a pasted stylesheet, where an
-unknown property is ignored the way a browser ignores it.
-
-\strong{What cannot be styled at all.} There is no small-caps
-(\code{\\textsc} is not a MicroTeX command), no
-\code{font-variant-numeric}, no right-to-left or bidirectional text,
-and no padding inside an inline \code{border}: MicroTeX has no
-\code{\\fboxsep}, so that inset is fixed.
+An unknown property is an error here, but is ignored in CSS text.
+Small caps, \code{font-variant-numeric} and padding inside an inline
+\code{border} are not supported.
 }
 \examples{
 md_style(color = "steelblue", font_size = 2.5, margin_top = 1.2)

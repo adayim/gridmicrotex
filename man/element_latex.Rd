@@ -15,67 +15,44 @@ element_latex(
 )
 }
 \arguments{
-\item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
-Use \code{""} (default) for Lete Sans Math, which pairs with R's
-default sans-serif text font.
-See \code{\link{available_math_fonts}} for loaded fonts.}
+\item{math_font}{Math font: \code{"lete"} (Lete Sans Math, the default),
+\code{"stix"} (STIX Two Math), or one added with \code{\link[=load_math_font]{load_math_font()}}. See
+\code{\link[=available_math_fonts]{available_math_fonts()}}.}
 
-\item{fontsize}{Convenience alias for \code{size}; when supplied,
-it is forwarded to \code{ggplot2::element_text()} as the text size
-in points. If \code{NULL} (default), the theme's inherited size is
-used.}
+\item{fontsize}{Font size in points. \code{NULL} (default) uses the theme's
+size.}
 
-\item{lineheight}{Multi-line height multiplier (default 1.2), matching
-\code{grid::gpar()} semantics.}
+\item{lineheight}{Line spacing (default 1.2).}
 
-\item{max_width}{Numeric maximum width in big points for automatic
-line wrapping.  Use \code{0} (default) for no wrapping.}
+\item{max_width}{Width in big points (1/72 inch) at which lines wrap.
+\code{0}, the default, does not wrap.}
 
-\item{input_mode}{How \code{tex} is read.
-\code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
-with math between \code{$...$} or \code{\\(...\\)}, and a newline
-starts a new line, as \code{"\\n"} does in R.
-\code{"math"} reads the whole string as math, as between \code{$...$},
-so a word is set as italic letters; write text as \code{\\text{...}}.
-\code{"document"} reads a LaTeX document body by LaTeX's own rules: a
-newline is a space, a blank line (or \code{\\par}) starts an indented
-paragraph, \code{\\section} and its kin are numbered headings, and
-display math is centred on a line of its own. Give \code{max_width} to
-break the paragraphs into lines. The default can be set for the
-session with \code{\link{latex_options}(input_mode = )}.}
+\item{input_mode}{How \code{tex} is read:
+\itemize{
+\item \code{"mixed"} (default): text, with math between \verb{$...$} or \verb{\\(...\\)}.
+A newline starts a new line.
+\item \code{"math"}: everything is math; write text in \verb{\\text\{\}}.
+\item \code{"document"}: a LaTeX document body, with paragraphs, numbered
+headings and displayed equations. Use it with \code{max_width}.
+}}
 
-\item{render_mode}{Character string: \code{"typeface"} (default) renders
-glyphs as native text using the math font, producing
-selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_math_font}}
-are read directly from their OTF files: no system-wide font
-install is required.
-Falls back to path mode automatically on devices that lack the
-R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
-\code{postscript()}, which cannot embed the math font.
-For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
-\code{"path"} renders math symbols as filled vector paths (works on
-all devices but text is not selectable in PDF/SVG).}
+\item{render_mode}{\code{"typeface"} (default) draws glyphs as text, which
+can be selected in PDF and SVG output. It needs a device such as
+ragg, svglite or \code{\link[grDevices:cairo]{grDevices::cairo_pdf()}}, and falls back to
+\code{"path"} on others, such as \code{pdf()}. \code{"path"} draws glyphs as
+outlines, which works on every device.}
 
-\item{...}{Additional arguments passed to \code{ggplot2::element_text()}
-(e.g., \code{size}, \code{colour}, \code{hjust}).}
+\item{...}{Passed to \code{\link[ggplot2:element]{ggplot2::element_text()}}, such as \code{colour} or
+\code{hjust}.}
 }
 \value{
-An S7 object of class \code{element_latex}, inheriting from
-\code{ggplot2::element_text}.
+A theme element of class \code{element_latex}, a kind of
+\code{element_text}.
 }
 \description{
-Use this as a theme element for axis titles, axis labels, plot titles,
-or any other text element in a ggplot2 theme. The text string is parsed
-as LaTeX math and rendered via MicroTeX.
-}
-\details{
-Dollar signs (\code{$...$}) in the label text are stripped automatically
-so that both \code{"\\frac{a}{b}"} and \code{"$\\frac{a}{b}$"} work.
-
-This element is an S7 subclass of \code{ggplot2::element_text}, so it
-inherits all standard text properties (size, colour, hjust, etc.) from
-the theme and supports \code{merge_element()} correctly.
+A theme element that renders text, such as an axis or plot title, as
+LaTeX. The \code{$} signs are optional. It takes the same settings as
+\code{\link[ggplot2:element]{ggplot2::element_text()}} and inherits from the theme like it.
 }
 \examples{
 \donttest{

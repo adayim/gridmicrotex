@@ -1,7 +1,5 @@
-# Mixed mode is read by the parser itself: prose, math in `$...$` and its
-# kin, and a line end in the prose as a line break. These pin down what
-# that reading does; test-latex-wrap.R covers latex_wrap(), which markdown
-# still uses.
+# Mixed mode: prose, math in `$...$` and its kin, and a line end in the
+# prose as a line break. test-latex-wrap.R covers latex_wrap().
 
 records <- function(tex, mode = "mixed") {
   latex_tree(tex, input_mode = mode, render_mode = "typeface")$records
@@ -22,8 +20,7 @@ test_that("a label lays out as its wrapped form did", {
               "A \\(x\\) B", "A \\[x\\] B")) {
     expect_identical(records(s), suppressWarnings(records(latex_wrap(s), "math")), info = s)
   }
-  # Except a tabular's cells, which are text in a label, as in LaTeX, where
-  # the wrapped form kept them math.
+  # Except a tabular's cells, which are text in a label, as in LaTeX.
   s <- "x\n\\begin{tabular}{l}p q\\end{tabular}"
   expect_identical(texts(s)$text, c("x", "p q"))
 })

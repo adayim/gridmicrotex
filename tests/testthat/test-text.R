@@ -43,11 +43,8 @@ test_that("reflectbox leaves rotation at 0", {
 })
 
 test_that("rotation past a quarter turn is not read as a reflection", {
-  # The mirror test used to be `a < 0`, and `a` is cos(theta): true of a
-  # \reflectbox, but equally true of every rotation past 90 degrees. Those
-  # angles came out 180 degrees away from what was asked -- a vertical
-  # label upside down -- and took a reflection's x-shift with them. The
-  # sign of the determinant is the test that separates the two.
+  # A rotation past 90 degrees is not a reflection: the sign of the
+  # determinant tells them apart, cos(theta) does not.
   for (deg in c(30, 89, 90, 91, 135, 180, 270, -90)) {
     layout <- parse_latex_cpp(sprintf("\\rotatebox{%d}{\\mbox{Ab}}", deg),
                               text_size = 20)

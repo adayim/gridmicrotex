@@ -1,7 +1,5 @@
-# LaTeX's document commands, which a single grob has no use for, are read by
-# the front end itself: dropped, or drawn as their nearest equivalent. Each
-# input must draw exactly what its equivalent draws. (They were rewritten in
-# R before the parse until 0.2.0.)
+# LaTeX's document commands are dropped or drawn as their nearest
+# equivalent. Each input must draw exactly what its equivalent draws.
 
 layout_of <- function(tex, mode = "mixed") {
   t <- latex_tree(tex, input_mode = mode, render_mode = "path")
@@ -22,10 +20,8 @@ test_that("the preamble, title metadata and alignment declarations draw nothing"
 })
 
 test_that("a whole file's preamble is read for its definitions and not drawn", {
-  # LaTeX draws nothing before \begin{document}; a paper's preamble is full
-  # of package settings a grob cannot honour, which must neither be drawn
-  # nor warned about. Its definitions still hold, and what follows
-  # \end{document} is ignored, as in LaTeX.
+  # Nothing in it is drawn or warned about, its definitions hold, and what
+  # follows \end{document} is ignored.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   file <- paste(
     "\\documentclass{article}",
@@ -63,10 +59,6 @@ test_that("a whole file's preamble is read for its definitions and not drawn", {
 })
 
 test_that("nothing begun in the preamble reaches into the body", {
-  # A declaration runs to the end of its group, an environment or a list to
-  # its \end, \over takes the rest of its list, and a macro reads its
-  # arguments wherever they are: begun in the preamble, none may take the
-  # body into what is read only for its definitions.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   file <- function(pre) {
     paste0("\\documentclass{article}\n", pre,
@@ -88,8 +80,7 @@ test_that("nothing after \\end{document} is read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   body <- "\\documentclass{article}\n\\begin{document}Hello\\end{document}\n"
   plain <- layout_of(body, "document")
-  # Not taken into the body (\over), not a capacity error (a runaway), not
-  # warned about.
+  # Not taken into the body, not an error, not warned about.
   for (post in c("a \\over b", "\\def\\a{\\a}\\a", "} { $ \\unknown", "\\begin{itemize}")) {
     expect_silent(got <- layout_of(paste0(body, post), "document"))
     expect_identical(got, plain, info = post)
@@ -111,8 +102,7 @@ test_that("booktabs rules are drawn as the engine's rules", {
   expect_draws_as(
     "\\begin{tabular}{lr}\\toprule x & y \\\\ \\midrule 1 & 2 \\\\ \\bottomrule\\end{tabular}",
     "\\begin{tabular}{lr}\\thickhline x & y \\\\ \\hline 1 & 2 \\\\ \\thickhline\\end{tabular}")
-  # \cmidrule keeps its column range; its width and trims have nothing to
-  # act on.
+  # \cmidrule keeps its column range; width and trims are ignored.
   for (rule in c("\\cmidrule{2-3}", "\\cmidrule(lr){2-3}", "\\cmidrule[2pt]{2-3}",
                  "\\cmidrule[2pt](lr){2-3}")) {
     expect_draws_as(
@@ -127,8 +117,7 @@ test_that("text commands a grob has no equivalent for are drawn as the nearest",
   expect_draws_as("\\emph{a $x_{i}$ b}", "\\textit{a $x_{i}$ b}")
   expect_draws_as("a\\par b", "a\\\\b")
   expect_draws_as("a\\newline b", "a\\\\b")
-  # Fixed space: a grob has no glue to fill. A space after a command word
-  # is dropped, as in TeX.
+  # Fixed space. A space after a command word is dropped, as in TeX.
   expect_draws_as("a\\smallskip b", "a\\vspace{0.25em}b")
   expect_draws_as("a\\medskip b", "a\\vspace{0.5em}b")
   expect_draws_as("a\\bigskip b", "a\\vspace{1em}b")
@@ -145,13 +134,11 @@ test_that("a caption is a line of text where it is written", {
 })
 
 test_that("a caption, note or run-in heading is set once per line it runs over", {
-  # As \textbf{a\\b} is. They were rebuilt through the handlers, which do
-  # not know them, and drawn as red names with their text lost.
+  # As \textbf{a\\b} is.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_draws_as("\\caption{one\\\\two}", "\\text{one}\\\\\\text{two}\\\\")
   expect_draws_as("\\paragraph{One\\\\Two} text", "\\paragraph{One}\\\\\\paragraph{Two} text")
-  # \footnote warns that it has no page, once per note, so the two are
-  # compared without their warnings.
+  # \footnote warns once per note, so compare without the warnings.
   drawn <- function(tex, mode) {
     l <- suppressWarnings(layout_of(tex, mode))
     attr(l$records, "diagnostics") <- NULL
@@ -166,15 +153,13 @@ test_that("a caption, note or run-in heading is set once per line it runs over",
 test_that("links look like LaTeX's, and a URL is drawn as written", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   col <- gridmicrotex:::.MD_LINK_COLOR
-  # hyperref with colorlinks colours a link and does not underline it; the
-  # url package sets a URL in monospace.
+  # As hyperref with colorlinks: coloured, not underlined; a URL in monospace.
   expect_draws_as("\\href{https://ex.org}{the text}",
                   sprintf("\\textcolor{%s}{the text}", col))
   expect_draws_as("\\href{u}{\\textbf{b}}", sprintf("\\textcolor{%s}{\\textbf{b}}", col))
   expect_draws_as("\\url{https://ex.org}",
                   sprintf("\\textcolor{%s}{\\texttt{https://ex.org}}", col))
-  # A URL's specials are characters: `_` opens no subscript, `%` no comment,
-  # `#` and `~` are themselves.
+  # A URL's specials are characters.
   expect_draws_as("\\url{a.io/x_y}", sprintf("\\textcolor{%s}{\\texttt{a.io/x\\_y}}", col))
   expect_draws_as("\\url{a.io/x%20y} tail",
                   sprintf("\\textcolor{%s}{\\texttt{a.io/x\\%%20y}} tail", col))
@@ -182,11 +167,11 @@ test_that("links look like LaTeX's, and a URL is drawn as written", {
                   sprintf("\\textcolor{%s}{\\texttt{a.io/\\char126{}u\\#top}}", col))
   expect_draws_as("\\href{a.io/%7E#x}{t} tail", sprintf("\\textcolor{%s}{t} tail", col))
   expect_warning(latex_dims("\\href{only-one-group}"), "missing argument for \\\\href")
-  # Nothing in a URL is a command: `\b` is a macro elsewhere.
+  # Nothing in a URL is a command.
   r <- latex_tree("\\url{a\\b{c}d}")$records
   expect_equal(r$text, "a\\b{c}d")
   # An \href's text is in the mode around it, and a line break in it ends
-  # the line of a label with the rest still a link.
+  # the line with the rest still a link.
   expect_draws_as("$\\href{u}{x^2}$", sprintf("$\\textcolor{%s}{x^2}$", col))
   r <- latex_tree("\\href{u}{a\nb}")$records
   expect_equal(r$color, c(col, col))
@@ -199,8 +184,7 @@ test_that("a starred environment is its plain form", {
   expect_draws_as("\\begin{alignat*}{1}a&=b\\end{alignat*}",
                   "\\begin{alignat}{1}a&=b\\end{alignat}")
   expect_draws_as("\\begin{equation*}x\\end{equation*}", "\\begin{equation}x\\end{equation}")
-  # tabular* takes a width before its column spec; a grob is as wide as
-  # its content.
+  # tabular*'s width is ignored.
   expect_draws_as("\\begin{tabular*}{\\textwidth}{lcr}a&b&c\\end{tabular*}",
                   "\\begin{tabular}{lcr}a&b&c\\end{tabular}")
 })

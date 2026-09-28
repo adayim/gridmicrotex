@@ -3,57 +3,34 @@
 \name{markdown_grob}
 \alias{markdown_grob}
 \alias{grid.markdown}
-\title{Render markdown as a grid grob}
+\title{Render a markdown label as a grid grob}
 \usage{
 markdown_grob(md, style = NULL, ...)
 
 grid.markdown(md, ...)
 }
 \arguments{
-\item{md}{Character string of markdown.}
+\item{md}{Markdown, as a character string.}
 
-\item{style}{Appearance of the text: a \code{\link{markdown_style}}
-object, CSS text, or a path to a \code{.css} file. \code{NULL}
-(default) uses \code{latex_options("markdown_style")} if set, and
-the built-in defaults otherwise. Only the properties \code{md_style}
-marks as \emph{inline} apply here: there is no block layout in a
-single run for a margin, an indent or an alignment to act on, so
-those are ignored. \code{\link{markdown_box_grob}} honours them all.}
+\item{style}{A \code{\link[=markdown_style]{markdown_style()}}, CSS text, or a path to a \code{.css}
+file. \code{NULL} (default) uses \code{latex_options("markdown_style")}, if
+set. Only properties marked \emph{inline} in \code{\link[=md_style]{md_style()}} apply.}
 
-\item{...}{Passed to \code{\link{latex_grob}}: e.g. \code{x},
-\code{y}, \code{hjust}, \code{vjust}, \code{rot}, \code{max_width},
-\code{gp}.}
+\item{...}{Passed to \code{\link[=latex_grob]{latex_grob()}}, such as \code{x}, \code{y}, \code{hjust},
+\code{vjust}, \code{rot}, \code{max_width} and \code{gp}.}
 }
 \value{
-A \code{latexgrob}, as returned by \code{\link{latex_grob}}.
+A grob, as from \code{\link[=latex_grob]{latex_grob()}}. \code{grid.markdown()} draws it and
+returns it invisibly.
 }
 \description{
-Parses a markdown string and returns a grid grob, so plot labels can
-mix ordinary prose formatting with real LaTeX math. Inline markdown
-(\code{**bold**}, \code{*italic*}, \code{`code`}, \code{~~strike~~})
-is translated to the equivalent LaTeX commands, while \code{$...$}
-(and \code{\\(...\\)}, \code{$$...$$}, \code{\\[...\\]}) math spans
-are passed through to MicroTeX byte-for-byte.
+Draws a line of markdown, such as a plot title, with LaTeX math between
+\verb{$...$}. \verb{**bold**}, \verb{*italic*}, \code{`code`} and \verb{~~strike~~} work,
+and so does some inline HTML. For headings, lists, tables and other
+blocks, use \code{\link[=markdown_box_grob]{markdown_box_grob()}}.
 }
 \details{
-Markdown and LaTeX disagree about several characters: most
-importantly \code{\\}, which CommonMark treats as an escape. Math
-spans are therefore hidden from the markdown parser before it runs and
-restored afterwards, so constructs like
-\code{$\\begin{matrix}a\\\\b\\end{matrix}$} survive intact.
-
-That hiding uses three private-use codepoints (\code{U+E000},
-\code{U+E001}, \code{U+E002}) as markers, so those three characters
-are \emph{removed} from the input. They are unassigned in Unicode, but
-icon fonts such as Nerd Fonts do put real glyphs there: if your text
-contains one it will be dropped rather than drawn. The alternative is
-worse: a pasted marker would be spliced together with a math span
-on the way back out and silently duplicate a formula.
-
-GFM has no markdown syntax for colour, underline, super/subscript,
-highlight or size, so these come from inline HTML, as in CommonMark
-and as \pkg{ggtext} does. Each tag renders as HTML's own
-default rendering prescribes:
+These HTML tags are supported:
 
 \tabular{ll}{
 \strong{tag} \tab \strong{effect} \cr
@@ -66,66 +43,30 @@ default rendering prescribes:
 \code{<sub>}, \code{<sup>} \tab sub / superscript \cr
 \code{<mark>} \tab yellow highlight \cr
 \code{<small>}, \code{<big>} \tab smaller / larger \cr
-\code{<q>} \tab wrapped in quotation marks \cr
+\code{<q>} \tab quotation marks \cr
 \code{<br>} \tab line break \cr
 \code{<span style="...">} \tab see below
 }
 
-A \code{style} attribute is read for \code{color} (any R colour name,
-the nine CSS names R lacks (\code{crimson}, \code{teal},
-\code{rebeccapurple} and friends), \code{#rgb}, \code{#rrggbb} or
-\code{rgb()}; note that \code{green}, \code{gray}, \code{grey},
-\code{maroon} and \code{purple} keep their R values, not their CSS
-ones),
-\code{text-decoration} (\code{underline}, \code{line-through}),
-\code{font-size} (\code{pt}, \code{px}, \code{in}, \code{cm},
-\code{mm}, \code{em}, \code{rem}, \code{\%}, \code{smaller},
-\code{larger}) and \code{font-family}. Any other property is ignored.
+A \code{style} attribute can set \code{color}, \code{text-decoration} (\code{underline},
+\code{line-through}), \code{font-size} (such as \verb{12pt}, \verb{1.2em} or \code{smaller})
+and \code{font-family}; other properties are ignored. Colours
+are R colour names, CSS names, \verb{#rgb}, \verb{#rrggbb} or \code{rgb()}.
+\code{font-family} takes \code{serif}, \code{sans-serif}, \code{monospace} or an installed
+font; to use a font file that is not installed, register it first with
+\code{systemfonts::register_font()}.
 
-\code{font-family} takes the CSS generics \code{monospace},
-\code{sans-serif} and \code{serif}, or any font name; a fallback list
-resolves to its first entry. The name is handed to
-\code{gp$fontfamily}, so \emph{the device resolves it}: \pkg{ragg} and
-\pkg{svglite} see any installed family plus anything registered with
-\code{systemfonts::register_font()}, cairo devices see installed
-families, and base \code{pdf()} sees only what \code{pdfFonts()}
-declares: a named family will not resolve there. An unavailable
-font falls back silently, as it does for \code{gpar(fontfamily=)}.
-A font file that is not installed system-wide is used by registering
-it first:
-
-\preformatted{systemfonts::register_font(name = "MyFont", plain = "MyFont.otf")}
-
-\code{\link{load_math_font}} is \emph{not} the function for this:
-it registers \emph{math} fonts with MicroTeX, which is a different
-mechanism.
-
-A span's own family wins over \code{gp$fontfamily}, but the width of
-the spaces \emph{between} its words still comes from
-\code{gp$fontfamily}; set both to the same family if that shows.
-
-Tags nest and combine freely with markdown. Any other tag (and all
-block-level HTML) is dropped, keeping the text inside it, which is
-also what a browser shows for the ones (\code{<a>}, \code{<abbr>},
-\code{<span>} without a style) that have no default rendering.
-
-Not every markdown feature has a MicroTeX equivalent. Links keep their
-text and drop the destination. An image is drawn inline from a local
-PNG, JPEG or SVG file, and one that cannot be drawn is an error, as
-for \code{\\includegraphics} in \code{\link{latex_grob}}.
-
-Everything is flattened into a single run here, with paragraphs joined
-by line breaks: there is no block layout, so indentation, list markers
-and block-quote rules need \code{\link{markdown_box_grob}}. A heading
-still takes the size and weight its \code{style} gives it, since those
-compile to LaTeX commands rather than to layout.
+Tags nest and can hold markdown and math. Other tags are dropped and
+their text kept. Links keep their text only. Images must be local PNG,
+JPEG or SVG files. The characters U+E000 to U+E002 are removed from the
+input.
 }
 \examples{
 \donttest{
   grid::grid.newpage()
-  grid.markdown("The **fitted** slope is $\\\\beta_1$, *p* < 0.001")
+  grid.markdown(r"(The **fitted** slope is $\beta_1$, *p* < 0.001)")
 }
 }
 \seealso{
-\code{\link{latex_grob}}, \code{\link{latex_wrap}}
+\code{\link[=markdown_box_grob]{markdown_box_grob()}}, \code{\link[=geom_markdown]{geom_markdown()}}
 }

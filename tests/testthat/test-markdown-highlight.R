@@ -1,5 +1,3 @@
-# Helpers shared by the tests below.
-
 # The class of each character of one line, as a plain vector.
 hl <- function(line, lang) {
   cls <- .hl_classes(line, lang)
@@ -17,8 +15,7 @@ class_of <- function(line, lang, what) {
 
 # Width of a code line in bigpts, as the emitter renders it.
 code_w <- function(line, cls = NULL) {
-  # Its own device: converting a unit with none open opens R's default one
-  # and leaves it open for every later test.
+  # Its own device, or R opens a default one and leaves it open.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   tex <- .hl_code_tex(line, cls, function(k) NULL)
   d <- latex_dims(tex, input_mode = "math",
@@ -26,8 +23,7 @@ code_w <- function(line, cls = NULL) {
   as.numeric(grid::convertWidth(d$width, "bigpts"))
 }
 
-# Every LaTeX string the box grob actually builds, gathered by walking
-# the children makeContent() produces. Drives the real entry point.
+# Every LaTeX string the box grob builds, through the real entry point.
 box_tex <- function(md, style = NULL) {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- markdown_box_grob(md, width = grid::unit(4, "in"), style = style)
@@ -75,9 +71,7 @@ grammar_file <- function(rules, lists = "", lang = "Toy", csens = "1",
 # --- indentation ------------------------------------------------------
 
 test_that("leading whitespace in a code block survives", {
-  # The defect this replaces: a whole line went into one \text{} run and
-  # MicroTeX collapses a run of spaces inside one run to a single space,
-  # so eight leading spaces measured exactly one space wide.
+  # A run of spaces inside one \text{} collapses to one space.
   one_char <- code_w("xx") - code_w("x")
   base <- code_w("return 1")
   for (n in c(2L, 4L, 8L, 12L)) {
@@ -97,9 +91,7 @@ test_that("interior alignment is preserved, not just the left margin", {
 
 test_that("code with no repeated spaces renders exactly as it did before", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Guards the claim that the emitter change is width-neutral for
-  # ordinary code: a single space between runs measures the same as a
-  # space inside one run, so nothing already in a snapshot moves.
+  # A single space between runs measures the same as one inside a run.
   for (line in c("x<-foo(1)", "a b", "if (x) y else z")) {
     expect_equal(code_w(line),
                  {
@@ -114,11 +106,7 @@ test_that("code with no repeated spaces renders exactly as it did before", {
 })
 
 test_that("~ and ^ are literal characters, not accents", {
-  # They used to be escaped to \~{} and \^{}, which are the tilde and
-  # circumflex *accents*: `lm(y ~ x)` drew its tilde floating at cap
-  # height instead of on the baseline. `^` needs no escape at all, and
-  # `~` needs \char126{} -- left bare it is a non-breaking space and the
-  # character disappears entirely.
+  # \~{} and \^{} are accents; a bare `~` is a non-breaking space.
   drawn <- function(line) {
     df <- parse_latex_cpp(.hl_code_tex(line, NULL, function(k) NULL),
                           text_size = 12, use_path = FALSE)
@@ -135,17 +123,14 @@ test_that("~ and ^ are literal characters, not accents", {
   # And each occupies exactly one monospace cell, like any operator.
   expect_equal(code_w("y ~ x"), code_w("y - x"))
   expect_equal(code_w("a^b"), code_w("a-b"))
-  # The escaper is shared with prose, which had the same fault.
+  # The escaper is shared with prose.
   expect_match(.md_to_tex("approx ~5"), "char126", fixed = TRUE)
   expect_false(grepl("\\~{}", .md_to_tex("approx ~5"), fixed = TRUE))
 })
 
 test_that("nothing in a code block is interpreted as math or LaTeX", {
-  # Math is masked out of the whole document before CommonMark parses it,
-  # and CommonMark cannot tell it about fences. Left masked, the span's
-  # *content* is lost and the sentinel's index is drawn in its place:
-  # `# see $E = mc^2$ here` came out as `# see 1 here`. Restored here, and
-  # then neutralised by the ordinary escaping.
+  # Math is masked document-wide before CommonMark runs; left masked in a
+  # fence, `# see $E = mc^2$ here` came out as `# see 1 here`.
   for (line in c("# see $E = mc^2$ here", "cost is $5 and $10",
                  "s <- \"$x^2$\"", "a $$ b")) {
     tex <- box_tex(paste0("~~~\n", line, "\n~~~\n"))
@@ -158,20 +143,16 @@ test_that("nothing in a code block is interpreted as math or LaTeX", {
   # The content itself is intact, not replaced by a sentinel index.
   expect_match(box_tex("~~~\n# see $E = mc^2$ here\n~~~\n"),
                "E = mc\\char94{}2", fixed = TRUE)
-  # And with a language, so the classifier sees the real source too --
-  # the dollars are escaped, which is what stops them opening math.
+  # And with a language, so the classifier sees the real source too.
   expect_match(box_tex("~~~r\nx <- \"$a$\"\n~~~\n"), "\\$a\\$", fixed = TRUE)
-  # An inline code span was already correct; keep it that way.
+  # Inline code spans too.
   expect_match(.md_to_tex("`$x$`"), "\\$x\\$", fixed = TRUE)
   # Prose outside a fence must still render real math, not a literal.
   expect_identical(.md_to_tex("value $x$ here"), "value $x$ here")
 })
 
 test_that("#pop!Context validates its push target", {
-  # Unvalidated, an unknown target compiles, the engine then finds no
-  # such context, and highlighting dies for the rest of the line *and
-  # every line after it* -- the stack never recovers. Exactly the
-  # runaway this design refuses everywhere else.
+  # An unknown target would stop highlighting for the rest of the block.
   f <- grammar_file('<DetectChar attribute="String" char="q" context="S"/>',
                     contexts = '<context name="S" attribute="String" lineEndContext="#stay">
                        <DetectChar attribute="String" char="z" context="#pop!Nope"/>
@@ -189,9 +170,6 @@ test_that("#pop!Context validates its push target", {
 })
 
 test_that("a leading ^ anchors only its own alternative", {
-  # Lifting the ^ out into an at_start flag applied it to the whole
-  # rule, so `^aaa|bbb` became `aaa|bbb` restricted to column 0 and
-  # `bbb` stopped matching anywhere at all.
   f <- grammar_file('<RegExpr attribute="Keyword" String="^aaa|bbb"/>')
   register_highlighter("anch", f)
   expect_identical(class_of("aaa xx bbb", "anch", "aaa"), "kw")
@@ -202,9 +180,6 @@ test_that("a leading ^ anchors only its own alternative", {
 })
 
 test_that("registering under a custom name does not hijack aliases", {
-  # `register_highlighter("mybash", bash.xml)` used to repoint ```sh,
-  # ```zsh and ```shell at "mybash" -- three fence languages the caller
-  # never named.
   expect_identical(.hl_canonical("sh"), "bash")
   register_highlighter("mybash", .hl_grammar_path("bash"))
   expect_identical(.hl_canonical("sh"), "bash")
@@ -215,8 +190,7 @@ test_that("registering under a custom name does not hijack aliases", {
 })
 
 test_that("symbol keywords in a <list> match", {
-  # \b around the whole alternation cannot bound `+` or `<=>`, so
-  # operator keywords silently never matched.
+  # \b cannot bound `+` or `<=>`.
   f <- tempfile(fileext = ".xml")
   writeLines('<?xml version="1.0" encoding="UTF-8"?>
     <language name="Sym" version="1" kateversion="5.0" casesensitive="1">
@@ -237,8 +211,7 @@ test_that("symbol keywords in a <list> match", {
 })
 
 test_that("classification is memoised, and re-registering clears it", {
-  # .md_layout() runs at draw time, so without this every redraw
-  # reclassifies: 0.59s of a 1.09s draw on a 100-line block.
+  # It runs at draw time, so every redraw would reclassify.
   code <- rep("x <- foo(1)  # hi", 20)
   .hl_state$cache <- list()
   a <- .hl_classes(code, "r")
@@ -254,9 +227,6 @@ test_that("classification is memoised, and re-registering clears it", {
 })
 
 test_that("a tab advances to the next tab stop, not by a fixed four", {
-  # Makefiles have no choice about tabs, and Go is tab-indented by
-  # convention; expanding to a fixed four misaligns everything after
-  # the first partial column.
   expect_identical(.md_expand_tabs("a\tb"), "a   b")
   expect_identical(.md_expand_tabs("abc\tx"), "abc x")
   expect_identical(.md_expand_tabs("abcd\tx"), "abcd    x")
@@ -279,9 +249,8 @@ test_that("tabs become spaces so they can be seen at all", {
 # --- the segmentation invariant --------------------------------------
 
 test_that("segments reproduce the source line exactly", {
-  # The reason the emitter cannot corrupt code: every segment is a
-  # substring of the original line, so no classifier -- ours or a user's
-  # -- can drop or duplicate a character.
+  # Every segment is a substring of the line, so no classifier can drop or
+  # duplicate a character.
   cases <- list(
     c("x <- \"a # b\"", "r"),
     c("# say \"hi\"", "python"),
@@ -302,9 +271,7 @@ test_that("segments reproduce the source line exactly", {
 })
 
 test_that("only runs of spaces are split, and no segment mixes classes", {
-  # A run of spaces collapses inside one \text{} and must be split; a
-  # lone space does not, and splitting it would multiply the draw
-  # records in every code block for nothing.
+  # A lone space is not split, to keep the number of draw records down.
   expect_identical(.hl_segments("a   b", NULL)$text, c("a", " ", " ", " ", "b"))
   expect_identical(.hl_segments("a b", NULL)$text, "a b")
   expect_identical(.hl_segments("a b c d", NULL)$text, "a b c d")
@@ -334,7 +301,6 @@ test_that("R is classified by R's own parser", {
 })
 
 test_that("a multi-line R string is classified across both lines", {
-  # The reason R parses the whole block rather than line by line.
   cls <- .hl_classes(c("s <- \"first", "second\"", "t <- 1"), "r")
   expect_true(all(cls[[1]][6:11] == "st"))
   expect_true(all(cls[[2]][1:7] == "st"))
@@ -342,8 +308,7 @@ test_that("a multi-line R string is classified across both lines", {
 })
 
 test_that("an R fragment that does not parse still gets highlighted", {
-  # A fenced snippet is very often not a complete program. parse() fails,
-  # and the r.xml grammar takes over rather than the block going plain.
+  # parse() fails, and the r.xml grammar takes over.
   expect_null(tryCatch(parse(text = "for (i in x) {  # note", keep.source = TRUE),
                        error = function(e) NULL))
   expect_identical(class_of("for (i in x) {  # note", "r", "# note"), "co")
@@ -351,8 +316,7 @@ test_that("an R fragment that does not parse still gets highlighted", {
 })
 
 test_that("non-ASCII does not shift classes onto neighbouring characters", {
-  # getParseData reports byte offsets under some encodings; a span that
-  # does not match its own token text is dropped rather than trusted.
+  # getParseData can report byte offsets.
   line <- "x <- 1  # café éé"
   cls <- hl(line, "r")
   expect_length(cls, nchar(line))
@@ -365,8 +329,6 @@ test_that("non-ASCII does not shift classes onto neighbouring characters", {
 # --- the grammar engine ----------------------------------------------
 
 test_that("the earliest match wins, whatever order the rules are in", {
-  # Both of these come out right without the grammar having to choose.
-  # An all-or-nothing "claim if unclaimed" pass gets one of them wrong.
   expect_identical(class_of("# say \"hi\"", "python", "\"hi\""), "co")
   expect_identical(class_of("x = \"a # b\"", "python", "# b\""), "st")
 })
@@ -424,9 +386,7 @@ test_that("each supported rule type matches what it claims to", {
 })
 
 test_that("a rule with no attribute takes its context's, as KDE does", {
-  # Not a corner case: 226 of the 714 rules in KDE's own bash.xml leave
-  # `attribute` off. Assigning them no class would silently under-colour
-  # a third of any grammar downloaded from upstream.
+  # A third of the rules in KDE's bash.xml have no attribute.
   f <- tempfile(fileext = ".xml")
   writeLines('<?xml version="1.0" encoding="UTF-8"?>
     <language name="Inh" version="1" kateversion="5.0" casesensitive="1">
@@ -447,18 +407,13 @@ test_that("a rule with no attribute takes its context's, as KDE does", {
 })
 
 test_that("an attribute no <itemData> defines is refused", {
-  # A typo here would otherwise produce a grammar that loads happily and
-  # colours nothing -- the failure mode this design refuses everywhere else.
   f <- grammar_file('<RegExpr attribute="Typoo" String="zap"/>')
   expect_error(register_highlighter("typo", f), "Typoo")
   expect_false("typo" %in% available_highlighters())
 })
 
 test_that("bundled grammar aliases are all in the static alias table", {
-  # Aliases are declared twice: in each grammar's alternativeNames and in
-  # .HL_ALIASES. Only the static table works before a grammar has been
-  # loaded, so an alias present only in the XML resolves or not depending
-  # on what else the session rendered first. Pin the invariant.
+  # Only .HL_ALIASES works before a grammar is loaded.
   for (g in .hl_grammar_names()) {
     for (a in .hl_compile(.hl_grammar_path(g))$aliases) {
       expect_identical(unname(.HL_ALIASES[a]), g,
@@ -468,7 +423,6 @@ test_that("bundled grammar aliases are all in the static alias table", {
 })
 
 test_that("every alias resolves from a cold registry", {
-  # The regression the test above guards against, exercised directly.
   old <- list(g = .hl_state$grammars, a = .hl_state$aliases)
   on.exit({ .hl_state$grammars <- old$g; .hl_state$aliases <- old$a }, add = TRUE)
   for (a in names(.HL_ALIASES)) {
@@ -479,9 +433,6 @@ test_that("every alias resolves from a cold registry", {
 })
 
 test_that("a literal from a grammar is not read as a pattern", {
-  # StringDetect, DetectChar, WordDetect and keyword items are literals.
-  # An unescaped metacharacter in one would either match the wrong thing
-  # or make the whole rule an invalid regex and match nothing.
   bs <- intToUtf8(92)
   for (lit in c("a.c", "x*", "(y)", "[z]", "a+b", paste0("p", bs, "q"), "$v")) {
     esc <- .hl_esc_re(lit)
@@ -502,8 +453,6 @@ test_that("a case-insensitive grammar matches either case", {
 })
 
 test_that("internal DTD entities are expanded", {
-  # The design relies on xml2 doing this: KDE grammars define entities
-  # heavily, and an unexpanded &name; would be matched literally.
   f <- tempfile(fileext = ".xml")
   writeLines(
     '<?xml version="1.0" encoding="UTF-8"?>
@@ -529,8 +478,7 @@ test_that("internal DTD entities are expanded", {
 # --- refusing what is not implemented --------------------------------
 
 test_that("an unrepresentable rule that switches context refuses the grammar", {
-  # Losing a context switch strands the machine: an unclosed string would
-  # paint every following line. These must fail loudly, by name.
+  # A lost context switch would mis-colour every following line.
   push <- grammar_file('<DetectChar attribute="String" char="&quot;" context="Nowhere"/>')
   expect_error(register_highlighter("bad1", push), "Nowhere")
 
@@ -545,10 +493,7 @@ test_that("an unrepresentable rule that switches context refuses the grammar", {
 })
 
 test_that("an unrepresentable rule that stays in context is skipped", {
-  # The other half of the same principle. Dropping an in-context rule
-  # costs colour on the text it would have matched and nothing more, so
-  # refusing the whole grammar over it would reject almost every real
-  # KDE file for no benefit.
+  # It only loses the colour of what it would have matched.
   g <- grammar_file(
     '<RegExpr attribute="String" String="zzz" dynamic="true"/>
      <keyword attribute="Keyword" String="kw"/>',
@@ -571,8 +516,7 @@ test_that("a malformed grammar fails at registration, not at draw time", {
   empty <- grammar_file("")
   expect_error(register_highlighter("empty", empty), "no usable rules")
 
-  # A keyword list defined in another file, reached through a
-  # cross-language include we skipped: nothing usable is left.
+  # A keyword list from another file: nothing usable is left.
   missing_list <- grammar_file('<keyword attribute="Keyword" String="absent"/>')
   expect_error(register_highlighter("ml2", missing_list), "no usable rules")
 
@@ -593,8 +537,7 @@ test_that("every bundled grammar compiles", {
 })
 
 test_that("every bundled grammar classifies a keyword, string, comment and number", {
-  # line, keyword, string, comment, number. The comment comes last on
-  # every line: anything after it is part of the comment, not a token.
+  # line, keyword, string, comment, number. The comment comes last.
   cases <- list(
     r      = list("if (x) s <- \"a\" + 1.5  # c", "if", "\"a\"", "# c", "1.5"),
     python = list("if x: s = \"a\" + 1.5  # c", "if", "\"a\"", "# c", "1.5"),
@@ -629,18 +572,12 @@ test_that("every bundled grammar classifies a keyword, string, comment and numbe
 })
 
 test_that("a comment after a string containing the comment character", {
-  # The case that retired the vectorised fast path: gregexpr consumed the
-  # `#` inside the string, so the real trailing comment was never seen.
-  # The positional engine is inside the string context there, so its
-  # comment rule is not even live.
   expect_identical(class_of('s = "a # b"  # real', "python", "# real"), "co")
   expect_identical(class_of('s = "a # b"  # real', "python", '"a # b"'), "st")
   expect_identical(class_of("x <- \"a # b\"  # real", "r", "# real"), "co")
 })
 
 test_that("a multi-context grammar keeps state across lines", {
-  # The whole point of contexts: a delimiter opened on one line still
-  # governs the next, so a keyword inside a string is not a keyword.
   f <- tempfile(fileext = ".xml")
   writeLines('<?xml version="1.0" encoding="UTF-8"?>
     <language name="Ml" version="1" kateversion="5.0" casesensitive="1">
@@ -674,10 +611,7 @@ test_that("a multi-context grammar keeps state across lines", {
 })
 
 test_that("KDE's boolean attributes are read in both spellings", {
-  # KDE mixes them inside one file: python.xml has lookAhead="1" ninety
-  # times and lookAhead="true" not once. Reading only "true" silently
-  # turned every look-ahead rule into a consuming one, which mis-coloured
-  # every string and comment in every upstream grammar.
+  # KDE writes lookAhead="1" far more often than lookAhead="true".
   expect_true(.hl_bool("1"))
   expect_true(.hl_bool("true"))
   expect_true(.hl_bool("TRUE"))
@@ -706,14 +640,10 @@ test_that("KDE's boolean attributes are read in both spellings", {
 })
 
 test_that("the github preset styles every token class the defaults do", {
-  # The preset is a copyable worked example, so a class present in the
-  # built-in defaults but missing from the CSS would silently render in
-  # the body colour for anyone using the preset.
   st <- markdown_style("github")
   sels <- vapply(st$rules, function(r) r$selector, character(1))
   expect_true(all(paste0(".", names(.MD_CODE_COLORS)) %in% sels))
-  # And the two palettes agree, so switching to the preset does not
-  # quietly restyle code.
+  # And the two palettes agree.
   for (k in names(.MD_CODE_COLORS)) {
     expect_identical(.md_resolve_color(.md_cascade(st, "pre", classes = k)$color),
                      unname(.MD_CODE_COLORS[k]), info = k)
@@ -721,8 +651,6 @@ test_that("the github preset styles every token class the defaults do", {
 })
 
 test_that("every class a bundled grammar emits has a default colour", {
-  # Otherwise a token would be classified and then rendered in the body
-  # colour, which looks like the highlighter silently failed.
   for (g in .hl_grammar_names()) {
     gram <- .hl_compile(.hl_grammar_path(g))
     rules <- unlist(lapply(gram$contexts, function(x) x$rules), recursive = FALSE)
@@ -796,8 +724,6 @@ test_that("token colours reach the drawn layout", {
 })
 
 test_that("highlighting survives the whole markdown_box_grob() path", {
-  # Everything above works on the emitter directly; this drives the real
-  # entry point, so a break in the wiring cannot pass unnoticed.
   md <- "```r\nplot(1)  # hi\n```\n"
   tex <- box_tex(md)
   expect_true(any(grepl(.MD_CODE_COLORS[["fu"]], tex, fixed = TRUE)))
@@ -817,9 +743,6 @@ test_that("a stylesheet overrides one token class and only that one", {
 })
 
 test_that("a token whose colour equals the block colour emits no markup", {
-  # Why the emitter compares against the block colour rather than always
-  # wrapping: colouring a token the colour it already is would bloat
-  # every line with markup that changes nothing.
   md <- "```r\nplot(1)\n```\n"
   tex <- box_tex(md, style = "pre { color: #112233 } .fu { color: #112233 }")
   expect_false(any(grepl("textcolor{#112233}", tex, fixed = TRUE)))
@@ -828,10 +751,7 @@ test_that("a token whose colour equals the block colour emits no markup", {
 test_that("visual: a highlighted code block", {
   skip_if_not_installed("vdiffr")
   skip_on_os("mac")
-  # Evidence, not coverage: this block skips on CRAN, so nothing above is
-  # delegated to it. vdiffr writes one family name for every family, so
-  # the mono run is recorded as `font-family: sans` here -- that is the
-  # snapshot device, not the layout. The colours are real.
+  # vdiffr records every family as sans; the colours are real.
   vdiffr::expect_doppelganger("markdown-highlight", function() {
     grid::grid.draw(markdown_box_grob(
       "```r\nfit <- lm(y ~ x)  # refit\nif (bad) {\n    stop(\"no\")\n}\n```\n",
@@ -844,8 +764,6 @@ test_that("visual: a highlighted code block", {
 })
 
 test_that("an unhighlighted block emits no colour markup at all", {
-  # Keeps a plain fence byte-identical to what it rendered before, which
-  # is what stops every existing snapshot from moving.
   for (lang in c(NA_character_, "klingon")) {
     cls <- .hl_classes("x <- 1", lang)
     tex <- .hl_code_tex("x <- 1", if (is.null(cls)) NULL else cls[[1]],
