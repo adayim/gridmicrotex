@@ -1,8 +1,9 @@
 # A ggplot2 theme element for markdown text
 
-Use as a theme element for axis titles, axis labels, plot titles or any
-other text element. The label is parsed as markdown (including `$...$`
-math), and rendered via MicroTeX.
+A theme element that renders text, such as an axis or plot title, as
+markdown with `$math$`. It takes the same settings as
+[`ggplot2::element_text()`](https://ggplot2.tidyverse.org/reference/element.html)
+and inherits from the theme like it.
 
 ## Usage
 
@@ -24,23 +25,20 @@ element_markdown(
 
 - math_font:
 
-  Name of the math font to use (e.g. `"stix"`).
+  Math font, such as `"stix"`.
 
 - fontsize:
 
-  Convenience alias for `size`; forwarded to
-  [`ggplot2::element_text()`](https://ggplot2.tidyverse.org/reference/element.html)
-  as the text size in points. `NULL` (default) uses the theme's
-  inherited size.
+  Font size in points. `NULL` (default) uses the theme's size.
 
 - lineheight:
 
-  Multi-line height multiplier (default 1.2).
+  Line spacing (default 1.2).
 
 - max_width:
 
-  Maximum width in big points for automatic line wrapping (default: 0,
-  no wrapping).
+  Width in big points at which lines wrap. `0`, the default, does not
+  wrap.
 
 - render_mode:
 
@@ -48,87 +46,53 @@ element_markdown(
 
 - justify:
 
-  Logical; justify wrapped lines. Requires `max_width`.
+  If `TRUE`, stretch wrapped lines to fill `max_width`.
 
 - style:
 
   A
-  [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
-  object, CSS text, or the path to a `.css` file, applied to labels
-  drawn through this theme element. `NA`, the default, means unset: the
-  global
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(markdown_style = )`
-  applies instead. Only the properties that compile to LaTeX have an
-  effect, unless the label is laid out as blocks (see *Block labels*).
-  See
-  [`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md).
+  [`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md),
+  CSS text, or a path to a `.css` file. `NA` (default) uses
+  `latex_options(markdown_style = )`.
 
 - width:
 
-  Wrapping measure for the label, as a
-  [`unit`](https://rdrr.io/r/grid/unit.html). `NA`, the default, means
-  unset: the label is sized to its content and does not wrap.
-  `unit(1, "npc")` is the useful value for a plot title, whose cell
-  really is the full plot width. See *Block labels*.
+  Width at which the label wraps, as a
+  [`grid::unit()`](https://rdrr.io/r/grid/unit.html). `NA` (default)
+  does not wrap. `unit(1, "npc")` suits a plot title.
 
 - ...:
 
-  Additional arguments passed to
-  [`ggplot2::element_text()`](https://ggplot2.tidyverse.org/reference/element.html)
-  (e.g. `colour`, `hjust`).
+  Passed to
+  [`ggplot2::element_text()`](https://ggplot2.tidyverse.org/reference/element.html),
+  such as `colour` or `hjust`.
 
 ## Value
 
-An S7 object of class `element_markdown`, inheriting from
-[`ggplot2::element_text`](https://ggplot2.tidyverse.org/reference/element.html).
-
-## Details
-
-This is an S7 subclass of
-[`ggplot2::element_text`](https://ggplot2.tidyverse.org/reference/element.html),
-so it inherits the standard text properties (size, colour, hjust, ...)
-from the theme and merges correctly with inherited theme entries.
+A theme element of class `element_markdown`, a kind of `element_text`.
 
 ## Block labels
 
-A label with real block structure (a heading, a list, a table, a rule,
-or more than one paragraph) is laid out by
-[`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-rather than flattened into one run, so list markers, indents and block
-spacing survive. That makes a title like this work:
+A label with a heading, a list, a table, a rule or several paragraphs is
+laid out as a small document, as in
+[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md):
 
     labs(title = "## Findings\n\n- slope $\\beta_1$\n- *p* < 0.001")
 
-The box's own background, border, padding and corner radius come from
-the stylesheet's `body` rule
-(`style = "body \{ background: grey95; padding: 8px \}"`), not from
-arguments here. See
-[`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md).
+Its box is styled by the `body` rule, as in
+`style = "body { background: grey95; padding: 8px }"`.
 
-Three details follow from how ggplot2 measures theme elements:
+- Text wraps only if `width` is given.
 
-- **Wrapping is opt-in.** Without `width` the label is sized to its
-  content, because ggplot2 asks an element for its height before placing
-  it, when a relative width would resolve against the whole device
-  rather than the element's cell.
+- Axis tick labels and rotated labels are never laid out as blocks; a
+  rotated one warns.
 
-- **Axis tick labels are never laid out as blocks**, whatever they
-  contain, for the same reason.
+- `math_font`, `render_mode` and `justify` do not apply to blocks; set
+  them with
+  [`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md).
 
-- **A rotated label is never laid out as blocks.** The box cannot
-  rotate, so a label with both blocks and a non-zero `angle` keeps the
-  angle, is rendered as a single run, and warns. A `width` given with an
-  angle becomes the run's wrapping measure instead.
-
-`math_font`, `render_mode` and `justify` are not forwarded to the box; a
-block label takes those from
-[`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md).
-
-Note that ggtext also exports a function called `element_markdown()`. If
-both packages are attached, the one loaded later wins; call
-`gridmicrotex::element_markdown()` explicitly to be unambiguous. The two
-are not interchangeable: ggtext renders HTML/CSS and images, this
-renders LaTeX math.
+ggtext also has an `element_markdown()`. If both packages are attached,
+write `gridmicrotex::element_markdown()`.
 
 ## See also
 

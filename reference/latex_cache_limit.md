@@ -1,14 +1,9 @@
-# Set the maximum number of entries kept in the LaTeX layout cache
+# Layout cache
 
-The cache stores parsed layout information for recently rendered LaTeX
-expressions, keyed by the expression and relevant rendering parameters
-(font, size, macros, etc.). This speeds up repeated rendering of the
-same expressions, especially in loops or interactive sessions. The
-default limit is 512 entries, which should be sufficient for most use
-cases. When the limit is exceeded, the least recently used entries are
-automatically evicted. The same limit, and `latex_cache_clear()`, also
-apply to a smaller memo of pre-processed input kept alongside the
-layouts.
+Recently drawn expressions are cached, so drawing the same one again is
+fast. `latex_cache_limit()` sets how many are kept (512 by default),
+`latex_cache_clear()` empties the cache, and `latex_cache_info()`
+reports on it.
 
 ## Usage
 
@@ -24,17 +19,14 @@ latex_cache_info()
 
 - n:
 
-  Non-negative integer cache capacity. Default is 512. Set to `0` to
-  disable caching.
+  Number of entries to keep. `0` turns the cache off.
 
 ## Value
 
-- `latex_cache_limit`: Invisibly returns the previous limit.
-
-- `latex_cache_clear`: Invisibly returns `NULL`.
-
-- `latex_cache_info`: A list with elements `size` (entries currently
-  stored), `max_size`, `hits`, and `misses`.
+`latex_cache_limit()` returns the previous limit and
+`latex_cache_clear()` returns `NULL`, both invisibly.
+`latex_cache_info()` returns a list with `size`, `max_size`, `hits` and
+`misses`.
 
 ## See also
 

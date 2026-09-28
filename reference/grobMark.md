@@ -1,10 +1,8 @@
-# Look up a named anchor inside a LaTeX grob
+# Position of a named point in a LaTeX grob
 
-Resolves a `\mark{name}` that was placed inside the LaTeX source to a
-pair of grid units in the grob's parent viewport. The returned units
-already account for the grob's viewport position and `hjust`/`vjust`, so
-you can pass them directly to grid drawing functions to anchor other
-graphics on parts of the formula.
+Returns the position of a `\mark{name}` written in the LaTeX, as grid
+units that can be passed straight to other grid functions, for example
+to point an arrow at part of a formula.
 
 ## Usage
 
@@ -16,19 +14,18 @@ grobMark(grob, name)
 
 - grob:
 
-  A `latexgrob` returned by
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
+  A grob from
+  [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 - name:
 
-  The mark name (the argument to `\mark{...}`).
+  The name given to `\mark{}`.
 
 ## Value
 
-A list with elements `x` and `y`, each a
-[`unit`](https://rdrr.io/r/grid/unit.html). Mark coordinates are
-evaluated in the grob's parent viewport. They assume an unrotated grob:
-with `rot != 0` the returned position does not account for the rotation.
+A list with `x` and `y`, each a
+[`grid::unit()`](https://rdrr.io/r/grid/unit.html). Rotation (`rot`) is
+not taken into account.
 
 ## See also
 

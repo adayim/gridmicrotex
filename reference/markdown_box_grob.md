@@ -1,12 +1,10 @@
 # Render a markdown document as a boxed grid grob
 
-Lays markdown out as a block document (headings, paragraphs, lists
-(including GFM task lists), block quotes, code blocks, tables,
-horizontal rules and images) inside an optional padded, filled and
-bordered box. Prose wraps to the requested width, and `$...$` math is
-typeset by MicroTeX as usual. All the inline formatting
-[`markdown_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-understands, including the inline HTML subset, works inside every block.
+Draws a markdown document (headings, paragraphs, lists, task lists,
+quotes, code, tables, rules and images) inside an optional box. Text
+wraps to `width`, and math goes between `$...$`. Everything
+[`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+supports works inside each block.
 
 ## Usage
 
@@ -36,135 +34,105 @@ markdown_box_grob(
 
 - md:
 
-  Character string of markdown.
+  Markdown, as a character string.
 
 - x, y:
 
-  Position of the box in the parent viewport.
+  Position of the box.
 
 - width:
 
-  Width of the box, including `margin`. `NULL` sizes the box to its
-  content, so nothing wraps: useful where the available width is not
-  known, as in a ggplot2 theme element.
+  Width of the box. `NULL` fits the box to its content, with no
+  wrapping.
 
 - height:
 
-  Fixed height, or `NULL` (default) to take whatever height the content
-  needs.
+  Height of the box. `NULL` (default) fits the content.
 
 - hjust, vjust:
 
-  Justification of the whole box about `x` and `y`.
+  Justification of the box about `x` and `y`.
 
 - halign:
 
-  Horizontal alignment of blocks within the box: `0` left (default),
-  `0.5` centred, `1` right.
+  Alignment of blocks in the box: `0` left (default), `0.5` centre, `1`
+  right.
 
 - valign:
 
-  Vertical alignment of the content when `height` leaves room to spare:
-  `1` top (default), `0` bottom.
+  Vertical alignment of the content when `height` leaves room: `1` top
+  (default), `0` bottom.
 
 - padding, margin:
 
-  A [`unit`](https://rdrr.io/r/grid/unit.html) of length 1 or 4 giving
-  top, right, bottom and left. Padding is inside the box, margin outside
-  it. `NULL` (default) takes them from the stylesheet's `body` rule, and
-  is zero if that says nothing.
+  A [`grid::unit()`](https://rdrr.io/r/grid/unit.html) of length 1, or 4
+  for top, right, bottom and left. Padding is inside the box, margin
+  outside. `NULL` (default) uses the style's `body` rule.
 
 - box_gp:
 
-  Graphical parameters for the box itself, e.g.
-  `gpar(fill = "grey95", col = "black")`. `NULL` (default) takes the
-  fill from `body { background }` and the border from `body { border }`,
-  and draws no box if neither is set.
+  Fill and border of the box, such as
+  `gpar(fill = "grey95", col = "black")`. `NULL` (default) uses the
+  style's `body` rule, and draws no box if it has none.
 
 - r:
 
-  Corner radius; a non-zero value draws a rounded box. `NULL` (default)
-  takes it from `body { border-radius }`.
+  Corner radius. `NULL` (default) uses the style's `body` rule.
 
 - style:
 
-  Appearance of the blocks: a
-  [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
-  object, CSS text, or a path to a `.css` file. `NULL` (default) uses
-  `latex_options("markdown_style")` if set, and the built-in defaults
-  otherwise.
+  A
+  [`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md),
+  CSS text, or a path to a `.css` file. `NULL` (default) uses
+  `latex_options("markdown_style")`, if set.
 
 - name:
 
-  Optional grob name.
+  Grob name.
 
 - gp:
 
-  Graphical parameters for the text. `fontsize` also sets the scale for
-  block spacing and list indentation, and `cex` multiplies it as
-  elsewhere in grid.
+  Graphical parameters for the text. `fontsize` also scales the spacing
+  between blocks.
 
 - vp:
 
-  Optional viewport. Supplying one replaces the viewport built from `x`,
-  `y`, `width`, `height`, `hjust` and `vjust`, so those are then
-  ignored.
+  A viewport. If given, `x`, `y`, `width`, `height`, `hjust` and `vjust`
+  are ignored.
 
 ## Value
 
-A `markdownbox` gTree.
+A grob of class `"markdownbox"`.
 
 ## Details
 
-Where
-[`markdown_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-flattens everything into a single run, this stacks one grob per block,
-which is what makes margins, padding, background fills, borders and
-block-quote rules possible. Each block's content is LaTeX text laid out
-by the engine, so it wraps, coloured, sized, underlined and highlighted
-spans included, and a block's `text-align` aligns each of its lines.
+A table that is too wide for the box wraps its widest columns;
+`table-layout: fixed` gives the columns equal widths instead. Code lines
+do not wrap.
 
-A table is as wide as its content when that fits the box. When it does
-not, its wide columns share the width the others leave and their cells
-wrap, as an HTML table shrinks to its container; `table-layout: fixed`
-divides the width evenly between the columns instead. Code lines are not
-wrapped.
-
-An image on a line of its own is drawn as a block, scaled to fit the
-column but never enlarged past its natural size (pixels are read at 96
-dpi); an image *within* a sentence is drawn inline, and so is an `<img>`
-tag, even alone on its line. It must be a local PNG, JPEG or SVG file,
-read by png, jpeg or rsvg respectively, all *Suggests* and needed only
-for their own format. An image that cannot be drawn – a missing file, a
-URL, another format, or a reader that is not installed – is an error
-when the grob is built, saying which.
-
-The layout is computed at draw time, so an open device is required,
-which is what lets a relative `width` and the measured height of the
-text resolve against the viewport the box is actually drawn in.
+An image on its own line is a block, scaled down to fit; an image inside
+a sentence is inline. Images must be local PNG, JPEG or SVG files, and
+need the png or jpeg package, or rsvg and grImport2 for SVG. An image
+that cannot be drawn is an error.
 
 ## Styling
 
-Appearance comes from a small CSS cascade. `style` sets the house style
-for the whole document, by tag:
+`style` sets the look of each tag:
 
     markdown_box_grob(md, style = markdown_style(
       h1         = md_style(color = "steelblue", font_size = 2),
       blockquote = md_style(border_left = "3px solid grey60")
     ))
 
-The same thing written as CSS, which `style` also takes directly, as
-text or as the path to a `.css` file:
+Or the same as CSS, as text or a `.css` file:
 
     markdown_box_grob(md, style = "
       h1 { color: steelblue; font-size: 2rem }
       blockquote { border-left: 3px solid grey60 }
     ")
 
-To style one chunk rather than every block of a kind, wrap it in a
-`<div>` carrying a `class` or a `style`. **Leave blank lines around the
-tags**: that is what makes CommonMark parse the markdown between them
-instead of treating the whole thing as raw HTML:
+To style one part, wrap it in a `<div>` with a `class` or `style`, with
+blank lines around the tags:
 
     <div class="note">
 
@@ -172,10 +140,11 @@ instead of treating the whole thing as raw HTML:
 
     </div>
 
-Inline runs take `class` as well as `style` on a `<span>`. See
-[`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
-for the tag names, the supported properties and how the cascade
-resolves.
+`<span class="...">` works the same inside a line. See
+[`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
+for tag names and
+[`md_style()`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
+for properties.
 
 ## See also
 

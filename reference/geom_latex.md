@@ -1,8 +1,9 @@
 # A ggplot2 geom for LaTeX math labels
 
-Renders LaTeX math expressions as native grid grobs within a ggplot2
-plot. Each label is parsed and laid out by MicroTeX, producing
-resolution-independent vector output.
+Like
+[`ggplot2::geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html),
+with labels written in LaTeX. The `$` signs are optional.
+`annotate("latex", ...)` adds a single label.
 
 ## Usage
 
@@ -95,62 +96,51 @@ geom_latex(
 
 - ...:
 
-  Other arguments passed to
-  [`layer`](https://ggplot2.tidyverse.org/reference/layer.html).
+  Passed to
+  [`ggplot2::layer()`](https://ggplot2.tidyverse.org/reference/layer.html).
 
 - fontsize:
 
-  Default font size in points. Overridden by the `size` aesthetic if
-  mapped.
+  Font size in points, unless `size` is mapped.
 
 - math_font:
 
-  Name of the math font to use (e.g., `"stix"`).
+  Math font, such as `"stix"`.
 
 - lineheight:
 
-  Multi-line height multiplier (default 1.2), matching
-  [`grid::gpar()`](https://rdrr.io/r/grid/gpar.html) semantics.
+  Line spacing (default 1.2).
 
 - max_width:
 
-  Maximum width in big points for automatic line wrapping (default: 0,
-  no wrapping).
+  Width in big points at which lines wrap. `0`, the default, does not
+  wrap.
 
 - input_mode:
 
-  How `tex` is read. `"mixed"` (default) reads a label: text, as in a
-  LaTeX paragraph, with math between `$...$` or `\(...\)`, and a newline
-  starts a new line, as `"\n"` does in R. `"math"` reads the whole
-  string as math, as between `$...$`, so a word is set as italic
-  letters; write text as `\text{...}`. `"document"` reads a LaTeX
-  document body by LaTeX's own rules: a newline is a space, a blank line
-  (or `\par`) starts an indented paragraph, `\section` and its kin are
-  numbered headings, and display math is centred on a line of its own.
-  Give `max_width` to break the paragraphs into lines. The default can
-  be set for the session with
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = )`.
+  How `tex` is read:
+
+  - `"mixed"` (default): text, with math between `$...$` or `\(...\)`. A
+    newline starts a new line.
+
+  - `"math"`: everything is math; write text in `\text{}`.
+
+  - `"document"`: a LaTeX document body, with paragraphs, numbered
+    headings and displayed equations. Use it with `max_width`.
 
 - render_mode:
 
-  Character string: `"typeface"` (default) renders glyphs as native text
-  using the math font, producing selectable/accessible text in PDF and
-  SVG output. Bundled math fonts and any registered via
-  [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-  are read directly from their OTF files: no system-wide font install is
-  required. Falls back to path mode automatically on devices that lack
-  the R \\\geq\\ 4.3 glyph engine, and on base
-  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) and
-  [`postscript()`](https://rdrr.io/r/grDevices/postscript.html), which
-  cannot embed the math font. For selectable PDF output, prefer
-  [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`
-  renders math symbols as filled vector paths (works on all devices but
-  text is not selectable in PDF/SVG).
+  `"typeface"` (default) draws glyphs as text, which can be selected in
+  PDF and SVG output. It needs a device such as ragg, svglite or
+  [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html),
+  and falls back to `"path"` on others, such as
+  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html). `"path"` draws glyphs
+  as outlines, which works on every device.
 
 - na.rm:
 
-  If `FALSE`, the default, missing values are removed with a warning. If
-  `TRUE`, missing values are silently removed.
+  If `FALSE` (default), missing values are removed with a warning; if
+  `TRUE`, silently.
 
 - show.legend:
 
@@ -182,19 +172,19 @@ are in bold):
 
 - **`y`**
 
-- **`label`** — LaTeX math string
+- **`label`**: LaTeX string
 
-- `size` — font size in points (default: 11)
+- `size`: font size in points (default: 11)
 
-- `colour` — text colour (default: `"black"`)
+- `colour`: text colour (default: `"black"`)
 
-- `angle` — rotation angle in degrees (default: 0)
+- `angle`: rotation angle in degrees (default: 0)
 
-- `hjust` — horizontal justification, 0–1 (default: 0.5)
+- `hjust`: horizontal justification, 0-1 (default: 0.5)
 
-- `vjust` — vertical justification, 0–1 (default: 0.5)
+- `vjust`: vertical justification, 0-1 (default: 0.5)
 
-- `alpha` — transparency (default: 1)
+- `alpha`: transparency (default: 1)
 
 ## Examples
 

@@ -1,9 +1,8 @@
-# Inspect the parsed layout of a LaTeX expression
+# The layout of a LaTeX expression
 
-Returns the raw draw-record table produced by MicroTeX's layout pass
-together with the bounding-box metadata. Useful for debugging alignment
-issues, building custom grobs on top of the layout, or counting
-glyphs/paths/rules in a formula.
+Returns what a formula is drawn from: one row per glyph, line, rectangle
+or run of text, with its position. Useful for checking alignment or
+building your own grobs.
 
 ## Usage
 
@@ -23,88 +22,66 @@ latex_tree(
 
 - tex:
 
-  Character string of LaTeX math code.
+  LaTeX, as a character string.
 
 - math_font:
 
-  Name of the math font to use (e.g., `"stix"`). Use `""` (default) for
-  Lete Sans Math, which pairs with R's default sans-serif text font. See
-  [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
-  for loaded fonts.
+  Math font: `"lete"` (Lete Sans Math, the default), `"stix"` (STIX Two
+  Math), or one added with
+  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md).
+  See
+  [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md).
 
 - max_width:
 
-  Numeric maximum width in big points for automatic line wrapping. Use
-  `0` (default) for no wrapping.
+  Width in big points (1/72 inch) at which lines wrap. `0`, the default,
+  does not wrap.
 
 - tex_style:
 
-  Character: TeX style override. One of `""` (default; let the parser
-  decide), `"display"`, `"text"`, `"script"`, or `"scriptscript"`. See
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-  for the semantics of each value.
+  Force a TeX style: `"display"`, `"text"`, `"script"` or
+  `"scriptscript"`. `""`, the default, follows the delimiters. See
+  Details.
 
 - input_mode:
 
-  How `tex` is read. `"mixed"` (default) reads a label: text, as in a
-  LaTeX paragraph, with math between `$...$` or `\(...\)`, and a newline
-  starts a new line, as `"\n"` does in R. `"math"` reads the whole
-  string as math, as between `$...$`, so a word is set as italic
-  letters; write text as `\text{...}`. `"document"` reads a LaTeX
-  document body by LaTeX's own rules: a newline is a space, a blank line
-  (or `\par`) starts an indented paragraph, `\section` and its kin are
-  numbered headings, and display math is centred on a line of its own.
-  Give `max_width` to break the paragraphs into lines. The default can
-  be set for the session with
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = )`.
+  How `tex` is read:
+
+  - `"mixed"` (default): text, with math between `$...$` or `\(...\)`. A
+    newline starts a new line.
+
+  - `"math"`: everything is math; write text in `\text{}`.
+
+  - `"document"`: a LaTeX document body, with paragraphs, numbered
+    headings and displayed equations. Use it with `max_width`.
 
 - render_mode:
 
-  Character string: `"typeface"` (default) renders glyphs as native text
-  using the math font, producing selectable/accessible text in PDF and
-  SVG output. Bundled math fonts and any registered via
-  [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-  are read directly from their OTF files: no system-wide font install is
-  required. Falls back to path mode automatically on devices that lack
-  the R \\\geq\\ 4.3 glyph engine, and on base
-  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) and
-  [`postscript()`](https://rdrr.io/r/grDevices/postscript.html), which
-  cannot embed the math font. For selectable PDF output, prefer
-  [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`
-  renders math symbols as filled vector paths (works on all devices but
-  text is not selectable in PDF/SVG).
+  `"typeface"` (default) draws glyphs as text, which can be selected in
+  PDF and SVG output. It needs a device such as ragg, svglite or
+  [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html),
+  and falls back to `"path"` on others, such as
+  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html). `"path"` draws glyphs
+  as outlines, which works on every device.
 
 - gp:
 
-  Graphical parameters (see [`gpar`](https://rdrr.io/r/grid/gpar.html)).
-  Common entries: `col` (formula foreground), `fontfamily` (text font),
-  `fontsize` / `cex` (formula size), and `lineheight` (multi-line
-  spacing). See
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-  for how each of these flows through MicroTeX.
+  Graphical parameters from
+  [`grid::gpar()`](https://rdrr.io/r/grid/gpar.html): `col`,
+  `fontfamily`, `fontsize`, `cex` and `lineheight`. See Details.
 
 ## Value
 
-A list with class `"latex_tree"` containing:
+A list of class `"latex_tree"`:
 
-- `records`:
+- `records`: a data frame with one row per drawn element, with columns
+  such as `type`, `x`, `y`, `glyph`, `font_size`, `color` and `text`.
 
-  Data frame of draw records (one row per glyph, path, line, rect, or
-  text block). Columns include `type`, `x`, `y`, `glyph`, `font_size`,
-  `color`, `text`, `codepoint`, `font_file`.
+- `bbox`: `width`, `height`, `depth` and `baseline`, in big points.
 
-- `bbox`:
+- `tex`: the input.
 
-  Named numeric vector with `width`, `height`, `depth`, `baseline` (all
-  in big points).
-
-- `tex`:
-
-  The (macro-expanded) input string.
-
-- `render_mode`:
-
-  Rendering mode used for the layout.
+- `render_mode`: the render mode used.
 
 ## See also
 

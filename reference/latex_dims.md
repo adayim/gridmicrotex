@@ -1,6 +1,6 @@
-# Get dimensions of a LaTeX expression
+# Size of a LaTeX expression
 
-Get dimensions of a LaTeX expression
+Size of a LaTeX expression
 
 ## Usage
 
@@ -22,103 +22,80 @@ latex_dims(
 
 - tex:
 
-  Character string of LaTeX math code.
+  LaTeX, as a character string.
 
 - math_font:
 
-  Name of the math font to use (e.g., `"stix"`). Use `""` (default) for
-  Lete Sans Math, which pairs with R's default sans-serif text font. See
-  [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
-  for loaded fonts.
+  Math font: `"lete"` (Lete Sans Math, the default), `"stix"` (STIX Two
+  Math), or one added with
+  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md).
+  See
+  [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md).
 
 - max_width:
 
-  Numeric maximum width in big points for automatic line wrapping. Use
-  `0` (default) for no wrapping.
+  Width in big points (1/72 inch) at which lines wrap. `0`, the default,
+  does not wrap.
 
 - tex_style:
 
-  Character: TeX style override. One of `""` (default; let the parser
-  decide), `"display"`, `"text"`, `"script"`, or `"scriptscript"`. See
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-  for the semantics of each value.
+  Force a TeX style: `"display"`, `"text"`, `"script"` or
+  `"scriptscript"`. `""`, the default, follows the delimiters. See
+  Details.
 
 - input_mode:
 
-  How `tex` is read. `"mixed"` (default) reads a label: text, as in a
-  LaTeX paragraph, with math between `$...$` or `\(...\)`, and a newline
-  starts a new line, as `"\n"` does in R. `"math"` reads the whole
-  string as math, as between `$...$`, so a word is set as italic
-  letters; write text as `\text{...}`. `"document"` reads a LaTeX
-  document body by LaTeX's own rules: a newline is a space, a blank line
-  (or `\par`) starts an indented paragraph, `\section` and its kin are
-  numbered headings, and display math is centred on a line of its own.
-  Give `max_width` to break the paragraphs into lines. The default can
-  be set for the session with
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(input_mode = )`.
+  How `tex` is read:
+
+  - `"mixed"` (default): text, with math between `$...$` or `\(...\)`. A
+    newline starts a new line.
+
+  - `"math"`: everything is math; write text in `\text{}`.
+
+  - `"document"`: a LaTeX document body, with paragraphs, numbered
+    headings and displayed equations. Use it with `max_width`.
 
 - render_mode:
 
-  Character string: `"typeface"` (default) renders glyphs as native text
-  using the math font, producing selectable/accessible text in PDF and
-  SVG output. Bundled math fonts and any registered via
-  [`load_math_font`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-  are read directly from their OTF files: no system-wide font install is
-  required. Falls back to path mode automatically on devices that lack
-  the R \\\geq\\ 4.3 glyph engine, and on base
-  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) and
-  [`postscript()`](https://rdrr.io/r/grDevices/postscript.html), which
-  cannot embed the math font. For selectable PDF output, prefer
-  [`cairo_pdf`](https://rdrr.io/r/grDevices/cairo.html). `"path"`
-  renders math symbols as filled vector paths (works on all devices but
-  text is not selectable in PDF/SVG).
+  `"typeface"` (default) draws glyphs as text, which can be selected in
+  PDF and SVG output. It needs a device such as ragg, svglite or
+  [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html),
+  and falls back to `"path"` on others, such as
+  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html). `"path"` draws glyphs
+  as outlines, which works on every device.
 
 - justify:
 
-  Logical. When `TRUE`, wrapped text is stretched at its interword
-  spaces so every line but the last fills `max_width` exactly. Requires
-  `max_width`: it acts on the lines the wrapper produces, so it does
-  nothing on its own. `FALSE` (default) leaves the right edge ragged,
-  matching R's own text drawing. In a narrow column, expect wide word
-  spaces; mark the words that may break with `\-` to tighten them.
+  If `TRUE`, wrapped lines are stretched to fill `max_width`, except the
+  last. Needs `max_width`.
 
 - line_break:
 
-  How lines are chosen when wrapping. `"greedy"` (default) fills each
-  line as far as it will go and never reconsiders. `"optimal"` chooses
-  the breaks together so the paragraph as a whole reads best, in the
-  spirit of Knuth-Plass: pulling one word down early can improve every
-  later line, which a greedy pass cannot see. Requires `max_width`, and
-  costs a little more layout time.
+  `"greedy"` (default) fills one line at a time. `"optimal"` chooses the
+  breaks for the whole paragraph. Needs `max_width`.
 
 - gp:
 
-  Graphical parameters (see [`gpar`](https://rdrr.io/r/grid/gpar.html)).
-  Common entries: `col` (formula foreground), `fontfamily` (text font),
-  `fontsize` / `cex` (formula size), and `lineheight` (multi-line
-  spacing). See
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-  for how each of these flows through MicroTeX.
+  Graphical parameters from
+  [`grid::gpar()`](https://rdrr.io/r/grid/gpar.html): `col`,
+  `fontfamily`, `fontsize`, `cex` and `lineheight`. See Details.
 
 ## Value
 
-A list with the following elements:
+A list of grid units in big points:
 
-- `width`, `height`, `depth`: grid unit objects in big points. `height`
-  is total height (ascent + descent).
+- `width`, `height`: the size of the bounding box.
 
-- `baseline`: grid unit object giving the baseline position measured in
-  big points from the *bottom* of the bounding box. Equivalent to
-  `height - depth` for single-line formulas. Useful for aligning a
-  formula's baseline with surrounding text.
+- `depth`: how far it extends below the baseline.
 
-- `is_split`: logical; `TRUE` if the formula was wrapped across multiple
-  lines (only possible when `max_width > 0`).
+- `baseline`: the height of the baseline above the bottom.
+
+And `is_split`: `TRUE` if the text was wrapped over several lines.
 
 ## Examples
 
 ``` r
-latex_dims("\\frac{a}{b}")
+latex_dims(r"($\frac{a}{b}$)")
 #> $width
 #> [1] 7bigpts
 #> 

@@ -74,16 +74,14 @@
 
     
     
-<p>A grid page saved as PDF is a document. With
-<code>input_mode = "document"</code>, <code><a href="../reference/latex_grob.html">latex_grob()</a></code> and
-<code><a href="../reference/latex_grob.html">grid.latex()</a></code> read the body of a LaTeX document —
-paragraphs, headings, displayed equations, lists and tables — by LaTeX’s
-own rules, so a methods section, a report’s appendix or a long caption
-can be set in R without a LaTeX installation.</p>
+<p>With <code>input_mode = "document"</code>, <code><a href="../reference/latex_grob.html">grid.latex()</a></code>
+sets the body of a LaTeX document: paragraphs, headings, displayed
+equations, lists and tables. Use it for a methods section, an appendix
+or a long caption, with no LaTeX installation.</p>
 <div class="section level2">
 <h2 id="a-document-body">A document body<a class="anchor" aria-label="anchor" href="#a-document-body"></a>
 </h2>
-<p>This is ordinary LaTeX, as it would sit between
+<p>This is ordinary LaTeX, as it would appear between
 <code>\begin{document}</code> and <code>\end{document}</code>:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">body</span> <span class="op">&lt;-</span> <span class="st">r"(\section{Methods}</span></span>
@@ -108,8 +106,8 @@ can be set in R without a LaTeX installation.</p>
 <span><span class="st">  \item normally distributed --- which matters only for the tests.</span></span>
 <span><span class="st">\end{itemize}</span></span>
 <span><span class="st">)"</span></span></code></pre></div>
-<p><code>max_width</code> is the text width, in big points (1/72 inch).
-Paragraphs are broken to it and displays are centred in it:</p>
+<p><code>max_width</code> is the text width in big points (1/72
+inch):</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">body</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.6</span> <span class="op">*</span> <span class="fl">72</span>,</span>
@@ -120,52 +118,40 @@ Paragraphs are broken to it and displays are centred in it:</p>
 <div class="section level2">
 <h2 id="how-the-body-is-read">How the body is read<a class="anchor" aria-label="anchor" href="#how-the-body-is-read"></a>
 </h2>
-<p>As LaTeX reads it, with nothing of our own:</p>
+<p>As in LaTeX:</p>
 <ul>
 <li>
-<strong>Paragraphs.</strong> A line end is a space. A blank line, or
-<code>\par</code>, starts a paragraph, whose first line is indented by
-TeX’s <code>\parindent</code> (1.5 em); there is no space between
-paragraphs. <code>\noindent</code> leaves one flush.</li>
+<strong>Paragraphs.</strong> A blank line or <code>\par</code>
+starts a new, indented paragraph. <code>\noindent</code> suppresses the
+indent.</li>
 <li>
 <strong>Headings.</strong> <code>\section</code>,
-<code>\subsection</code> and <code>\subsubsection</code> are numbered 1,
-1.1, 1.1.1 and set bold, on a line of their own; <code>\paragraph</code>
-runs into its paragraph. A starred heading has no number. The paragraph
-after a heading is not indented.</li>
+<code>\subsection</code> and <code>\subsubsection</code> are numbered;
+starred forms are not.</li>
 <li>
-<strong>Math.</strong> <code>$…$</code> and <code>\(…\)</code> are
-inline. <code>\[…\]</code>, <code>$$…$$</code> and the display
-environments — <code>equation</code>, <code>align</code>,
-<code>gather</code>, <code>multline</code>, <code>eqnarray</code>,
-starred or not — are centred on a line of their own, and the paragraph
-goes on after them unindented, as in LaTeX. Equations are not
+<strong>Math.</strong> <code>$...$</code> and <code>\(...\)</code>
+are inline. <code>\[...\]</code>, <code>$$...$$</code>,
+<code>equation</code>, <code>align</code>, <code>gather</code> and
+<code>multline</code> are centred on their own line. Equations are not
 numbered.</li>
 <li>
-<strong>Lists and tables.</strong> <code>itemize</code> and
-<code>enumerate</code> are set as blocks; their items, like a
-<code>tabular</code>’s cells, are text, with math between
-<code>$…$</code>.</li>
+<strong>Lists and tables.</strong> <code>itemize</code>,
+<code>enumerate</code> and <code>tabular</code> hold text, with math
+between <code>$...$</code>.</li>
 <li>
 <strong>Text.</strong> <code>--</code> and <code>---</code> are
-dashes, <code>`</code> and <code>'</code> (single or doubled) curly
-quotes, and <code>~</code> a space the line is not broken at.
-<code>\centering</code> and the <code>center</code> environment centre
-their lines, and a <code>table</code> or <code>figure</code> is set
-apart where it is written, with its <code>\caption</code> on a line of
-its own.</li>
+dashes, quotes are curly, and <code>~</code> is a non-breaking space.
+<code>\centering</code> and <code>center</code> centre lines.</li>
 </ul>
-<p>Anything LaTeX would stop on is drawn as well as it can be, and one
-warning lists each problem with its line and column in the body.</p>
+<p>Problems produce one warning, listing each with its line and
+column.</p>
 </div>
 <div class="section level2">
-<h2 id="the-text-width">The text width<a class="anchor" aria-label="anchor" href="#the-text-width"></a>
+<h2 id="justified-text">Justified text<a class="anchor" aria-label="anchor" href="#justified-text"></a>
 </h2>
-<p>Without <code>max_width</code> every paragraph is a single line,
-however long. With it, lines are filled one at a time and left ragged;
-<code>justify = TRUE</code> stretches every line but a paragraph’s last
-to the full width, and <code>line_break = "optimal"</code> chooses a
-paragraph’s breaks together, as TeX does:</p>
+<p><code>justify = TRUE</code> fills every line but the last, and
+<code>line_break = "optimal"</code> chooses the breaks for the whole
+paragraph:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">para</span> <span class="op">&lt;-</span> <span class="st">r"(Least squares has a closed form, which is why it was the</span></span>
 <span><span class="st">method of choice long before computers made iterative fitting cheap. It</span></span>
@@ -181,11 +167,8 @@ paragraph’s breaks together, as TeX does:</p>
 <div class="section level2">
 <h2 id="saving-a-pdf">Saving a PDF<a class="anchor" aria-label="anchor" href="#saving-a-pdf"></a>
 </h2>
-<p>A document is one grob, so it goes on a page like any other. Use
-<code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf()</a></code> rather than <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code>: its text stays
-text, which can be selected and searched, where base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code>
-falls back to drawing glyphs as outlines. <code><a href="../reference/latex_dims.html">latex_dims()</a></code>
-gives the size the body needs, to size the page from:</p>
+<p>Use <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf()</a></code> so the text can be selected.
+<code><a href="../reference/latex_dims.html">latex_dims()</a></code> gives the height to size the page:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/latex_dims.html">latex_dims</a></span><span class="op">(</span><span class="va">body</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.5</span> <span class="op">*</span> <span class="fl">72</span>,</span>
 <span>                gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
@@ -196,24 +179,23 @@ gives the size the body needs, to size the page from:</p>
 <span>           x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="st">"in"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1</span>, <span class="st">"npc"</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="st">"in"</span><span class="op">)</span>,</span>
 <span>           hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/dev.html" class="external-link">dev.off</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>A body longer than the page does not flow onto the next one: a grob
-is one piece. Split a long document at its paragraph breaks and draw
-each part on a page of its own.</p>
+<p>A document is drawn as one piece and does not flow onto a second
+page. Split a long one at paragraph breaks and draw each part on its own
+page.</p>
 </div>
 <div class="section level2">
-<h2 id="what-a-single-grob-cannot-do">What a single grob cannot do<a class="anchor" aria-label="anchor" href="#what-a-single-grob-cannot-do"></a>
+<h2 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a>
 </h2>
-<p>A document’s cross-references need the rest of the document, so they
-warn and are drawn as LaTeX draws them when it cannot resolve one:
-<code>\ref</code> and <code>\pageref</code> as a bold <code>??</code>,
-<code>\eqref</code> as <code>(??)</code> and <code>\cite{key}</code> as
-<code>[?]</code>. A <code>\footnote</code> has no foot of a page to go
-to, so its text is set where it is written. The preamble,
-<code>\maketitle</code> and <code>\label</code> are read and dropped,
-and a <code>table</code> or <code>figure</code> is set where it is
-written, as a float placed “here” would be.
-<code><a href="../articles/getting-started.html">vignette("getting-started")</a></code> lists what is not supported at
-all.</p>
+<ul>
+<li>
+<code>\ref</code> and <code>\pageref</code> draw <code>??</code>,
+<code>\eqref</code> draws <code>(??)</code> and <code>\cite</code> draws
+<code>[?]</code>, with a warning.</li>
+<li>A footnote’s text is set where it is written.</li>
+<li>Tables and figures are placed where they are written.</li>
+<li>The preamble, <code>\maketitle</code> and <code>\label</code> draw
+nothing.</li>
+</ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

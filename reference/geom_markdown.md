@@ -1,9 +1,11 @@
 # A ggplot2 geom for markdown labels
 
-Renders markdown labels (`**bold**`, `*italic*`, `` `code` ``,
-`~~strike~~` and `$math$`) as native grid grobs inside a plot. The
-markdown is converted to LaTeX and laid out by MicroTeX, so the output
-is resolution-independent vector graphics.
+Like
+[`ggplot2::geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html),
+with labels written in markdown: `**bold**`, `*italic*`, `` `code` ``,
+`~~strike~~` and `$math$`, as in
+[`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md).
+`annotate("markdown", ...)` adds a single label.
 
 ## Usage
 
@@ -97,53 +99,48 @@ geom_markdown(
 
 - ...:
 
-  Other arguments passed to
-  [`layer`](https://ggplot2.tidyverse.org/reference/layer.html).
+  Passed to
+  [`ggplot2::layer()`](https://ggplot2.tidyverse.org/reference/layer.html).
 
 - fontsize:
 
-  Default font size in points. Overridden by the `size` aesthetic if
-  mapped.
+  Font size in points, unless `size` is mapped.
 
 - math_font:
 
-  Name of the math font to use (e.g. `"stix"`).
+  Math font, such as `"stix"`.
 
 - lineheight:
 
-  Multi-line height multiplier (default 1.2), matching
-  [`grid::gpar()`](https://rdrr.io/r/grid/gpar.html) semantics.
+  Line spacing (default 1.2).
 
 - max_width:
 
-  Maximum width in big points for automatic line wrapping (default: 0,
-  no wrapping).
+  Width in big points at which lines wrap. `0`, the default, does not
+  wrap.
 
 - render_mode:
 
   `"typeface"` (default) or `"path"`; see
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
+  [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 - justify:
 
-  Logical; justify wrapped lines. Requires `max_width`. See
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
+  If `TRUE`, stretch wrapped lines to fill `max_width`.
 
 - style:
 
   A
-  [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
-  object, CSS text, or the path to a `.css` file, applied to every label
-  this layer draws. `NULL` falls back to
-  [`latex_options`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)`(markdown_style = )`.
-  Only the properties that compile to LaTeX apply here: a label has no
-  block layout, so margins and padding are ignored. See
-  [`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md).
+  [`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md),
+  CSS text, or a path to a `.css` file. `NULL` uses
+  `latex_options(markdown_style = )`. Only properties marked *inline* in
+  [`md_style()`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
+  apply.
 
 - na.rm:
 
-  If `FALSE`, the default, missing values are removed with a warning. If
-  `TRUE`, they are removed silently.
+  If `FALSE` (default), missing values are removed with a warning; if
+  `TRUE`, silently.
 
 - show.legend:
 

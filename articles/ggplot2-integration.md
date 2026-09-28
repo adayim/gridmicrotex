@@ -1,40 +1,13 @@
 # Using LaTeX Math in ggplot2
 
-gridmicrotex offers two ways to put LaTeX math in a ggplot:
-
-- **[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)**
-  and
-  **[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)**:
-  a geom layer for placing LaTeX labels at data coordinates, and a theme
-  element for rendering axis titles, plot titles and other text elements
-  as LaTeX.
-- **`latex_options(device_math = TRUE)`**: no new functions at all.
-  Ordinary
-  [`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
-  and [`labs()`](https://ggplot2.tidyverse.org/reference/labs.html)
-  labels written with `$...$` are typeset as they are drawn; see [The
-  same plot with no gridmicrotex
-  functions](#the-same-plot-with-no-gridmicrotex-functions).
-
-There are matching
-[`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
-and
-[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
-for labels written in markdown rather than raw LaTeX — covered at the
-end of this vignette, and in more depth in
-[`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md).
-
-## Annotating plots with `geom_latex()`
+## `geom_latex()` and `element_latex()`
 
 [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
 works like
-[`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
-but interprets the `label` aesthetic as a LaTeX math string. You can
-also map the `size` (font size in points) and `colour` aesthetics as
-usual.
+[`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html),
+with LaTeX labels. The `size` aesthetic is the font size in points.
 [`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
-replaces a text theme element so that its label is rendered as LaTeX
-math.
+renders a theme element, such as an axis title, as LaTeX.
 
 ``` r
 
@@ -45,9 +18,9 @@ df <- data.frame(
   col = c("red", "blue", "green")
 )
 
-ggplot(df, aes(x, y, 
-               label = eq, 
-               colour = col, 
+ggplot(df, aes(x, y,
+               label = eq,
+               colour = col,
                size = c(14, 18, 14))) +
   geom_latex() +
   scale_colour_identity() +
@@ -64,18 +37,38 @@ ggplot(df, aes(x, y,
 
 ![](ggplot2-integration_files/figure-html/geom-basic-1.png)
 
-Dollar-sign delimiters are stripped automatically here, so
-`r"(\frac{a}{b})"` and `r"($\frac{a}{b}$)"` produce the same output.
+The `$` signs are optional here: `\frac{a}{b}` and `$\frac{a}{b}$` give
+the same result.
 
-### The same plot with no gridmicrotex functions
+### Annotations
 
-`latex_options(device_math = TRUE)` takes a different route to the same
-place. It works at the graphics device, so ordinary
+`annotate("latex", ...)` adds a single label:
+
+``` r
+
+fit <- lm(mpg ~ wt, data = mtcars)
+b0 <- round(coef(fit)[1], 1)
+b1 <- round(coef(fit)[2], 1)
+r2 <- round(summary(fit)$r.squared, 3)
+
+eq_label <- sprintf(r"($\hat{y} = %s %s x, \quad R^2 = %s$)", b0, b1, r2)
+
+ggplot(mtcars, aes(wt, mpg)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  annotate("latex", x = 4, y = 30, label = eq_label, size = 12) +
+  theme_minimal()
+#> `geom_smooth()` using formula = 'y ~ x'
+```
+
+![](ggplot2-integration_files/figure-html/regression-annotation-1.png)
+
+## Without new functions
+
+With `latex_options(device_math = TRUE)`, ordinary
 [`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
-and [`labs()`](https://ggplot2.tidyverse.org/reference/labs.html) pick
-up math on their own, and a plot you already have needs no new geoms or
-theme elements. Here is the example above with every gridmicrotex
-function taken out:
+and [`labs()`](https://ggplot2.tidyverse.org/reference/labs.html) labels
+are typeset too. Here is the first plot using only ggplot2 functions:
 
 ``` r
 
@@ -97,62 +90,21 @@ ggplot(df, aes(x, y,
 
 ![](ggplot2-integration_files/figure-html/device-math-1.png)
 
-The middle label stays literal, and that is intended.
-[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
-reads its whole label as LaTeX, so `\frac{a}{b}` needs no delimiters
-there. `device_math` sees every string drawn on the device, most of
-which are not math, so it only acts on text inside `$...$`, `\(...\)` or
-`\[...\]`. Write `r"($\frac{a}{b}$)"` and the fraction renders here too.
-
-Which route to take? `device_math` keeps the code you already have, and
-it works the same way for base graphics and lattice. It is also a
-session-wide switch, and ggplot2 still sizes titles, facet strips and
-legend keys from the font rather than the formula, so a tall formula
-there can overflow its space.
+Here math needs its `$` signs, so the middle label stays literal.
+`device_math` applies to the whole session and does not make room for
+tall formulas;
 [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
 and
 [`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
-measure the real height and affect only the layer or element you give
-them.
-[`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
-lists the other side effects. The rest of this vignette uses the
-gridmicrotex functions, with `device_math` off.
-
-### Adding equation annotations to a scatter plot
-
-A common use case is annotating a regression fit with the model
-equation. Use `annotate("latex", ...)` for single annotations — it
-delegates to `GeomLatex` internally but avoids creating a data frame and
-automatically hides the legend.
-
-``` r
-
-fit <- lm(mpg ~ wt, data = mtcars)
-b0 <- round(coef(fit)[1], 1)
-b1 <- round(coef(fit)[2], 1)
-r2 <- round(summary(fit)$r.squared, 3)
-
-eq_label <- sprintf(r"($\hat{y} = %s %s x, \quad R^2 = %s$)", b0, b1, r2)
-
-ggplot(mtcars, aes(wt, mpg)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  annotate("latex", x = 4, y = 30, label = eq_label, size = 12) +
-  theme_minimal()
-#> `geom_smooth()` using formula = 'y ~ x'
-```
-
-![](ggplot2-integration_files/figure-html/regression-annotation-1.png)
+do. See
+[`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md).
 
 ## Markdown labels
 
-When a label is more prose than formula — a bold phrase, an italic word,
-a symbol in a sentence —
 [`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
 and
 [`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
-accept markdown with inline `$math$`. They take the same aesthetics and
-theme slots as their LaTeX counterparts; only the label syntax differs.
+take markdown with `$math$`, for labels that are more text than formula:
 
 ``` r
 
@@ -180,18 +132,7 @@ ggplot(df, aes(x, y, label = lab)) +
 
 ![](ggplot2-integration_files/figure-html/markdown-1.png)
 
-Unlike
-[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md),
-[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
-never strips `$` delimiters — in markdown a `$...$` pair *is* the math,
-so removing it would change the label.
-
-### Annotating with markdown
-
-`annotate("markdown", ...)` is the markdown counterpart of
-`annotate("latex", ...)`. It suits a callout that is part prose and part
-formula — and because `<br>` starts a new line, one annotation can hold
-several:
+`annotate("markdown", ...)` adds one label; `<br>` starts a new line:
 
 ``` r
 
@@ -215,17 +156,11 @@ ggplot(mtcars, aes(wt, mpg)) +
 
 ![](ggplot2-integration_files/figure-html/markdown-annotation-1.png)
 
-The LaTeX version of the same annotation would need `\text{}` around
-every word and could not set the heading in bold on its own line.
+### Styling
 
-### Styling labels
-
-Both take a `style`: a
-[`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
-object, CSS text, or the path to a `.css` file. It is the same cascade
-[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-uses — so a stylesheet can set the look of every label at once, and
-`<span class=>` picks out one run inside a label.
+`style` takes CSS, as in
+[`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md).
+`<span class="...">` styles part of a label:
 
 ``` r
 
@@ -256,20 +191,13 @@ ggplot(df, aes(x, y, label = lab)) +
 
 ![](ggplot2-integration_files/figure-html/style-1.png)
 
-On a single-run label only the properties that compile to LaTeX apply —
-colour, the `font-*` family, decorations. Margins, padding and
-backgrounds need block layout, which is the next section.
-`latex_options(markdown_style = )` sets a default for a whole document,
-so the argument is only needed to override it.
+Margins, padding and backgrounds apply only to block titles (below).
+`latex_options(markdown_style = )` sets a default style for the session.
 
 ### Block titles
 
-A label with real block structure — a heading, a list, a table, or more
-than one paragraph — is laid out as blocks instead of being flattened
-into a single run. There is nothing to switch on:
-[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
-notices. That makes a title a small document, and the `body` rule styles
-the box around it.
+A title with a heading, a list or several paragraphs is laid out as a
+small document, and the `body` rule styles its box:
 
 ``` r
 
@@ -287,18 +215,6 @@ ggplot(mtcars, aes(wt, mpg)) +
 
 ![](ggplot2-integration_files/figure-html/blocktitle-1.png)
 
-Two consequences of how ggplot2 measures theme elements are worth
-knowing.
-
-**Wrapping is opt-in.** ggplot2 asks an element how tall it is before it
-knows how wide the element’s cell will be, so a relative width would be
-resolved against the whole device and the title would reserve the wrong
-height. Without `width` the label is sized to its content and never
-wraps. Pass one when you want wrapping — `unit(1, "npc")` is the right
-value for a title, whose cell really is the plot width.
-
-**Tick labels and rotated labels stay single runs.** Axis tick labels
-for the same measuring reason. Rotated labels because the box cannot
-rotate: a rotated label with blocks in it keeps its angle, renders as
-one run, and warns, since laying a `axis.title.y` out horizontally
-across the panel would be the worse of the two failures.
+- Text does not wrap unless you give `width`; `unit(1, "npc")` suits a
+  title.
+- Axis tick labels and rotated labels are never laid out as blocks.

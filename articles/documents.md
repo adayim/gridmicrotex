@@ -1,18 +1,15 @@
 # Typesetting a document
 
-A grid page saved as PDF is a document. With `input_mode = "document"`,
-[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-and
+With `input_mode = "document"`,
 [`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-read the body of a LaTeX document — paragraphs, headings, displayed
-equations, lists and tables — by LaTeX’s own rules, so a methods
-section, a report’s appendix or a long caption can be set in R without a
-LaTeX installation.
+sets the body of a LaTeX document: paragraphs, headings, displayed
+equations, lists and tables. Use it for a methods section, an appendix
+or a long caption, with no LaTeX installation.
 
 ## A document body
 
-This is ordinary LaTeX, as it would sit between `\begin{document}` and
-`\end{document}`:
+This is ordinary LaTeX, as it would appear between `\begin{document}`
+and `\end{document}`:
 
 ``` r
 
@@ -40,8 +37,7 @@ The errors are taken to be
 )"
 ```
 
-`max_width` is the text width, in big points (1/72 inch). Paragraphs are
-broken to it and displays are centred in it:
+`max_width` is the text width in big points (1/72 inch):
 
 ``` r
 
@@ -55,40 +51,26 @@ grid.latex(body, input_mode = "document", max_width = 5.6 * 72,
 
 ## How the body is read
 
-As LaTeX reads it, with nothing of our own:
+As in LaTeX:
 
-- **Paragraphs.** A line end is a space. A blank line, or `\par`, starts
-  a paragraph, whose first line is indented by TeX’s `\parindent` (1.5
-  em); there is no space between paragraphs. `\noindent` leaves one
-  flush.
+- **Paragraphs.** A blank line or `\par` starts a new, indented
+  paragraph. `\noindent` suppresses the indent.
 - **Headings.** `\section`, `\subsection` and `\subsubsection` are
-  numbered 1, 1.1, 1.1.1 and set bold, on a line of their own;
-  `\paragraph` runs into its paragraph. A starred heading has no number.
-  The paragraph after a heading is not indented.
-- **Math.** `$…$` and `\(…\)` are inline. `\[…\]`, `$$…$$` and the
-  display environments — `equation`, `align`, `gather`, `multline`,
-  `eqnarray`, starred or not — are centred on a line of their own, and
-  the paragraph goes on after them unindented, as in LaTeX. Equations
-  are not numbered.
-- **Lists and tables.** `itemize` and `enumerate` are set as blocks;
-  their items, like a `tabular`’s cells, are text, with math between
-  `$…$`.
-- **Text.** `--` and `---` are dashes, `` ` `` and `'` (single or
-  doubled) curly quotes, and `~` a space the line is not broken at.
-  `\centering` and the `center` environment centre their lines, and a
-  `table` or `figure` is set apart where it is written, with its
-  `\caption` on a line of its own.
+  numbered; starred forms are not.
+- **Math.** `$...$` and `\(...\)` are inline. `\[...\]`, `$$...$$`,
+  `equation`, `align`, `gather` and `multline` are centred on their own
+  line. Equations are not numbered.
+- **Lists and tables.** `itemize`, `enumerate` and `tabular` hold text,
+  with math between `$...$`.
+- **Text.** `--` and `---` are dashes, quotes are curly, and `~` is a
+  non-breaking space. `\centering` and `center` centre lines.
 
-Anything LaTeX would stop on is drawn as well as it can be, and one
-warning lists each problem with its line and column in the body.
+Problems produce one warning, listing each with its line and column.
 
-## The text width
+## Justified text
 
-Without `max_width` every paragraph is a single line, however long. With
-it, lines are filled one at a time and left ragged; `justify = TRUE`
-stretches every line but a paragraph’s last to the full width, and
-`line_break = "optimal"` chooses a paragraph’s breaks together, as TeX
-does:
+`justify = TRUE` fills every line but the last, and
+`line_break = "optimal"` chooses the breaks for the whole paragraph:
 
 ``` r
 
@@ -107,14 +89,10 @@ grid.latex(para, input_mode = "document", max_width = 5.6 * 72,
 
 ## Saving a PDF
 
-A document is one grob, so it goes on a page like any other. Use
-[`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) rather than
-[`pdf()`](https://rdrr.io/r/grDevices/pdf.html): its text stays text,
-which can be selected and searched, where base
-[`pdf()`](https://rdrr.io/r/grDevices/pdf.html) falls back to drawing
-glyphs as outlines.
+Use [`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) so the text
+can be selected.
 [`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md)
-gives the size the body needs, to size the page from:
+gives the height to size the page:
 
 ``` r
 
@@ -129,18 +107,13 @@ grid.latex(body, input_mode = "document", max_width = 5.5 * 72,
 dev.off()
 ```
 
-A body longer than the page does not flow onto the next one: a grob is
-one piece. Split a long document at its paragraph breaks and draw each
-part on a page of its own.
+A document is drawn as one piece and does not flow onto a second page.
+Split a long one at paragraph breaks and draw each part on its own page.
 
-## What a single grob cannot do
+## Limitations
 
-A document’s cross-references need the rest of the document, so they
-warn and are drawn as LaTeX draws them when it cannot resolve one:
-`\ref` and `\pageref` as a bold `??`, `\eqref` as `(??)` and
-`\cite{key}` as `[?]`. A `\footnote` has no foot of a page to go to, so
-its text is set where it is written. The preamble, `\maketitle` and
-`\label` are read and dropped, and a `table` or `figure` is set where it
-is written, as a float placed “here” would be.
-[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)
-lists what is not supported at all.
+- `\ref` and `\pageref` draw `??`, `\eqref` draws `(??)` and `\cite`
+  draws `[?]`, with a warning.
+- A footnote’s text is set where it is written.
+- Tables and figures are placed where they are written.
+- The preamble, `\maketitle` and `\label` draw nothing.

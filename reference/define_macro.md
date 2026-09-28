@@ -1,9 +1,8 @@
-# Define a user-level LaTeX macro
+# Define a LaTeX shorthand for every label
 
-Registers a zero-argument shorthand that every later expression can use,
-expanded by the parser as a `\newcommand` without arguments would be.
-Useful for domain-specific notation (e.g. `\RR` for `\mathbb{R}`) you
-reuse across many plots.
+`define_macro()` adds a macro without arguments, such as `\RR` for
+`\mathbb{R}`, that every later label can use. `list_macros()` shows them
+and `clear_macros()` removes them.
 
 ## Usage
 
@@ -19,42 +18,23 @@ list_macros()
 
 - name:
 
-  Macro name **without** the leading backslash. For `clear_macros`, the
-  macro name to drop, or `NULL` (default) to clear all.
+  Macro name, without the backslash. For `clear_macros()`, `NULL`
+  (default) removes all macros.
 
 - definition:
 
-  LaTeX source the macro expands to.
+  The LaTeX the macro stands for.
 
 ## Value
 
-- `define_macro`: Invisibly returns `NULL`.
+`list_macros()` returns a named character vector of macros and their
+definitions. The others return `NULL`, invisibly.
 
-- `clear_macros`: Invisibly returns `NULL`.
+## Details
 
-- `list_macros`: A named character vector mapping macro names to their
-  expansions. Empty if no macros are defined.
-
-## Choosing between this and `\newcommand`
-
-An expression can also define macros itself, as LaTeX does:
-`\newcommand`, `\renewcommand`, `\providecommand`, `\def` (delimited
-parameters included), `\let`, `\DeclareMathOperator` and
-`\newenvironment`. Those are the more capable form: they take up to nine
-arguments, which `define_macro()` does not. As in TeX, a definition made
-inside `{...}` ends with the group, and `\gdef` is global.
-
-
-      # parameterised, but local to this one expression
-      grid.latex(r"(\def\norm#1{\left\lVert #1 \right\rVert}
-                    \norm{\vec{v}})")
-
-What they cannot do is persist: a `\newcommand` written in one call is
-gone by the next (`\gdef` included). That is the one thing
-`define_macro()` is for. Use `\newcommand` / `\def` for an abbreviation
-local to a single label, and `define_macro()` for notation you want
-available to every label in a script. A `\renewcommand` in one label
-overrides a `define_macro()` macro for that label only.
+A label can also define its own macros with `\newcommand`, `\def` and
+the like, including macros with arguments, but those last for that label
+only.
 
 ## See also
 

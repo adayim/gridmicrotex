@@ -1,13 +1,12 @@
-# Set or query package-wide LaTeX rendering defaults
+# Set or show default rendering options
 
-A single entry point for project-wide defaults used by
-[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
-[`grid.latex`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
-[`latex_dims`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md),
-and
-[`latex_tree`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md).
-Options set here are applied only when the corresponding argument is
-*not* supplied at the call site, so explicit arguments always win.
+Sets defaults for
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
+[`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
+[`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md),
+[`latex_tree()`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md)
+and the markdown functions. An argument given in a call always wins over
+the default.
 
 ## Usage
 
@@ -30,172 +29,78 @@ reset_latex_options()
 
 - math_font:
 
-  Math font name or alias (see
-  [`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)).
+  Math font; see
+  [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md).
 
 - render_mode:
 
-  Either `"typeface"` or `"path"`.
+  `"typeface"` or `"path"`; see
+  [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 - tex_style:
 
-  TeX style override. One of `""` (let the parser decide), `"display"`,
-  `"text"`, `"script"`, or `"scriptscript"`. `"display"` forces large
-  operators with limits placed over/under, useful for inline labels that
-  should still look like display equations.
+  `""`, `"display"`, `"text"`, `"script"` or `"scriptscript"`; see
+  [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 - input_mode:
 
-  How the input string is read: `"mixed"` (the default) as a label, text
-  with math between `$...$` and a newline for a new line; `"math"` as a
-  formula throughout; or `"document"` as a LaTeX document body, with
-  paragraphs, headings and displays. See
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
+  `"mixed"`, `"math"` or `"document"`; see
+  [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 - justify:
 
-  Logical. When `TRUE`, wrapped text is stretched at its interword
-  spaces so every line but the last fills `max_width` exactly. Has no
-  effect without `max_width`, since it acts on the lines the wrapper
-  produces. `FALSE` (default) leaves the right edge ragged, matching R's
-  own text drawing. In a narrow column, justifying alone opens
-  noticeably wide word spaces; mark the words that may break with `\-`.
+  If `TRUE`, stretch wrapped lines to fill `max_width`.
 
 - line_break:
 
-  How lines are chosen when wrapping. `"greedy"` (default) fills each
-  line as far as it will go and never reconsiders. `"optimal"` chooses
-  the breaks together so the paragraph as a whole reads best, in the
-  spirit of Knuth-Plass: pulling one word down early can improve every
-  later line, which a greedy pass cannot see. Requires `max_width`, and
-  costs a little more layout time.
+  `"greedy"` or `"optimal"`; see
+  [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
 
 - markdown_style:
 
   Default style for
-  [`markdown_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
+  [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
   and
-  [`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md):
+  [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md):
   a
-  [`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md)
-  object, CSS text, or a path to a `.css` file.
+  [`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md),
+  CSS text, or a path to a `.css` file.
 
 - device_math:
 
-  Logical. When `TRUE`, text drawn to the graphics device is rendered
-  with MicroTeX wherever it contains math. The motivating case is *base*
-  graphics, which has no other route to LaTeX: `plot(main=)`, `xlab`,
-  `ylab`, [`text`](https://rdrr.io/r/graphics/text.html),
-  [`mtext`](https://rdrr.io/r/graphics/mtext.html),
-  [`legend`](https://rdrr.io/r/graphics/legend.html), and anything built
-  on them such as [`hist()`](https://rdrr.io/r/graphics/hist.html) or a
-  package's own `plot` method.
+  If `TRUE`, any plot label containing math, such as `"Slope $x^2$"`, is
+  typeset as LaTeX. This works for base graphics (`main`, `xlab`,
+  [`text()`](https://rdrr.io/r/graphics/text.html),
+  [`legend()`](https://rdrr.io/r/graphics/legend.html), ...), and also
+  for lattice, grid and ggplot2. Labels without math, such as
+  `"Cost $5-$10"`, are left alone.
 
-  Interception happens at the device, so it is **not** limited to base
-  graphics: text drawn by grid, ggplot2 and lattice, and by other
-  packages' plot methods, is affected too. `grid.text("$x^2$")` renders
-  math while this is on.
-  [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md),
-  [`geom_latex`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
-  and
-  [`element_latex`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
-  give the same rendering confined to one grob, layer or theme element,
-  and measure its height correctly.
-
-  The convention is the one
-  [`latex_wrap`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
-  already uses: `$...$`, `$$...$$`, `\(...\)`, `\[...\]`, with `\$` a
-  literal dollar sign. A label is intercepted only when *every*
-  delimiter in it is closed, and either the label is a single formula or
-  every `$...$` pair wraps something that looks like math. So
-  `"Revenue ($)"`, `"Cost $5-$10"`, `"Budget $1,000 to $5,000"` and R's
-  own `"Histogram of df$a_b - df$c_d"` are passed through untouched.
-  Anything that cannot be laid out is drawn as plain text rather than
-  raising an error.
-
-  **Height is the one thing that cannot be corrected.** R computes text
-  height from the font, never from the string, and a graphics device has
-  no string-height entry point to intercept. A tall formula can
-  therefore overflow a
-  [`legend()`](https://rdrr.io/r/graphics/legend.html) box or the space
-  `par("mar")` reserved for it. Widths *are* correct. Reserve the room
-  yourself with
-  [`latex_dims`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md):
-
-
-        h  <- latex_dims("$\\frac{a}{b}$",
-                         gp = grid::gpar(fontsize = par("ps")))$height
-        bp <- grid::convertHeight(h, "bigpts", TRUE)
-        # par(mar) counts lines of par("cin"), not grid's "lines".
-        need <- ceiling(bp / (par("cin")[2] * 72 * par("mex")))
-        par(mar = c(5, need + 1, 4, 2))
-        
-
-  Other side effects worth knowing:
-
-  - It is session-wide and reaches every device opened while it is on,
-    including text drawn by packages you did not write. Labels without
-    math are passed through unchanged.
-
-  - A label containing a newline reaches the device one line at a time,
-    so a formula split across lines is not recognised.
-
-  - Math is drawn as vector outlines, so unlike
-    [`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-    it is not selectable in a PDF.
-
-  - Prose inside a bold label is not bolded: face comes from `\textbf`
-    rather than from the device.
-
-  - `\includegraphics` is left out, and rounded box corners are drawn
-    square.
-
-  - A label that cannot be laid out is drawn as literal text, and
-    warnings raised while laying it out are suppressed.
-
-  - showtext replaces the same device callbacks when a plot starts, so
-    with `showtext::showtext_auto()` on, labels stay literal.
-
-  - A package that gives `$` its own meaning acts first: corrplot parses
-    a label starting with `$` as plotmath.
-
-  - [`expression()`](https://rdrr.io/r/base/expression.html) labels are
-    untouched, because R lays plotmath out inside the graphics engine.
-
-  - Output not drawn through an R graphics device is unaffected: plotly
-    and other htmlwidgets, and rgl's own `text3d()` labels. rgl's
-    `plotmath3d()` (and `text3d(usePlotmath = TRUE)`, which calls it)
-    draws into an R device and does pick it up.
-
-  - In R Markdown, turn it off in a later chunk than the one that draws:
-    knitr captures a chunk's plots after its last line runs.
-
+  Heights are not adjusted: a tall formula can overflow a margin or a
+  [`legend()`](https://rdrr.io/r/graphics/legend.html) box. Measure it
+  with
+  [`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md)
+  and make room with `par(mar = )`. See
   [`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
-  walks through all of this with examples.
+  for the rules and limitations.
 
 ## Value
 
-Invisibly returns the previous settings (a list). With no arguments,
-returns the current settings visibly.
+The previous settings, invisibly. With no arguments, the current
+settings.
 
 ## Details
 
-Calling `latex_options()` with no arguments returns the current settings
-(a list whose `NULL` entries mean "use the built-in default"). Supply
-one or more named arguments to update them. An argument set to `NULL`
-resets that option to its default, as with
-[`options`](https://rdrr.io/r/base/options.html), so either list
-`latex_options()` returns can be passed back with
-`do.call(latex_options, old)` to restore those settings.
+With no arguments, returns the current settings (`NULL` means the
+built-in default). Setting an option to `NULL` resets it. The previous
+settings are returned, so `do.call(latex_options, old)` restores them.
 
-Font size and line spacing are controlled via `gp` parameters
-(`fontsize`, `cex`, `lineheight`) at the grob level; see
-[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
+Size and line spacing are set with `gp` (`fontsize`, `cex`,
+`lineheight`), not here.
 
 ## See also
 
-[`available_math_fonts`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md),
-[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+[`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md),
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
 
 ## Examples
 

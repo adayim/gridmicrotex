@@ -1,8 +1,9 @@
 # Check math font status
 
-Reports which **math** fonts are loaded and available for rendering: the
-MicroTeX version, the loaded math fonts, and whether the bundled font
-files are present.
+Prints which math fonts are available and whether the bundled font files
+are present. Text fonts are not covered; use
+[`systemfonts::match_fonts()`](https://systemfonts.r-lib.org/reference/match_fonts.html)
+to see what a font family resolves to.
 
 ## Usage
 
@@ -12,14 +13,7 @@ check_math_fonts()
 
 ## Value
 
-Invisibly returns the character vector of available math font names.
-
-## Details
-
-Text fonts are not covered, because they are not registered here: they
-are resolved on demand by systemfonts from `gp$fontfamily`. Use
-[`systemfonts::match_fonts()`](https://systemfonts.r-lib.org/reference/match_fonts.html)
-to see what a text family resolves to.
+The names of the available math fonts, invisibly.
 
 ## See also
 

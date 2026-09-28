@@ -1,9 +1,9 @@
 # Declarations for one markdown tag
 
-A set of CSS declarations, for use as a named argument to
-[`markdown_style`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md).
-Argument names are the CSS property names with underscores in place of
-hyphens, so `font_size` sets `font-size`.
+CSS properties for one tag, for use in
+[`markdown_style()`](https://adayim.github.io/gridmicrotex/reference/markdown_style.md).
+Names are CSS property names with `_` for `-`, so `font_size` sets
+`font-size`.
 
 ## Usage
 
@@ -15,7 +15,7 @@ md_style(...)
 
 - ...:
 
-  Named declarations.
+  Properties, as named arguments.
 
 ## Value
 
@@ -23,16 +23,15 @@ An object of class `gridmicrotex_md_style`.
 
 ## Details
 
-Lengths accept three forms: a bare number is `rem`, a multiple of the
-body font size (`font_size = 2.5`); a string is whatever CSS says it is
-(`"2.5em"`, `"12pt"`, `"150%"`); and a
-[`unit`](https://rdrr.io/r/grid/unit.html) is absolute.
+A length can be a number, meaning a multiple of the body font size
+(`font_size = 2.5`); a CSS string such as `"2.5em"` or `"12pt"`; or a
+[`grid::unit()`](https://rdrr.io/r/grid/unit.html).
 
-These are the supported properties, and where each one has an effect.
-*Inline* means it also works on a `<span>` and in
-[`markdown_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md),
-which has no block layout; *block* means it needs
-[`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md).
+The supported properties are below. *Inline* ones also work on a
+`<span>` and in
+[`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md);
+*block* ones need
+[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md).
 
 |  |  |  |
 |----|----|----|
@@ -67,34 +66,26 @@ which has no block layout; *block* means it needs
 | `bullet` | `ul` | raw LaTeX for the marker glyph |
 | `marker_gap` | `ul`, `ol` | marker to text |
 
-`font_size` also accepts CSS's keywords (`xx-small` through `xx-large`,
-plus `smaller` and `larger`), taken from the `\tiny`..`\Huge` ladder
-MicroTeX implements.
+`font_size` also takes the keywords `xx-small` to `xx-large`, `smaller`
+and `larger`.
 
-**The `body` rule styles the box itself.** On any other tag,
-`background`, `border`, `border_radius`, `padding` and `margin` apply to
-that block. On `body` they apply to the whole
-[`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md):
-its fill, its frame, its corner radius, and the space inside and outside
-it. That is the only way to give a
-[`element_markdown`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
-title a background, since the theme element takes no box arguments of
-its own:
+On `body`, `background`, `border`, `border_radius`, `padding` and
+`margin` style the box of
+[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
+or of an
+[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+title:
 
     body { background: grey95; padding: 8px;
             border: 1px solid grey60; border-radius: 4px }
 
-An explicit `box_gp`, `padding`, `margin` or `r` argument to
+The `box_gp`, `padding`, `margin` and `r` arguments of
 [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-wins over the rule, the way an inline style wins in CSS.
+override this rule.
 
-Anything else is an error: unlike a pasted stylesheet, where an unknown
-property is ignored the way a browser ignores it.
-
-**What cannot be styled at all.** There is no small-caps (`\textsc` is
-not a MicroTeX command), no `font-variant-numeric`, no right-to-left or
-bidirectional text, and no padding inside an inline `border`: MicroTeX
-has no `\fboxsep`, so that inset is fixed.
+An unknown property is an error here, but is ignored in CSS text. Small
+caps, `font-variant-numeric` and padding inside an inline `border` are
+not supported.
 
 ## See also
 

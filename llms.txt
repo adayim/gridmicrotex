@@ -1,37 +1,21 @@
 # gridmicrotex
 
-Render LaTeX math in [**base R** plots](#base-graphics) and as native R
-**grid** graphics objects (markdown included), with no external LaTeX
-installation required.
-
-gridmicrotex embeds the
-[MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ layout engine to
-parse LaTeX, compute the full box model, and produce
-resolution-independent vector output (paths, lines, rectangles) that
-works on any R graphics device.
-
-## Disclaimer
-
-**A note on development**: This package was developed as a proof of
-concept for AI-assisted package creation. I designed the architecture
-and specification, and the core C++ integration (via
-[MicroTeX](https://github.com/NanoMichael/MicroTeX)) was largely
-facilitated by AI, with my review and oversight of the design and final
-outputs. I am sharing it because it works, and I hope that others will
-find it useful. Contributions, bug reports and improvements from the
-community are very welcome.
+LaTeX math and markdown for R graphics: grid, base plots and ggplot2. No
+LaTeX installation needed. Built on the
+[MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
 
 ## Installation
 
-Install the development version from GitHub:
-
 ``` r
 
+install.packages("gridmicrotex")
+
+# Development version
 # install.packages("devtools")
 devtools::install_github("adayim/gridmicrotex")
 ```
 
-## Examples
+## grid
 
 ``` r
 
@@ -39,210 +23,88 @@ library(gridmicrotex)
 library(grid)
 
 grid.newpage()
-grid.latex("x = \\frac{\\textcolor{red}{-b} \\pm \\sqrt{b^{2} - 4ac}}{2a}", 
-           gp = grid::gpar(fontsize = 30))
+grid.latex(r"($x = \frac{\textcolor{red}{-b} \pm \sqrt{b^2 - 4ac}}{2a}$)",
+           gp = gpar(fontsize = 30))
 ```
 
 ![](reference/figures/README-example-basic-1.png)
 
-By default a string is read as a label (`input_mode = "mixed"`): text,
-as in a LaTeX paragraph, with math between `$...$` or `\(...\)` — which
-is why the `"x = "` above is set as text. `input_mode = "math"` reads
-the whole string as math, and `input_mode = "document"` reads a LaTeX
-document body, with paragraphs, headings, displayed equations and lists
-([`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md)).
-Change the default with `latex_options(input_mode = "math")`.
-
-### Composing with other grobs
-
-The grob can be placed alongside other grid objects:
-
-``` r
-
-latex_options(input_mode = "math")
-g <- latex_grob("\\frac{a}{b}", gp = grid::gpar(fontsize = 30))
-grid.newpage()
-# A blue box behind the formula
-grid.rect(
-  x = 0.5, y = 0.5,
-  width = grobWidth(g) + unit(10, "bigpts"),
-  height = grobHeight(g) + unit(10, "bigpts"),
-  gp = gpar(fill = "#e8f0fe", col = "#4285f4", lwd = 2)
-)
-
-# The formula itself
-grid.draw(g)
-```
-
-![](reference/figures/README-example-compose-1.png)
-
-### Multiple expressions
-
-``` r
-
-exprs <- c(
-  "E = mc^{2}",
-  "e^{i\\pi} + 1 = 0",
-  "\\nabla \\times \\vec{E} = -\\frac{\\partial \\vec{B}}{\\partial t}",
-  "\\binom{n}{k} = \\frac{n!}{k!(n-k)!}"
-)
-
-grid.newpage()
-for (i in seq_along(exprs)) {
-  grid.latex(
-    exprs[i],
-    x = unit(0.5, "npc"),
-    y = unit(1 - i / (length(exprs) + 1), "npc"),
-    gp = grid::gpar(fontsize = 28)
-  )
-}
-```
-
-![](reference/figures/README-example-multiple-1.png)
-
-### Mixed text and math
-
-You can use `r"()"` raw strings to write LaTeX with regular newlines and
-quotes without escaping. Use `\text{}` to embed regular text within math
-expressions:
-
-``` r
-
-grid.newpage()
-grid.latex(
-  r"(f(x) = \begin{cases} x^2 & \text{if } x \geq 0 \\ -x & \text{otherwise} \end{cases})",
-  gp = grid::gpar(fontsize = 26)
-)
-```
-
-![](reference/figures/README-example-mixed-definition-1.png)
-
-``` r
-
-reset_latex_options()  # back to input_mode = "mixed" for what follows
-```
-
-### Documents
-
-`input_mode = "document"` sets the body of a LaTeX document —
-paragraphs, headings, displayed equations, lists and tables — broken
-into lines at `max_width`, ready for a PDF page. See
-[`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md).
-
-``` r
-
-grid.newpage()
-grid.latex(r"(\section{Results}
-The slope is positive --- the fitted line is
-\[ \hat{y} = 1.2 + 0.42\,x, \]
-and its residuals show no pattern.)",
-  input_mode = "document", max_width = 5.6 * 72,
-  x = 0.02, y = 0.95, hjust = 0, vjust = 1, gp = gpar(fontsize = 12))
-```
-
-![](reference/figures/README-example-document-1.png)
+Text and math mix as in LaTeX, with math between `$...$`. Use
+`input_mode = "math"` for a bare formula, or `input_mode = "document"`
+for paragraphs, headings and displayed equations.
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+returns the grob instead of drawing it.
 
 ## Base graphics
-
-R’s own plotting system gets math too. Set
-`latex_options(device_math = TRUE)` and any label containing `$...$` is
-typeset by MicroTeX: `main`, `xlab`, `ylab`,
-[`text()`](https://rdrr.io/r/graphics/text.html),
-[`mtext()`](https://rdrr.io/r/graphics/mtext.html),
-[`legend()`](https://rdrr.io/r/graphics/legend.html), and anything built
-on them such as [`hist()`](https://rdrr.io/r/graphics/hist.html).
-Nothing else in your plotting code changes. The switch acts at the
-device, so it reaches lattice, grid, ggplot2 and other packages’ plot
-methods as well: a plain
-[`geom_text()`](https://ggplot2.tidyverse.org/reference/geom_text.html)
-label picks up math without any gridmicrotex function.
 
 ``` r
 
 latex_options(device_math = TRUE)
 
 plot(1:10, (1:10)^2,
-     main = "Slope $\\hat{\\beta}_1 = \\sum_{i=1}^{n} x_i^2$",
-     xlab = "Cost $5-$10 per unit",   # left alone: not math
-     ylab = "$\\frac{y}{2}$")
-text(3, 80, "$\\int_0^\\infty e^{-x^2}\\,dx$", col = "steelblue")
+     main = r"(Slope $\hat{\beta}_1 = \sum_{i=1}^{n} x_i^2$)",
+     xlab = "Cost $5-$10 per unit",   # no math, drawn as written
+     ylab = r"($\frac{y}{2}$)")
+text(3, 80, r"($\int_0^\infty e^{-x^2}\,dx$)", col = "steelblue")
 ```
 
 ![](reference/figures/README-example-base-1.png)
 
-Everyday labels are left alone, which is why the x-axis title above
-renders as written. Because the switch is session-wide it has side
-effects worth knowing (a tall formula can overflow the space R reserved
-for it, and showtext overrides it);
-[`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
-lists them.
+With `device_math = TRUE`, any label containing math is typeset: titles,
+axis labels, [`text()`](https://rdrr.io/r/graphics/text.html),
+[`legend()`](https://rdrr.io/r/graphics/legend.html), and labels in
+lattice and ggplot2 plots too.
 
-## Markdown
-
-[`grid.markdown()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-renders markdown, with `$math$` inline. Unlike the other
-markdown-in-grid packages, the maths is real LaTeX rather than plotmath:
-
-``` r
-
-grid.newpage()
-grid.markdown(
-  "The **fitted** slope is $\\hat{\\beta}_1 = 0.42$ (*p* < 0.001).",
-  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
-)
-```
-
-![](reference/figures/README-example-markdown-1.png)
-
-Colour, font and size come from inline HTML, as they must: markdown
-itself defines no syntax for them.
-
-``` r
-
-grid.newpage()
-grid.markdown(
-  paste0('Set in <span style="font-family:serif">serif</span>, ',
-         'H<sub>0</sub> <u>rejected</u> at ',
-         '<span style="color:#B22222">5%</span>.'),
-  x = 0.02, hjust = 0, gp = gpar(fontsize = 20)
-)
-```
-
-![](reference/figures/README-example-markdown-html-1.png)
-
-[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-lays out a whole document — headings, lists, quotes, code, tables and
-images — as a stack of grobs. See
-[`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md).
-
-## ggplot2 integration
-
-Use
-[`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
-to place LaTeX labels at data coordinates, and
-[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
-for LaTeX-rendered axis titles:
+## ggplot2
 
 ``` r
 
 library(ggplot2)
-# Add a LaTeX table as an annotation: its cells are text, as in LaTeX
-tab_str <- r"(\begin{tabular}{c|c} A & $B^2$ \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 
+tab <- r"(\begin{tabular}{c|c} A & $B^2$ \\ \hline 1 & \cellcolor{#00bde5}2 \\ 3 & 4 \end{tabular})"
 df <- data.frame(x = 1:3, y = 1:3,
-                 eq = c("$x^2$", "$\\frac{a}{b}$", "$\\sum_{i=1}^n x_i$"))
+                 eq = c("$x^2$", r"($\frac{a}{b}$)", r"($\sum_{i=1}^n x_i$)"))
+
 ggplot(df, aes(x, y, label = eq)) +
   geom_latex() +
-  annotate("latex", x = 1.15, y = 2.7, label = tab_str, size = 12) +
-  labs(x = "$\\beta_1 \\cdot x + \\beta_0$") +
+  annotate("latex", x = 1.15, y = 2.7, label = tab, size = 12) +
+  labs(x = r"($\beta_1 \cdot x + \beta_0$)") +
   theme(axis.title.x = element_latex())
 ```
 
 ![](reference/figures/README-example-ggplot2-geom-1.png)
 
-ggplot2 is a soft dependency — the core functions work without it. See
-[`vignette("ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md)
-for more examples.
+## Markdown
+
+``` r
+
+grid.newpage()
+grid.markdown(r"(The **fitted** slope is $\hat{\beta}_1 = 0.42$ (*p* < 0.001).)",
+              x = 0.02, hjust = 0, gp = gpar(fontsize = 20))
+```
+
+![](reference/figures/README-example-markdown-1.png)
+
+[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
+lays out whole documents: headings, lists, code, tables and images.
+[`geom_markdown()`](https://adayim.github.io/gridmicrotex/reference/geom_markdown.md)
+and
+[`element_markdown()`](https://adayim.github.io/gridmicrotex/reference/element_markdown.md)
+bring markdown labels to ggplot2.
+
+## Fonts and devices
+
+Lete Sans Math (the default) and STIX Two Math (`math_font = "stix"`)
+are included;
+[`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
+adds others.
+
+If the default device on Windows or macOS warns `font family not found`,
+use [ragg](https://CRAN.R-project.org/package=ragg),
+[svglite](https://CRAN.R-project.org/package=svglite) or
+[`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) (in knitr:
+`knitr::opts_chunk$set(dev = "ragg_png")`), or set
+`render_mode = "path"` to draw glyphs as outlines.
 
 ## Comparison
 
@@ -257,55 +119,26 @@ for more examples.
 | `marquee`        |       No        |         Yes         |     None      |   Yes    |
 | **gridmicrotex** |     **No**      |       **Yes**       |   **Broad**   | **Yes**  |
 
-## How it works
+## Learn more
 
-The LaTeX is read by TeX’s rules — macros expanded, commands and
-environments parsed — and MicroTeX computes the full TeX box model; a
-recorder captures every draw operation with exact coordinates, and R
-turns those into native grid primitives. Nothing is rasterised, so the
-output stays sharp at any resolution on any device.
+- [Getting
+  started](https://adayim.github.io/gridmicrotex/articles/getting-started.html)
+- [Base R
+  graphics](https://adayim.github.io/gridmicrotex/articles/base-graphics.html)
+- [ggplot2](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.html)
+- [Markdown](https://adayim.github.io/gridmicrotex/articles/markdown.html)
+- [Documents](https://adayim.github.io/gridmicrotex/articles/documents.html)
 
-Glyphs are drawn either as native text (which keeps PDF and SVG output
-selectable and searchable) or as filled vector paths, which work
-everywhere. `render_mode` chooses, and falls back to paths by itself on
-a device that cannot embed fonts.
-[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)
-covers the trade-off.
+## Disclaimer
 
-## Graphics backend
-
-The default graphics device on Windows (`windows()`) and macOS
-([`quartz()`](https://rdrr.io/r/grDevices/quartz.html)) may not find the
-bundled math fonts, producing warnings like:
-
-``` R
-font family not found in Windows font database
-```
-
-To avoid this, switch to a modern graphics backend that uses
-[systemfonts](https://CRAN.R-project.org/package=systemfonts) for font
-resolution:
-
-``` r
-
-# For knitr / R Markdown — add to your setup chunk:
-knitr::opts_chunk$set(dev = "ragg_png")
-
-# For interactive use:
-options(device = function(...) ragg::agg_png(tempfile(fileext = ".png"), ...))
-```
-
-Recommended backends:
-
-| Backend | Format | Package |
-|:---|:---|:---|
-| [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) | PNG | [ragg](https://CRAN.R-project.org/package=ragg) |
-| [`svglite::svglite()`](https://svglite.r-lib.org/reference/svglite.html) | SVG | [svglite](https://CRAN.R-project.org/package=svglite) |
-| [`grDevices::cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html) | PDF | Base R (Cairo build) |
-
-Alternatively, use `render_mode = "path"` to bypass font lookup entirely
-— glyphs are drawn as vector paths, which works on all devices but
-produces non-selectable text in PDF/SVG.
+**A note on development**: This package was developed as a proof of
+concept for AI-assisted package creation. I designed the architecture
+and specification, and the core C++ integration (via
+[MicroTeX](https://github.com/NanoMichael/MicroTeX)) was largely
+facilitated by AI, with my review and oversight of the design and final
+outputs. I am sharing it because it works, and I hope that others will
+find it useful. Contributions, bug reports and improvements from the
+community are very welcome.
 
 # Package index
 
@@ -315,13 +148,13 @@ Create and draw LaTeX math as grid grobs
 
 - [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
   [`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-  : Create a grid grob from a LaTeX expression
+  : Create a grid grob from LaTeX
 - [`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md)
-  : Get dimensions of a LaTeX expression
+  : Size of a LaTeX expression
 - [`latex_tree()`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md)
-  : Inspect the parsed layout of a LaTeX expression
+  : The layout of a LaTeX expression
 - [`grobMark()`](https://adayim.github.io/gridmicrotex/reference/grobMark.md)
-  : Look up a named anchor inside a LaTeX grob
+  : Position of a named point in a LaTeX grob
 
 ## Markdown
 
@@ -329,7 +162,7 @@ Render markdown, with LaTeX math inline, as grid grobs
 
 - [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
   [`grid.markdown()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-  : Render markdown as a grid grob
+  : Render a markdown label as a grid grob
 - [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
   : Render a markdown document as a boxed grid grob
 
@@ -357,15 +190,15 @@ Project-wide defaults and advanced tooling
 
 - [`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
   [`reset_latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
-  : Set or query package-wide LaTeX rendering defaults
+  : Set or show default rendering options
 - [`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
   [`clear_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
   [`list_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-  : Define a user-level LaTeX macro
+  : Define a LaTeX shorthand for every label
 - [`latex_cache_limit()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)
   [`latex_cache_clear()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)
   [`latex_cache_info()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)
-  : Set the maximum number of entries kept in the LaTeX layout cache
+  : Layout cache
 
 ## ggplot2 integration
 
@@ -396,7 +229,9 @@ Load and configure math and text fonts
 Utilities for working with LaTeX strings and rendering
 
 - [`latex_wrap()`](https://adayim.github.io/gridmicrotex/reference/latex_wrap.md)
-  : Wrap standard text for math-first LaTeX renderers
+  :
+
+  Wrap the text of a label in `\text{}`
 
 # Articles
 

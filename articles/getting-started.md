@@ -1,46 +1,11 @@
 # Introduction to gridmicrotex
 
-## What is gridmicrotex?
-
-**gridmicrotex** renders LaTeX math in [base R plots](#base-graphics)
-and as native R `grid` graphics objects, embedding the
-[MicroTeX](https://github.com/NanoMichael/MicroTeX) C++ engine. For a
-grob, the pipeline is:
-
-1.  The LaTeX is read by TeX’s rules — macros expanded, commands and
-    environments parsed — and MicroTeX lays it out as a TeX box model
-2.  A custom `Graphics2D` recorder captures every draw operation — glyph
-    paths, lines, rectangles — with exact coordinates
-3.  That layout crosses the C++/R boundary as a data frame
-4.  R converts each record into a grid primitive (`pathGrob`,
-    `segmentsGrob`, `rectGrob`, `textGrob`)
-5.  The result is a `gTree` that draws on any device at any resolution
-
-No LaTeX installation is required, and because nothing is rasterised the
-output is resolution independent on every R device.
-
-- Base R graphics: `latex_options(device_math = TRUE)`, see
-  [`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
-- Full math: fractions, roots, integrals, matrices, Greek, accents,
-  delimiters, and colour via `\textcolor{}`
-- Two bundled math fonts, plus any OpenType math font through
-  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-- CJK, RTL and multilingual text inside `\text{}`
-- ggplot2 integration:
-  [`geom_latex()`](https://adayim.github.io/gridmicrotex/reference/geom_latex.md)
-  and
-  [`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md),
-  see
-  [`vignette("ggplot2-integration")`](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.md)
-- Markdown with inline math: see
-  [`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md)
-
 ## Quick start
 
-[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-returns a grob;
 [`grid.latex()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-builds and draws one.
+draws LaTeX on the current page;
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+returns it as a grob.
 
 ``` r
 
@@ -53,43 +18,34 @@ grid.latex(r"($\frac{\textcolor{red}{-b} \pm \sqrt{b^2 - 4ac}}{2a}$)")
 
 ![](getting-started_files/figure-html/basic-1.png)
 
-**Write LaTeX in a raw string.** `r"(...)"` passes backslashes through
-untouched, so what you paste is what renders. Every example here uses
-one. In an ordinary `"..."` string each `\` has to be doubled — and
-LaTeX’s own row separator `\\` becomes a bewildering `\\\\`.
+Write LaTeX in a raw string, `r"(...)"`, so backslashes need no
+doubling.
 
-### Mixing text and math
+## Text and math
 
-The default `input_mode = "mixed"` reads the string as a LaTeX paragraph
-reads it: text, with math inside `$…$` or `\(…\)`, which is why
-`Famous:` below needs no markup. Its one departure from LaTeX is that a
-newline starts a new line, as `"\n"` does in any R label.
-`input_mode = "math"` treats the whole string as math, so prose must be
-wrapped in `\text{}`; that suits heavy math. These two render
-identically:
+A string is read like a line of LaTeX text: math goes between `$...$` or
+`\(...\)`, and a newline starts a new line. With `input_mode = "math"`
+the whole string is math and text goes in `\text{}`. These two are the
+same:
 
 ``` r
 
 grid.newpage()
 grid.latex(r"(Famous: $E = mc^2$)",
-           x = 0.05, y = 0.7, hjust = 0, )
+           x = 0.05, y = 0.7, hjust = 0)
 grid.latex(r"(\text{Famous: } E = mc^2)", input_mode = "math",
-           x = 0.05, y = 0.3, hjust = 0, )
+           x = 0.05, y = 0.3, hjust = 0)
 ```
 
 ![](getting-started_files/figure-html/modes-1.png)
 
-Set the mode for a whole session with `latex_options(input_mode = )`. A
-third mode, `input_mode = "document"`, reads a whole LaTeX document body
-— paragraphs, headings, displayed equations — and has a vignette of its
-own,
-[`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md).
+`input_mode = "document"` reads a document body with paragraphs,
+headings and displayed equations (see
+[`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md)).
+`latex_options(input_mode = )` sets the default for the session.
 
-### When the LaTeX is wrong
-
-Input that LaTeX would stop on does not stop a label. What can be read
-is drawn, and a single warning lists each problem with its line and
-column; an unknown command is drawn in red, so it is easy to find:
+Mistakes do not stop the drawing. One warning lists each problem with
+its line and column, and an unknown command is drawn in red:
 
 ``` r
 
@@ -100,14 +56,10 @@ grid.latex(r"(Area $\pi r^2$, see \nosuchcommand{here})")
 
 ![](getting-started_files/figure-html/malformed-1.png)
 
-Only a macro that expands without end is an error.
-
 ## Base graphics
 
-The quick start builds a grid grob. Base graphics, the plotting system R
-starts with, can typeset math too: turn on
-`latex_options(device_math = TRUE)` and write `$...$` in any label, with
-no other change to your code.
+Set `latex_options(device_math = TRUE)` and write `$...$` in any base
+plot label:
 
 ``` r
 
@@ -121,18 +73,14 @@ text(3, 80, r"($\int_0^\infty e^{-x^2}\,dx$)", col = "steelblue")
 
 ![](getting-started_files/figure-html/base-quick-1.png)
 
-The switch works at the graphics device, so it also reaches lattice,
-grid, ggplot2 and other packages’ plot methods. It is session-wide and
-has side effects worth knowing before you rely on it.
+See
 [`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
-covers when a label counts as math, a table drawn inside a base plot,
-how to make room for a tall formula, and the full list of side effects.
+for details.
 
-## What it can render
+## Examples
 
-Two figures before the details, because the range is easier to see than
-to describe. A coloured `array` with `\multicolumn`, `\rowcolor`,
-`\cellcolor`, a custom column type and a nested matrix:
+A coloured `array` with `\multicolumn`, `\rowcolor`, `\cellcolor`, a
+custom column type and a nested matrix:
 
 ``` r
 
@@ -156,14 +104,13 @@ grid.latex(r"(
   \multicolumn{4}{|c|}{\text{Table Foot}}\\
   \hline
 \end{array}
-)", )
+)")
 ```
 
 ![](getting-started_files/figure-html/showcase-table-1.png)
 
-And a page of assorted notation — `split` alignment, fraktur, stacked
-delimiters, `\sideset`, extensible arrows, `\rotatebox`, `\reflectbox`
-and a boxed result:
+Assorted notation: `split` alignment, fraktur, stacked delimiters,
+`\sideset`, extensible arrows, `\rotatebox` and `\reflectbox`:
 
 ``` r
 
@@ -215,16 +162,10 @@ grid.latex(r"(
 
 ![](getting-started_files/figure-html/showcase-equation-1.png)
 
-Both are ordinary LaTeX, pasted unchanged. The rest of this vignette is
-about placing such things, choosing fonts, and knowing where the
-supported set ends.
+## Placing a formula
 
-### Aligning to the math baseline
-
-`hjust` and `vjust` also take names. The useful one is
-`vjust = "baseline"`, which puts the formula’s *math baseline* — not the
-bounding-box centre — on the anchor, so a formula sits beside running
-text the way it would in a typeset document.
+`hjust` and `vjust` take numbers or names. `vjust = "baseline"` puts the
+formula’s baseline on `y`, so it lines up with text beside it:
 
 ``` r
 
@@ -242,18 +183,11 @@ grid.text(", then proceed.", x = 0.62, y = y, just = c(0, 0.5),
 
 ![](getting-started_files/figure-html/baseline-align-1.png)
 
-`hjust` accepts `"left"`/`"bbleft"`, `"center"`/`"centre"`/`"middle"`/
-`"bbcentre"`, and `"right"`/`"bbright"`. `vjust` accepts `"bottom"`,
-`"center"`/`"centre"`/`"middle"`, `"top"`, and `"baseline"`.
+### Named anchors
 
-### Named anchors with `\mark{}`
-
-`\mark{name}` records a named anchor inside the formula, and
+`\mark{name}` records a point inside a formula, and
 [`grobMark()`](https://adayim.github.io/gridmicrotex/reference/grobMark.md)
-resolves it to a pair of grid units ready to drive an arrow or a
-callout. Marks work at any nesting level — even inside a superscript or
-a fraction — and inherit the surrounding transform (font shrink,
-scaling, rotation), so the anchor lands on the rendered glyph.
+returns it as grid units, ready for an arrow or a callout:
 
 ``` r
 
@@ -262,7 +196,6 @@ g <- latex_grob(r"($a^2 + b\mark{term}^2 \mark{equals}= c^2$)",
 grid.newpage()
 grid.draw(g)
 
-# The "=" sign, pointed at from above.
 mk_eq <- grobMark(g, "equals")
 grid.segments(mk_eq$x, mk_eq$y + unit(15, "mm"),
               mk_eq$x, mk_eq$y + unit(3, "mm"),
@@ -271,8 +204,6 @@ grid.segments(mk_eq$x, mk_eq$y + unit(15, "mm"),
 grid.text("equals", x = mk_eq$x, y = mk_eq$y + unit(18, "mm"),
           gp = gpar(col = "red"))
 
-# The b^2 term, from below -- the mark sits at the end of the term,
-# including the superscript's smaller scale.
 mk_bsq <- grobMark(g, "term")
 grid.segments(mk_bsq$x - unit(6, "mm"), mk_bsq$y - unit(15, "mm"),
               mk_bsq$x - unit(2, "mm"), mk_bsq$y - unit(3, "mm"),
@@ -285,27 +216,11 @@ grid.text("b² term", x = mk_bsq$x - unit(7, "mm"),
 
 ![](getting-started_files/figure-html/mark-1.png)
 
-The returned units carry the grob’s viewport position and
-`hjust`/`vjust`, so they go straight into any grid drawing function with
-no offset arithmetic. A mark is a single point, not a span: to centre a
-callout over a multi-glyph term, use a pair (`\mark{l}…\mark{r}`) and
-take the midpoint.
+## Display and text style
 
-## Display and inline style
-
-TeX sets the same expression two ways. In *display* style a `\sum` is
-drawn at full size with its limits above and below; in *text* (inline)
-style it shrinks and the limits become scripts beside it. This is a
-choice about spacing and layout, not about size — size is always
-`gp$fontsize`.
-
-By default the delimiters decide, exactly as in a LaTeX document: `$…$`
-gives text style and `$$…$$` gives display style. A label written
-without delimiters — a plot title, an axis title, an
-[`element_latex()`](https://adayim.github.io/gridmicrotex/reference/element_latex.md)
-— has nothing for the parser to go on, so it gets text style.
-`tex_style` overrides that for the whole expression, and takes all four
-of TeX’s styles:
+`$...$` sets a formula in text style, as in a paragraph; `$$...$$` sets
+it in display style, with limits above and below. A label without
+delimiters is set in text style. `tex_style` overrides this:
 
 ``` r
 
@@ -327,25 +242,15 @@ for (i in seq_along(styles)) {
 
 ![](getting-started_files/figure-html/style-options-1.png)
 
-Every panel is `gp = gpar(fontsize = 20)`. The display version is taller
-and narrower because the limits moved above and below the operator
-instead of sitting beside it — worth knowing when you are budgeting
-space for a label, and
-[`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md)
-reports the difference if you need the numbers. `"script"` and
-`"scriptscript"` are the sizes TeX uses for first- and second-level
-scripts; they are occasionally handy for a compact sub-label, and rarely
-needed otherwise.
+All four use the same font size. To change the style of part of a
+formula, use `\displaystyle`, `\textstyle`, `\scriptstyle` or
+`\scriptscriptstyle`.
 
-To change style for part of an expression rather than all of it, use the
-inline commands `\displaystyle`, `\textstyle`, `\scriptstyle` and
-`\scriptscriptstyle` instead. `latex_options(tex_style = )` sets a
-session default.
+## Line wrapping
 
-## Wrapping and justification
-
-`max_width`, in big points, wraps a label over as many lines as it
-needs.
+`max_width`, in big points, wraps a label over several lines.
+`justify = TRUE` fills every line but the last, and
+`line_break = "optimal"` balances the breaks across the paragraph:
 
 ``` r
 
@@ -372,22 +277,14 @@ popViewport(2)
 
 ![](getting-started_files/figure-html/wrap-1.png)
 
-Both refinements are off by default. `justify = TRUE` fills every line
-but the last; `line_break = "optimal"` chooses the breaks by total fit
-rather than one line at a time. Justifying a narrow column opens wide
-word gaps, since nothing may break inside a word — mark the words that
-may with `\-`, as in `in\-ter\-na\-tion\-al`.
+Words are not hyphenated. Mark where one may break with `\-`, as in
+`in\-ter\-na\-tion\-al`.
 
-## Including a figure
+## Images
 
-`\includegraphics` draws an image inside the formula. PNG, JPEG and SVG
-are supported, sized with `width`, `height` or `scale` in any LaTeX
-length; give one of width/height and the aspect ratio is kept, or both
-plus `keepaspectratio` to fit inside them. As in LaTeX the extension may
-be omitted (`{plots/fig}` finds `plots/fig.svg` or `plots/fig.png`), and
-`\graphicspath{{figs/}}` names the directories to search. `angle`
-rotates the figure, like `\rotatebox`; `trim` and `clip` are recognised
-but not applied, and say so.
+`\includegraphics` draws a PNG, JPEG or SVG file. Size it with `width`,
+`height` or `scale`, and rotate it with `angle`. The extension may be
+left off, and `\graphicspath{{figs/}}` adds a folder to search.
 
 ``` r
 
@@ -400,38 +297,15 @@ dev.off()
 #>   2
 
 grid.newpage()
-grid.latex(sprintf(r"(\text{before }\includegraphics[width=1in]{%s}\text{ after})", fig),
-           input_mode = "math", gp = gpar(fontsize = 20))
+grid.latex(sprintf(r"(before \includegraphics[width=1in]{%s} after)", fig),
+           gp = gpar(fontsize = 20))
 ```
 
 ![](getting-started_files/figure-html/img-basic-1.png)
 
-Inline, the image sits **on the baseline**, as in LaTeX — `\raisebox`
-moves it. A paragraph holding only an image is a **block**, flush left
-unless `halign` or a `text-align` rule on `img` says otherwise.
-
-``` r
-
-icon <- sprintf(r"(\includegraphics[width=14bp]{%s})", fig)
-grid.newpage()
-grid.latex(sprintf(r"(\text{baseline }%s\text{, raised }\raisebox{4bp}{%s})",
-                   icon, icon),
-           input_mode = "math", gp = gpar(fontsize = 20))
-```
-
-![](getting-started_files/figure-html/img-raise-1.png)
-
-### A caption
-
-`\caption` renders where it is written. A caption after
-`\includegraphics` therefore sits below the figure, and one written
-before a `tabular` sits above the table — which is what makes raw
-`xtable` and `kable` output come out the right way round without any
-float logic.
-
-`\centering` is dropped, because a grob has no page to centre against. A
-one-column `array` does the job instead: it centres the figure and its
-caption on each other.
+An inline image sits on the baseline; `\raisebox` moves it. A `\caption`
+is drawn where it is written. To centre a figure and its caption, put
+them in a one-column `array`:
 
 ``` r
 
@@ -445,43 +319,20 @@ grid.latex(sprintf(r"(\begin{array}{c}
 
 ![](getting-started_files/figure-html/img-caption-1.png)
 
-Remove the `array` and the same two lines come out flush left. LaTeX
-numbers captions from a counter; here the number is yours to write.
-
-**Prefer SVG.** An SVG is drawn as real grid primitives, so it stays
-sharp at any output resolution — there is no dpi to choose. A PNG or
-JPEG is a fixed grid of pixels, so if you display one much larger than
-it was saved you get a blurry result; the package warns when the
-effective resolution falls below 150 dpi and tells you what pixel size
-would reach 300. The rule is `pixels = display_inches * output_dpi`.
-
-PDF and EPS are **not** supported. Save the figure as SVG instead: it
-needs no external tool and, unlike a rasterised PDF, its text stays
-text.
+Prefer SVG, which stays sharp at any size. A PNG or JPEG warns when it
+is shown below 150 dpi. PDF and EPS files are not supported.
 
 ## Fonts
 
-Two layers are in play. **MicroTeX** chooses the math glyphs and their
-metrics; **grid** draws everything inside `\text{}` using
-`gp$fontfamily`, so prose follows R’s ordinary font handling — Latin,
-CJK, Cyrillic and anything else the device supports.
-
-Two math fonts ship with the package and load automatically:
+Two math fonts are included:
 
 | Alias              | Font           | Style      | Pairs with             |
 |--------------------|----------------|------------|------------------------|
 | `"lete"` (default) | Lete Sans Math | Sans-serif | `fontfamily = "sans"`  |
 | `"stix"`           | STIX Two Math  | Serif      | `fontfamily = "serif"` |
 
-``` r
-
-available_math_fonts()
-#> [1] "DejaVu Sans"    "Lete Sans Math" "STIX Two Math"
-```
-
-Set one per call with `math_font`, or for the session with
-`latex_options(math_font = )`. Both rows below are the same formula —
-only the math font and its paired text family differ:
+Choose one with `math_font`, or for the session with
+`latex_options(math_font = )`. Text follows `gp$fontfamily`:
 
 ``` r
 
@@ -500,10 +351,8 @@ upViewport(2)
 
 ![](getting-started_files/figure-html/fonts-1.png)
 
-[`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md)
-gives a diagnostic report. Any font available to R works for the text
-half — base families like `"sans"`, `"serif"` and `"mono"`, or anything
-registered through **systemfonts**:
+Any font R can use works for text, including CJK and right-to-left
+scripts:
 
 ``` r
 
@@ -514,19 +363,8 @@ grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)",
 
 ![](getting-started_files/figure-html/cjk-1.png)
 
-Right-to-left scripts work the same way, mixed with Latin included. Two
-things do not: wrapping a right-to-left paragraph across lines needs the
-optional [FriBidi](https://github.com/fribidi/fribidi) library, and a
-math atom between two right-to-left runs — `\text{…}$x^2$\text{…}` —
-falls back to left-to-right order.
-
-### Naming a font for one run
-
-`gp$fontfamily` applies to the whole grob. For a *single run*, use
-`\gmfontfamily{family}{content}` — a gridmicrotex extension, not
-standard LaTeX. `\textrm{…}` goes the other way, returning content to
-`gp$fontfamily` even inside a `\textsf{…}`, `\texttt{…}` or
-`\gmfontfamily{…}{…}` group, and without disturbing bold or italic:
+`\gmfontfamily{family}{text}` sets the font of one run, and `\textrm{}`
+returns to `gp$fontfamily`:
 
 ``` r
 
@@ -539,75 +377,32 @@ grid.latex(
 
 ![](getting-started_files/figure-html/gmfontfamily-1.png)
 
-`family` is anything `gp$fontfamily` accepts: a generic (`"sans"`,
-`"serif"`, `"mono"`) or a specific name such as `"Georgia"`, which
-`\textsf{…}` / `\texttt{…}` cannot express. Unresolvable names fall back
-silently. The content is typeset as text, so this styles prose, not math
-— math glyphs follow `math_font`. It composes with emphasis in either
-nesting order, but a nested `\gmfontfamily` *replaces* the family it
-sits inside.
+`load_math_font("MyFont.otf")` adds any OpenType math font. Text fonts
+need no loading.
+[`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md)
+lists what is available.
 
-The name is deliberately not `\fontfamily`: LaTeX’s takes one argument,
-does nothing until `\selectfont`, and wants an NFSS code (`ptm`) rather
-than a font name. Since gridmicrotex accepts pasted LaTeX, claiming that
-name would silently misparse real input. This is also what markdown’s
-`font-family` CSS compiles to — see
-[`vignette("markdown")`](https://adayim.github.io/gridmicrotex/articles/markdown.md).
+## Devices
 
-### Loading a custom math font
+By default glyphs are drawn as text, so PDF and SVG output can be
+selected and searched. This needs `ragg`, `svglite` or
+[`cairo_pdf()`](https://rdrr.io/r/grDevices/cairo.html); on other
+devices, such as [`pdf()`](https://rdrr.io/r/grDevices/pdf.html), glyphs
+are drawn as outlines with a warning. `render_mode = "path"` always
+draws outlines: it works on every device, but the text cannot be
+selected.
 
-[`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-adds any OpenType math font. The OpenType MATH table is parsed directly
-in C++, so no companion metrics file and no external toolchain are
-needed:
+If the default device on Windows or macOS warns `font family not found`,
+use [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html)
+instead.
 
-``` r
-
-load_math_font("path/to/MyFont.otf")
-```
-
-This is only for **math** fonts. Text fonts need no loading at all — set
-`gp$fontfamily`, or name one for a run with `\gmfontfamily{}{}`.
-
-## Devices and render modes
-
-- **`"typeface"`** (default) draws glyphs as native text, so PDF and SVG
-  output stays selectable and searchable: a line of prose is emitted as
-  a single element, so a viewer finds a phrase and not merely a word.
-  Text given a `max_width` is the exception — it is emitted one word per
-  element, because the spaces are where the lines break. Fonts are read
-  straight from their OTF files, with no system-wide install — but this
-  needs a device with the R 4.3 glyph engine (`ragg`, `svglite`,
-  `cairo_pdf`). On others, such as the base
-  [`pdf()`](https://rdrr.io/r/grDevices/pdf.html) device, it falls back
-  to path mode with a warning.
-- **`"path"`** draws each glyph as a filled vector path. Works on every
-  device; the text is not selectable, and files are larger.
-
-``` r
-
-grid.latex(r"($E = mc^2$)")                        # typeface
-grid.latex(r"($E = mc^2$)", gp = gpar(fontsize = 24), render_mode = "path")  # path
-```
-
-The default devices on Windows and macOS may not find the bundled math
-fonts, and warn `font family not found in Windows font database`. The
-README lists the backends to prefer with the one-line setup for each,
-and compares the package with `tikzDevice`, `xdvir`, `latex2exp` and
-`plotmath`.
-
-> **Do not use `showtext::showtext_auto()` with typeface mode.**
-> showtext intercepts all text rendering and converts it to paths,
-> silently defeating typeface mode even on `svglite` and `ragg`. Call
-> `showtext::showtext_auto(FALSE)` before drawing formulas.
+`showtext::showtext_auto()` turns all text into outlines, formulas
+included. Turn it off with `showtext::showtext_auto(FALSE)`.
 
 ## Utilities
 
-### Measuring
-
 [`latex_dims()`](https://adayim.github.io/gridmicrotex/reference/latex_dims.md)
-returns the bounding box of an expression, for layout arithmetic and for
-checking that a label fits:
+measures a formula:
 
 ``` r
 
@@ -628,25 +423,18 @@ latex_dims(r"(\frac{a}{b})", gp = gpar(fontsize = 20))
 #> [1] FALSE
 ```
 
-### Session defaults
-
 [`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
-sets `math_font`, `render_mode` and `input_mode` for calls that don’t
-supply them; explicit arguments always win. Size stays at the grob
-level, via `gp$fontsize` / `gp$lineheight`.
+sets defaults for the session; arguments given in a call always win:
 
 ``` r
 
-latex_options(math_font = "stix", render_mode = "typeface")
-latex_options()        # query
-reset_latex_options()  # back to built-in defaults
+latex_options(math_font = "stix")
+latex_options()        # show the current settings
+reset_latex_options()  # back to the defaults
 ```
 
-### User-defined macros
-
 [`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-registers zero-argument shorthands that every later label can use,
-expanded as a `\newcommand` without arguments would be:
+adds a shorthand for every later label:
 
 ``` r
 
@@ -654,7 +442,7 @@ define_macro("RR", r"(\mathbb{R})")
 define_macro("eps", r"(\varepsilon)")
 
 grid.newpage()
-grid.latex(r"(\forall \eps > 0, \eps \in \RR)")
+grid.latex(r"($\forall \eps > 0, \eps \in \RR$)")
 ```
 
 ![](getting-started_files/figure-html/macros-1.png)
@@ -665,49 +453,21 @@ grid.latex(r"(\forall \eps > 0, \eps \in \RR)")
 clear_macros()
 ```
 
-Names must be ASCII letters, and macros can use each other.
-[`list_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-shows what is registered;
-[`clear_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-drops everything.
-
-A label can define macros itself, as LaTeX does: `\newcommand`,
-`\renewcommand`, `\providecommand`, `\def` (delimited parameters
-included), `\let` and `\newenvironment`, with up to nine arguments.
-These live only for the expression they appear in — and, as in TeX, only
-to the end of the `{...}` group they are made in — so use them for an
-abbreviation local to one label and
-[`define_macro()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
-for one that should persist:
+A label can also define its own, with `\newcommand` or `\def`. These
+last for that label only:
 
 ``` r
 
 grid.newpage()
 grid.latex(
   r"(\def\norm#1{\left\lVert #1 \right\rVert}
-      \norm{\vec{v}} = \sqrt{\langle \vec{v}, \vec{v} \rangle})"
+      $\norm{\vec{v}} = \sqrt{\langle \vec{v}, \vec{v} \rangle}$)"
 )
 ```
 
 ![](getting-started_files/figure-html/def-inline-1.png)
 
-### Caching and introspection
-
-Parsed layouts are memoised by
-`(tex, fontsize, math_font, render_mode, …)`, so a repeated axis label
-is laid out once:
-
-``` r
-
-latex_cache_info()       # size / max_size / hits / misses
-latex_cache_limit(1024)  # LRU capacity; 0 disables caching
-latex_cache_clear()      # wipe (e.g. after re-loading fonts)
-```
-
-[`latex_tree()`](https://adayim.github.io/gridmicrotex/reference/latex_tree.md)
-returns the raw draw records plus bbox metadata, and `debug = TRUE`
-overlays the bounding box, baseline and record origins — both useful
-when checking alignment:
+`debug = TRUE` draws the bounding box and baseline:
 
 ``` r
 
@@ -717,50 +477,10 @@ grid.latex(r"($x^{2} + y_{i}$)", debug = TRUE)
 
 ![](getting-started_files/figure-html/debug-1.png)
 
-## LaTeX reference
+## Pasting LaTeX
 
-gridmicrotex covers the vast majority of the notation used in plots and
-figures, and reads a document body too, but it draws one grob, not
-pages: it does not replace a LaTeX installation. This section is the
-boundary.
-
-### Lists
-
-`itemize` and `enumerate` lay their items out as a left-aligned column,
-one per row — `itemize` prefixes a bullet, `enumerate` numbers them. An
-item is text, as in LaTeX, with its math between `$…$`:
-
-``` r
-
-grid.newpage()
-grid.latex(r"(\begin{enumerate}
-  \item Euler: $e^{i\pi} + 1 = 0$
-  \item Two letters: \begin{itemize}
-          \item $\alpha$ \item $\beta$
-        \end{itemize}
-\end{enumerate})", gp = gpar(fontsize = 20))
-```
-
-![](getting-started_files/figure-html/lists-1.png)
-
-An optional `[…]` argument customises the marker. For `itemize` it is
-the literal marker (`\begin{itemize}[\star]`); for `enumerate` it is a
-counter template containing one of `\arabic*`, `\alph*`, `\Alph*`,
-`\roman*` or `\Roman*` (e.g. `\begin{enumerate}[\Roman*.]`). Lists nest,
-and an item may hold a table as well as math.
-
-With `input_mode = "math"` an item is math instead, as everything in
-that mode is. Either way an item is **one line**: `max_width` does not
-wrap it. The `description` environment is not supported.
-
-### Pasting LaTeX from other sources
-
-Input generated by other tools — ready-to-compile `tabular` snippets,
-fragments copied out of a `.tex` file — usually arrives wrapped in
-document-level constructs a single grob has no use for. They are read
-and dropped, or read as their nearest equivalent, so
-`knitr::kable(format = "latex")` and `xtable::print.xtable()` output can
-be pasted in unedited:
+Tables from `knitr::kable(format = "latex")` or `xtable` can be pasted
+unchanged:
 
 ``` r
 
@@ -781,82 +501,18 @@ Slope & 0.42 & 0.001 \\
 )"
 
 grid.newpage()
-grid.latex(snippet, input_mode = "mixed", gp = gpar(fontsize = 11))
+grid.latex(snippet, gp = gpar(fontsize = 11))
 ```
 
 ![](getting-started_files/figure-html/pasted-1.png)
 
-Six things were handled without any editing: the `%` comment and the
-`table` float were dropped, `\centering` removed, `\caption` set as a
-line above the table, `\toprule`/`\bottomrule` became thick rules,
-`\midrule` a plain one, and `\emph` became italic.
+## Not supported
 
-The cells are text, as in LaTeX, with any math in them between `$…$`.
-With `input_mode = "math"` a `tabular`’s cells are math instead, like an
-`array`’s.
-
-**Read and dropped (no visual effect):**
-
-| Construct | Why |
-|----|----|
-| `%`-to-end-of-line comments (`\%` is preserved) | comments are non-visual in LaTeX too |
-| `\documentclass[…]{…}`, `\usepackage[…]{…}` | preamble metadata |
-| `\begin{document}` / `\end{document}` | document boundary, structural only |
-| `\maketitle`, `\title{…}`, `\author{…}` | title-page metadata, no body output |
-| `\label{…}` | cross-reference target, never rendered in LaTeX either |
-| `\begin{table}[…]` / `\end{table}`, `\begin{figure}[…]` / `\end{figure}` (and starred variants) | float wrappers; the contents stay |
-| `\raggedright`, `\raggedleft`, `\flushleft`, `\flushright`, and `\centering` outside a document | alignment scope declarations |
-| `\relax`, and `\noindent` outside a document | content-free declarations |
-
-**Read as their nearest equivalent:**
-
-| Construct | Becomes |
-|----|----|
-| `\emph{X}` | `\textit{X}` |
-| `\newline`, and `\par` outside a document | `\\` (line break) |
-| `\toprule`, `\bottomrule` | `\thickhline` (rendered ~2× thickness) |
-| `\midrule` | `\hline` |
-| `\cmidrule[trim]?(parenarg)?{a-b}` | `\cline{a-b}` — partial-column rule |
-| `\caption[short]{X}` | `\text{X}` plus a line break, at its source position — so a caption written above the table stays above it |
-| `\smallskip`, `\medskip`, `\bigskip` | `\vspace{0.25em}` / `\vspace{0.5em}` / `\vspace{1em}` — em-relative so they scale with `gp$fontsize` |
-| `\hfill`, `\vfill` | `\quad` / `\vspace{1em}` — static proxies for rubber lengths |
-| `\url{X}` | coloured monospace text — a grob cannot be a hyperlink, so only the appearance survives |
-| `\href{U}{X}` | `X`, coloured. Matches `hyperref` with `colorlinks=true`; markdown links use HTML’s blue-and-underlined convention instead |
-
-Three of those are approximations. `\caption` renders where it appears
-in the source, not where LaTeX’s float machinery would move it, so
-caption-above or caption-below follows whatever your tool emits. The
-skips are em-relative rather than LaTeX’s absolute 3/6/12 pt, so they
-stay visible at any `gp$fontsize`; use `\vspace{Xpt}` for an exact
-amount. And `\hfill` / `\vfill` are *rubber* lengths with nothing to
-fill in a fixed-size grob, so they become a static 1 em gap — right
-position, no elasticity.
-
-**Drawn as LaTeX draws them when there is nothing to resolve them
-against**, with a warning: `\ref{…}` and `\pageref{…}` as a bold `??`,
-`\eqref{…}` as `(??)`, `\cite{key}` as `[?]`, and a `\footnote{…}`’s
-text where it is written, since a grob has no foot of the page.
-
-**Not supported** — drawn in red with a warning, which makes them easy
-to spot:
-
-- Declarative font scopes: `\bfseries`, `\itshape`, `\ttfamily`,
-  `\sffamily`, `\rmfamily`. Use the argument-bearing forms instead —
-  `\textbf{…}`, `\textit{…}`, `\texttt{…}`, `\textsf{…}`, `\textrm{…}` —
-  all of which nest, or TeX’s older `\bf` and `\it`. To choose the text
-  font itself, set `gp$fontfamily` or use `\gmfontfamily{…}{…}`.
-- Small caps: `\textsc{…}` — MicroTeX has no small-caps glyphs.
-
-### What is not supported
-
-These need a real document compiler: pages and page layout,
-`\tableofcontents`, and anything numbered across a document —
-references, bibliographies, `\tag` and equation numbers. Nor are
-automatic hyphenation (`\-` marks a break point yourself, and
-`max_width` / `justify` do handle line breaking), TikZ/PGF, theorem
-environments, `\verb`, and the `description` list environment (`itemize`
-and `enumerate` *are* supported). `\usepackage{…}` is accepted but loads
-nothing — every supported command is built in.
-
-For axis labels, annotations, legends and in-plot formulas, the
-supported set is more than sufficient.
+- Pages, and numbering across a document: `\ref` draws `??`, `\cite`
+  draws `[?]`, and equations are not numbered.
+- Automatic hyphenation, TikZ, theorem environments, `\verb`, small caps
+  and the `description` list.
+- `\bfseries`, `\itshape` and similar switches. Use `\textbf{}`,
+  `\textit{}`, or `\bf` and `\it`.
+- `\usepackage` loads nothing; every supported command is built in.
+- A formula between two right-to-left words is not reordered.

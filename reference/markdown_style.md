@@ -1,13 +1,11 @@
 # A style for markdown rendering
 
-Builds the style used by
-[`markdown_box_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-and
-[`markdown_grob`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md):
-a small CSS cascade over the markdown tags. One constructor covers
-creating a style, starting from a preset, and extending an existing one.
-For the properties themselves, and which are honoured where, see
-[`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md).
+Creates a style for
+[`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md),
+[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
+and the ggplot2 markdown functions, from CSS, a preset, or
+[`md_style()`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
+declarations.
 
 ## Usage
 
@@ -19,53 +17,38 @@ markdown_style(base = NULL, css = NULL, ...)
 
 - base:
 
-  `NULL` (default) for the built-in defaults, the name of a bundled
-  preset such as `"github"`, or an existing `markdown_style` to extend.
+  `NULL` (default) for the built-in style, a preset name such as
+  `"github"`, or a `markdown_style` to extend.
 
 - css:
 
-  A stylesheet: CSS text, or a path to a `.css` file. Read as a file
-  when it names one.
+  CSS text, or a path to a `.css` file.
 
 - ...:
 
-  Named tag overrides, each an
-  [`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md).
-  Use a leading dot for a class, e.g. `.note = md_style(...)`.
+  Tag styles, each an
+  [`md_style()`](https://adayim.github.io/gridmicrotex/reference/md_style.md).
+  Start a name with a dot for a class, as in `.note = md_style(...)`.
 
 ## Value
 
-An object of class `gridmicrotex_markdown_style`.
+A style object of class `"gridmicrotex_markdown_style"`.
 
 ## Details
 
-Tags are named as in HTML, so a stylesheet reads the way a CSS author
-expects: `body` (the document root, which every other tag inherits from,
-and which also styles the box itself; see
-[`md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md)),
-`p`, `h1` ... `h6`, `ul`, `ol`, `li`, `blockquote`, `pre` (a code
-block), `code` (an inline code span), `strong` and `em` (what markdown's
-`**` and `*` produce), `table`, `tr`, `td`, `th`, `hr`, `img`, `a` (a
-link), `math` (a paragraph that is nothing but `$$...$$`), `footnote`,
-`div` and `span`.
+Tags are named as in HTML: `body`, `p`, `h1` to `h6`, `ul`, `ol`, `li`,
+`blockquote`, `pre` (code block), `code` (inline code), `strong`, `em`,
+`table`, `tr`, `td`, `th`, `hr`, `img`, `a` (link), `math` (a `$$...$$`
+paragraph), `footnote`, `div` and `span`. Every tag inherits from
+`body`, and table cells inherit from `table`.
 
-The table tags nest as they do in HTML: `tr`, `td` and `th` inherit
-through `table`, so `table { color: }` reaches the cells. `background`
-on `tr` fills the row, on `td`/`th` the individual cell.
+As in CSS, an inline `style` beats a class (`.note`), which beats a tag
+(`h1`), and a later rule beats an earlier one. Colour, font, line height
+and alignment are inherited by nested blocks; margins, padding and
+borders are not.
 
-Four things can style a document, and they resolve in CSS's own order:
-the built-in defaults, then a type selector (`h1`), then a class
-selector (`.note`), then an inline `style` attribute. Ties are broken by
-document order, so a later rule wins. Inheritable properties (`color`,
-the `font-*` family, `line-height`, `text-align`) fall through into
-nested containers, so `blockquote { color: grey40 }` greys everything
-quoted; box properties (margins, padding, borders) do not.
-
-The supported CSS is a deliberately small subset: type selectors, class
-selectors and selector lists (`h1, h2`). Combinators, pseudo-classes,
-attribute selectors, `#id` and at-rules are skipped rather than raised,
-so an existing stylesheet can be handed over and the parts that apply
-still take effect.
+Tag selectors, class selectors and lists (`h1, h2`) are supported. Other
+selectors are ignored.
 
 ## See also
 

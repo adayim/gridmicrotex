@@ -1,37 +1,21 @@
 # Rendering Markdown with Math
 
-Plot labels are rarely pure math. A title might be a bold phrase with a
-symbol in it; a caption might be a short paragraph that happens to
-contain an equation. `gridmicrotex` renders
-[CommonMark](https://commonmark.org) markdown *and* LaTeX math together,
-in one grob, with no external LaTeX installation.
+gridmicrotex renders [CommonMark](https://commonmark.org) markdown with
+LaTeX math between `$...$`. There are two functions:
 
-**These functions are a wrapper around
-[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)**
-— your markdown is turned into LaTeX and drawn by the same engine. So
-everything
-[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-renders works here too, with the same fonts, the same options and the
-same limits (see
-[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)),
-and this vignette covers only what markdown adds on top.
-
-There are two entry points:
-
-- **[`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)**
+- [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
   (and
   [`grid.markdown()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md))
-  for a single flowing run of text — the right choice for a title or an
-  axis label.
-- **[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)**
-  for a whole block document — headings, lists, block quotes, code,
-  tables — inside an optional padded, filled box.
+  for a single label, such as a title.
+- [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
+  for a document with headings, lists, quotes, code and tables.
+
+Fonts, options and LaTeX support are the same as for
+[`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
+(see
+[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md)).
 
 ## Inline markdown
-
-[`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-handles the inline part of markdown — `**bold**`, `*italic*`,
-`` `code` ``, `~~strikethrough~~` — and any `$math$`.
 
 ``` r
 
@@ -44,10 +28,10 @@ grid.markdown(
 
 ![](markdown_files/figure-html/inline-1.png)
 
-### Colour and inline HTML
+### Inline HTML
 
-Markdown has no syntax for colour, underline, super/subscript, highlight
-or size. Use inline HTML; each tag does what it does in a browser:
+For colour, underline, sub- and superscripts, highlight and size, use
+inline HTML:
 
 | tag | effect |
 |----|----|
@@ -59,32 +43,11 @@ or size. Use inline HTML; each tag does what it does in a browser:
 | `<sub>`, `<sup>` | sub / superscript |
 | `<mark>` | yellow highlight |
 | `<small>`, `<big>` | smaller / larger |
-| `<q>` | wrapped in quotation marks |
-| `<ruby>`, `<rt>` | annotation above the base (furigana) |
+| `<q>` | quotation marks |
+| `<ruby>`, `<rt>` | annotation above the text (furigana) |
 | `&nbsp;` | non-breaking space |
 | `<br>` | line break |
-| `<span style="…">` | any property from [`?md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md) |
-
-`<ruby>` is worth singling out: `<ruby>漢<rt>かん</rt></ruby>` sets the
-annotation above its base with `\overset`, which is how furigana and
-bopomofo are typeset. Neither marquee nor gridtext can do this.
-
-In a `style` attribute: `color` takes any R colour name, the nine CSS
-names R happens to lack (`crimson`, `teal`, `rebeccapurple` and
-friends), `#rgb`, `#rrggbb` or
-[`rgb()`](https://rdrr.io/r/grDevices/rgb.html) — but note that `green`,
-`gray`, `grey`, `maroon` and `purple` keep their R values rather than
-their (darker) CSS ones, so that they mean the same thing here as in
-`gpar(col = ...)`; `text-decoration` takes `underline` or
-`line-through`; `font-size` takes `pt`, `px`, `in`, `cm`, `mm`, `em`,
-`rem`, `%`, `smaller` or `larger`; `font-family` takes the CSS generics
-`monospace`, `sans-serif` and `serif`, or any font name, including via a
-fallback list like `'Courier New', monospace`. Any other property is
-ignored.
-
-One figure with most of the table in it — a sized and coloured span, two
-font families, a subscript, an underline, a highlight, and the blank
-line that two `<br>` leave behind:
+| `<span style="…">` | `color`, `font-size`, `font-family`, `text-decoration`, and the rest of [`?md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md) |
 
 ``` r
 
@@ -101,17 +64,14 @@ grid.markdown(
 
 ![](markdown_files/figure-html/html-css-1.png)
 
-Tags nest, and markdown and `$math$` keep working inside them, so
-`<u>**bold underlined**</u>` and `**<u>the same thing</u>**` render
-alike. Any other tag is dropped and its text kept — as a browser does
-with `<a>` or a bare `<span>`, which have no rendering of their own.
+Tags nest, and markdown and math work inside them. Other tags are
+dropped and their text kept.
 
-## Block documents
+## Documents
 
 [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-lays out a full markdown document. Each block — heading, paragraph,
-list, quote, code, table — becomes its own grob, stacked top to bottom.
-The `width` you give is the box width; prose wraps to fit it.
+stacks the blocks of a document inside an optional box. Text wraps to
+`width`.
 
 ``` r
 
@@ -150,49 +110,28 @@ grid.draw(markdown_box_grob(
 
 ![](markdown_files/figure-html/block-1.png)
 
-A fenced block that names a language is syntax-highlighted, and its
-indentation is kept. (The example above fences with `~~~r` rather than
-three backticks only because it lives inside an R chunk in this
-vignette, where a backtick fence would end the chunk; both spellings are
-standard CommonMark.)
-[`available_highlighters()`](https://adayim.github.io/gridmicrotex/reference/available_highlighters.md)
-lists what is built in — R, Python, SQL, shell, C++, YAML, JSON, Stan,
-Julia and LaTeX — and the usual GitHub aliases (`py`, `sh`, `c++`,
-`yml`, `jl`, `tex`) work too. A fence naming anything else is set as
-plain monospace.
+`box_gp = NULL` draws no box, and `r` rounds its corners. `padding` and
+`margin` take one unit, or four for top, right, bottom and left.
 
-Colours are ordinary CSS, using the same class names knitr writes into
-HTML output, so a Pandoc syntax theme can be pasted straight in:
+### Code
+
+A fenced code block that names its language is highlighted.
+[`available_highlighters()`](https://adayim.github.io/gridmicrotex/reference/available_highlighters.md)
+lists the languages;
+[`register_highlighter()`](https://adayim.github.io/gridmicrotex/reference/register_highlighter.md)
+adds one from a [KDE syntax file](https://kate-editor.org/syntax/).
+Colours use the same class names as Pandoc and knitr, so a Pandoc theme
+can be pasted in:
 
 ``` r
 
 markdown_style(css = ".co { color: #59636E } .kw { color: #CF222E }")
 ```
 
-Those are ordinary class selectors, and they are global: seventeen
-two-letter names (`co`, `st`, `kw`, `cf`, `dv`, `fl`, `cn`, `fu`, `dt`,
-`bu` and friends) carry a default colour. If you use one of them as your
-own class in prose — `<div class="dt">` — it picks up the syntax colour,
-and a tag rule cannot override it, because a class beats a tag in CSS
-just as it does in a browser. Pick another name for your own classes, or
-restyle the one you want.
+### Lists and tables
 
-[`register_highlighter()`](https://adayim.github.io/gridmicrotex/reference/register_highlighter.md)
-adds a language from a KDE syntax XML file — either one of your own
-(copy a bundled grammar from
-`system.file("highlight", package = "gridmicrotex")` as a template) or
-one downloaded from <https://kate-editor.org/syntax/>, most of which
-work as they are.
-
-Set `box_gp = NULL` to draw no box, or give the `r` argument a value
-such as `unit(6, "pt")` for rounded corners. `padding` and `margin`
-accept a single unit or a length-4 unit giving top, right, bottom, left.
-
-### Lists, tasks, and tables
-
-Ordered and unordered lists, GFM task lists, and tables all render.
-Markdown tables become real typeset tables, with column alignment taken
-from the `|:---:|` markers — something a text renderer cannot do.
+Task lists and tables work, with column alignment from the `|:---:|`
+markers:
 
 ``` r
 
@@ -223,15 +162,11 @@ grid.draw(markdown_box_grob(
 
 ### Images
 
-An image on its own line is drawn as a block, scaled to the column
-width; one inside a sentence is drawn inline. It must be a local PNG,
-JPEG or SVG file, read by the optional `png`, `jpeg` or `rsvg` package
-for its format. An image that cannot be drawn — a missing file, a URL,
-another format, or its reader not installed — is an error saying which.
+An image on its own line is a block, scaled to fit; one inside a
+sentence is inline. Images must be local PNG, JPEG or SVG files.
 
 ``` r
 
-# Any .png / .jpeg path works; this one ships with the png package.
 img <- system.file("img", "Rlogo.png", package = "png")
 
 md <- sprintf("
@@ -253,10 +188,7 @@ grid.draw(markdown_box_grob(
 
 ## Styling
 
-Everything above uses the built-in look. To change it, hand
-[`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
-a `style`. It is a small CSS cascade over the markdown tags, and it
-takes CSS directly — as text, or as the path to a `.css` file:
+`style` takes CSS, as text or a `.css` file:
 
 ``` r
 
@@ -282,8 +214,7 @@ grid.draw(markdown_box_grob(
 
 ![](markdown_files/figure-html/style-css-1.png)
 
-The same thing written in R, which validates property names and
-autocompletes:
+Or the same in R:
 
 ``` r
 
@@ -294,42 +225,19 @@ markdown_style(
 )
 ```
 
-Lengths take three forms: a bare number is `rem`, a multiple of the body
-font size; a string is whatever CSS says (`"1.8rem"`, `"12pt"`,
-`"150%"`); and a [`grid::unit()`](https://rdrr.io/r/grid/unit.html) is
-absolute.
-
-Tags are named as in HTML — `body`, `p`, `h1`–`h6`, `ul`, `ol`, `li`,
-`blockquote`, `pre`, `code`, `strong`, `em`, `a`, `table`, `tr`, `td`,
-`th`, `hr`, `img`, `math`, `footnote`, `div`, `span`. The properties are
-colour, the font family, size, weight and slant, decorations, line
-height, margins, left padding, alignment and the two borders.
+A bare number is a multiple of the body font size (`rem`). Tags are
+named as in HTML (`p`, `h1`, `li`, `blockquote`, `pre`, `code`, `table`,
+…).
 [`?md_style`](https://adayim.github.io/gridmicrotex/reference/md_style.md)
-has the full table, including which of them work on an inline `<span>`
-as well as on a block. Anything outside it parses and is then ignored,
-the way a browser ignores what it does not implement — so an existing
-stylesheet can be pasted in and the parts that apply still work.
+lists the supported properties; others are ignored.
 
-### Starting from a preset
+`markdown_style("github")` starts from a GitHub-like preset, and
+`latex_options(markdown_style = )` sets a default for the session.
 
-`markdown_style("github")` is a GitHub-like look, shipped as a CSS file
-you can read and copy:
+### Styling one part
 
-``` r
-
-markdown_style("github", h1 = md_style(color = "firebrick"))
-file.show(system.file("css", "github.css", package = "gridmicrotex"))
-```
-
-Pass an existing style as the first argument to extend it, and use
-`latex_options(markdown_style = ...)` to set one for a whole document.
-
-### Styling one chunk
-
-A style set says how *every* heading looks. To style one particular
-chunk, wrap it in a `<div>` with a `class` or a `style`. **Leave blank
-lines around the tags** — that is what makes CommonMark parse the
-markdown between them rather than treating the whole block as raw HTML:
+Wrap a part in a `<div>` with a `class` or `style`, leaving a blank line
+after the opening tag and before the closing one:
 
 ``` r
 
@@ -356,33 +264,21 @@ grid.draw(markdown_box_grob(
 
 ![](markdown_files/figure-html/style-div-1.png)
 
-Inheritable properties — colour and the `font-*` family — fall through
-to everything inside the div, exactly as in CSS; margins, padding and
-borders do not. `<span class="...">` works the same way for an inline
-run.
+`<span class="...">` does the same inside a line.
 
 ### Styling tables
 
-Tables take row and cell fills, rule colour and weight, and column
-spacing. The tags nest as in HTML: `tr`, `td` and `th` inherit through
-`table`.
+| CSS                             | effect                  |
+|---------------------------------|-------------------------|
+| `table { border-color }`        | colour of every rule    |
+| `tr { background }`             | fills a row             |
+| `td`, `th` `{ background }`     | fills a cell            |
+| `tr { border-bottom }`          | a rule under each row   |
+| `td { border-left }`            | rules between columns   |
+| `td { padding-left }`           | the gap between columns |
+| `table { table-layout: fixed }` | columns of equal width  |
 
-| CSS                             | effect                         |
-|---------------------------------|--------------------------------|
-| `table { border-color }`        | colour of every rule           |
-| `tr { background }`             | fills a whole row              |
-| `td`, `th` `{ background }`     | fills one cell                 |
-| `tr { border-bottom }`          | a rule under each row          |
-| `td { border-left }`            | vertical rules between columns |
-| `td { padding-left }`           | the gap between columns        |
-| `table { table-layout: fixed }` | see below                      |
-
-Header cells are **bold** by default.
-
-A table is as wide as its content when that fits the box. When it does
-not, its wide columns share the width the others leave and their cells
-wrap, as an HTML table shrinks to its container. `table-layout: fixed`
-divides the available width evenly between the columns instead:
+A table that is too wide for the box wraps its widest columns.
 
 ``` r
 
@@ -408,12 +304,10 @@ grid.draw(markdown_box_grob(
 
 ![](markdown_files/figure-html/style-table-1.png)
 
-## Dropping down to LaTeX
+## LaTeX inside markdown
 
-Anything markdown cannot express, write as LaTeX inside a math span.
-
-The clearest case is a table: markdown tables have no spanning cells and
-no per-cell colour, and a LaTeX `array` has both.
+For what markdown cannot do, such as merged or coloured table cells,
+write LaTeX in a `$$...$$` block:
 
 ``` r
 
@@ -435,94 +329,24 @@ grid.draw(markdown_box_grob(
 
 ![](markdown_files/figure-html/latex-escape-1.png)
 
-That is one `\multicolumn` spanning header, a `\rowcolor` band and three
-`\cellcolor` cells — none of which GFM table syntax can express. The
-same route reaches `cases`, `aligned`, `\multirow`, `\newcolumntype` and
-everything else in
-[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md).
+Inside `\textbf{}` you are in text, so write `\textbf{R}^2`, not
+`\textbf{R^2}`. CSS table rules do not apply to a LaTeX table; style it
+in LaTeX.
 
-Note the header cell written `\textbf{R}^2` rather than `\textbf{R^2}`.
-Inside `$$…$$` you are already in math mode, so `^` superscripts — but
-`\textbf{}` switches to *text* mode, where `^` is an accent rather than
-a superscript operator and `R^2` comes out flat. Put the superscript
-outside the text command. There is no need to open `$…$` again either:
-delimiters do not nest, and an escaped `\$` would simply typeset a
-dollar sign.
+## Limitations
 
-**Styling reaches the block, not inside it**, and that figure shows both
-halves at once. The `math` rule sets the colour and size of the table’s
-text but leaves the prose either side black, because those properties
-travel on the block’s `gp`. The cell fills ignore it completely.
-
-So the cascade cannot see *through* a math span. That `array` is math,
-not a markdown table, and `table`, `tr` and `td` rules leave it
-untouched — which is why its colours had to be written in LaTeX rather
-than CSS. That is the trade: a GFM table is styled by the cascade but
-cannot span cells; a LaTeX `array` spans anything but is styled in
-LaTeX.
-
-## What is and isn’t supported
-
-Full CommonMark plus the GitHub extensions — tables, strikethrough,
-autolinks and task lists — is parsed, so parsing is never the
-limitation.
-
-Apart from an image that cannot be drawn (see *Images* above), nothing
-errors: anything that cannot be drawn degrades to its text. This
-document contains every degradation at once, which is easier to look at
-than to read about:
-
-``` r
-
-doc <- r"(A [link](https://example.org) keeps its text, and an
-<unknown>unknown tag</unknown> keeps its content.
-
-Footnotes[^1] land at the foot.
-
-<table><tr><td>an HTML table is dropped</td></tr></table>
-
-[^1]: Like this one.)"
-
-grid.newpage()
-grid.draw(markdown_box_grob(
-  doc,
-  width = unit(4.4, "in"), padding = unit(8, "pt"),
-  gp = gpar(fontsize = 13)
-))
-```
-
-![](markdown_files/figure-html/degrade-1.png)
-
-The link is styled but inert, the unknown tag is stripped and its words
-kept, the footnote is numbered and moved to the foot, and the HTML table
-is gone entirely — no error, no placeholder. In detail:
-
-- **Images** are drawn inline within a sentence, or as a block alone on
-  their line. Alt text is not drawn.
-- **Links** keep their text; the destination is dropped. They are styled
-  blue and underlined through the `a` tag, which a stylesheet can
-  change.
-- **Footnotes** (`[^1]` with a `[^1]:` definition) put a superscript
-  marker in place and the note at the foot, after a rule. Only in
+- Links show their text only.
+- Footnotes are placed at the bottom in
   [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md);
+  in
   [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
-  shows the marker and drops the note.
-- **Display math** — a paragraph that is nothing but `$$…$$` — gets its
-  own centred line, styleable as the `math` tag. Inline `$…$` is
-  unaffected.
-- **Small caps** and `font-variant-numeric` are not rendered.
-- **Block-level HTML** other than `<div>` and an `<img>` alone on its
-  line is dropped, `<table>` included — use GFM’s table syntax.
-- **Spanning cells** are not reachable from markdown table syntax. Write
-  the table as LaTeX instead; see *Dropping down to LaTeX*.
-- **Syntax highlighting** refuses a downloaded grammar that uses KDE’s
-  *dynamic* rules rather than colouring it approximately; thirteen of
-  twenty sampled definitions loaded.
-- **Code comes out slightly tight** on `png(type = "cairo")` and
-  `svglite`, which report sans widths for the `"mono"` family. Use
+  only the marker is shown.
+- HTML blocks other than `<div>` and `<img>` are dropped, `<table>`
+  included. Use markdown tables.
+- Markdown tables cannot merge cells; use LaTeX (above).
+- Small caps are not supported.
+- The syntax class names (`co`, `st`, `kw`, `dt`, …) also apply to your
+  own `<div class>`; choose other names for your classes.
+- Code is a little narrow on `png(type = "cairo")` and `svglite`; use
   [`ragg::agg_png()`](https://ragg.r-lib.org/reference/agg_png.html) if
-  that matters.
-
-Everything else — emphasis, headings, lists, quotes, tables, rules,
-block images, footnotes, ruby annotation, and of course `$math$` —
-renders.
+  it matters.

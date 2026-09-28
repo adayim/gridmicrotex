@@ -1,10 +1,6 @@
 # List available math fonts
 
-Returns the names of all math fonts currently loaded by MicroTeX. These
-names can be passed to the `math_font` parameter of
-[`latex_grob`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
-and
-[`grid.latex`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md).
+Returns the math fonts that can be passed to `math_font`.
 
 ## Usage
 
@@ -18,8 +14,8 @@ A character vector of math font names.
 
 ## Font pairing
 
-The bundled math fonts have different styles. For a consistent look,
-pair them with a matching `fontfamily` in `gp`:
+For a consistent look, pair each math font with a matching `fontfamily`
+in `gp`:
 
 |                                    |            |                         |
 |------------------------------------|------------|-------------------------|
