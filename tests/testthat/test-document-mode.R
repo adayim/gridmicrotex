@@ -1,6 +1,4 @@
-# input_mode = "document": a LaTeX document body, by TeX's rules with no
-# exception. A line end is a space, a blank line starts a paragraph, and a
-# paragraph indents its first line.
+# input_mode = "document": a LaTeX document body, by TeX's rules.
 
 runs <- function(tex, mode = "document", ...) {
   t <- latex_tree(tex, input_mode = mode, ...)
@@ -10,20 +8,17 @@ runs <- function(tex, mode = "document", ...) {
 
 test_that("a line end is a space, as TeX reads it", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # One line, and one run of text, so the device shapes "one two" whole.
+  # One line, and one run of text.
   d <- runs("one\ntwo")
   expect_identical(nrow(d), 1L)
   expect_identical(d$text, "one two")
-  # The same input in a label is two lines: mixed mode's one departure
-  # from TeX.
+  # In a label it is two lines: mixed mode's one departure from TeX.
   m <- runs("one\ntwo", mode = "mixed")
   expect_identical(m$text, c("one", "two"))
   expect_false(m$y[1] == m$y[2])
 })
 
 test_that("a paragraph neither starts nor ends with a space, as in TeX", {
-  # Between paragraphs TeX is in vertical mode, where a space is nothing,
-  # and \par drops the space a paragraph ends with.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_identical(runs("\nText.\n"), runs("Text."))
   expect_identical(runs("  Text.  "), runs("Text."))
@@ -42,7 +37,7 @@ test_that("a blank line starts a paragraph, however many there are", {
 
 test_that("a paragraph indents its first line by TeX's \\parindent", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # 1.5em, which is TeX's 15pt at a 10pt font, and follows the font size.
+  # 1.5em, which follows the font size.
   for (fs in c(8, 12, 20)) {
     gp <- grid::gpar(fontsize = fs)
     indent <- latex_dims("\\kern1.5em", gp = gp)$width
@@ -72,15 +67,13 @@ test_that("a display is centred on a line of its own, as in LaTeX", {
   }
   width <- function(...) as.numeric(latex_dims(...)$width)
   tex <- "Before\n\\[ x^2 + y^2 \\]\nafter."
-  # Centred in the text width, which the grob then fills: a text width 100
-  # wider moves it 50 to the right. (Dimensions are whole bp, positions are
-  # not, so the rest compares positions.)
+  # 100 more text width moves it 50 to the right. (Dimensions are whole
+  # bp, positions are not.)
   expect_equal(at(tex, max_width = 400) - at(tex, max_width = 300), 50, tolerance = 1e-6)
   expect_equal(width(tex, input_mode = "document", max_width = 300), 300)
   dw <- width(r"(\displaystyle x^2 + y^2)", input_mode = "math")
   expect_lt(abs(at(tex, max_width = 300) - (300 - dw) / 2), 1)
-  # With no text width, on the widest line: a widest line 100 longer moves
-  # it 50 too.
+  # With no text width, it is centred on the widest line.
   expect_equal(at(paste0("\\kern100bp ", tex)) - at(tex), 50, tolerance = 1e-6)
   # Each display LaTeX has sits between the text around it, starred or not.
   for (d in c(r"(\[x\])", r"($$x$$)", r"(\begin{equation}x\end{equation})",
@@ -109,8 +102,7 @@ test_that("a display interrupts its paragraph without ending it", {
 
 test_that("a display environment is in display style, as \\[...\\] is", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # A fraction in display style keeps its numerator at the body size; in
-  # text style it would be at script size.
+  # In display style a fraction's numerator is at the body size.
   for (d in c("\\[\\frac{a}{b}\\]", "\\begin{equation}\\frac{a}{b}\\end{equation}",
               "\\begin{align*}\\frac{a}{b}\\end{align*}")) {
     r <- latex_tree(paste("x", d), input_mode = "document")$records
@@ -120,8 +112,7 @@ test_that("a display environment is in display style, as \\[...\\] is", {
 
 test_that("a list or a float is set apart from its paragraph", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # A list is a block, as in LaTeX: the text before it ends its line, and
-  # the text after it goes on unindented, as after a display.
+  # A list is a block; the text after it goes on unindented.
   d <- runs("Before\n\\begin{itemize}\\item one\\end{itemize}\nafter.")
   expect_identical(d$text, c("Before", "one", "after."))
   expect_length(unique(d$y), 3L)
@@ -131,7 +122,7 @@ test_that("a list or a float is set apart from its paragraph", {
                    "\\begin{tabular}{l}cell\\end{tabular}\\end{table} after."))
   expect_identical(d$text, c("Before", "Cap", "cell", "after."))
   expect_length(unique(d$y), 4L)
-  # In a label, as before, a list is part of the line: it follows "Before".
+  # In a label a list is part of the line.
   d <- runs("Before \\begin{itemize}\\item one\\end{itemize}", mode = "mixed")
   expect_gt(d$x[d$text == "one"], as.numeric(latex_dims("Before", input_mode = "mixed")$width))
 })
@@ -142,8 +133,7 @@ test_that("center and \\centering centre a document's lines", {
     d <- runs(tex, ...)
     d$x[d$text == word]
   }
-  # Centred in the text width: 100 more of it moves a line 50 to the right.
-  # The text after the block is flush again.
+  # 100 more text width moves a line 50 right; the text after is flush.
   for (tex in c("\\begin{center}Short\\end{center}\nafter",
                 "\\begin{figure}\\centering Short\\end{figure}\nafter")) {
     expect_equal(x_of(tex, "Short", max_width = 400) - x_of(tex, "Short", max_width = 300),
@@ -152,16 +142,15 @@ test_that("center and \\centering centre a document's lines", {
   }
   # A float without \centering is flush left, as LaTeX sets it.
   expect_identical(x_of("\\begin{figure}Short\\end{figure}", "Short", max_width = 300), 0)
-  # A label is not a document: \centering does nothing there, as before.
+  # A label is not a document: \centering does nothing there.
   expect_identical(runs("\\centering Short", mode = "mixed")$x, 0)
 })
 
 test_that("a heading reads LaTeX's optional short title and a spaced star", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # The short title is for a table of contents a grob has not got.
   expect_identical(runs("\\section[Intro]{Introduction}\nText.")$text,
                    c("1", "Introduction", "Text."))
-  # LaTeX finds the star past a space, as it finds it after a newline.
+  # LaTeX finds the star past a space.
   expect_identical(runs("\\section *{A}\nText")$text, c("A", "Text"))
 })
 
@@ -175,7 +164,7 @@ test_that("\\paragraph starts a paragraph of its own, flush left, and runs in", 
 
 test_that("a caption is a line of its own in a document", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # After the figure, as LaTeX's usual order writes it, it goes below it.
+  # After the figure, so below it.
   d <- runs("\\begin{figure}\\centering x\\caption{Cap}\\end{figure}")
   expect_gt(d$y[d$text == "Cap"], d$y[d$text == "x"])
 })
@@ -200,8 +189,7 @@ test_that("a group's paragraphs and headings are a document's, its declarations 
   tex <- "\\small\n\\section{A}\nText"
   expect_identical(runs(tex)$y[1], runs("\\section{A}\nText")$y[1])
   expect_lt(size(tex, "Text"), 20)
-  # \centering ends with its group: `{\centering Title\par}` centres the
-  # title, and what follows is not centred.
+  # \centering ends with its group.
   d <- runs("{\\centering Title\\par}\nBody", max_width = 300)
   expect_gt(d$x[d$text == "Title"], 50)
   expect_equal(d$x[d$text == "Body"], indent, tolerance = 1e-5)
@@ -214,7 +202,7 @@ test_that("a centred paragraph broken at max_width is centred line by line", {
     d <- runs(paste0("\\begin{center}", words, "\\end{center}"), max_width = w)
     tapply(d$x, d$y, min)
   }
-  # Several lines, none of them flush left, as the splitter left them.
+  # Several lines, none of them flush left.
   expect_gt(length(at(80)), 2L)
   expect_true(all(at(80) > 0))
 })
@@ -226,8 +214,8 @@ test_that("a heading is numbered as LaTeX numbers it", {
   # A counter carries on, and a lower one restarts under it.
   d <- runs("\\section{A}\n\n\\subsection{B}\n\n\\section{C}\n\n\\subsection{D}")
   expect_identical(d$text[d$text %in% c("1", "1.1", "2", "2.1")], c("1", "1.1", "2", "2.1"))
-  # A starred heading has no number and does not advance the counter, and
-  # \paragraph is below article's secnumdepth, so it has none either.
+  # A starred heading has no number and does not advance the counter;
+  # \paragraph is unnumbered too.
   expect_identical(runs("\\section*{A}\n\n\\section{B}")$text, c("A", "1", "B"))
   # The space after the run-in heading is the one written after its `}`.
   expect_identical(runs("\\paragraph{P} text")$text, c("P", " text"))
@@ -243,8 +231,7 @@ test_that("a heading is bold, sized and on a line of its own", {
   expect_equal(r$font_size[r$text == "A"] / body, 1.4, tolerance = 1e-6)
   expect_equal(r$font_size[r$text == "B"] / body, 1.2, tolerance = 1e-6)
   expect_equal(r$font_size[r$text == "C"] / body, 1.0, tolerance = 1e-6)
-  # Each heading has a row to itself, and is never indented: its row opens
-  # with the number, flush left.
+  # Each heading has a row to itself, never indented.
   expect_identical(length(unique(r$y)), 4L)
   expect_identical(r$x[r$text == "1"], 0)
   # \paragraph is the exception: LaTeX runs it into its paragraph.
@@ -255,8 +242,7 @@ test_that("a heading is bold, sized and on a line of its own", {
 test_that("the paragraph after a heading is not indented, as in LaTeX", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   indent <- as.numeric(latex_dims("\\kern1.5em")$width)
-  # However it is separated from the heading -- a line end or a blank line
-  # -- the first paragraph is flush, and the one after it is indented.
+  # After a line end or a blank line alike.
   for (tex in c("\\section{H}\nfirst\n\nsecond", "\\section{H}\n\nfirst\n\nsecond")) {
     d <- runs(tex)
     expect_identical(d$x[d$text == "first"], 0, info = tex)
@@ -277,8 +263,6 @@ test_that("latex_options and the grob functions accept the document mode", {
 })
 
 test_that("text under \\large, \\color or \\textcolor wraps at max_width", {
-  # A size or a colour is one box around its text, which the line breaker
-  # could not enter: a paper's \small abstract ran off the page.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   long <- paste(rep("word", 40), collapse = " ")
   for (mode in c("document", "mixed")) {
@@ -289,25 +273,22 @@ test_that("text under \\large, \\color or \\textcolor wraps at max_width", {
       expect_lte(t$bbox[["width"]], 200, label = paste(mode, tex))
       expect_gt(length(unique(round(r$y))), 5L, label = paste(mode, tex))
     }
-    # What the box did it still does, to every piece: the colour...
+    # Every piece keeps the colour...
     r <- latex_tree(sprintf("\\color{red} %s", long), input_mode = mode,
                     max_width = 200)$records
     expect_true(all(r$color[r$type == "text"] == "#FF0000"), info = mode)
-    # ...and the size, word for word as \large sets a line that fits.
+    # ...and the size.
     big <- latex_tree(sprintf("\\large %s", long), input_mode = mode, max_width = 200)$records
     one <- latex_tree("\\large word word", input_mode = mode)$records
     expect_identical(unique(big$font_size), unique(one$font_size), info = mode)
   }
-  # A line that fits is never opened, so any measure it fits in sets it the
-  # same (the harness holds it to the layouts drawn before).
+  # A line that fits is set the same at any measure it fits in.
   fits <- "\\large a few {\\color{blue} words} here"
   expect_identical(latex_tree(fits, input_mode = "document", max_width = 1000)$records,
                    latex_tree(fits, input_mode = "document", max_width = 5000)$records)
 })
 
 test_that("a line breaks at the last break before it overflows, even a level down", {
-  # The break at the space that ends one run of text was not seen when the
-  # next run overflowed, so the line ran on to a later break, past the width.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   width <- function(tex, mode, w) latex_tree(tex, input_mode = mode, max_width = w)$bbox[["width"]]
   expect_lte(width("\\text{aaa }\\textbf{bbb}\\text{ ccc ddd eee fff ggg hhh}", "math", 60), 60)
@@ -324,8 +305,7 @@ test_that("ulem's \\uline and \\sout wrap with their text, their rules straight"
     expect_lte(t$bbox[["width"]], 150, label = cmd)
     rules <- r[r$type == "line", ]
     txt <- r[r$type == "text", ]
-    # One height per line, and no rule past the last word of a line: the
-    # space it broke at is left bare, as ulem leaves it.
+    # One rule height per line.
     for (y in unique(round(txt$y))) {
       line <- txt[round(txt$y) == y, ]
       at <- rules[abs(rules$y - line$y[1]) < 12, ]
@@ -356,8 +336,7 @@ test_that("relsize's \\textscale and \\relscale set a size that wraps", {
 test_that("\\raggedleft, flushright and flushleft align a document's lines", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   long <- "A paragraph long enough to wrap onto several lines at this width here"
-  # Where each line starts. A line put to the right starts twice as far in
-  # as the same line centred: all its room is before it, not half.
+  # Where each line starts. Right-aligned starts twice as far in as centred.
   lefts <- function(tex) {
     r <- latex_tree(tex, input_mode = "document", max_width = 200)$records
     r <- r[r$type == "text", ]
@@ -415,17 +394,14 @@ test_that("\\text, \\mbox and \\textsuperscript keep the style around them", {
 })
 
 test_that("a definition in math between two dollars is inline math", {
-  # The expander takes the \newcommand away; TeX saw it between the `$`,
-  # which makes this `$`, not `$$`.
+  # With the \newcommand expanded away this is `$` `$`, not `$$`.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_silent(latex_grob("$\\newcommand{\\R}{\\mathbb{R}}$ $\\R$", input_mode = "document"))
   expect_silent(latex_grob("$$x$$ and \\[y\\]", input_mode = "document"))
 })
 
 test_that("a box stays whole in a broken line, and keeps a height set by hand", {
-  # Only a declaration's size or colour is broken with its text:
-  # \scalebox and \colorbox are boxes in LaTeX, and a line breaks around
-  # them, not inside.
+  # \scalebox and \colorbox are boxes: a line breaks around them.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   long <- paste(rep("abc", 20), collapse = " ")
   lines <- function(tex) length(unique(round(runs(tex, max_width = 200)$y)))
@@ -433,8 +409,7 @@ test_that("a box stays whole in a broken line, and keeps a height set by hand", 
     expect_identical(lines(paste("Lead", sprintf(box, long), "tail")), 3L, label = box)
   }
   expect_gt(lines(paste("Lead \\large", long, "tail")), 3L)
-  # A row the breaker rebuilds, to reach a size or colour in it, keeps
-  # the height \smash or \raisebox gave it.
+  # A rebuilt row keeps the height \smash or \raisebox gave it.
   words <- paste(rep("word", 30), collapse = " ")
   height <- function(tall) {
     latex_tree(paste("Lead", words, tall, words), input_mode = "document", max_width = 200,
@@ -449,12 +424,10 @@ test_that("a box stays whole in a broken line, and keeps a height set by hand", 
   expect_gt(height("{\\Huge Tall}"), flat)
 })
 
-# --- what a pasted paper uses (Stage 9d, from rendering arXiv 1706.03762) ---
+# --- what a pasted paper uses ---
 
 test_that("\\em is italic, as \\emph is", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Italic, and set where \emph sets it (\emph's \textit also records the
-  # roman bit, which draws nothing different).
   em <- latex_tree("a {\\em b} c", input_mode = "document")$records
   emph <- latex_tree("a \\emph{b} c", input_mode = "document")$records
   expect_true(bitwAnd(em$font_style[em$text == "b"], 4L) != 0)
@@ -557,14 +530,12 @@ test_that("a minipage's body is paragraphs, as the text around it is", {
   # A blank line starts a paragraph in it, as it does outside one.
   inside <- runs("\\begin{minipage}{200pt}First para.\n\nSecond para.\\end{minipage}")
   expect_identical(length(unique(inside$y)), 2L)
-  # The line ends around its body -- the usual way to write one -- are
-  # nothing, and do not push its lines off their place.
+  # Line ends around its body are nothing.
   expect_identical(runs("\\begin{minipage}{200pt}\n  Text  \n\\end{minipage}"),
                    runs("\\begin{minipage}{200pt}Text\\end{minipage}"))
   expect_identical(runs("\\begin{minipage}{200pt}\\centering\n  Text  \n\\end{minipage}"),
                    runs("\\begin{minipage}{200pt}\\centering Text\\end{minipage}"))
-  # [b] meets the last line of all, when the breaker broke the paragraph
-  # (or a centred line) that ends it.
+  # [b] meets the last line, even when the breaker broke it.
   r <- runs(paste("A \\begin{minipage}[b]{100pt}\\centering Short\\\\",
                   paste(rep("word", 10), collapse = " "), "\\end{minipage} B"))
   expect_gt(length(unique(r$y[r$text == "word"])), 2L)
@@ -583,7 +554,7 @@ test_that("a heading that wraps hangs its title from the number, as LaTeX does",
   starts <- tapply(words$x, round(words$y), min)
   expect_identical(length(unique(round(starts, 2))), 1L)
   expect_gt(min(starts), number$x)
-  # One that fits is set as it always was, on one line.
+  # One that fits is set on one line.
   expect_identical(runs("\\section{Short}", max_width = 200),
                    runs("\\section{Short}", max_width = 5000))
 })
@@ -595,8 +566,7 @@ test_that("a minipage taller than its body puts the room where it is told", {
     c(a = r$y[r$text == "A "], one = r$y[r$text == "one"])
   }
   top <- at("t"); mid <- at("c"); bottom <- at("b")
-  # [t] meets the body's first line; the room goes below it (t), around
-  # it (c) or above it (b), so the body moves down in that order.
+  # The room goes below (t), around (c) or above (b) the body.
   expect_equal(top[["a"]], top[["one"]])
   expect_lt(top[["one"]], mid[["one"]])
   expect_lt(mid[["one"]], bottom[["one"]])

@@ -1,7 +1,5 @@
-# Base-graphics math interception.
-#
-# Every test disarms on exit: R CMD check runs examples and tests against
-# a shared device, and leaving it hooked would leak into unrelated files.
+# device_math. Every test disarms on exit, or the hook leaks into other
+# files.
 
 png_dev <- function(...) {
   f <- tempfile(fileext = ".png")
@@ -9,10 +7,9 @@ png_dev <- function(...) {
   f
 }
 
-# Run `lines` in a fresh Rscript and return what it printed. The child
-# finds this build through R_LIBS -- system2(env=) is a no-op on Windows --
-# and R_LIBS is put back afterwards, or every later test that starts a
-# child process would inherit it.
+# Run `lines` in a fresh Rscript and return what it printed. The child finds
+# this build through R_LIBS (system2(env=) does nothing on Windows), which
+# is restored afterwards.
 run_probe <- function(lines) {
   rscript <- file.path(R.home("bin"), "Rscript")
   skip_if(!file.exists(rscript) && !file.exists(paste0(rscript, ".exe")))
@@ -29,8 +26,7 @@ run_probe <- function(lines) {
   )
 }
 
-# Signal an interrupt the way R's own onintr() does, so a test can raise
-# one at an exact point instead of racing a real Ctrl-C.
+# Signal an interrupt the way R's own onintr() does.
 signal_interrupt <- function() {
   cond <- structure(class = c("interrupt", "condition"),
                     list(message = "", call = NULL))
@@ -41,9 +37,6 @@ signal_interrupt <- function() {
 }
 
 test_that("the gate rejects ordinary labels that merely contain a dollar", {
-  # Each of these is balanced or unbalanced in a way latex_wrap() would
-  # happily mangle: "Revenue ($)" becomes \text{Revenue (}) and
-  # "Cost $5-$10" sets "5-" as math. Neither may be intercepted.
   literal <- c(
     "Revenue ($)", "Sales in $m", "Price $1,000 to $5,000",
     "Cost $ per kg", "Growth in $ and %", "Cost $5-$10",
@@ -51,12 +44,11 @@ test_that("the gate rejects ordinary labels that merely contain a dollar", {
     "Just \\$100 escaped", "$ $",
     # A whole label that is still a price, not a formula.
     "$5 to $", "$ - $", "$1,000$",
-    # R's own deparsed labels, where `$` is column access:
-    # hist(df$price_usd - df$tax_usd) titles itself with a closed pair.
+    # R's own deparsed labels, where `$` is column access.
     "Histogram of df$price_usd - df$tax_usd", "dat$dist_m * dat$scale_f",
     "x[[1]]$a_b + f(y)$c_d", "Histogram of `my df`$a_b - `my df`$c_d",
-    "Histogram of caf\u00e9$prix_ht - caf\u00e9$tva_ht",
-    "Histogram of \u6570\u636e$\u4ef7\u683c_\u5143 - \u6570\u636e$\u7a0e_\u5143"
+    "Histogram of café$prix_ht - café$tva_ht",
+    "Histogram of 数据$价格_元 - 数据$税_元"
   )
   for (s in literal) {
     expect_false(.gm_base_is_math(s), label = paste0("literal: ", s))
@@ -64,10 +56,7 @@ test_that("the gate rejects ordinary labels that merely contain a dollar", {
 })
 
 test_that("one mathy span does not drag the rest of the label in", {
-  # latex_wrap() cannot be told "span 3 is math, leave span 1 alone", so
-  # accepting a label because *some* span qualifies sets the others as
-  # math too: "Budget $1,000 to $5,000 with $x$ shown" rendered the
-  # currency as math and italicised "to".
+  # Every $...$ pair must qualify, or the currency is set as math too.
   expect_false(.gm_base_is_math("Budget $1,000 to $5,000 with $x$ shown"))
   expect_false(.gm_base_is_math("Cost $5-$10 and $\\alpha$"))
   # An escaped dollar is not a span, so this still qualifies.
@@ -76,19 +65,14 @@ test_that("one mathy span does not drag the rest of the label in", {
 
 test_that("a warning during layout does not discard the layout", {
   grDevices::pdf(NULL)
-  # The missing-image warning fires once per path, so use a name no other
-  # test shares and reset the registry afterwards -- reusing
-  # "no-such-file.png" silently consumed the flag test-images.R relies on.
+  # A name no other test uses, since the warning fires once per path.
   on.exit({
     .image_reset_warnings()
     grDevices::dev.off()
   }, add = TRUE)
   missing_png <- basename(tempfile("gm-absent-", fileext = ".png"))
 
-  # Base graphics are the one place an unreadable image only warns -- they
-  # never draw images, and everywhere else it is an error. The rest of the
-  # formula is fine, and treating the warning as failure drew the raw LaTeX
-  # source instead.
+  # In base graphics an unreadable image only warns; the rest is drawn.
   expect_silent(
     lay <- .gm_base_layout(sprintf("$x + \\includegraphics{%s}$", missing_png), 20)
   )
@@ -110,8 +94,7 @@ test_that("text runs take their face from the record, not from par(font)", {
     if (!length(cs)) 0L else max(cs) - min(cs)
   }
   latex_options(device_math = TRUE)
-  # MicroTeX measured the prose in its own face. Inheriting par(font = 2)
-  # would bold text that was measured plain, overrunning the reported width.
+  # Bolding text that was measured plain would overrun its width.
   w_plain <- ink_width(function()
     graphics::text(0.5, 0.5, "Slope $x$ estimate", cex = 2, font = 1))
   w_bold  <- ink_width(function()
@@ -141,11 +124,8 @@ test_that("a translucent colour stays translucent", {
   literal <- render("$x^2$")
   latex_options(device_math = TRUE)
   got <- render("$x^2$")
-  # The math path must actually have run: drawn literally, "$x^2$" is just
-  # as translucent as the reference and the comparison below proves nothing.
+  # The math path must actually have run.
   expect_lt(got$ink_cols, literal$ink_cols)
-  # Dropping alpha drew it fully opaque (0); reading the record's 9-char
-  # hex in the wrong byte order drew nothing at all (1).
   expect_equal(got$darkest, ref$darkest, tolerance = 0.05)
 })
 
@@ -155,8 +135,7 @@ test_that("a translucent record colour is read as #RRGGBBAA", {
   grDevices::pdf(NULL)
   lay <- .gm_base_layout("$\\rule{2cm}{1cm}$", 20)
   grDevices::dev.off()
-  # No input yields a translucent record today, so plant one -- 50% red,
-  # in the byte order color_to_hex() writes -- and draw it.
+  # Plant a 50% red record, in the byte order color_to_hex() writes.
   lay$layout$color <- "#FF000080"
   gm_base_set_enabled(TRUE, function(...) lay)
 
@@ -178,11 +157,9 @@ test_that("the gate accepts every delimiter latex_wrap() documents", {
     "Slope $\\hat{\\beta}_1$ estimate", "$$\\sum_{i=1}^{n} x_i$$",
     "Slope \\(\\hat\\beta\\)", "Block \\[x^2\\] here",
     "Cost: \\$100 for $x$ items",
-    # A label that is one formula and nothing else cannot be currency, so
-    # it needs no command or script to count.
+    # A label that is one formula and nothing else.
     "$y = 2x + 1$", "$f(x)$", "$p < 0.05$", "$ab$", " $n = 30$ ",
-    # LaTeX glued to a word. What follows each `$` -- `_`, `^`, `\` --
-    # starts no R name, so none of these is column access.
+    # LaTeX glued to a word: `_`, `^` or `\` after `$` is not column access.
     "CO$_2$ emissions", "R$^2$ = 0.93", "Area (m$^2$)", "10$^{-3}$ M",
     "x$_i$ and x$_j$", "5$\\times$10$^3$"
   )
@@ -202,10 +179,9 @@ test_that("layout metrics are doubles and match latex_dims", {
   grDevices::pdf(NULL)
   on.exit(grDevices::dev.off(), add = TRUE)
   lay <- .gm_base_layout("$\\hat{\\beta}_1$", 12)
+  # An integer width left-aligns every centred label.
   expect_type(lay$width, "double")
   expect_type(lay$ascent, "double")
-  # An integer width here reads as "no horizontal adjustment" in the C
-  # emitter and silently left-aligns every centred label.
   d <- latex_dims("$\\hat{\\beta}_1$", render_mode = "path",
                   gp = grid::gpar(fontsize = 12))
   expect_equal(lay$width, grid::convertWidth(d$width, "bigpts", TRUE))
@@ -242,8 +218,7 @@ test_that("reset_latex_options disarms rather than only clearing the flag", {
   latex_options(device_math = TRUE)
   expect_equal(.gm_base_armed(), 1L)
   reset_latex_options()
-  # Stale callbacks outliving the option that installed them is the
-  # crash path, so the count matters more than the option value.
+  # Stale callbacks are the crash path, so the count matters most.
   expect_equal(.gm_base_armed(), 0L)
   expect_null(latex_options()$device_math)
 })
@@ -258,8 +233,7 @@ test_that("the settings latex_options() returns switch interception back off", {
   reset_latex_options()
   op <- latex_options(device_math = TRUE)
   expect_equal(.gm_base_armed(), 1L)
-  # The usual save/restore idiom. Unset read NULL, and NULL means "leave
-  # unchanged", so this left every device armed for the rest of the session.
+  # The usual save/restore idiom.
   do.call(latex_options, op)
   expect_equal(.gm_base_armed(), 0L)
 })
@@ -277,7 +251,6 @@ test_that("a plot with no math is byte-identical armed and unarmed", {
   latex_options(device_math = TRUE)
   b <- tempfile(fileext = ".png"); draw(b)
   latex_options(device_math = FALSE)
-  # The contract behind "zero change to user plotting code".
   expect_identical(unname(tools::md5sum(a)), unname(tools::md5sum(b)))
   unlink(c(a, b))
 })
@@ -343,8 +316,6 @@ test_that("an interrupt during layout stops the plot", {
     }
     "completed"
   }, interrupt = function(e) "interrupted")
-  # Caught as a layout failure, the interrupt drew $x_5$ literally and the
-  # loop carried on, so a math-heavy plot could not be stopped.
   expect_identical(res, "interrupted")
   expect_identical(drawn, 4L)
 
@@ -360,9 +331,6 @@ test_that("an interrupt while text is being measured stops the layout", {
     latex_options(device_math = FALSE)
     grDevices::dev.off()
   }, add = TRUE)
-  # MicroTeX calls back into R to measure each \text{} run, and a
-  # catch-all around that call turned an interrupt into "estimate the
-  # width" and carried on.
   measurer <- .make_text_measurer
   local_mocked_bindings(.make_text_measurer = function(text_gp) {
     measure <- measurer(text_gp)
@@ -399,16 +367,13 @@ test_that("a time limit stops an armed plot", {
     grDevices::dev.off()
   }, add = TRUE)
   local_mocked_bindings(.gm_base_layout_impl = function(...) {
-    # Busy rather than Sys.sleep(): on Linux and macOS a sleep never looks
-    # at the limit, so the label finished and the plot went on.
+    # Busy-wait: Sys.sleep() never checks the limit on Linux and macOS.
     t0 <- proc.time()[["elapsed"]]
     while (proc.time()[["elapsed"]] - t0 < 2) NULL
     NULL
   })
   latex_options(device_math = TRUE)
   graphics::plot.new()
-  # setTimeLimit() stops with an ordinary error, and a label that fails to
-  # lay out is drawn as literal text -- so the plot ran on with no limit.
   res <- tryCatch({
     setTimeLimit(elapsed = 0.3, transient = TRUE)
     graphics::text(0.5, 0.5, "$x$")
@@ -429,19 +394,14 @@ test_that("a saved latex_options() query switches interception back off", {
   op <- latex_options()
   latex_options(device_math = TRUE)
   expect_equal(.gm_base_armed(), 1L)
-  # Every entry of the query read NULL, and NULL meant "leave unchanged".
   do.call(latex_options, op)
   expect_equal(.gm_base_armed(), 0L)
   expect_null(latex_options()$device_math)
 })
 
 test_that("recordPlot/replayPlot survive an armed device", {
-  # Registering a graphics system adds an element to every recordPlot()
-  # snapshot, and restoreRecordedPlot() calls library() on each element's
-  # "pkgName" with no NULL guard. An unnamed state makes replay fail with
-  # "'package' must be of length 1" -- which breaks dev.copy(), RStudio's
-  # Export, and every knitr chunk. No unit test caught this; knitting the
-  # README did.
+  # Replay needs a "pkgName" on every graphics-system state (dev.copy(),
+  # RStudio's Export and knitr all replay).
   f <- png_dev()
   on.exit({
     latex_options(device_math = FALSE)
@@ -467,7 +427,6 @@ test_that("document-wide options reach base labels", {
 
   default_w <- w()
   latex_options(math_font = "stix")
-  # Hard-coding math_font = "" here silently ignored the user's font.
   expect_false(isTRUE(all.equal(w(), default_w)))
   reset_latex_options()
   expect_equal(w(), default_w)
@@ -491,9 +450,7 @@ test_that("boxed formulas are stroked, not filled, and match grid", {
     mean(apply(a[, , 1:3, drop = FALSE], c(1, 2), function(p) any(p < 0.5)))
   }
 
-  # A "rect" record is an outline (col=colour, fill=NA); filling it turns
-  # every \boxed{} and \fbox{} into a solid block. Compare the ink against
-  # the grid path, which is the reference implementation.
+  # Compare the ink with the grid path.
   via_grid <- ink(function() {
     grid::grid.newpage()
     grid.latex("$\\boxed{x^2}$", render_mode = "path",
@@ -508,7 +465,7 @@ test_that("boxed formulas are stroked, not filled, and match grid", {
   latex_options(device_math = FALSE)
 
   expect_equal(via_base, via_grid, tolerance = 0.15)
-  # A solid fill was ~6.5x the reference; make that impossible to pass.
+  # A solid fill was ~6.5x the reference.
   expect_lt(via_base, via_grid * 2)
 })
 
@@ -520,8 +477,7 @@ test_that("an armed device does not crash R when the package is unloaded", {
     'png(tempfile(), width = 300, height = 200)',
     'latex_options(device_math = TRUE)',
     'plot(1:3, main = "$x^2$")',
-    # Unload with the device still open and still armed. Without the
-    # teardown in .onUnload this jumps into freed memory on the next draw.
+    # Unload with the device still open and armed.
     'unloadNamespace("gridmicrotex")',
     'plot(1:3, main = "after unload $x^2$")',
     'dev.off()',
@@ -534,9 +490,7 @@ test_that("an armed device does not crash R when the package is unloaded", {
 
 test_that("an armed device survives the DLL being unloaded without .onUnload", {
   skip_on_cran()
-  # pkgload::unload() takes this path when another loaded package imports
-  # gridmicrotex: unloadNamespace() refuses, so .onUnload never runs and
-  # the DLL is unmapped directly.
+  # As pkgload::unload() does when another package imports gridmicrotex.
   out <- run_probe(c(
     'library(gridmicrotex)',
     'png(tempfile(), width = 300, height = 200); plot.new()',

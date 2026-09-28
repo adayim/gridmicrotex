@@ -1,6 +1,6 @@
 # Malformed input is drawn as far as it can be, and each problem is one line
-# of a single warning, at its line:col. Only a capacity running out -- a
-# macro that expands forever -- is an error (see test-latex-grob.R).
+# of a single warning, at its line:col. Only running out of capacity is an
+# error (see test-latex-grob.R).
 
 # What is drawn, leaving out the problems found (the layout carries them).
 layout_quietly <- function(tex, mode = "math") {
@@ -43,8 +43,7 @@ test_that("valid input does not warn", {
 
 test_that("an unclosed environment is closed at the end of the input", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # bmatrix is defined in LaTeX source, so its closing bracket comes from
-  # its \end; without one the bracket went missing.
+  # bmatrix's closing bracket comes from its \end.
   for (env in c("bmatrix", "pmatrix", "matrix", "cases")) {
     open <- sprintf("\\begin{%s} a & b", env)
     expect_warning(latex_grob(open, input_mode = "math"),
@@ -65,8 +64,6 @@ test_that("a stray \\end is left out, with a warning", {
 })
 
 test_that("an \\end of another name ends a list, as in LaTeX", {
-  # A list's body is kept as text for its builder, and only its own \end
-  # was looked for: the rest of the input was read into the last item.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   wrong <- "\\begin{itemize}\\item a\\end{enumerate}\n\nAfter."
   expect_warning(latex_grob(wrong, input_mode = "document"),
@@ -88,9 +85,7 @@ test_that("an unknown environment draws its body, with a warning", {
 })
 
 test_that("an unknown environment met in text is text, as in LaTeX", {
-  # LaTeX's recovery from "Environment ... undefined" sets the body as
-  # ordinary text in a group. Read as an array (math), a pasted abstract (then unknown)
-  # lost every space between its words.
+  # As LaTeX recovers: the body is text in a group.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   quiet <- function(tex, mode) {
     records <- suppressWarnings(latex_grob(tex, input_mode = mode))$layout_df
@@ -104,8 +99,7 @@ test_that("an unknown environment met in text is text, as in LaTeX", {
     expect_identical(body, quiet("a {\\bf b c} d", mode), info = mode)
     expect_identical(body$text[!is.na(body$text)], c("a ", "b c", " d"), info = mode)
   }
-  # A line end inside it is still a line break in a label; the text runs
-  # join across it, as if the environment were not there.
+  # In a label, a line end inside it is still a line break.
   expect_identical(quiet("x \\begin{foo}one\ntwo\\end{foo} y", "mixed"),
                    quiet("x one\ntwo y", "mixed"))
   # In math it is an array, as before.
@@ -115,8 +109,6 @@ test_that("an unknown environment met in text is text, as in LaTeX", {
 
 test_that("an environment inside an argument or a list is read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Arguments are handed to the engine's commands as text, which the old
-  # parser had already rewritten; an environment in one came out red.
   nested <- "\\begin{itemize} \\item a \\begin{itemize}\\item b\\end{itemize} \\end{itemize}"
   d <- latex_grob(nested, input_mode = "math", render_mode = "path")$layout_df
   expect_false("#FF0000" %in% d$color)
@@ -126,17 +118,14 @@ test_that("an environment inside an argument or a list is read", {
 
 test_that("$$ inside \\text does not open display math", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # TeX reads $$ in restricted horizontal mode (\hbox, \text) as an empty
-  # formula; read as display math, it swallowed the closing brace.
+  # In \text (restricted horizontal mode) TeX reads $$ as an empty formula.
   expect_no_warning(latex_grob("\\text{a$$}", input_mode = "math"))
   expect_identical(layout_quietly("\\text{a$$}"), layout_quietly("\\text{a}"))
 })
 
 test_that("a delimited macro whose delimiter never comes is left out", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # As after TeX's runaway-argument error, the call goes and the rest is
-  # read as it stands. Taking the rest as the argument made a macro that
-  # calls itself copy the whole input into every expansion (fuzzing: ~2 s).
+  # As after TeX's runaway-argument error: the call goes, the rest is read.
   for (tex in c("\\def\\a#1.{[#1]}\\a x", "\\def\\a#1.{\\a#1}\\a x")) {
     expect_warning(latex_grob(tex, input_mode = "math"), "missing its delimiter; it is left out",
                    fixed = TRUE, label = tex)
@@ -149,8 +138,7 @@ test_that("a delimited macro whose delimiter never comes is left out", {
 
 test_that("an abandoned call puts back what every argument read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # #1 found its `.`, #2 never found its `!`: all of `x.y z` is read again,
-  # not only what #2 read.
+  # All of `x.y z` is read again, not only what #2 read.
   tex <- "\\def\\a#1.#2!{[#1|#2]} \\a x.y z"
   expect_warning(latex_grob(tex, input_mode = "math"), "missing its delimiter", fixed = TRUE)
   expect_identical(layout_quietly(tex), layout_quietly("x.y z"))
@@ -158,8 +146,6 @@ test_that("an abandoned call puts back what every argument read", {
 
 test_that("an environment left open inside a group ends with the group", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Its expansion opened a group of its own, which took the `}` meant for
-  # the argument and put every brace after it out by one.
   env <- "\\newenvironment{gmp}{\\left(}{\\right)}"
   tex <- paste0(env, "\\frac{\\begin{gmp} a}{b} c")
   expect_warning(latex_grob(tex, input_mode = "math"), "missing \\end{gmp} inserted",
@@ -170,7 +156,6 @@ test_that("an environment left open inside a group ends with the group", {
 
 test_that("\\\\[len] in an alignment adds that much space below its row", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # It was never read: the `[len]` was drawn as text in the next cell.
   height <- function(tex) latex_tree(tex, input_mode = "math", render_mode = "path")$bbox[["height"]]
   for (env in c("aligned", "matrix", "gather")) {
     body <- if (env == "gather") c("a", "b") else c("a & b", "c & d")
@@ -189,8 +174,7 @@ test_that("an environment in an optional argument keeps its name", {
 
 test_that("a comment inside an argument is not drawn", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # parse_latex_cpp() directly: R's own passes strip comments first, but
-  # the engine does not rely on them.
+  # The engine directly, without R's own comment stripping.
   drawn <- function(tex) {
     r <- gridmicrotex:::parse_latex_cpp(tex, use_path = TRUE)
     attr(r, "diagnostics") <- NULL
@@ -202,8 +186,6 @@ test_that("a comment inside an argument is not drawn", {
 })
 
 test_that("a runaway argument in a loop is an error, not a slow render", {
-  # Each abandoned call reads the rest of the input again; in a macro that
-  # calls itself that was once per turn, 18 s for a 200-byte input.
   tex <- paste0("\\def\\gmrun#1.{}\\newcommand{\\gmloop}{\\gmrun\\gmloop}\\gmloop",
                 strrep("1", 2000))
   expect_error(latex_dims(tex, input_mode = "math"), "Too many runaway arguments")
@@ -211,8 +193,7 @@ test_that("a runaway argument in a loop is an error, not a slow render", {
 
 test_that("a delimiter that is not one is read again as itself, with a warning", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Found only at layout, it failed the whole label. TeX puts a null
-  # delimiter in its place and reads the token again.
+  # As TeX does: a null delimiter in its place, and the token read again.
   expect_warning(latex_grob("\\left( a \\middle x b \\right)", input_mode = "math"),
                  "\\middle: x is not a delimiter; drawn after it", fixed = TRUE)
   expect_identical(layout_quietly("\\left( a \\middle x b \\right)"),
@@ -248,9 +229,6 @@ test_that("a definition that cannot be made is dropped whole", {
 
 test_that("nesting past 400 is an error however it nests", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # A command given as an argument with its own, a one-token argument, a
-  # raw argument read again and \ensuremath in math each nested with no
-  # count: deep enough, a stack overflow or minutes of work.
   for (tex in c(strrep("\\emph", 500), paste0("$", strrep("\\frac", 500), "$"),
                 paste0("a", strrep("\\cite[{", 500), "x", strrep("}]{k}", 500)))) {
     expect_error(latex_dims(tex), "nested too deeply", info = substr(tex, 1, 12))
@@ -264,7 +242,6 @@ test_that("nesting past 400 is an error however it nests", {
 
 test_that("a runaway \\let, and long division of a negative number, end at once", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Each turn kept a copy of the 30 KB body for its group: gigabytes.
   loop <- paste0("{\\def\\b{", strrep("x", 30000), "}\\def\\a{\\let\\c\\b\\a}\\a}")
   expect_error(latex_dims(loop, input_mode = "math"), "too large")
   expect_warning(latex_dims("\\longdiv{-2147483648}{-1}", input_mode = "math"),

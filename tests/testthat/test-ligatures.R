@@ -48,8 +48,7 @@ test_that("markdown keeps its hyphens and quotes, as CommonMark does", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- markdown_grob("use `--verbose` here")
   expect_true("--verbose" %in% g$layout_df$text)
-  # Prose too: CommonMark makes no dashes or curly quotes without its
-  # `smart` extension, so markdown text is not read as TeX's ligatures.
+  # Markdown prose is not read as TeX's ligatures.
   txt <- paste(markdown_grob("run with --verbose, don't `x` it's ``q''")$layout_df$text,
                collapse = "")
   expect_match(txt, "--verbose, don't", fixed = TRUE)
@@ -59,7 +58,7 @@ test_that("markdown keeps its hyphens and quotes, as CommonMark does", {
 test_that("a reference, citation or footnote warns and draws what LaTeX draws", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # LaTeX draws a bold ?? for a reference it cannot resolve, and a bold ?
-  # in brackets for a citation. None of them is an unknown command any more.
+  # in brackets for a citation.
   bold <- function(tex) {
     r <- suppressWarnings(latex_tree(tex, input_mode = "document"))$records
     r$text[r$type == "text" & bitwAnd(r$font_style, 2L) != 0L]

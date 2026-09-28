@@ -68,9 +68,8 @@ test_that("a macro defined in terms of itself is still stopped, and quickly", {
 
 test_that("a runaway inside an optional argument is stopped as quickly", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Each expansion opens a \sqrt[ that is never closed, so the argument
-  # collects everything up to the cap -- and the parser used to read it all
-  # again at every level it nested, after the error: 35 to 100 s each.
+  # Each expansion opens a \sqrt[ that is never closed; after the error
+  # nothing is read again.
   for (tex in c("\\newcommand{\\a}{x\\sqrt[\\a}\\a",
                 "\\newcommand{\\a}[1]{#1#1\\sqrt[\\a{#1}}\\a{xy}",
                 "\\def\\a{\\sqrt[\\a\\a}\\a")) {

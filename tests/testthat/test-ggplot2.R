@@ -1,8 +1,5 @@
-# geom_latex(), annotate("latex") and element_latex() are adapters: they
-# hand ggplot2 a latex_grob(). So the thing worth asserting is that a grob
-# of ours, carrying what the caller asked for, actually lands in the built
-# plot. Saving a png and checking it did not error says nothing -- it
-# passes just as happily when the layer draws nothing at all.
+# These assert that a grob of ours, carrying what the caller asked for,
+# lands in the built plot.
 
 skip_if_not_installed("ggplot2")
 
@@ -18,8 +15,7 @@ test_that("geom_latex contributes one rendered grob per row", {
                       geom_latex())
   expect_length(gs, 3L)
   expect_true(all(vapply(gs, inherits, logical(1), "latexgrob")))
-  # Each one has something to draw. A layer that silently produced empty
-  # grobs would still be a gList of the right length.
+  # Each one has something to draw.
   expect_true(all(vapply(gs, function(g) nrow(g$layout_df) > 0, logical(1))))
 })
 
@@ -39,7 +35,6 @@ test_that("geom_latex passes colour and size down to the grob", {
 })
 
 test_that("geom_latex treats a missing alpha as opaque", {
-  # A mapped alpha can be NA, and `NA < 1` made the layer fail to build.
   df <- data.frame(x = 1, y = 1, eq = "$x^2$", a = NA_real_)
   g <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq, alpha = a)) +
                      geom_latex(colour = "red"))[[1]]
@@ -47,8 +42,6 @@ test_that("geom_latex treats a missing alpha as opaque", {
 })
 
 test_that("geom_latex draws nothing for an empty or missing label", {
-  # Without the guard in draw_panel these render the literal "NA", or an
-  # empty formula that still reserves space.
   df <- data.frame(x = 1:2, y = 1:2, eq = c("$x^2$", ""))
   gs <- layer_grobs(ggplot2::ggplot(df, ggplot2::aes(x, y, label = eq)) +
                       geom_latex())
@@ -86,8 +79,7 @@ test_that("annotate('latex') adds a rendered layer of its own", {
     ggplot2::annotate("latex", x = 4, y = 30,
                       label = "$\\hat{y} = \\beta_0 + \\beta_1 x$",
                       size = 12, colour = "red")
-  # Layer 2 is the annotation; the geom has to be reachable by name for
-  # annotate() to find it at all.
+  # Layer 2 is the annotation.
   g <- layer_grobs(p, 2L)[[1]]
   expect_s3_class(g, "latexgrob")
   expect_gt(nrow(g$layout_df), 0)
@@ -95,8 +87,6 @@ test_that("annotate('latex') adds a rendered layer of its own", {
 })
 
 test_that("annotate('latex') follows latex_options(), as geom_latex() does", {
-  # annotate() never calls geom_latex(), so the layer's own defaults were
-  # what it got: a mixed label in the default font, whatever the options.
   on.exit(reset_latex_options(), add = TRUE)
   latex_options(input_mode = "math", math_font = "stix")
   base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
@@ -114,8 +104,6 @@ test_that("annotate('latex') follows latex_options(), as geom_latex() does", {
 })
 
 test_that("geom_latex() and annotate('latex') read the options when drawn", {
-  # Both take them when the plot is drawn, so a plot made under one set of
-  # options and printed under another draws both layers alike.
   on.exit(reset_latex_options(), add = TRUE)
   base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
   latex_options(input_mode = "math")
@@ -127,8 +115,7 @@ test_that("geom_latex() and annotate('latex') read the options when drawn", {
   g2 <- suppressWarnings(layer_grobs(p, 2L))[[1]]
   expect_identical(g1$layout_df, g2$layout_df)
   expect_identical(g1$layout_df$text, "x^2")
-  # Neither says it was asked for typeface when it was not, so the fallback
-  # message follows the same rule for both.
+  # Unset options stay unset on the layer.
   expect_null(p$layers[[1]]$geom_params$render_mode)
   expect_identical(p$layers[[1]]$geom_params$input_mode, NULL)
   # What the caller does give is checked when the layer is made.
@@ -141,8 +128,7 @@ test_that("geom_latex() and annotate('latex') read the options when drawn", {
 test_that("element_latex is an element_text subclass that merges", {
   el <- element_latex(fontsize = 18, render_mode = "path")
   expect_equal(el@render_mode, "path")
-  # `fontsize` is our alias for element_text's `size`; it is not a
-  # property of its own, so it has to land there or it is silently lost.
+  # `fontsize` is an alias for element_text's `size`.
   expect_equal(el@size, 18)
 
   # Properties the caller did not set come from the parent element.
@@ -165,9 +151,7 @@ test_that("element_latex installs our grob as the axis title", {
   expect_true("glyph" %in% g$layout_df$type)
 })
 
-# Tick labels go through element_grob() with a vector label; that path and
-# its reported size are covered in test-ggplot2-markdown.R, which runs it
-# for element_latex() as well as element_markdown().
+# Tick labels are tested in test-ggplot2-markdown.R, for both elements.
 
 # --- .element_grob_latex() internals ---
 

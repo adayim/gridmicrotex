@@ -10,10 +10,7 @@ test_that("the ggplot2 objects are created at load", {
 })
 
 test_that("element_markdown keeps the legacy element classes", {
-  # S7 inheritance drops ggplot2's legacy "element_text"/"element" S3
-  # strings, and without them combine_elements() treats the object as an
-  # unrelated sibling and silently discards it when resolving inherited
-  # theme entries.
+  # Without them combine_elements() drops the element from inherited themes.
   e <- element_markdown()
   expect_true(inherits(e, "element_text"))
   expect_true(inherits(e, "element"))
@@ -28,9 +25,7 @@ test_that("element_markdown survives theme inheritance", {
 })
 
 test_that("emphasis actually reaches the rendered output", {
-  # \text{} inside a text command resets the style: \textbf{bold} reports
-  # font style 2, \textbf{\text{bold}} reports 1. Wrapping there would
-  # silently drop every bold and italic in the document.
+  # \text{} inside \textbf would reset the style.
   expect_match(.md_to_tex("**b**"), "\\textbf{b}", fixed = TRUE)
   expect_match(.md_to_tex("*i*"), "\\textit{i}", fixed = TRUE)
   expect_false(grepl("\\textbf{\\text{", .md_to_tex("**b**"), fixed = TRUE))
@@ -57,8 +52,6 @@ test_that("math and escapes survive inside emphasis", {
 })
 
 test_that("geom_markdown contributes one rendered grob per row", {
-  # "the plot builds" is ggplot2's business; ours is that the layer hands
-  # back a grob per row with something in it.
   df <- data.frame(x = 1:3, y = 1:3,
                    lab = c("**b**", "*i* $\\beta_1$", "`c` $x^2$"))
   gs <- ggplot2::layer_grob(
@@ -70,7 +63,6 @@ test_that("geom_markdown contributes one rendered grob per row", {
 })
 
 test_that("geom_markdown treats a missing alpha as opaque", {
-  # A mapped alpha can be NA, and `NA < 1` made the layer fail to build.
   df <- data.frame(x = 1, y = 1, lab = "**b**", a = NA_real_)
   g <- ggplot2::layer_grob(
     ggplot2::ggplot(df, ggplot2::aes(x, y, label = lab, alpha = a)) +
@@ -79,7 +71,6 @@ test_that("geom_markdown treats a missing alpha as opaque", {
 })
 
 test_that("annotate('markdown') follows latex_options(), as geom_markdown() does", {
-  # As annotate('latex'): the layer's own defaults used to win.
   on.exit(reset_latex_options(), add = TRUE)
   latex_options(math_font = "stix")
   base <- ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y))
@@ -103,8 +94,7 @@ test_that("element_markdown installs our grob as the axis titles", {
   gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
   named <- function(nm) gt$grobs[[which(gt$layout$name == nm)]]
 
-  # Both titles, so the y case -- which is rotated and takes a different
-  # branch -- is covered too.
+  # y is rotated and takes a different branch.
   expect_s3_class(named("xlab-b"), "latexgrob")
   expect_s3_class(named("ylab-l"), "latexgrob")
   # Rendered as markdown, not as the literal asterisks.
@@ -112,8 +102,7 @@ test_that("element_markdown installs our grob as the axis titles", {
 })
 
 test_that("a bundle of tick labels reports a non-zero size", {
-  # ggplot2 sizes the axis strip from this grob. When it measured 0 x 0
-  # no room was reserved and the labels were drawn over the axis title.
+  # ggplot2 sizes the axis from this grob.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   for (el in list(element_markdown(), element_latex())) {
     g <- ggplot2::element_grob(el, label = c("1.0", "1.5", "2.0"),
@@ -137,9 +126,7 @@ test_that("element_markdown validates justify", {
 })
 
 test_that("dollar delimiters are never stripped", {
-  # element_latex() strips enclosing $...$ in math mode, where users add
-  # them by analogy with plotmath. In markdown a `$` pair is the math
-  # delimiter, so stripping would destroy the label.
+  # element_latex() strips them; in markdown they are the math.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   g <- ggplot2::element_grob(element_markdown(), label = "$x^2$")
   expect_s3_class(g, "latexgrob")
@@ -166,24 +153,21 @@ test_that("style= reaches both ggplot2 entry points", {
   # geom_markdown takes it as a layer parameter.
   expect_true("style" %in% names(formals(geom_markdown)))
 
-  # The element must still merge into a theme. A NULL default would fail
-  # here with "Can't find property <ggplot2::element_text>@style", because
-  # ggplot2 reads an unset property off the parent element -- which is why
-  # the property defaults to NA and is mapped back to NULL on use.
+  # Both still apply in a built plot, where the element is merged into the
+  # theme (a NULL property default failed that merge).
   p <- ggplot2::ggplot(data.frame(x = 1, y = 1, lab = "**a**"),
                        ggplot2::aes(x, y, label = lab)) +
     ggplot2::geom_point() +
     geom_markdown(style = "body { color: #1F6FB2 }") +
     ggplot2::labs(x = "**wt**") +
     ggplot2::theme(axis.title.x = element_markdown(style = "body { color: red }"))
-  expect_no_error(ggplot2::ggplot_build(p))
+  gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
+  expect_equal(cols(gt$grobs[[which(gt$layout$name == "xlab-b")]]), "#FF0000")
+  expect_equal(cols(ggplot2::layer_grob(p, i = 2L)[[1]][[1]]), "#1F6FB2")
 })
 
 test_that("body seeds inheritance for inline markdown too", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # markdown_box_grob() has always seeded from `body`; markdown_grob() did
-  # not, so a stylesheet written against the box grob silently did nothing
-  # when handed to the inline one.
   cols <- function(g) unique(stats::na.omit(g$layout_df$color))
   expect_equal(cols(markdown_grob("hi", style = "body { color: #B22222 }")),
                "#B22222")
@@ -211,21 +195,16 @@ test_that("a block-structured label is laid out as blocks, a paragraph is not", 
   eg <- function(lab, ...) {
     ggplot2::element_grob(element_markdown(...), label = lab)
   }
-  # The run path flattens blocks: list markers and indents are simply
-  # lost, which is what promotion exists to fix.
   expect_s3_class(eg("The **fitted** slope is $\\beta_1$"), "latexgrob")
   expect_s3_class(eg("## H\n\n- one\n- two"), "markdownbox")
-  # A width asks for the box even with only a paragraph: a run cannot
-  # wrap to a unit.
+  # A width asks for the box even for a paragraph.
   expect_s3_class(eg("just a paragraph", width = grid::unit(2, "in")),
                   "markdownbox")
 })
 
 test_that("a rotated block label keeps its angle and warns", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # The box cannot rotate, so one of the two has to give. Losing the
-  # angle would lay a y-axis title horizontally across the panel; losing
-  # the block layout only flattens it, which is today's behaviour anyway.
+  # The box cannot rotate, so the label is flattened to a run instead.
   expect_warning(
     g <- ggplot2::element_grob(element_markdown(angle = 90),
                                label = "# H\n\n- a"),
@@ -233,8 +212,7 @@ test_that("a rotated block label keeps its angle and warns", {
   )
   expect_s3_class(g, "latexgrob")
 
-  # A width alongside an angle is not ignored either -- it becomes the
-  # run's own wrapping measure.
+  # A width with an angle becomes the run's wrapping measure.
   expect_no_warning(
     g2 <- ggplot2::element_grob(
       element_markdown(angle = 90, width = grid::unit(100, "bigpts")),
@@ -245,13 +223,9 @@ test_that("a rotated block label keeps its angle and warns", {
 
 test_that("axis tick labels are never laid out as blocks", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # ggplot2 asks an element for its height before placing it, so a box
-  # sized in npc measures against the whole device -- every tick would
-  # claim the full width.
+  # A box sized in npc would measure against the whole device.
   g <- ggplot2::element_grob(element_markdown(), label = c("# H", "# H"))
   expect_s3_class(g, "gridmicrotex_labels")
-  # The heading would promote to a box on its own; in a tick bundle each
-  # label has to stay a run.
   expect_true(all(vapply(g$children, inherits, logical(1), "latexgrob")))
   expect_false(any(vapply(g$children, inherits, logical(1), "markdownbox")))
 })
@@ -290,7 +264,6 @@ test_that("a block plot title is promoted to a box, and its style applies", {
   styled <- title_grob(mk(width = grid::unit(1, "npc"),
                           style = "body { background: #EEF3FB; padding: 8px }"))
   expect_s3_class(styled, "markdownbox")
-  # 8px of padding above and below has to reach the box, or the style is
-  # being carried but never resolved.
+  # The padding reaches the box.
   expect_gt(height(styled), height(plain))
 })

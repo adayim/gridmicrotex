@@ -1,7 +1,5 @@
 # Each input must draw exactly what its spelled-out form draws: the same
-# records, positions and bounding box. This is how the parser is checked
-# against LaTeX's own reading of an input, rather than against a snapshot of
-# whatever it drew before.
+# records, positions and bounding box.
 
 layout_of <- function(tex) {
   t <- latex_tree(tex, input_mode = "math", render_mode = "path")
@@ -76,9 +74,7 @@ test_that("\\middle takes a delimiter by name, as \\left and \\right do", {
 test_that("a \\right the parser inserts is TeX's null delimiter", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # `\left(x` warns "missing \right. inserted" and must then draw what
-  # `\left(x\right.` draws. It used to fall back to a plain row instead, so
-  # the fence did not stretch: `\left(\frac{a}{b}` came out 25bp tall
-  # against 32bp for the same input spelled out.
+  # `\left(x\right.` draws, the fence stretched.
   drawn <- function(tex) {
     t <- suppressWarnings(latex_tree(tex, input_mode = "math", render_mode = "path"))
     # The warning itself is the one intended difference between the pair.

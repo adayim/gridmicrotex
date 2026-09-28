@@ -62,13 +62,7 @@ test_that("editGrob() preserves string-valued vjust across reparse", {
   expect_equal(g2$vjust, g2$bbox_bl_bp / g2$bbox_h)
 })
 
-# Regression: \def with backslash control sequences in the body used to fail
-# on subsequent parses because MicroTeX's static macro table leaked the name
-# into the next parse's preprocess pass, which then mis-tokenised the body.
-# A macro is only doing its job if the call lays out exactly as the body
-# written out longhand. Asserting the class alone catches a parse error
-# and nothing else -- an expansion that silently dropped its argument
-# would still return a latexgrob.
+# A macro call must lay out exactly as its body written out longhand.
 expands_to <- function(macro, longhand, ...) {
   expect_equal(latex_grob(macro, ...)$layout_df,
                latex_grob(longhand, ...)$layout_df)
@@ -79,30 +73,21 @@ test_that("plain-TeX \\def with parameterised body expands to its body", {
              r"(\left\lVert v \right\rVert)", input_mode = "math")
   expands_to(r"(\def\inner#1#2{\langle #1, #2 \rangle} \inner{u}{v})",
              r"(\langle u, v \rangle)", input_mode = "math")
-  # The typeface path triggers a second internal parse for the path-mode
-  # fallback layout — exercise it explicitly.
+  # Typeface mode parses a second time for the path fallback.
   expands_to(r"(\def\frob#1{|#1|} \frob{M})", r"(|M|)",
              render_mode = "typeface", input_mode = "math")
 })
 
 test_that("\\newcommand survives the typeface mode double-parse", {
-  # The typeface mode parses twice (once for glyph layout, once for path
-  # fallback). The old parser kept a label's definitions in a static map,
-  # so the second parse once hit "Command already exists!"; the front end
-  # keeps them in a layer made new for each parse.
+  # Each parse has its own definitions.
   expands_to(r"(\newcommand{\xyznorm}[1]{\lVert #1 \rVert} \xyznorm{v})",
              r"(\lVert v \rVert)", render_mode = "typeface",
              input_mode = "math")
 })
 
 test_that("\\textcolor body inherits the surrounding math/text mode", {
-  # Regression: \textcolor used to force its body into text mode, so
-  # `\textcolor{red}{c^2}` rendered "c^2" literally with a caret glyph
-  # instead of a superscript. Now the body inherits math mode and the
-  # ^ produces a real superscript record.
+  # In math, `\textcolor{blue}{c^2}` sets a superscript, not a caret.
   g <- latex_grob(r"($\textcolor{blue}{c^2}$)", input_mode = "math")
-  # The literal '^' should not appear as a TEXT record; if it did, the
-  # body was parsed in text mode.
   layout <- g$layout_df
   has_caret_glyph <- any(layout$type == "text" &
                          vapply(layout$text, function(s) {
@@ -113,9 +98,6 @@ test_that("\\textcolor body inherits the surrounding math/text mode", {
 })
 
 test_that("\\color declaration colours the rest of the enclosing group", {
-  # Regression: \color outside array mode was a no-op, so
-  # `\color{blue} E = mc^2` rendered black. Now it consumes the rest of
-  # the enclosing group and wraps it in a ColorAtom.
   g <- latex_grob(r"($\color{blue} E = mc^2$)", input_mode = "math")
   cols <- unique(g$layout_df$color[g$layout_df$type %in% c("glyph", "path")])
   cols <- cols[!is.na(cols)]
@@ -127,14 +109,11 @@ test_that("\\color declaration colours the rest of the enclosing group", {
 test_that("\\newcommand and \\def do not leak between independent latex_grob calls", {
   src <- r"(\newcommand{\xyzleak}{Q} \xyzleak)"
   first <- latex_grob(src, input_mode = "math")$layout_df
-  # A second call with the same definition must succeed -- it errored
-  # "already exists" when state leaked between parses -- and must lay out
-  # the same, which a re-registration that shadowed the body would not.
+  # A second call with the same definition succeeds and lays out the same.
   expect_equal(latex_grob(src, input_mode = "math")$layout_df, first)
   expands_to(src, "Q", input_mode = "math")
 
-  # And built-in environments must still be available after the leak guard
-  # runs (it cleared _codes wholesale in an earlier iteration of the fix).
+  # Built-in environments are still available.
   pmat <- latex_grob(r"(\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix})",
                      input_mode = "math")
   # Four cells and a pair of delimiters, not the literal source text.
@@ -184,11 +163,11 @@ test_that("grobX/grobY match a rectGrob with identical geometry across theta", {
   on.exit(grDevices::dev.off(), add = TRUE)
   grid::grid.newpage()
 
-  dims <- latex_dims("\frac{a}{b}", gp = grid::gpar(fontsize = 20))
+  dims <- latex_dims("\\frac{a}{b}", gp = grid::gpar(fontsize = 20))
   thetas <- c(0, 30, 45, 90, 135, 180, 225, 270, 315)
 
   for (just in list(c(0, 0), c(0.5, 0.5), c(1, 0.25))) {
-    g <- latex_grob("\frac{a}{b}",
+    g <- latex_grob("\\frac{a}{b}",
                     x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
                     hjust = just[1], vjust = just[2],
                     gp = grid::gpar(fontsize = 20))
@@ -215,8 +194,7 @@ test_that("grobX/grobY on a rotated grob match a rectGrob in the same viewport",
   for (rot in c(37, 90, 180)) {
     g <- latex_grob("$x^2$", x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
                     hjust = 0, vjust = 0, rot = rot, gp = grid::gpar(fontsize = 20))
-    # grid's reference behaviour for a grob whose rotation comes from its
-    # viewport: theta is measured in the grob's own (rotated) frame.
+    # theta is measured in the grob's own (rotated) frame.
     r <- grid::rectGrob(vp = grid::viewport(
       x = grid::unit(0.25, "npc"), y = grid::unit(0.4, "npc"),
       width = dims$width, height = dims$height,

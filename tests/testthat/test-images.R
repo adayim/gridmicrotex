@@ -1,12 +1,6 @@
-# \includegraphics: resolving a file reference into a sized box, and
-# drawing whatever that file deserves.
-#
-# The parser asks R for each image as it meets one, after macros are
-# expanded, so most of what is under test here is that a real path
-# survives contact with the pipeline.
+# \includegraphics: resolving a file into a sized box, and drawing it.
 
-# A PNG of a known pixel size. `width`/`height` are PIXELS for agg_png,
-# which is easy to get wrong -- 1 means one pixel, not one inch.
+# A PNG of a known size. agg_png's width/height are pixels.
 mk_png <- function(w_px = 300, h_px = 200) {
   f <- tempfile(fileext = ".png")
   ragg::agg_png(f, width = w_px, height = h_px)
@@ -23,9 +17,7 @@ mk_svg <- function(w_in = 3, h_in = 2) {
   f
 }
 
-# Warnings are suppressed here on purpose: sizing a small test image to a
-# few inches legitimately trips the low-resolution notice, and that notice
-# has its own test below. These helpers are about geometry.
+# Geometry only: the low-resolution warning has its own test.
 wid <- function(tex, ...) {
   suppressWarnings(as.numeric(latex_dims(tex, input_mode = "math", ...)$width))
 }
@@ -44,9 +36,7 @@ test_that("a length is read in every unit LaTeX writes one in", {
   expect_equal(bp("2em", 20, 0), 40)
   expect_equal(bp("12", 20, 0), 12)      # bare number is big points
 
-  # \textwidth has no page in a grob, so it resolves against max_width;
-  # without one it is unreadable and the caller falls back to the file's
-  # own size rather than dropping the figure.
+  # \textwidth is max_width; without one it is unreadable.
   expect_equal(bp("\\textwidth", 20, 400), 400)
   expect_equal(bp("0.5\\textwidth", 20, 400), 200)
   expect_equal(bp("0.5\\linewidth", 20, 400), 200)
@@ -60,10 +50,7 @@ test_that("a length is read in every unit LaTeX writes one in", {
 test_that("a file reference survives the pipeline that would mangle a path", {
   enc <- gridmicrotex:::.image_ref_encode
   dec <- gridmicrotex:::.image_ref_decode
-  # Hex, because every one of these breaks a raw path: backslashes are
-  # LaTeX escapes, `%` starts a comment that runs to the end of the line,
-  # and the macro expander would rewrite `\Users` for anyone who had
-  # defined a macro of that name.
+  # Backslashes, `%` and macro names would all break a raw path.
   for (p in c("C:\\Users\\a\\my fig.png", "a/b/100%plot.png",
               "with space_and_under.png", "plain.png")) {
     expect_equal(dec(enc(p)), p, info = p)
@@ -78,26 +65,25 @@ test_that("an image reserves a box of exactly the requested size", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png(300, 200)
 
-  # Intrinsic: pixels at 96 dpi, the convention the block path already used.
+  # Intrinsic: pixels at 96 dpi.
   expect_equal(wid(sprintf("\\includegraphics{%s}", f)), 300 * 72 / 96)
   expect_equal(hei(sprintf("\\includegraphics{%s}", f)), 200 * 72 / 96)
 
-  # Absolute, and independent of font size -- it is a picture, not type.
+  # Absolute, and independent of font size.
   for (fs in c(10, 40)) {
     expect_equal(
       wid(sprintf("\\includegraphics[width=3in]{%s}", f),
           gp = grid::gpar(fontsize = fs)), 216, info = fs)
   }
 
-  # Aspect is preserved when only one side is given, and deliberately not
-  # when both are, as in LaTeX.
+  # Aspect is kept when one side is given, not when both are, as in LaTeX.
   expect_equal(hei(sprintf("\\includegraphics[width=3in]{%s}", f)), 144)
   expect_equal(wid(sprintf("\\includegraphics[height=1in]{%s}", f)), 108)
   # 225 * 0.5 = 112.5; the bbox is reported in whole big points.
   expect_equal(wid(sprintf("\\includegraphics[scale=0.5]{%s}", f)), 112)
   expect_equal(hei(sprintf("\\includegraphics[width=3in,height=1in]{%s}", f)), 72)
 
-  # It sits on the baseline: no depth, as \includegraphics does in LaTeX.
+  # It sits on the baseline: no depth, as in LaTeX.
   d <- latex_dims(sprintf("\\includegraphics[width=1in]{%s}", f),
                   input_mode = "math")
   expect_equal(as.numeric(d$depth), 0)
@@ -107,9 +93,8 @@ test_that("an oversized image is clamped so a markdown column can converge", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png(300, 200)
-  # .md_measure() shrinks max_width and retries up to six times; an
-  # absolutely sized image never shrinks, so without a clamp the loop
-  # burns six parses and still overflows.
+  # .md_measure() retries with a smaller max_width; a fixed-size image
+  # would never shrink.
   expect_equal(wid(sprintf("\\includegraphics[width=10in]{%s}", f),
                    max_width = 200), 200)
   expect_lte(wid(sprintf("\\includegraphics{%s}", f), max_width = 100), 100)
@@ -143,15 +128,8 @@ test_that("an SVG is drawn as real vector, not a raster", {
   expect_equal(wid(sprintf("\\includegraphics{%s}", f)), 216)
   expect_equal(hei(sprintf("\\includegraphics{%s}", f)), 144)
 
-  # Installed is not the same as working: a container can carry rsvg and
-  # grImport2 while librsvg cannot actually turn the file into a Picture,
-  # and the loader then correctly falls back to a raster. Probe the real
-  # conversion before asserting a vector came out of it, or this fails on
-  # the environment rather than on the package. Seen on R-hub's nold
-  # container, where all three packages are installed.
-  # A Picture object is not enough: it has to carry drawable content.
-  # librsvg on R-hub's nold container returns an empty one, and the
-  # loader then correctly falls back to a raster.
+  # Skip where librsvg returns an empty Picture (R-hub's nold container);
+  # the loader then rightly falls back to a raster.
   can_vector <- tryCatch(suppressWarnings({
     cairo <- tempfile(fileext = ".svg")
     rsvg::rsvg_svg(f, cairo)
@@ -165,10 +143,7 @@ test_that("an SVG is drawn as real vector, not a raster", {
     latex_grob(sprintf("\\includegraphics[width=1in]{%s}", f),
                input_mode = "math"))$children
   expect_length(kids, 1L)
-  # grImport2 turns the file into grid drawing primitives; a raster would
-  # be a rastergrob, and would not scale with the device. How deep the
-  # primitives sit depends on the SVG, so walk the whole subtree rather
-  # than assuming a fixed nesting, and report the tree when it is absent.
+  # grImport2 primitives, at a depth that depends on the SVG.
   expect_false(inherits(kids[[1]], "rastergrob"))
   grob_classes <- function(g) {
     c(class(g)[1], unlist(lapply(g$children, grob_classes), use.names = FALSE))
@@ -177,9 +152,7 @@ test_that("an SVG is drawn as real vector, not a raster", {
   expect_true(any(grepl("^pic", prims)),
               info = paste("grob tree:", paste(prims, collapse = " / ")))
 
-  # The wrapper must carry a plain viewport, or .md_shift_grob() -- which
-  # realigns a block by nudging vp$x -- would hit pictureGrob's vpStack,
-  # whose x is NULL.
+  # .md_shift_grob() moves a block by its vp$x, which pictureGrob lacks.
   expect_false(is.null(kids[[1]]$vp))
   expect_false(is.null(kids[[1]]$vp$x))
 })
@@ -190,25 +163,16 @@ test_that("an SVG falls back to a raster when there is no picture reader", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_svg(2, 1)
 
-  # This branch is for machines that have rsvg but not grImport2. Every
-  # other SVG test skips without grImport2, so with it installed the
-  # fallback would never execute and would rot unnoticed -- mock the
-  # picture reader away to force it.
-  # `.package` is given explicitly: without it testthat infers the target
-  # from a pkgload context, so this block errored with "No packages
-  # loaded with pkgload" under a plain test_dir() / test_file() run --
-  # green under devtools::test() and R CMD check, which both supply one.
+  # Mock grImport2 away, so the fallback runs where it is installed.
+  # `.package` is needed under a plain test_dir() / test_file().
   testthat::local_mocked_bindings(.image_picture = function(...) NULL,
                                   .package = "gridmicrotex")
   g <- .image_grob(f, 144, 72)
   expect_s3_class(g, "rastergrob")
-  # Rasterised at the device's resolution rather than a size baked in when
-  # the file was written -- the one thing a vector source makes possible.
   expect_gt(nrow(g$raster), 1L)
   expect_gt(ncol(g$raster), 1L)
 
-  # And with neither reader there is nothing to draw: the grob is NULL and
-  # the grid builder warns that the box was left blank.
+  # With neither reader there is nothing to draw.
   testthat::local_mocked_bindings(.image_raster = function(...) NULL,
                                   .package = "gridmicrotex")
   expect_null(.image_grob(tempfile(fileext = ".png"), 72, 72))
@@ -216,16 +180,13 @@ test_that("an SVG falls back to a raster when there is no picture reader", {
 
 test_that("an image that cannot be drawn is an error saying why", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # A figure that was asked for and not drawn is easy to miss in the
-  # output, so it stops instead of drawing a stand-in. A URL is a path like
-  # any other and is not fetched, so it fails the same way.
+  # A URL is not fetched, so it fails like a missing file.
   for (f in c("no-such-file.png", "https://example.org/fig.png")) {
     expect_error(latex_grob(sprintf("\\includegraphics{%s}", f),
                             input_mode = "math"),
                  "file not found", label = f)
   }
 
-  # A format with no reader has nothing else to ask, so it is refused here.
   for (ext in c(".pdf", ".tiff")) {
     f <- tempfile(fileext = ext); writeBin(as.raw(1:20), f)
     expect_error(latex_dims(sprintf("\\includegraphics{%s}", f),
@@ -235,8 +196,7 @@ test_that("an image that cannot be drawn is an error saying why", {
 })
 
 test_that("a figure that cannot be drawn does not cost a whole document", {
-  # Most papers' figures are PDFs. In a label the figure is the point, so
-  # it stops; in a pasted paper one PDF used to fail every page.
+  # An error in a label; a warning and the file name in a document.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   .image_reset_warnings()
   f <- tempfile(fileext = ".pdf"); writeBin(as.raw(1:20), f)
@@ -252,8 +212,6 @@ test_that("a figure that cannot be drawn does not cost a whole document", {
 
 test_that("a commented-out \\includegraphics is not read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Commenting out a figure is routine LaTeX; the missing draft figure
-  # must not stop the whole render.
   expect_equal(wid("x % \\includegraphics{old.png}\ny"), wid("xy"))
   doc <- c("\\documentclass{article}", "\\begin{document}", "Text",
            "% \\includegraphics{draft.png}", "\\end{document}")
@@ -264,8 +222,7 @@ test_that("a commented-out \\includegraphics is not read", {
   # ...but an escaped `\%` is a percent sign, and the figure is real.
   expect_error(latex_dims("50\\% \\includegraphics{nope.png}", input_mode = "math"),
                "file not found")
-  # Likewise `\\includegraphics` is a line break and then a word, not the
-  # command; a third backslash makes it the command again.
+  # `\\includegraphics` is a line break and a word; `\\\` is the command.
   expect_false("image" %in% latex_tree("a\\\\includegraphics{x}", input_mode = "math")$records$type)
   expect_error(latex_dims("a\\\\\\includegraphics{nope.png}", input_mode = "math"),
                "file not found")
@@ -274,9 +231,7 @@ test_that("a commented-out \\includegraphics is not read", {
 test_that("one warning per file, however many times the layout is measured", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # .md_measure() calls latex_dims() up to seven times for a single render
-  # and editDetails() re-runs the pipeline, so deduplicating per parse
-  # would not deduplicate at all.
+  # One render can measure the layout several times.
   tex <- sprintf("\\includegraphics[trim=1 2 3 4]{%s}", mk_png())
   seen <- character(0)
   withCallingHandlers(
@@ -297,11 +252,10 @@ test_that("effective resolution is reported only when the author chose a size", 
     ws
   }
   small <- mk_png(96, 64)
-  # Asked for 3in from 96px: 32 dpi, and the fix is more pixels.
+  # Asked for 3in from 96px: 32 dpi.
   expect_match(warns(latex_dims(sprintf("\\includegraphics[width=3in]{%s}", small),
                                 input_mode = "math"))[1], "dpi")
-  # At intrinsic size the answer is 96 dpi by construction, so there is
-  # nothing to act on and nothing to say.
+  # At intrinsic size it is 96 dpi by construction.
   expect_length(warns(latex_dims(sprintf("\\includegraphics{%s}", mk_png(96, 64)),
                                  input_mode = "math")), 0L)
   # A vector source has no effective resolution at all.
@@ -313,9 +267,6 @@ test_that("effective resolution is reported only when the author chose a size", 
 test_that("an \\includegraphics inside a macro definition still resolves", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # The resolver sees this one after all: the command sits literally in the
-  # \newcommand's replacement text, which is just characters in the string.
-  # So it becomes a real image, not a fallback.
   f <- mk_png()
   d <- latex_grob(sprintf("\\newcommand{\\fig}{\\includegraphics[width=1in]{%s}}x\\fig y", f),
                   input_mode = "math")$layout_df
@@ -324,9 +275,7 @@ test_that("an \\includegraphics inside a macro definition still resolves", {
 
 test_that("an \\includegraphics a macro makes, or a malformed one, is read like any other", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # The parser reads each image after macros are expanded, so one a macro
-  # produces is resolved, and one it cannot read fails like every other
-  # image, malformed ones included -- in both input modes.
+  # Images are read after macros expand, in both input modes.
   for (tex in c("x\\includegraphics{unbalanced", "x\\includegraphics y",
                 "\\newcommand{\\ig}{\\includegraphics}\\ig{nope.png}",
                 "\\newcommand{\\fig}[1]{\\includegraphics{#1}}\\fig{nope.png}",
@@ -337,8 +286,7 @@ test_that("an \\includegraphics a macro makes, or a malformed one, is read like 
                    label = paste(mode, tex))
     }
   }
-  # Where images only warn (base graphics, a box mid-draw), it warns and
-  # draws the file's name, as for any image.
+  # Where images only warn, the file's name is drawn.
   .image_reset_warnings(); on.exit(.image_reset_warnings(), add = TRUE)
   alias <- "\\newcommand{\\ig}{\\includegraphics}\\ig{nope.png}"
   expect_warning(g <- .images_lenient(latex_grob(alias, input_mode = "math")),
@@ -368,9 +316,7 @@ test_that("the layout cache notices a file that changed on disk", {
   wid(sprintf("\\includegraphics{%s}", f))
   expect_equal(latex_cache_info()$hits - before, 1L)   # same file: a hit
 
-  # The cache key is the tex string, which holds no file metadata of its
-  # own -- so mtime and size ride along in the encoded reference. Without
-  # them an edited figure would keep its old layout forever.
+  # mtime and size are part of the cache key.
   Sys.sleep(1.1)
   ragg::agg_png(f, width = 600, height = 200); grid::grid.rect(); dev.off()
   expect_false(identical(wid(sprintf("\\includegraphics{%s}", f)), w1))
@@ -387,9 +333,7 @@ test_that("markdown draws a real image", {
   expect_match(gridmicrotex:::.md_to_tex(sprintf("a <img src='%s' width='48'> b", f)),
                "width=48px", fixed = TRUE)
 
-  # An <img> alone on its line is an HTML *block* to CommonMark, not an
-  # inline tag, and HTML blocks are otherwise dropped. It is drawn, as it
-  # is in a browser.
+  # An <img> alone on its line is an HTML block, and is drawn.
   expect_match(gridmicrotex:::.md_to_tex(sprintf("<img src='%s'>", f)),
                "includegraphics", fixed = TRUE)
   blk <- gridmicrotex:::.md_parse_blocks(sprintf("Intro\n\n<img src='%s'>\n\nEnd", f))
@@ -398,16 +342,13 @@ test_that("markdown draws a real image", {
 
 test_that("markdown that names an image it cannot draw is an error", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Every spelling fails the same way, a URL included, and none falls back
-  # to its alt text. An <img> with no src names no file at all.
+  # Every spelling fails, a URL included; none falls back to alt text.
   for (md in c("a ![ALT](nope.png) b", "a ![ALT](https://x/y.png) b",
                "a <img src='nope.png' alt='ALT'> b", "a <img alt='ALT'> b",
                "<img src='nope.png'>", "a <img src='nope.png' alt='a > b'> c")) {
     expect_error(markdown_grob(md), "file not found", label = md)
   }
-  # The block renderer lays out only when drawn, so it checks when it is
-  # built: an error from inside a draw would leave half a page. That
-  # includes an \includegraphics written inside a math span.
+  # The box is checked when built, since it lays out only when drawn.
   for (md in c("![ALT](nope.png)", "text ![ALT](nope.png) more",
                "Intro\n\n<img src='nope.png'>\n\nEnd",
                "see $\\includegraphics{nope.png}$")) {
@@ -421,10 +362,7 @@ test_that("markdown that names an image it cannot draw is an error", {
 test_that("a macro parameter in an image path is not checked as a file name", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # `#1` is a parameter of the definition, not a path. The build-time check
-  # reads the source as written, before anything is expanded, so it has to
-  # skip one -- it used to refuse the whole grob with "Cannot draw image
-  # '#1'". What the macro is *used* with is still an image like any other.
+  # The build-time check reads unexpanded source, so it must skip `#1`.
   def <- "$\\newcommand{\\fig}[1]{\\includegraphics[width=1in]{#1}}$"
   expect_true("image" %in% markdown_grob(paste0(def, " $\\fig{", mk_png(), "}$"))$layout_df$type)
   expect_error(markdown_grob(paste0(def, " $\\fig{nope.png}$")), "file not found")
@@ -437,8 +375,7 @@ test_that("markdown reads an image's path the way HTML and CommonMark do", {
   put <- function(name) { p <- file.path(d, name); file.copy(mk_png(), p); p }
   drawn <- function(md) "image" %in% markdown_grob(md)$layout_df$type
 
-  # A `$...$` pair in a file name is masked as math before CommonMark
-  # runs, and has to be put back or the name comes out as "a1c.png".
+  # A `$...$` pair in a file name is masked as math and must be restored.
   dollar <- put("a$b$c.png")
   expect_true(drawn(sprintf("x ![a](%s) y", dollar)))
   expect_true(drawn(sprintf("x <img src='%s'> y", dollar)))
@@ -463,8 +400,7 @@ test_that("keepaspectratio fits inside the box instead of stretching it", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png(300, 200)                     # 3:2, intrinsic 225 x 150 bp
-  # Without the key, both lengths are obeyed and the picture distorts --
-  # that is what LaTeX does too.
+  # Without the key, both lengths are obeyed, as in LaTeX.
   expect_equal(wid(sprintf("\\includegraphics[width=3in,height=3in]{%s}", f)), 216)
   expect_equal(hei(sprintf("\\includegraphics[width=3in,height=3in]{%s}", f)), 216)
   # With it, the smaller scale factor wins and the whole picture fits.
@@ -480,7 +416,6 @@ test_that("scale multiplies width and height rather than replacing them", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png(300, 200)
-  # graphicx applies scale to whatever width/height settled on.
   expect_equal(wid(sprintf("\\includegraphics[width=4in,scale=0.5]{%s}", f)), 144)
   expect_equal(hei(sprintf("\\includegraphics[width=4in,scale=0.5]{%s}", f)), 96)
 })
@@ -493,7 +428,7 @@ test_that("a path is found the way graphicx finds one", {
   old <- setwd(dir); on.exit(setwd(old), add = TRUE)
 
   rec <- function(tex) latex_tree(tex, input_mode = "math")$records
-  # No extension: the idiomatic LaTeX form, and the one that used to warn.
+  # No extension.
   expect_true("image" %in% rec("\\includegraphics{sub/fig}")$type)
   # \graphicspath supplies the directory, and draws nothing itself.
   expect_true("image" %in% rec("\\graphicspath{{sub/}}a\\includegraphics{fig}b")$type)
@@ -511,8 +446,7 @@ test_that("\\graphicspath reaches a list's items and a column's @{}", {
   file.copy(mk_png(300, 200), file.path(dir, "sub", "fig.png"))
   old <- setwd(dir); on.exit(setwd(old), add = TRUE)
 
-  # Both are lowered apart from the rest, and began without the
-  # directories: an R error in a label, the file's name in a document.
+  # Both are lowered separately from the rest of the input.
   item <- "\\graphicspath{{sub/}}\\begin{itemize}\\item \\includegraphics{fig}\\end{itemize}"
   for (mode in c("mixed", "document")) {
     expect_true("image" %in% latex_tree(item, input_mode = mode)$records$type, info = mode)
@@ -527,10 +461,8 @@ test_that("the starred and two-argument spellings are the same command", {
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png(300, 200)
-  # Unmatched, these rendered the option list and the raw path as text.
   expect_equal(wid(sprintf("\\includegraphics*[width=3in]{%s}", f)), 216)
-  # The older `[llx,lly][urx,ury]` spelling: two groups, no recognised key,
-  # so the picture comes out at its own size rather than as literal text.
+  # The older `[llx,lly][urx,ury]` spelling: no recognised key, own size.
   expect_equal(wid(sprintf("\\includegraphics[0,0][10,10]{%s}", f)), 225)
   expect_equal(wid(sprintf("\\includegraphics[0,0][width=3in]{%s}", f)), 216)
 })
@@ -544,9 +476,6 @@ test_that("an option that changes the picture warns rather than being dropped", 
       ws <<- c(ws, conditionMessage(w)); invokeRestart("muffleWarning") })
     ws
   }
-  # A cropped figure drawn whole is wrong in a way nothing in the output
-  # hints at, so it has to say so. (`angle` is not in this set: it is a real
-  # rotation now -- see the rotation test above.)
   w <- warns(latex_dims(sprintf("\\includegraphics[origin=c,width=1in]{%s}",
                                 mk_png(300, 200)), input_mode = "math"))
   expect_match(paste(w, collapse = " "), "origin")
@@ -566,22 +495,16 @@ test_that("\\textwidth without max_width keeps the figure at its own size", {
     suppressMessages(as.numeric(latex_dims(tex, input_mode = "math")$width)),
     warning = function(cnd) {
       ws <<- c(ws, conditionMessage(cnd)); invokeRestart("muffleWarning") })
-  # Dropping the figure entirely was the old behaviour; the intrinsic size
-  # is nearer to what the document meant, and the warning says so.
   expect_equal(w, 300 * 72 / 96)
   expect_match(paste(ws, collapse = " "), "textwidth")
-  # ...and it is not also reported as low-resolution: at intrinsic size the
-  # answer is 96 dpi by construction.
+  # Not also reported as low-resolution: intrinsic size is 96 dpi.
   expect_false(any(grepl("dpi", ws)))
 })
 
 test_that("an SVG no reader can draw is refused at parse time, not at draw time", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Well-formed XML with a readable width/height, but not an SVG. This is
-  # the shape of every "the header parsed but nothing can draw it" case,
-  # including a user with no rsvg installed. Sizing a box for it would
-  # reserve space and then draw nothing into it -- a silent hole, which is
-  # the one outcome this whole path exists to prevent.
+  # Well-formed XML with a size, but not an SVG: sizing a box for it would
+  # leave a blank hole.
   dir <- tempfile("gfx"); dir.create(dir)
   f <- file.path(dir, "notanimage.svg")
   writeLines("<notsvg width='72pt' height='36pt'><x/></notsvg>", f)
@@ -592,8 +515,7 @@ test_that("an SVG no reader can draw is refused at parse time, not at draw time"
   expect_error(gridmicrotex:::.md_to_tex(sprintf("a ![ALT](%s) b", f)),
                "notanimage.svg", fixed = TRUE)
 
-  # An <svg> root in some other namespace is not an SVG either: rsvg
-  # rejects it, so it drew a blank box and blamed the file for changing.
+  # An <svg> root in another namespace is not an SVG either.
   skip_if_not_installed("rsvg")
   foreign <- file.path(dir, "foreign.svg")
   writeLines("<svg xmlns='http://example.org/x' width='72pt' height='36pt'/>",
@@ -616,15 +538,11 @@ test_that("a rotated image is drawn rotated, not dropped", {
     d <- suppressWarnings(latex_tree(tex, input_mode = "math")$records)
     d[d$type == "image", ]
   }
-  # \rotatebox used to delete the figure outright: no record, no warning,
-  # nothing on the page. Everything else survives a rotation -- rects become
-  # paths, rules become lines -- so the image was the sole exception.
   r <- rec(sprintf("\\rotatebox{30}{\\includegraphics[width=1in]{%s}}", f))
   expect_equal(nrow(r), 1L)
   expect_equal(r$rotation, -30, tolerance = 1e-3)   # y-down, so negated
 
-  # `angle=` is the same thing spelled the graphicx way, and is routed to
-  # \rotatebox rather than warned about.
+  # `angle=` is the graphicx spelling of the same thing.
   expect_equal(rec(sprintf("\\includegraphics[angle=30,width=1in]{%s}", f))$rotation,
                -30, tolerance = 1e-3)
   expect_equal(rec(sprintf("\\includegraphics[width=1in]{%s}", f))$rotation, 0)
@@ -657,19 +575,15 @@ test_that("a size that cannot be drawn says why instead of vanishing quietly", {
     paste(ws, collapse = " ")
   }
   G <- function(o) sprintf("\\includegraphics%s{%s}", o, mk_png(300, 200))
-  # An unreadable length was the dangerous one: the arithmetic ignores it,
-  # so a typo came out at the file's own size with nothing said.
   expect_match(warns(G("[width=abc]")), "Cannot read")
   expect_match(warns(G("[width=3 inches]")), "Cannot read")
   expect_match(warns(G("[width=0]")), "nothing to draw")
   expect_match(warns(G("[width=-1in]")), "nothing to draw")
-  # 1e-5bp is positive but writes as "0.0000" at the four decimal places the
-  # reference carries, so it reserved a box of nothing.
+  # Positive, but 0.0000 at the reference's four decimal places.
   expect_match(warns(G("[width=0.00001bp]")), "nothing to draw")
   expect_match(warns(G("[scale=-2]")), "positive number")
 
-  # A width no pixel count can express must degrade, not error: the dpi
-  # advice used sprintf("%d") on it.
+  # A width no pixel count can express must degrade, not error.
   expect_no_error(suppressWarnings(latex_dims(G("[width=1e7in]"), input_mode = "math")))
 })
 
@@ -681,9 +595,6 @@ test_that("an unreadable file is reported in the reader's own words", {
     ""
   }, error = conditionMessage)
   dir <- tempfile("gfx"); dir.create(dir)
-  # The reader knows its format better than a guess made here. A missing
-  # reader package is reported the same way, by R: "there is no package
-  # called 'png'".
   empty <- file.path(dir, "empty.png"); file.create(empty)
   expect_match(why(empty), "empty.png': file is not in PNG format", fixed = TRUE)
   fake <- file.path(dir, "fake.jpg"); writeLines("x", fake)
@@ -699,8 +610,6 @@ test_that("latex_cache_clear() gives back the decoded images too", {
   suppressWarnings(latex_dims(sprintf("\\includegraphics{%s}", mk_png(300, 200)),
                               input_mode = "math"))
   expect_gt(length(ls(gridmicrotex:::.image_cache)), 0L)
-  # Rasters and pictures are far larger than a layout and have no size
-  # limit of their own, so this is the only way to release them.
   latex_cache_clear()
   expect_equal(length(ls(gridmicrotex:::.image_cache)), 0L)
 })
@@ -712,13 +621,10 @@ test_that("a file that stops being readable after measuring is reported", {
   g <- latex_grob(sprintf("\\includegraphics[width=1in]{%s}", f),
                   input_mode = "math")
   unlink(f)
-  # The box is already in the layout and cannot be given back, so the only
-  # honest thing left is to say the gap is there.
   expect_warning(grid::makeContent(g), "was readable when")
 
-  # A markdown box is checked when it is built and laid out when it is
-  # drawn, so it has the same gap between the two -- for a block image, an
-  # inline one, and one in a table cell alike. None may error mid-draw.
+  # A markdown box likewise, for block, inline and table-cell images; none
+  # may error mid-draw.
   f <- mk_png(300, 200)
   g <- markdown_box_grob(sprintf("![a](%s)", f), width = grid::unit(3, "in"))
   unlink(f)

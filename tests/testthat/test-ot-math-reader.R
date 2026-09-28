@@ -29,10 +29,7 @@ test_that("a font that cannot be read is an error saying why", {
 })
 
 test_that("load_math_font reads a bare OTF", {
-  # Copy Lete.otf to a temp file with a unique name so it registers as a
-  # distinct math font (not colliding with the bundled "Lete Sans Math"
-  # already loaded at .onLoad). Exercises the MATH-table synthesis path
-  # end-to-end.
+  # A copy of Lete under a unique file name, loaded as a custom font.
   src <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
   skip_if_not(nzchar(src))
   tmp <- file.path(tempdir(), "A3Probe.otf")

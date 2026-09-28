@@ -1,17 +1,9 @@
-# Named "zz" so testthat runs it last: it tears MicroTeX down and lets it
-# re-initialise, which is not something the other files should inherit
-# halfway through.
+# Named "zz" so it runs last: it releases MicroTeX's per-session state,
+# which the other files must not inherit.
 
 test_that("a release / re-init cycle leaves the macro registry usable", {
-  # MicroTeX::release() is MacroInfo::_free_(), i.e. final teardown: it
-  # empties the macro registry, which is only ever repopulated from inside
-  # MicroTeX::init(). microtex_release() is not paired with a re-init, so
-  # it must leave the registry alone and drop only
-  # per-session state -- see src/init.cpp. (Historically _free_() deleted
-  # every value in the static _commands map without erasing it, so the
-  # next MacroInfo::add() double-freed a built-in; that is fixed at the
-  # source now, but calling it from here would still strand the parser
-  # without \frac and friends.)
+  # microtex_release() must drop only per-session state and leave the
+  # macro registry alone; see src/init.cpp.
   pdf(NULL)
   on.exit(dev.off(), add = TRUE)
 
@@ -28,9 +20,7 @@ test_that("a release / re-init cycle leaves the macro registry usable", {
     nrow(latex_grob("\\gmfontfamily{A}{x}", input_mode = "math")$layout_df),
     1L
   )
-  # \mark is ours, registered at init. After a release it must still be
-  # recognised: the anchor is recorded and the marker itself draws
-  # nothing, so the layout is exactly that of the text without it.
+  # \mark records its anchor and draws nothing.
   marked <- latex_grob("a\\mark{m}b", input_mode = "math")
   expect_equal(marked$marks$name, "m")
   expect_equal(nrow(marked$layout_df),
@@ -43,17 +33,14 @@ test_that("a release / re-init cycle leaves the macro registry usable", {
     "BODY"
   )
 
-  # ...and the formula that used to blow up still parses identically.
+  # ...and the big formula still parses identically.
   expect_equal(nrow(latex_grob(big, input_mode = "math")$layout_df), before)
 
-  # The p{} column type is registered by the vendored spec parser, not by
-  # a macro, so it should be unaffected by a release -- assert it rather
-  # than assume it.
+  # p{} columns still constrain the column: narrower than a free column,
+  # and tall enough to have wrapped.
   wide <- "\\begin{tabular}{p{3cm}}\\text{wrap me over several lines}\\end{tabular}"
   free <- "\\begin{tabular}{l}\\text{wrap me over several lines}\\end{tabular}"
   d <- latex_dims(wide, input_mode = "math", gp = grid::gpar(fontsize = 16))
-  # p{3cm} still constrains the column: narrower than the same cell in a
-  # free column, and tall enough to have wrapped onto more than one line.
   expect_lt(as.numeric(d$width),
             as.numeric(latex_dims(free, input_mode = "math",
                                   gp = grid::gpar(fontsize = 16))$width))
@@ -61,11 +48,7 @@ test_that("a release / re-init cycle leaves the macro registry usable", {
 })
 
 test_that("unloading the namespace unloads the DLL, and a reload still parses", {
-  # This has to run in a subprocess: the package under test cannot unload
-  # itself out from under testthat. Two things are asserted, and the first
-  # is the one that silently regressed before -- .onUnload() used to call
-  # microtex_release() only, so R kept the shared object mapped and
-  # R_unload_gridmicrotex() never ran.
+  # In a subprocess: the package cannot unload itself under testthat.
   skip_on_cran()
   rscript <- file.path(R.home("bin"), "Rscript")
   skip_if(
@@ -85,10 +68,7 @@ test_that("unloading the namespace unloads the DLL, and a reload still parses", 
     'gridmicrotex::latex_cache_clear()',
     'after <- nrow(gridmicrotex:::latex_grob(tex, input_mode = "math")$layout_df)',
     'cat("GM-ROWS:", before, after, "\\n")',
-    # Our own macros are registered behind s_registered guards in
-    # atom/font_family_atom.cpp / atom/mark_atom.cpp, while the built-ins come back
-    # via MicroTeX::init(). If a teardown ever clears the macro table
-    # without also resetting those guards, these are what break.
+    # Our own macros sit behind s_registered guards; see CLAUDE.md.
     'ff <- nrow(gridmicrotex:::latex_grob("\\\\gmfontfamily{mono}{x}",',
     '                                     input_mode = "math")$layout_df)',
     'mk <- gridmicrotex:::latex_grob("a\\\\mark{m}b", input_mode = "math")',
@@ -114,18 +94,15 @@ test_that("unloading the namespace unloads the DLL, and a reload still parses", 
   expect_length(mapped, 1L)
   expect_length(rows, 1L)
 
-  # The DLL is gone after unloadNamespace(), which is what makes
-  # R_unload_gridmicrotex() reachable at all.
+  # The DLL is gone after unloadNamespace().
   expect_equal(trimws(sub("^GM-DLL-MAPPED:", "", mapped)), "FALSE", info = info)
 
-  # And the reload re-registers the built-ins: \frac parses to the same
-  # number of draw records as it did before the teardown.
+  # The reload re-registers the built-ins.
   n <- as.integer(strsplit(trimws(sub("^GM-ROWS:", "", rows)), " +")[[1]])
   expect_gt(n[1], 0L)
   expect_equal(n[2], n[1], info = info)
 
-  # ...and so do ours: \gmfontfamily lays out its one glyph, and \mark
-  # still records its anchor rather than being parsed as literal text.
+  # ...and ours.
   ours <- grep("^GM-OURS:", out, value = TRUE)
   expect_length(ours, 1L)
   parts <- strsplit(trimws(sub("^GM-OURS:", "", ours)), " +")[[1]]
