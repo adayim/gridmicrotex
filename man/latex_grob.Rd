@@ -3,7 +3,7 @@
 \name{latex_grob}
 \alias{latex_grob}
 \alias{grid.latex}
-\title{Create a grid grob from a LaTeX expression}
+\title{Create a grid grob from LaTeX}
 \usage{
 latex_grob(
   tex,
@@ -28,328 +28,156 @@ latex_grob(
 grid.latex(tex, ...)
 }
 \arguments{
-\item{tex}{Character string of LaTeX math code.}
+\item{tex}{LaTeX, as a character string.}
 
-\item{x, y}{Position in grid coordinates.}
+\item{x, y}{Position.}
 
-\item{default.units}{Units for x, y if given as numeric.}
+\item{default.units}{Units for \code{x} and \code{y} when they are numbers.}
 
-\item{hjust, vjust}{Horizontal/vertical justification. Accepts the
-usual numeric values in \verb{[0, 1]}. As a convenience, \code{hjust} also
-accepts the strings \code{"left"}/\code{"bbleft"}, \code{"center"}/\code{"centre"}/
-\code{"middle"}/\code{"bbcentre"}, and \code{"right"}/\code{"bbright"}; \code{vjust} accepts
-\code{"bottom"}, \code{"center"}/\code{"centre"}/\code{"middle"}, \code{"top"}, and
-\code{"baseline"}. \code{"baseline"} aligns the formula's math baseline with
-the anchor point — handy for placing a formula in flowing text.}
+\item{hjust, vjust}{Justification: a number in \verb{[0, 1]}, or a name.
+\code{hjust} takes \code{"left"}, \code{"center"} and \code{"right"} (also \code{"centre"},
+\code{"middle"}, \code{"bbleft"}, \code{"bbcentre"}, \code{"bbright"}). \code{vjust} takes
+\code{"bottom"}, \code{"center"}, \code{"top"} and \code{"baseline"}, which puts the
+formula's baseline on \code{y}.}
 
-\item{rot}{Rotation angle in degrees, counter-clockwise (default: 0).
-Matches the \code{rot} parameter of \code{\link[grid]{textGrob}}.}
+\item{rot}{Rotation in degrees, counter-clockwise.}
 
-\item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
-Use \code{""} (default) for Lete Sans Math, which pairs with R's
-default sans-serif text font.
-See \code{\link{available_math_fonts}} for loaded fonts.}
+\item{math_font}{Math font: \code{"lete"} (Lete Sans Math, the default),
+\code{"stix"} (STIX Two Math), or one added with \code{\link[=load_math_font]{load_math_font()}}. See
+\code{\link[=available_math_fonts]{available_math_fonts()}}.}
 
-\item{max_width}{Numeric maximum width in big points for automatic
-line wrapping.  Use \code{0} (default) for no wrapping.}
+\item{max_width}{Width in big points (1/72 inch) at which lines wrap.
+\code{0}, the default, does not wrap.}
 
-\item{tex_style}{Character: TeX style override. One of \code{""}
-(default; let the parser decide), \code{"display"}, \code{"text"},
-\code{"script"}, or \code{"scriptscript"}. See
-\code{\link{latex_grob}} for the semantics of each value.}
+\item{tex_style}{Force a TeX style: \code{"display"}, \code{"text"}, \code{"script"}
+or \code{"scriptscript"}. \code{""}, the default, follows the delimiters. See
+Details.}
 
-\item{input_mode}{How \code{tex} is read.
-\code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
-with math between \code{$...$} or \code{\\(...\\)}, and a newline
-starts a new line, as \code{"\\n"} does in R.
-\code{"math"} reads the whole string as math, as between \code{$...$},
-so a word is set as italic letters; write text as \code{\\text{...}}.
-\code{"document"} reads a LaTeX document body by LaTeX's own rules: a
-newline is a space, a blank line (or \code{\\par}) starts an indented
-paragraph, \code{\\section} and its kin are numbered headings, and
-display math is centred on a line of its own. Give \code{max_width} to
-break the paragraphs into lines. The default can be set for the
-session with \code{\link{latex_options}(input_mode = )}.}
+\item{input_mode}{How \code{tex} is read:
+\itemize{
+\item \code{"mixed"} (default): text, with math between \verb{$...$} or \verb{\\(...\\)}.
+A newline starts a new line.
+\item \code{"math"}: everything is math; write text in \verb{\\text\{\}}.
+\item \code{"document"}: a LaTeX document body, with paragraphs, numbered
+headings and displayed equations. Use it with \code{max_width}.
+}}
 
-\item{render_mode}{Character string: \code{"typeface"} (default) renders
-glyphs as native text using the math font, producing
-selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_math_font}}
-are read directly from their OTF files: no system-wide font
-install is required.
-Falls back to path mode automatically on devices that lack the
-R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
-\code{postscript()}, which cannot embed the math font.
-For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
-\code{"path"} renders math symbols as filled vector paths (works on
-all devices but text is not selectable in PDF/SVG).}
+\item{render_mode}{\code{"typeface"} (default) draws glyphs as text, which
+can be selected in PDF and SVG output. It needs a device such as
+ragg, svglite or \code{\link[grDevices:cairo]{grDevices::cairo_pdf()}}, and falls back to
+\code{"path"} on others, such as \code{pdf()}. \code{"path"} draws glyphs as
+outlines, which works on every device.}
 
-\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
-its interword spaces so every line but the last fills
-\code{max_width} exactly. Requires \code{max_width}: it acts on the
-lines the wrapper produces, so it does nothing on its own.
-\code{FALSE} (default) leaves the right edge ragged, matching R's own
-text drawing. In a narrow column, expect wide word spaces; mark the
-words that may break with \code{\\-} to tighten them.}
+\item{justify}{If \code{TRUE}, wrapped lines are stretched to fill
+\code{max_width}, except the last. Needs \code{max_width}.}
 
-\item{line_break}{How lines are chosen when wrapping.
-\code{"greedy"} (default) fills each line as far as it will go and
-never reconsiders. \code{"optimal"} chooses the breaks together so
-the paragraph as a whole reads best, in the spirit of Knuth-Plass:
-pulling one word down early can improve every later line, which a
-greedy pass cannot see. Requires \code{max_width}, and costs a
-little more layout time.}
+\item{line_break}{\code{"greedy"} (default) fills one line at a time.
+\code{"optimal"} chooses the breaks for the whole paragraph. Needs
+\code{max_width}.}
 
-\item{debug}{Logical; if \code{TRUE}, draws diagnostic overlays on the
-grob: the full bounding box (dashed gray), the baseline (solid
-red), the depth line (dashed gray), and a small dot at each
-MicroTeX draw record's origin. Useful for checking positioning and
-diagnosing vertical alignment.}
+\item{debug}{If \code{TRUE}, draws the bounding box, the baseline (red) and
+a dot at the origin of each glyph.}
 
-\item{name}{Optional grob name.}
+\item{name}{Grob name.}
 
-\item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
-Common entries: \code{col} (formula foreground), \code{fontfamily}
-(text font), \code{fontsize} / \code{cex}
-(formula size), and \code{lineheight} (multi-line spacing). See
-\code{\link{latex_grob}} for how each of these flows through
-MicroTeX.}
+\item{gp}{Graphical parameters from \code{\link[grid:gpar]{grid::gpar()}}: \code{col},
+\code{fontfamily}, \code{fontsize}, \code{cex} and \code{lineheight}. See Details.}
 
-\item{...}{Additional arguments passed to \code{\link{latex_grob}}.}
+\item{...}{Arguments passed to \code{latex_grob()}.}
 }
 \value{
-A \code{grid} grob of class \code{"latexgrob"}.
-
-Invisibly returns the grob.
+\code{latex_grob()} returns a grob of class \code{"latexgrob"};
+\code{grid.latex()} draws it and returns it invisibly.
 }
 \description{
-Reads LaTeX -- a formula, a label mixing text and math, or a document
-body -- and returns a grid grob object that draws it with native grid
-graphics primitives. The grob supports standard grid queries such as
-\code{grobWidth()}, \code{grobHeight()}, \code{grobX()}, and
-\code{grobY()}.
-
-A convenience wrapper that creates a \code{\link{latex_grob}} and
-immediately draws it on the current device via
-\code{\link[grid]{grid.draw}}.
+\code{latex_grob()} returns a grob that draws LaTeX: a formula, a label
+mixing text and math, or a document body. \code{grid.latex()} draws it
+straight away. The grob works with \code{grobWidth()}, \code{grobHeight()},
+\code{grobX()} and \code{grobY()}.
 }
 \details{
-\subsection{Controlling TeX style with \code{tex_style}}{
+\subsection{Style}{
 
-\code{tex_style} selects the size-and-spacing regime MicroTeX applies to
-the whole expression. It changes the \emph{style} (display vs. text), not
-the font size: size is always set via \code{gp$fontsize} / \code{gp$cex};
-style-dependent shrinking (for \code{"script"} and \code{"scriptscript"}) is
-applied on top of that size.
+\verb{$...$} sets a formula in text style, as in a paragraph; \verb{$$...$$} and
+\verb{\[...\]} set it in display style, with larger operators and limits
+above and below. A label with no delimiters is set in text style.
+\code{tex_style} forces one style on the whole formula; \code{"script"} and
+\code{"scriptscript"} are the smaller styles of sub- and superscripts. For
+part of a formula, use \verb{\\displaystyle}, \verb{\\textstyle}, \verb{\\scriptstyle}
+or \verb{\\scriptscriptstyle}.
+}
+
+\subsection{Graphical parameters}{
 \itemize{
-\item \code{""} (default): let the parser choose based on the delimiters in
-\code{tex}. Inline delimiters (single \code{$}, or \verb{\\(...\\)}) produce
-\code{"text"} style; display delimiters (double \verb{$$}, or \verb{\[...\]})
-produce \code{"display"} style. If the string has no delimiters,
-MicroTeX defaults to \code{"text"} style.
-\item \code{"display"}: force display style. Large operators (\verb{\\sum},
-\verb{\\int}, \verb{\\prod}) render at their full size, limits are placed
-above/below rather than as subscripts/superscripts, and fractions
-use full-size numerators and denominators. Useful when you want a
-display-style equation inline in a label, legend, or
-\code{element_latex()} title.
-\item \code{"text"}: force text (inline) style. Big operators shrink to their
-inline size and limits attach as scripts. The right choice for
-formulas embedded in a line of prose.
-\item \code{"script"}: force script style, the size normally used for
-first-level subscripts and superscripts. Produces a smaller,
-tighter layout; mainly useful for callouts or sub-labels where a
-compact equation is wanted.
-\item \code{"scriptscript"}: force scriptscript style, the smallest style,
-used by TeX for doubly-nested scripts. Rarely needed on its own;
-primarily for very dense annotations.
-}
-
-\code{tex_style} applies to the entire expression. To override the style
-of a sub-expression from within \code{tex}, use the inline TeX commands
-\verb{\\displaystyle}, \verb{\\textstyle}, \verb{\\scriptstyle}, or
-\verb{\\scriptscriptstyle}.
-}
-
-\subsection{Graphical parameters (\code{gp})}{
-\itemize{
-\item \code{col}: default foreground color for the formula. Individual
-elements can still be overridden with an inline \verb{\\textcolor}
-command in the LaTeX string.
-\item \code{fontfamily}: controls the font of text inside \verb{\\text} and \verb{\\mbox}
-blocks. For example, \code{gpar(fontfamily = "serif")} renders \verb{\\text}
-content in R's serif family. Any font available to R's graphics
-system works: base families (\code{"sans"}, \code{"serif"}, \code{"mono"}) as
-well as fonts registered via \pkg{showtext} or \pkg{systemfonts}.
-Math symbols always use the selected math font (see \code{math_font}).
-Bold/italic text is controlled from within the LaTeX source
-(\verb{\\textbf\{\}}, \verb{\\textit\{\}}, \verb{\\bf}, ...), not via \code{gp$fontface}:
-MicroTeX needs the style at layout time to size each run correctly,
-so a \code{gpar()}-level face is not consulted.
-
-\code{fontfamily} \emph{also} drives MicroTeX's layout metrics for non-math
-text: the matching system font is resolved via \pkg{systemfonts},
-a minimal metrics file is generated on first use and cached under
-\code{tools::R_user_dir("gridmicrotex", "cache")}, so MicroTeX's
-spacing of \verb{\\text} blocks stays in sync with what \pkg{grid}
-actually draws. When \code{fontfamily} is unset, the R default
-(\code{"sans"}) is used. No manual font loading is required for text
-fonts; \code{\link[=load_math_font]{load_math_font()}} remains only for adding custom \strong{math}
-fonts.
-\item \code{fontsize} / \code{cex}: formula size is \code{fontsize * cex} big points
-(default 20 * 1). Both math and text scale together. The effective
-size is baked into the parsed layout, so downstream viewports that
-inherit \code{cex} will not re-scale the grob (matching \code{textGrob}
-semantics when \code{gp} is set explicitly).
-\item \code{lineheight}: controls multi-line spacing (default 1.2). The
-inter-line gap is \code{(lineheight - 1) * fontsize} big points.
+\item \code{col}: the colour. \verb{\\textcolor} overrides it.
+\item \code{fontfamily}: the font of text, such as \code{"serif"} or the name of any
+installed font. Math uses \code{math_font}. Bold and italic come from
+\verb{\\textbf\{\}} and \verb{\\textit\{\}}, not from \code{fontface}.
+\item \code{fontsize}, \code{cex}: the size is \code{fontsize * cex} points (default 20).
+\item \code{lineheight}: line spacing (default 1.2).
 }
 }
 
-\subsection{Malformed input}{
+\subsection{Errors}{
 
-LaTeX that TeX would stop on is read as far as it can be and the rest
-is drawn, with one warning listing each problem at its line and column
-in \code{tex}: an unknown command (drawn as its name, in red), an unbalanced
-brace, \code{&} outside an alignment, \verb{_} or \code{^} outside math, and so on.
-Only a macro that expands without end, or input nested 400 levels deep,
-is an error.
+Invalid LaTeX is drawn as well as it can be, with one warning listing
+each problem by line and column. An unknown command is drawn in red. A
+macro that expands without end, or nesting deeper than 400 levels, is
+an error.
 }
 
-\subsection{Pasted LaTeX and documents}{
+\subsection{Pasted LaTeX}{
 
-LaTeX written for a document can be given as it is, whole or in part:
-output of \code{print.xtable()} or \code{knitr::kable()}, a \code{table}
-float, or a paper's body with \code{input_mode = "document"}. What a grob has
-no use for is read and dropped:
-\itemize{
-\item the preamble: in a whole LaTeX file, everything before
-\verb{\\begin\{document\}} is read for its definitions (\verb{\newcommand},
-\verb{\\definecolor}, ...) and not drawn, as LaTeX draws nothing there; a
-size, colour or environment begun there ends at \verb{\\begin\{document\}}.
-What follows \verb{\\end\{document\}} is ignored. Package settings a grob
-cannot honour are not warned about. \verb{\\documentclass}, \verb{\\usepackage}
-(which loads nothing: every supported command is built in) and
-\verb{\\bibliographystyle} draw nothing wherever they are;
-\item title and cross-reference metadata: \verb{\\maketitle}, \verb{\\title\{\}},
-\verb{\\author\{\}}, \verb{\\label\{\}};
-\item alignment: in a label, \verb{\\centering}, \verb{\\raggedleft} and \verb{\\raggedright}
-do nothing (a label is placed by \code{hjust}), nor do \verb{\\flushleft},
-\verb{\\flushright} and \verb{\\relax}. A document aligns each line of the
-paragraphs they are in, and of \code{center}, \code{flushleft} and \code{flushright}.
-}
+LaTeX from a document can be pasted as it is: the output of
+\code{knitr::kable()} or \code{xtable}, a \code{table} float, or a paper's body with
+\code{input_mode = "document"}. The preamble, \verb{\\maketitle} and \verb{\\label} draw
+nothing, and \verb{\\caption} is drawn where it is written. \verb{\\ref} and
+\verb{\\pageref} draw \verb{??}, \verb{\\eqref} draws \verb{(??)} and \verb{\\cite} draws \verb{[?]},
+with a warning. A footnote is set where it is written, and equations
+are not numbered.
 
-In a label the content of a \code{table} or \code{figure} float is set in the line
-like any other. A document sets a float where it is written, apart from
-its paragraphs, as LaTeX's \verb{[h]} placement would, and a \code{center}
-environment or a \verb{\\centering} centres its lines.
-
-Some commands are their nearest equivalent. \verb{\\emph} is \verb{\\textit}, \verb{\\em}
-is \verb{\\it}, and \verb{\\newline} is \verb{\\\\}. Booktabs' \verb{\\toprule} and
-\verb{\\bottomrule} are thick rules, \verb{\\midrule} a plain one, \verb{\\cmidrule} a
-partial one and \verb{\\specialrule\{w\}\{a\}\{b\}} one \code{w} thick. \verb{\\boldmath} sets
-the math that follows in its group in bold. A grob has
-no glue to stretch, so \verb{\\smallskip}, \verb{\\medskip} and \verb{\\bigskip} are 0.25,
-0.5 and 1 em of space, \verb{\\hfill} is a quad and \verb{\\vfill} 1 em. And
-\verb{\\caption\{X\}} is a line of text where it is written, unnumbered, so a
-caption written before a \code{tabular} is set above it.
-
-\verb{\\textwidth}, \verb{\\linewidth} and \verb{\\columnwidth} in a length
-(\verb{0.5\\textwidth}) are \code{max_width}, or with none the 345pt of LaTeX's
-article class. An \code{abstract} is set as article sets it, under a centred
-heading, and \code{thebibliography} as a "References" heading over a list
-numbered \verb{[1]}, \verb{[2]}, ... (\verb{\\bibitem}'s key has nothing to point at, and
-\verb{\\newblock} is a space).
-
-A \code{tabular}'s cells and the items of \code{itemize} and \code{enumerate} are
-text, as in LaTeX, when the table or list is met in text; met in math
-(\code{input_mode = "math"}, or between \verb{$...$}) they are math. A list item
-wraps at \code{max_width}, as a \verb{p\{\}} cell does; a cell in an \code{l}, \code{c} or \code{r}
-column is one line. A \code{minipage} sets its paragraphs to its width, and
-to its optional height, as LaTeX does. A heading too long for
-\code{max_width} wraps, its title hanging from its number.
-
-Commands that need the rest of a document warn and draw what LaTeX
-draws when it cannot resolve them: \verb{\\ref} and \verb{\\pageref} are a bold
-\verb{??}, \verb{\\eqref} is \verb{(??)}, \verb{\\cite\{key\}} and natbib's \verb{\\citep\{key\}} are
-\verb{[?]} (\verb{\\citet} is \verb{(author?) [?]}, \verb{\\citealp} a bare \verb{?}), and a
-\verb{\\footnote}'s text is set where it is written. Equations are not numbered. Not supported:
-\verb{\\tag}, \code{\\verb}, \verb{\\textsc}, the declarations \verb{\\bfseries}, \verb{\\itshape} and
-their kin (use \verb{\\textbf\{\}}, \verb{\\textit\{\}} or \verb{\\bf}, \verb{\\it}), the
-\code{description} list, theorem environments, and TikZ.
+Not supported: \verb{\\tag}, \verb{\verb}, \verb{\\textsc}, switches such as \verb{\\bfseries}
+and \verb{\\itshape} (use \verb{\\textbf\{\}} and \verb{\\textit\{\}}, or \verb{\\bf} and \verb{\\it}),
+the \code{description} list, theorem environments and TikZ.
 }
 
 \subsection{Images}{
-\itemize{
-\item \verb{\\includegraphics[opts]\{file\}} draws a PNG, JPEG or SVG inline. The
-starred form is accepted and behaves identically. \code{width}, \code{height}
-and \code{scale} take any LaTeX length (\verb{\\textwidth} resolves against
-\code{max_width}, and without one falls back to the file's own size with a
-warning); \code{scale} multiplies whatever \code{width}/\code{height} settled on, and
-\code{keepaspectratio} fits inside them instead of stretching to fill.
-\code{angle} rotates the figure and grows the surrounding box to the rotated
-bounds, as \verb{\\rotatebox} does. \code{origin}, \code{trim}, \code{clip} and \code{viewport}
-are parsed but not applied, and warn once so the difference is not
-silent; so does a length that cannot be read, or one that sizes the
-figure to nothing.
-\item The extension may be omitted, as in LaTeX: \code{{plots/fig}} finds
-\code{plots/fig.svg}, then \code{.png}, \code{.jpg}, \code{.jpeg}.
-\item An SVG is drawn as real vector and stays sharp at any output
-resolution; a bitmap does not, and warns when it would be shown below
-150 dpi. PDF and EPS are not supported: save the figure as SVG
-instead.
-\item The file must be local; a URL is not downloaded. A file that cannot
-be drawn -- missing, a URL, an unsupported format, or unreadable --
-is an error saying why; in a document (\code{input_mode = "document"}) it
-warns and draws the file's name, so that one figure does not cost the
-whole document. Each format needs its reader, all
-\emph{Suggests}: \code{png} for PNG, \code{jpeg} for JPEG and \code{rsvg} for SVG; the
-error names the one to install.
-\item The file is read when the parser meets the command, after macros are
-expanded, so one a macro produces (\verb{\newcommand}, \verb{\\def} or
-\code{\link[=define_macro]{define_macro()}}) works like any other. A commented-out
-\verb{\% \\includegraphics\{...\}} is ignored.
-\item \verb{\\graphicspath\{\{dir/\}\}} names the directories searched, as in LaTeX,
-and \verb{\\DeclareGraphicsExtensions\{\}} is read and dropped.
-}
+
+\verb{\\includegraphics[options]\{file\}} draws a local PNG, JPEG or SVG file.
+Each format needs a suggested package: png, jpeg, or rsvg and
+grImport2 for SVG. \code{width}, \code{height} and \code{scale} size the image,
+\code{keepaspectratio} fits it inside both, and \code{angle} rotates it;
+\verb{\\textwidth} means \code{max_width}. \code{trim} and \code{clip} are ignored with a
+warning. The extension may be left off, and \verb{\\graphicspath\{\{dir/\}\}}
+adds a folder to search.
+
+An SVG stays sharp at any size; a PNG or JPEG warns when it is shown
+below 150 dpi. PDF and EPS files are not supported. A file that cannot
+be drawn is an error, except with \code{input_mode = "document"}, where it
+warns and draws the file name instead.
 }
 
-\subsection{Parallelism}{
+\subsection{Parallel code}{
 
-The MicroTeX engine keeps mutable C++ state for font caching and text
-measurement. Rendering is safe single-threaded and under separate-process
-backends such as \code{future::plan(multisession)}. It is \emph{not} safe
-under forked backends (\code{parallel::mclapply()},
-\code{future::plan(multicore)}) on Unix, because forked workers share that
-state without synchronisation. Use a socket/multisession backend instead.
+Do not draw in forked processes, such as \code{parallel::mclapply()} or
+\code{future::plan(multicore)}. Use \code{future::plan(multisession)} or a socket
+cluster instead.
 }
 }
 \examples{
 \donttest{
-  g <- latex_grob(r"($\fcolorbox{red}{yellow}{\frac{a}{b}}$)",
-                  x = grid::unit(0.3, "npc"),
-                  y = grid::unit(0.3, "npc"),
-                  gp = grid::gpar(fontsize = 30))
+  grid::grid.newpage()
+  grid.latex(r"($x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$)",
+             y = 0.8, gp = grid::gpar(fontsize = 24))
+
+  # Colour, and a rotated grob
+  g <- latex_grob(r"($\colorbox{BurntOrange}{x^{2}} + y^{2}$)",
+                  x = 0.3, y = 0.4, rot = 45)
   grid::grid.draw(g)
-  # Red formula
-  grid::grid.draw(latex_grob("$x^{2}$",
-                             x = grid::unit(0.3, "npc"),
-                             y = grid::unit(0.8, "npc"),
-                             gp = grid::gpar(col = "red")))
-
-                             # Rotated formula
-  grid::grid.draw(latex_grob(r"($\colorbox{BurntOrange}{x^{2}} + y^{2}$)",
-                             x = grid::unit(0.6, "npc"),
-                             y = grid::unit(0.3, "npc"),
-                             gp = grid::gpar(fontsize = 24),
-                             rot = 45))
-
   grid.latex(r"($\textcolor{red}{x^{2}} + y^{2} = z^{2}$)",
-             x = grid::unit(0.6, "npc"),
-             y = grid::unit(0.8, "npc"),)
+             x = 0.7, y = 0.4, gp = grid::gpar(col = "grey30"))
 
-  # A document body: a heading, paragraphs and a display, broken into
-  # lines at max_width (in big points).
+  # A document body, wrapped at 250 points
   grid::grid.newpage()
   doc <- r"(\section{Results}
 The fitted line is
@@ -361,7 +189,6 @@ and its slope, $\beta_1$, is positive.)"
 }
 }
 \seealso{
-\code{\link{grid.latex}}, \code{\link{latex_dims}},
-\code{\link{geom_latex}}, \code{\link{available_math_fonts}},
-\code{\link{latex_wrap}}, \code{\link{latex_options}}
+\code{\link[=latex_dims]{latex_dims()}}, \code{\link[=latex_options]{latex_options()}}, \code{\link[=markdown_grob]{markdown_grob()}},
+\code{\link[=geom_latex]{geom_latex()}}
 }

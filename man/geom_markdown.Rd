@@ -71,34 +71,28 @@ to use \code{position_jitter()}, give the position as \code{"jitter"}.
 \link[ggplot2:layer_positions]{layer position} documentation.
 }}
 
-\item{...}{Other arguments passed to \code{\link[ggplot2]{layer}}.}
+\item{...}{Passed to \code{\link[ggplot2:layer]{ggplot2::layer()}}.}
 
-\item{fontsize}{Default font size in points. Overridden by the
-\code{size} aesthetic if mapped.}
+\item{fontsize}{Font size in points, unless \code{size} is mapped.}
 
-\item{math_font}{Name of the math font to use (e.g. \code{"stix"}).}
+\item{math_font}{Math font, such as \code{"stix"}.}
 
-\item{lineheight}{Multi-line height multiplier (default 1.2), matching
-\code{grid::gpar()} semantics.}
+\item{lineheight}{Line spacing (default 1.2).}
 
-\item{max_width}{Maximum width in big points for automatic line
-wrapping (default: 0, no wrapping).}
+\item{max_width}{Width in big points at which lines wrap. \code{0}, the
+default, does not wrap.}
 
 \item{render_mode}{\code{"typeface"} (default) or \code{"path"}; see
-\code{\link{latex_grob}}.}
+\code{\link[=latex_grob]{latex_grob()}}.}
 
-\item{justify}{Logical; justify wrapped lines. Requires
-\code{max_width}. See \code{\link{latex_grob}}.}
+\item{justify}{If \code{TRUE}, stretch wrapped lines to fill \code{max_width}.}
 
-\item{style}{A \code{\link{markdown_style}} object, CSS text, or the
-path to a \code{.css} file, applied to every label this layer draws.
-\code{NULL} falls back to
-\code{\link{latex_options}(markdown_style = )}. Only the properties
-that compile to LaTeX apply here: a label has no block layout, so
-margins and padding are ignored. See \code{\link{md_style}}.}
+\item{style}{A \code{\link[=markdown_style]{markdown_style()}}, CSS text, or a path to a \code{.css}
+file. \code{NULL} uses \code{latex_options(markdown_style = )}. Only properties
+marked \emph{inline} in \code{\link[=md_style]{md_style()}} apply.}
 
-\item{na.rm}{If \code{FALSE}, the default, missing values are removed
-with a warning. If \code{TRUE}, they are removed silently.}
+\item{na.rm}{If \code{FALSE} (default), missing values are removed with a
+warning; if \code{TRUE}, silently.}
 
 \item{show.legend}{logical. Should this layer be included in the legends?
 \code{NA}, the default, includes if any aesthetics are mapped.
@@ -117,10 +111,9 @@ the default plot specification, e.g. \code{\link[ggplot2:annotation_borders]{ann
 A ggplot2 layer.
 }
 \description{
-Renders markdown labels (\code{**bold**}, \code{*italic*},
-\code{`code`}, \code{~~strike~~} and \code{$math$}) as native grid
-grobs inside a plot. The markdown is converted to LaTeX and laid out by
-MicroTeX, so the output is resolution-independent vector graphics.
+Like \code{\link[ggplot2:geom_text]{ggplot2::geom_text()}}, with labels written in markdown:
+\verb{**bold**}, \verb{*italic*}, \code{`code`}, \verb{~~strike~~} and \verb{$math$}, as in
+\code{\link[=markdown_grob]{markdown_grob()}}. \code{annotate("markdown", ...)} adds a single label.
 }
 \section{Aesthetics}{
 

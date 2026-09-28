@@ -3,7 +3,7 @@
 \name{latex_options}
 \alias{latex_options}
 \alias{reset_latex_options}
-\title{Set or query package-wide LaTeX rendering defaults}
+\title{Set or show default rendering options}
 \usage{
 latex_options(
   math_font = NULL,
@@ -19,143 +19,51 @@ latex_options(
 reset_latex_options()
 }
 \arguments{
-\item{math_font}{Math font name or alias (see
-\code{\link{available_math_fonts}}).}
+\item{math_font}{Math font; see \code{\link[=available_math_fonts]{available_math_fonts()}}.}
 
-\item{render_mode}{Either \code{"typeface"} or \code{"path"}.}
+\item{render_mode}{\code{"typeface"} or \code{"path"}; see \code{\link[=latex_grob]{latex_grob()}}.}
 
-\item{tex_style}{TeX style override. One of \code{""} (let the parser
-decide), \code{"display"}, \code{"text"}, \code{"script"}, or
-\code{"scriptscript"}. \code{"display"} forces large operators with
-limits placed over/under, useful for inline labels that should still
-look like display equations.}
+\item{tex_style}{\code{""}, \code{"display"}, \code{"text"}, \code{"script"} or
+\code{"scriptscript"}; see \code{\link[=latex_grob]{latex_grob()}}.}
 
-\item{input_mode}{How the input string is read: \code{"mixed"} (the
-default) as a label, text with math between \code{$...$} and a
-newline for a new line; \code{"math"} as a formula throughout; or
-\code{"document"} as a LaTeX document body, with paragraphs,
-headings and displays. See \code{\link{latex_grob}}.}
+\item{input_mode}{\code{"mixed"}, \code{"math"} or \code{"document"}; see
+\code{\link[=latex_grob]{latex_grob()}}.}
 
-\item{justify}{Logical. When \code{TRUE}, wrapped text is stretched at
-its interword spaces so every line but the last fills
-\code{max_width} exactly. Has no effect without \code{max_width},
-since it acts on the lines the wrapper produces. \code{FALSE}
-(default) leaves the right edge ragged, matching R's own text
-drawing. In a narrow column, justifying alone opens noticeably wide
-word spaces; mark the words that may break with \code{\\-}.}
+\item{justify}{If \code{TRUE}, stretch wrapped lines to fill \code{max_width}.}
 
-\item{line_break}{How lines are chosen when wrapping.
-\code{"greedy"} (default) fills each line as far as it will go and
-never reconsiders. \code{"optimal"} chooses the breaks together so
-the paragraph as a whole reads best, in the spirit of Knuth-Plass:
-pulling one word down early can improve every later line, which a
-greedy pass cannot see. Requires \code{max_width}, and costs a
-little more layout time.}
+\item{line_break}{\code{"greedy"} or \code{"optimal"}; see \code{\link[=latex_grob]{latex_grob()}}.}
 
-\item{markdown_style}{Default style for \code{\link{markdown_grob}} and
-\code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}
-object, CSS text, or a path to a \code{.css} file.}
+\item{markdown_style}{Default style for \code{\link[=markdown_grob]{markdown_grob()}} and
+\code{\link[=markdown_box_grob]{markdown_box_grob()}}: a \code{\link[=markdown_style]{markdown_style()}}, CSS text, or a path to
+a \code{.css} file.}
 
-\item{device_math}{Logical. When \code{TRUE}, text drawn to the
-graphics device is rendered with MicroTeX wherever it contains math.
-The motivating case is \emph{base} graphics, which has no other route
-to LaTeX: \code{plot(main=)}, \code{xlab}, \code{ylab},
-\code{\link[graphics]{text}}, \code{\link[graphics]{mtext}},
-\code{\link[graphics]{legend}}, and anything built on them such as
-\code{hist()} or a package's own \code{plot} method.
+\item{device_math}{If \code{TRUE}, any plot label containing math, such as
+\code{"Slope $x^2$"}, is typeset as LaTeX. This works for base
+graphics (\code{main}, \code{xlab}, \code{text()}, \code{legend()}, ...), and also for
+lattice, grid and ggplot2. Labels without math, such as
+\code{"Cost $5-$10"}, are left alone.
 
-Interception happens at the device, so it is \strong{not} limited to
-base graphics: text drawn by \pkg{grid}, \pkg{ggplot2} and
-\pkg{lattice}, and by other packages' plot methods, is affected too.
-\code{grid.text("$x^2$")} renders math while this is on.
-\code{\link{latex_grob}}, \code{\link{geom_latex}} and
-\code{\link{element_latex}} give the same rendering confined to one
-grob, layer or theme element, and measure its height correctly.
-
-The convention is the one \code{\link{latex_wrap}} already uses:
-\code{$...$}, \code{$$...$$}, \code{\\(...\\)}, \code{\\[...\\]},
-with \code{\\$} a literal dollar sign. A label is intercepted only
-when \emph{every} delimiter in it is closed, and either the label is
-a single formula or every \code{$...$} pair wraps something that
-looks like math. So \code{"Revenue ($)"}, \code{"Cost $5-$10"},
-\code{"Budget $1,000 to $5,000"} and R's own
-\code{"Histogram of df$a_b - df$c_d"} are passed through untouched.
-Anything that cannot be laid out is drawn as plain text rather than
-raising an error.
-
-\strong{Height is the one thing that cannot be corrected.} R computes
-text height from the font, never from the string, and a graphics
-device has no string-height entry point to intercept. A tall formula
-can therefore overflow a \code{legend()} box or the space
-\code{par("mar")} reserved for it. Widths \emph{are} correct. Reserve
-the room yourself with \code{\link{latex_dims}}:
-
-\preformatted{
-  h  <- latex_dims("$\\\\frac{a}{b}$",
-                   gp = grid::gpar(fontsize = par("ps")))$height
-  bp <- grid::convertHeight(h, "bigpts", TRUE)
-  # par(mar) counts lines of par("cin"), not grid's "lines".
-  need <- ceiling(bp / (par("cin")[2] * 72 * par("mex")))
-  par(mar = c(5, need + 1, 4, 2))
-  }
-
-Other side effects worth knowing:
-\itemize{
-\item It is session-wide and reaches every device opened while it
-is on, including text drawn by packages you did not write. Labels
-without math are passed through unchanged.
-\item A label containing a newline reaches the device one line at a
-time, so a formula split across lines is not recognised.
-\item Math is drawn as vector outlines, so unlike
-\code{\link{latex_grob}} it is not selectable in a PDF.
-\item Prose inside a bold label is not bolded: face comes from
-\code{\\textbf} rather than from the device.
-\item \code{\\includegraphics} is left out, and rounded box corners
-are drawn square.
-\item A label that cannot be laid out is drawn as literal text, and
-warnings raised while laying it out are suppressed.
-\item \pkg{showtext} replaces the same device callbacks when a plot
-starts, so with \code{showtext::showtext_auto()} on, labels stay
-literal.
-\item A package that gives \code{$} its own meaning acts first:
-\pkg{corrplot} parses a label starting with \code{$} as plotmath.
-\item \code{expression()} labels are untouched, because R lays
-plotmath out inside the graphics engine.
-\item Output not drawn through an R graphics device is unaffected:
-\pkg{plotly} and other htmlwidgets, and \pkg{rgl}'s own
-\code{text3d()} labels. \pkg{rgl}'s \code{plotmath3d()} (and
-\code{text3d(usePlotmath = TRUE)}, which calls it) draws into an
-R device and does pick it up.
-\item In R Markdown, turn it off in a later chunk than the one that
-draws: knitr captures a chunk's plots after its last line runs.
-}
-
-\code{vignette("base-graphics")} walks through all of this with
-examples.}
+Heights are not adjusted: a tall formula can overflow a margin or a
+\code{legend()} box. Measure it with \code{\link[=latex_dims]{latex_dims()}} and make room with
+\code{par(mar = )}. See \code{vignette("base-graphics")} for the rules and
+limitations.}
 }
 \value{
-Invisibly returns the previous settings (a list). With no
-arguments, returns the current settings visibly.
+The previous settings, invisibly. With no arguments, the
+current settings.
 }
 \description{
-A single entry point for project-wide defaults used by
-\code{\link{latex_grob}}, \code{\link{grid.latex}},
-\code{\link{latex_dims}}, and \code{\link{latex_tree}}. Options set
-here are applied only when the corresponding argument is \emph{not}
-supplied at the call site, so explicit arguments always win.
+Sets defaults for \code{\link[=latex_grob]{latex_grob()}}, \code{\link[=grid.latex]{grid.latex()}}, \code{\link[=latex_dims]{latex_dims()}},
+\code{\link[=latex_tree]{latex_tree()}} and the markdown functions. An argument given in a call
+always wins over the default.
 }
 \details{
-Calling \code{latex_options()} with no arguments returns the current
-settings (a list whose \code{NULL} entries mean "use the built-in
-default"). Supply one or more named arguments to update them. An
-argument set to \code{NULL} resets that option to its default, as with
-\code{\link[base]{options}}, so either list \code{latex_options()}
-returns can be passed back with \code{do.call(latex_options, old)} to
-restore those settings.
+With no arguments, returns the current settings (\code{NULL} means the
+built-in default). Setting an option to \code{NULL} resets it. The previous
+settings are returned, so \code{do.call(latex_options, old)} restores them.
 
-Font size and line spacing are controlled via \code{gp} parameters
-(\code{fontsize}, \code{cex}, \code{lineheight}) at the grob level;
-see \code{\link{latex_grob}}.
+Size and line spacing are set with \code{gp} (\code{fontsize}, \code{cex},
+\code{lineheight}), not here.
 }
 \examples{
 \donttest{
@@ -178,5 +86,5 @@ if (!identical(Sys.getenv("IN_PKGDOWN"), "true"))
 }
 }
 \seealso{
-\code{\link{available_math_fonts}}, \code{\link{latex_grob}}
+\code{\link[=available_math_fonts]{available_math_fonts()}}, \code{\link[=latex_grob]{latex_grob()}}
 }

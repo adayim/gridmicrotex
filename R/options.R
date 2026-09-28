@@ -24,135 +24,43 @@
   invisible(TRUE)
 }
 
-#' Set or query package-wide LaTeX rendering defaults
+#' Set or show default rendering options
 #'
-#' A single entry point for project-wide defaults used by
-#' \code{\link{latex_grob}}, \code{\link{grid.latex}},
-#' \code{\link{latex_dims}}, and \code{\link{latex_tree}}. Options set
-#' here are applied only when the corresponding argument is \emph{not}
-#' supplied at the call site, so explicit arguments always win.
+#' Sets defaults for [latex_grob()], [grid.latex()], [latex_dims()],
+#' [latex_tree()] and the markdown functions. An argument given in a call
+#' always wins over the default.
 #'
-#' Calling \code{latex_options()} with no arguments returns the current
-#' settings (a list whose \code{NULL} entries mean "use the built-in
-#' default"). Supply one or more named arguments to update them. An
-#' argument set to \code{NULL} resets that option to its default, as with
-#' \code{\link[base]{options}}, so either list \code{latex_options()}
-#' returns can be passed back with \code{do.call(latex_options, old)} to
-#' restore those settings.
+#' With no arguments, returns the current settings (`NULL` means the
+#' built-in default). Setting an option to `NULL` resets it. The previous
+#' settings are returned, so `do.call(latex_options, old)` restores them.
 #'
-#' Font size and line spacing are controlled via \code{gp} parameters
-#' (\code{fontsize}, \code{cex}, \code{lineheight}) at the grob level;
-#' see \code{\link{latex_grob}}.
+#' Size and line spacing are set with `gp` (`fontsize`, `cex`,
+#' `lineheight`), not here.
 #'
-#' @param math_font Math font name or alias (see
-#'   \code{\link{available_math_fonts}}).
-#' @param render_mode Either \code{"typeface"} or \code{"path"}.
-#' @param tex_style TeX style override. One of \code{""} (let the parser
-#'   decide), \code{"display"}, \code{"text"}, \code{"script"}, or
-#'   \code{"scriptscript"}. \code{"display"} forces large operators with
-#'   limits placed over/under, useful for inline labels that should still
-#'   look like display equations.
-#' @param input_mode How the input string is read: \code{"mixed"} (the
-#'   default) as a label, text with math between \code{$...$} and a
-#'   newline for a new line; \code{"math"} as a formula throughout; or
-#'   \code{"document"} as a LaTeX document body, with paragraphs,
-#'   headings and displays. See \code{\link{latex_grob}}.
-#' @param justify Logical. When \code{TRUE}, wrapped text is stretched at
-#'   its interword spaces so every line but the last fills
-#'   \code{max_width} exactly. Has no effect without \code{max_width},
-#'   since it acts on the lines the wrapper produces. \code{FALSE}
-#'   (default) leaves the right edge ragged, matching R's own text
-#'   drawing. In a narrow column, justifying alone opens noticeably wide
-#'   word spaces; mark the words that may break with \code{\\-}.
-#' @param line_break How lines are chosen when wrapping.
-#'   \code{"greedy"} (default) fills each line as far as it will go and
-#'   never reconsiders. \code{"optimal"} chooses the breaks together so
-#'   the paragraph as a whole reads best, in the spirit of Knuth-Plass:
-#'   pulling one word down early can improve every later line, which a
-#'   greedy pass cannot see. Requires \code{max_width}, and costs a
-#'   little more layout time.
-#' @param markdown_style Default style for \code{\link{markdown_grob}} and
-#'   \code{\link{markdown_box_grob}}: a \code{\link{markdown_style}}
-#'   object, CSS text, or a path to a \code{.css} file.
-#' @param device_math Logical. When \code{TRUE}, text drawn to the
-#'   graphics device is rendered with MicroTeX wherever it contains math.
-#'   The motivating case is \emph{base} graphics, which has no other route
-#'   to LaTeX: \code{plot(main=)}, \code{xlab}, \code{ylab},
-#'   \code{\link[graphics]{text}}, \code{\link[graphics]{mtext}},
-#'   \code{\link[graphics]{legend}}, and anything built on them such as
-#'   \code{hist()} or a package's own \code{plot} method.
+#' @param math_font Math font; see [available_math_fonts()].
+#' @param render_mode `"typeface"` or `"path"`; see [latex_grob()].
+#' @param tex_style `""`, `"display"`, `"text"`, `"script"` or
+#'   `"scriptscript"`; see [latex_grob()].
+#' @param input_mode `"mixed"`, `"math"` or `"document"`; see
+#'   [latex_grob()].
+#' @param justify If `TRUE`, stretch wrapped lines to fill `max_width`.
+#' @param line_break `"greedy"` or `"optimal"`; see [latex_grob()].
+#' @param markdown_style Default style for [markdown_grob()] and
+#'   [markdown_box_grob()]: a [markdown_style()], CSS text, or a path to
+#'   a `.css` file.
+#' @param device_math If `TRUE`, any plot label containing math, such as
+#'   `"Slope $x^2$"`, is typeset as LaTeX. This works for base
+#'   graphics (`main`, `xlab`, `text()`, `legend()`, ...), and also for
+#'   lattice, grid and ggplot2. Labels without math, such as
+#'   `"Cost $5-$10"`, are left alone.
 #'
-#'   Interception happens at the device, so it is \strong{not} limited to
-#'   base graphics: text drawn by \pkg{grid}, \pkg{ggplot2} and
-#'   \pkg{lattice}, and by other packages' plot methods, is affected too.
-#'   \code{grid.text("$x^2$")} renders math while this is on.
-#'   \code{\link{latex_grob}}, \code{\link{geom_latex}} and
-#'   \code{\link{element_latex}} give the same rendering confined to one
-#'   grob, layer or theme element, and measure its height correctly.
-#'
-#'   The convention is the one \code{\link{latex_wrap}} already uses:
-#'   \code{$...$}, \code{$$...$$}, \code{\\(...\\)}, \code{\\[...\\]},
-#'   with \code{\\$} a literal dollar sign. A label is intercepted only
-#'   when \emph{every} delimiter in it is closed, and either the label is
-#'   a single formula or every \code{$...$} pair wraps something that
-#'   looks like math. So \code{"Revenue ($)"}, \code{"Cost $5-$10"},
-#'   \code{"Budget $1,000 to $5,000"} and R's own
-#'   \code{"Histogram of df$a_b - df$c_d"} are passed through untouched.
-#'   Anything that cannot be laid out is drawn as plain text rather than
-#'   raising an error.
-#'
-#'   \strong{Height is the one thing that cannot be corrected.} R computes
-#'   text height from the font, never from the string, and a graphics
-#'   device has no string-height entry point to intercept. A tall formula
-#'   can therefore overflow a \code{legend()} box or the space
-#'   \code{par("mar")} reserved for it. Widths \emph{are} correct. Reserve
-#'   the room yourself with \code{\link{latex_dims}}:
-#'
-#'   \preformatted{
-#'   h  <- latex_dims("$\\\\frac{a}{b}$",
-#'                    gp = grid::gpar(fontsize = par("ps")))$height
-#'   bp <- grid::convertHeight(h, "bigpts", TRUE)
-#'   # par(mar) counts lines of par("cin"), not grid's "lines".
-#'   need <- ceiling(bp / (par("cin")[2] * 72 * par("mex")))
-#'   par(mar = c(5, need + 1, 4, 2))
-#'   }
-#'
-#'   Other side effects worth knowing:
-#'   \itemize{
-#'     \item It is session-wide and reaches every device opened while it
-#'       is on, including text drawn by packages you did not write. Labels
-#'       without math are passed through unchanged.
-#'     \item A label containing a newline reaches the device one line at a
-#'       time, so a formula split across lines is not recognised.
-#'     \item Math is drawn as vector outlines, so unlike
-#'       \code{\link{latex_grob}} it is not selectable in a PDF.
-#'     \item Prose inside a bold label is not bolded: face comes from
-#'       \code{\\textbf} rather than from the device.
-#'     \item \code{\\includegraphics} is left out, and rounded box corners
-#'       are drawn square.
-#'     \item A label that cannot be laid out is drawn as literal text, and
-#'       warnings raised while laying it out are suppressed.
-#'     \item \pkg{showtext} replaces the same device callbacks when a plot
-#'       starts, so with \code{showtext::showtext_auto()} on, labels stay
-#'       literal.
-#'     \item A package that gives \code{$} its own meaning acts first:
-#'       \pkg{corrplot} parses a label starting with \code{$} as plotmath.
-#'     \item \code{expression()} labels are untouched, because R lays
-#'       plotmath out inside the graphics engine.
-#'     \item Output not drawn through an R graphics device is unaffected:
-#'       \pkg{plotly} and other htmlwidgets, and \pkg{rgl}'s own
-#'       \code{text3d()} labels. \pkg{rgl}'s \code{plotmath3d()} (and
-#'       \code{text3d(usePlotmath = TRUE)}, which calls it) draws into an
-#'       R device and does pick it up.
-#'     \item In R Markdown, turn it off in a later chunk than the one that
-#'       draws: knitr captures a chunk's plots after its last line runs.
-#'   }
-#'
-#'   \code{vignette("base-graphics")} walks through all of this with
-#'   examples.
-#' @return Invisibly returns the previous settings (a list). With no
-#'   arguments, returns the current settings visibly.
-#' @seealso \code{\link{available_math_fonts}}, \code{\link{latex_grob}}
+#'   Heights are not adjusted: a tall formula can overflow a margin or a
+#'   `legend()` box. Measure it with [latex_dims()] and make room with
+#'   `par(mar = )`. See `vignette("base-graphics")` for the rules and
+#'   limitations.
+#' @return The previous settings, invisibly. With no arguments, the
+#'   current settings.
+#' @seealso [available_math_fonts()], [latex_grob()]
 #' @export
 #'
 #' @examples

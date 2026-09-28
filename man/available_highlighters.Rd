@@ -7,18 +7,13 @@
 available_highlighters()
 }
 \value{
-A character vector of language names, sorted.
+A sorted character vector.
 }
 \description{
-Names accepted after an opening code fence in
-\code{\link{markdown_box_grob}}. Includes both the built-in grammars
-and any added with \code{\link{register_highlighter}}.
-}
-\details{
-Several common aliases also work and are not listed here, among them
-\code{py}, \code{sh}, \code{c++}, \code{yml}, \code{jl} and
-\code{tex}. A fence naming anything else renders as plain monospace
-text, without a warning.
+Languages that can follow an opening code fence in
+\code{\link[=markdown_box_grob]{markdown_box_grob()}}, including those added with
+\code{\link[=register_highlighter]{register_highlighter()}}. Aliases such as \code{py}, \code{sh}, \verb{c++}, \code{yml},
+\code{jl} and \code{tex} also work. Other languages are shown as plain code.
 }
 \examples{
 available_highlighters()

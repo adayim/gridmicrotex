@@ -8,73 +8,33 @@ register_highlighter(lang, file)
 }
 \arguments{
 \item{lang}{Language name, as written after the opening fence. Case is
-ignored. Registering a name that is already built in replaces it.}
+ignored. A built-in language of the same name is replaced.}
 
-\item{file}{Path to a KDE syntax XML grammar.}
+\item{file}{Path to a KDE syntax XML file.}
 }
 \value{
-Invisibly, \code{lang}.
+\code{lang}, invisibly.
 }
 \description{
-Registers a KDE/Kate syntax definition so that fenced code blocks
-tagged with \code{lang} are highlighted by
-\code{\link{markdown_box_grob}}. Ten languages are built in (see
-\code{\link{available_highlighters}}), and this is how to add
-another.
+Adds a language for highlighting fenced code blocks in
+\code{\link[=markdown_box_grob]{markdown_box_grob()}}, from a KDE syntax file (the format used by Kate
+and Pandoc). The easiest start is a copy of a built-in grammar:
 }
 \details{
-The grammar is an XML file in the format used by Kate, KDevelop and,
-through \pkg{skylighting}, Pandoc. The simplest way to write one is to
-copy a built-in grammar and edit it:
-
 \preformatted{
   file.copy(system.file("highlight", "python.xml",
                         package = "gridmicrotex"),
             "mylang.xml")
 }
 
-Because the format is KDE's, the several hundred definitions upstream
-are a useful \emph{reference} when writing your own: one XML file
-per language, catalogued at \url{https://kate-editor.org/syntax/},
-repository at
-\url{https://invent.kde.org/frameworks/syntax-highlighting}.
+Many files from \url{https://kate-editor.org/syntax/} work as they are.
+Files that use \emph{dynamic} rules are refused with an error. Those files
+are mostly GPL or LGPL licensed; check the licence before you
+redistribute one.
 
-Many load and work directly: of twenty sampled, thirteen registered,
-including \code{python} (249 contexts), \code{css}, \code{yaml},
-\code{makefile} and \code{go}. The seven that did not (\code{bash},
-\code{ruby}, \code{perl}, \code{rust}, \code{lua},
-\code{javascript} and \code{markdown}) all use \emph{dynamic}
-rules, which substitute part of the match into a later pattern and are
-not implemented.
-
-Cross-language includes (\code{##Alerts}, \code{##Doxygen} and
-friends) are skipped rather than followed. Those only add TODO/FIXME
-marks \emph{inside} a comment, so the comment is still a comment; the
-marks are all that is lost.
-
-They also carry their own licences, mostly GPL or LGPL, which is why
-none is bundled with this MIT-licensed package. Borrowing from one
-locally is your own decision; redistributing it is subject to its
-licence.
-
-Colours come from the \code{defStyleNum} of each \code{<itemData>},
-which maps onto the same CSS class names \pkg{knitr} and Pandoc use
-(\code{kw} for a keyword, \code{co} for a comment, \code{st} for a
-string, and so on), so a grammar needs no colour information of its
-own: restyle with \code{\link{markdown_style}}.
-
-At each position the current context's rules are tried in document
-order and the first to match wins. Contexts, \code{IncludeRules},
-\code{lookAhead} and \code{fallthroughContext} all work, and the
-context stack carries across lines, so a string or block comment may
-span them.
-
-A rule this engine cannot represent is skipped when it would have
-stayed in the current context (costing colour on the text it
-matched and nothing more), but \emph{refuses the grammar} when it
-would have switched, because a lost context switch leaves the machine
-in the wrong state and paints the rest of the file wrongly. The
-refusal names the construct.
+Colours come from \code{\link[=markdown_style]{markdown_style()}}, using Pandoc's class names (\code{kw}
+keyword, \code{co} comment, \code{st} string, ...), so a grammar needs no
+colours of its own.
 }
 \examples{
 # Registering a grammar under a name of your own.

@@ -12,9 +12,8 @@
 
 #' A ggplot2 geom for LaTeX math labels
 #'
-#' Renders LaTeX math expressions as native grid grobs within a ggplot2 plot.
-#' Each label is parsed and laid out by MicroTeX, producing resolution-independent
-#' vector output.
+#' Like [ggplot2::geom_text()], with labels written in LaTeX. The `$`
+#' signs are optional. `annotate("latex", ...)` adds a single label.
 #'
 #' @section Aesthetics:
 #' \code{geom_latex()} understands the following aesthetics (required aesthetics
@@ -22,27 +21,25 @@
 #' \itemize{
 #'   \item \strong{\code{x}}
 #'   \item \strong{\code{y}}
-#'   \item \strong{\code{label}} — LaTeX math string
-#'   \item \code{size} — font size in points (default: 11)
-#'   \item \code{colour} — text colour (default: \code{"black"})
-#'   \item \code{angle} — rotation angle in degrees (default: 0)
-#'   \item \code{hjust} — horizontal justification, 0–1 (default: 0.5)
-#'   \item \code{vjust} — vertical justification, 0–1 (default: 0.5)
-#'   \item \code{alpha} — transparency (default: 1)
+#'   \item \strong{\code{label}}: LaTeX string
+#'   \item \code{size}: font size in points (default: 11)
+#'   \item \code{colour}: text colour (default: \code{"black"})
+#'   \item \code{angle}: rotation angle in degrees (default: 0)
+#'   \item \code{hjust}: horizontal justification, 0-1 (default: 0.5)
+#'   \item \code{vjust}: vertical justification, 0-1 (default: 0.5)
+#'   \item \code{alpha}: transparency (default: 1)
 #' }
 #'
 #' @inheritParams ggplot2::layer
 #' @inheritParams latex_grob
-#' @param fontsize Default font size in points. Overridden by the \code{size}
-#'   aesthetic if mapped.
-#' @param math_font Name of the math font to use (e.g., \code{"stix"}).
-#' @param lineheight Multi-line height multiplier (default 1.2), matching
-#'   \code{grid::gpar()} semantics.
-#' @param max_width Maximum width in big points for automatic line
-#'   wrapping (default: 0, no wrapping).
-#' @param na.rm If \code{FALSE}, the default, missing values are removed with
-#'   a warning. If \code{TRUE}, missing values are silently removed.
-#' @param ... Other arguments passed to \code{\link[ggplot2]{layer}}.
+#' @param fontsize Font size in points, unless `size` is mapped.
+#' @param math_font Math font, such as `"stix"`.
+#' @param lineheight Line spacing (default 1.2).
+#' @param max_width Width in big points at which lines wrap. `0`, the
+#'   default, does not wrap.
+#' @param na.rm If `FALSE` (default), missing values are removed with a
+#'   warning; if `TRUE`, silently.
+#' @param ... Passed to [ggplot2::layer()].
 #'
 #' @return A ggplot2 layer.
 #' @export
@@ -111,29 +108,19 @@ GeomLatex <- NULL
 
 #' A ggplot2 theme element for LaTeX text
 #'
-#' Use this as a theme element for axis titles, axis labels, plot titles,
-#' or any other text element in a ggplot2 theme. The text string is parsed
-#' as LaTeX math and rendered via MicroTeX.
-#'
-#' Dollar signs (\code{$...$}) in the label text are stripped automatically
-#' so that both \code{"\\frac{a}{b}"} and \code{"$\\frac{a}{b}$"} work.
-#'
-#' This element is an S7 subclass of \code{ggplot2::element_text}, so it
-#' inherits all standard text properties (size, colour, hjust, etc.) from
-#' the theme and supports \code{merge_element()} correctly.
+#' A theme element that renders text, such as an axis or plot title, as
+#' LaTeX. The `$` signs are optional. It takes the same settings as
+#' [ggplot2::element_text()] and inherits from the theme like it.
 #'
 #' @inheritParams latex_grob
-#' @param fontsize Convenience alias for \code{size}; when supplied,
-#'   it is forwarded to \code{ggplot2::element_text()} as the text size
-#'   in points. If \code{NULL} (default), the theme's inherited size is
-#'   used.
-#' @param lineheight Multi-line height multiplier (default 1.2), matching
-#'   \code{grid::gpar()} semantics.
-#' @param ... Additional arguments passed to \code{ggplot2::element_text()}
-#'   (e.g., \code{size}, \code{colour}, \code{hjust}).
+#' @param fontsize Font size in points. `NULL` (default) uses the theme's
+#'   size.
+#' @param lineheight Line spacing (default 1.2).
+#' @param ... Passed to [ggplot2::element_text()], such as `colour` or
+#'   `hjust`.
 #'
-#' @return An S7 object of class \code{element_latex}, inheriting from
-#'   \code{ggplot2::element_text}.
+#' @return A theme element of class `element_latex`, a kind of
+#'   `element_text`.
 #' @export
 #'
 #' @examples

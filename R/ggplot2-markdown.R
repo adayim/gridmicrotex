@@ -20,10 +20,9 @@
 
 #' A ggplot2 geom for markdown labels
 #'
-#' Renders markdown labels (\code{**bold**}, \code{*italic*},
-#' \code{`code`}, \code{~~strike~~} and \code{$math$}) as native grid
-#' grobs inside a plot. The markdown is converted to LaTeX and laid out by
-#' MicroTeX, so the output is resolution-independent vector graphics.
+#' Like [ggplot2::geom_text()], with labels written in markdown:
+#' `**bold**`, `*italic*`, `` `code` ``, `~~strike~~` and `$math$`, as in
+#' [markdown_grob()]. `annotate("markdown", ...)` adds a single label.
 #'
 #' @section Aesthetics:
 #' \code{geom_markdown()} understands the following aesthetics (required
@@ -42,26 +41,20 @@
 #'
 #' @inheritParams ggplot2::layer
 #' @inheritParams markdown_grob
-#' @param fontsize Default font size in points. Overridden by the
-#'   \code{size} aesthetic if mapped.
-#' @param math_font Name of the math font to use (e.g. \code{"stix"}).
-#' @param lineheight Multi-line height multiplier (default 1.2), matching
-#'   \code{grid::gpar()} semantics.
-#' @param max_width Maximum width in big points for automatic line
-#'   wrapping (default: 0, no wrapping).
-#' @param render_mode \code{"typeface"} (default) or \code{"path"}; see
-#'   \code{\link{latex_grob}}.
-#' @param justify Logical; justify wrapped lines. Requires
-#'   \code{max_width}. See \code{\link{latex_grob}}.
-#' @param style A \code{\link{markdown_style}} object, CSS text, or the
-#'   path to a \code{.css} file, applied to every label this layer draws.
-#'   \code{NULL} falls back to
-#'   \code{\link{latex_options}(markdown_style = )}. Only the properties
-#'   that compile to LaTeX apply here: a label has no block layout, so
-#'   margins and padding are ignored. See \code{\link{md_style}}.
-#' @param na.rm If \code{FALSE}, the default, missing values are removed
-#'   with a warning. If \code{TRUE}, they are removed silently.
-#' @param ... Other arguments passed to \code{\link[ggplot2]{layer}}.
+#' @param fontsize Font size in points, unless `size` is mapped.
+#' @param math_font Math font, such as `"stix"`.
+#' @param lineheight Line spacing (default 1.2).
+#' @param max_width Width in big points at which lines wrap. `0`, the
+#'   default, does not wrap.
+#' @param render_mode `"typeface"` (default) or `"path"`; see
+#'   [latex_grob()].
+#' @param justify If `TRUE`, stretch wrapped lines to fill `max_width`.
+#' @param style A [markdown_style()], CSS text, or a path to a `.css`
+#'   file. `NULL` uses `latex_options(markdown_style = )`. Only properties
+#'   marked *inline* in [md_style()] apply.
+#' @param na.rm If `FALSE` (default), missing values are removed with a
+#'   warning; if `TRUE`, silently.
+#' @param ... Passed to [ggplot2::layer()].
 #'
 #' @return A ggplot2 layer.
 #' @seealso \code{\link{markdown_grob}}, \code{\link{geom_latex}}
@@ -127,82 +120,45 @@ GeomMarkdown <- NULL
 
 #' A ggplot2 theme element for markdown text
 #'
-#' Use as a theme element for axis titles, axis labels, plot titles or any
-#' other text element. The label is parsed as markdown (including
-#' \code{$...$} math), and rendered via MicroTeX.
-#'
-#' @details
-#' This is an S7 subclass of \code{ggplot2::element_text}, so it inherits
-#' the standard text properties (size, colour, hjust, ...) from the theme
-#' and merges correctly with inherited theme entries.
+#' A theme element that renders text, such as an axis or plot title, as
+#' markdown with `$math$`. It takes the same settings as
+#' [ggplot2::element_text()] and inherits from the theme like it.
 #'
 #' @section Block labels:
-#' A label with real block structure (a heading, a list, a table, a
-#' rule, or more than one paragraph) is laid out by
-#' \code{\link{markdown_box_grob}} rather than flattened into one run, so
-#' list markers, indents and block spacing survive. That makes a title
-#' like this work:
+#' A label with a heading, a list, a table, a rule or several paragraphs
+#' is laid out as a small document, as in [markdown_box_grob()]:
 #'
 #' \preformatted{labs(title = "## Findings\\n\\n- slope $\\\\beta_1$\\n- *p* < 0.001")}
 #'
-#' The box's own background, border, padding and corner radius come from
-#' the stylesheet's \code{body} rule (\code{style = "body \{ background:
-#' grey95; padding: 8px \}"}), not from arguments here. See
-#' \code{\link{markdown_style}}.
+#' Its box is styled by the `body` rule, as in
+#' `style = "body { background: grey95; padding: 8px }"`.
 #'
-#' Three details follow from how ggplot2 measures theme elements:
+#' * Text wraps only if `width` is given.
+#' * Axis tick labels and rotated labels are never laid out as blocks; a
+#'   rotated one warns.
+#' * `math_font`, `render_mode` and `justify` do not apply to blocks; set
+#'   them with [latex_options()].
 #'
-#' \itemize{
-#'   \item \strong{Wrapping is opt-in.} Without \code{width} the label is
-#'     sized to its content, because ggplot2 asks an element for its
-#'     height before placing it, when a relative width would resolve
-#'     against the whole device rather than the element's cell.
-#'   \item \strong{Axis tick labels are never laid out as blocks},
-#'     whatever they contain, for the same reason.
-#'   \item \strong{A rotated label is never laid out as blocks.} The box
-#'     cannot rotate, so a label with both blocks and a non-zero
-#'     \code{angle} keeps the angle, is rendered as a single run, and
-#'     warns. A \code{width} given with an angle becomes the run's
-#'     wrapping measure instead.
-#' }
+#' ggtext also has an `element_markdown()`. If both packages are
+#' attached, write `gridmicrotex::element_markdown()`.
 #'
-#' \code{math_font}, \code{render_mode} and \code{justify} are not
-#' forwarded to the box; a block label takes those from
-#' \code{\link{latex_options}}.
+#' @param math_font Math font, such as `"stix"`.
+#' @param fontsize Font size in points. `NULL` (default) uses the theme's
+#'   size.
+#' @param lineheight Line spacing (default 1.2).
+#' @param max_width Width in big points at which lines wrap. `0`, the
+#'   default, does not wrap.
+#' @param render_mode `"typeface"` (default) or `"path"`.
+#' @param justify If `TRUE`, stretch wrapped lines to fill `max_width`.
+#' @param style A [markdown_style()], CSS text, or a path to a `.css`
+#'   file. `NA` (default) uses `latex_options(markdown_style = )`.
+#' @param width Width at which the label wraps, as a [grid::unit()].
+#'   `NA` (default) does not wrap. `unit(1, "npc")` suits a plot title.
+#' @param ... Passed to [ggplot2::element_text()], such as `colour` or
+#'   `hjust`.
 #'
-#' Note that \pkg{ggtext} also exports a function called
-#' \code{element_markdown()}. If both packages are attached, the one loaded
-#' later wins; call \code{gridmicrotex::element_markdown()} explicitly to
-#' be unambiguous. The two are not interchangeable: ggtext renders
-#' HTML/CSS and images, this renders LaTeX math.
-#'
-#' @param math_font Name of the math font to use (e.g. \code{"stix"}).
-#' @param fontsize Convenience alias for \code{size}; forwarded to
-#'   \code{ggplot2::element_text()} as the text size in points.
-#'   \code{NULL} (default) uses the theme's inherited size.
-#' @param lineheight Multi-line height multiplier (default 1.2).
-#' @param max_width Maximum width in big points for automatic line
-#'   wrapping (default: 0, no wrapping).
-#' @param render_mode \code{"typeface"} (default) or \code{"path"}.
-#' @param justify Logical; justify wrapped lines. Requires
-#'   \code{max_width}.
-#' @param style A \code{\link{markdown_style}} object, CSS text, or the
-#'   path to a \code{.css} file, applied to labels drawn through this
-#'   theme element. \code{NA}, the default, means unset: the global
-#'   \code{\link{latex_options}(markdown_style = )} applies instead. Only
-#'   the properties that compile to LaTeX have an effect, unless the label
-#'   is laid out as blocks (see \emph{Block labels}). See
-#'   \code{\link{md_style}}.
-#' @param width Wrapping measure for the label, as a
-#'   \code{\link[grid]{unit}}. \code{NA}, the default, means unset: the
-#'   label is sized to its content and does not wrap.
-#'   \code{unit(1, "npc")} is the useful value for a plot title, whose
-#'   cell really is the full plot width. See \emph{Block labels}.
-#' @param ... Additional arguments passed to
-#'   \code{ggplot2::element_text()} (e.g. \code{colour}, \code{hjust}).
-#'
-#' @return An S7 object of class \code{element_markdown}, inheriting from
-#'   \code{ggplot2::element_text}.
+#' @return A theme element of class `element_markdown`, a kind of
+#'   `element_text`.
 #' @seealso \code{\link{markdown_grob}}, \code{\link{element_latex}}
 #' @export
 #'

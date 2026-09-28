@@ -17,93 +17,57 @@ element_markdown(
 )
 }
 \arguments{
-\item{math_font}{Name of the math font to use (e.g. \code{"stix"}).}
+\item{math_font}{Math font, such as \code{"stix"}.}
 
-\item{fontsize}{Convenience alias for \code{size}; forwarded to
-\code{ggplot2::element_text()} as the text size in points.
-\code{NULL} (default) uses the theme's inherited size.}
+\item{fontsize}{Font size in points. \code{NULL} (default) uses the theme's
+size.}
 
-\item{lineheight}{Multi-line height multiplier (default 1.2).}
+\item{lineheight}{Line spacing (default 1.2).}
 
-\item{max_width}{Maximum width in big points for automatic line
-wrapping (default: 0, no wrapping).}
+\item{max_width}{Width in big points at which lines wrap. \code{0}, the
+default, does not wrap.}
 
 \item{render_mode}{\code{"typeface"} (default) or \code{"path"}.}
 
-\item{justify}{Logical; justify wrapped lines. Requires
-\code{max_width}.}
+\item{justify}{If \code{TRUE}, stretch wrapped lines to fill \code{max_width}.}
 
-\item{style}{A \code{\link{markdown_style}} object, CSS text, or the
-path to a \code{.css} file, applied to labels drawn through this
-theme element. \code{NA}, the default, means unset: the global
-\code{\link{latex_options}(markdown_style = )} applies instead. Only
-the properties that compile to LaTeX have an effect, unless the label
-is laid out as blocks (see \emph{Block labels}). See
-\code{\link{md_style}}.}
+\item{style}{A \code{\link[=markdown_style]{markdown_style()}}, CSS text, or a path to a \code{.css}
+file. \code{NA} (default) uses \code{latex_options(markdown_style = )}.}
 
-\item{width}{Wrapping measure for the label, as a
-\code{\link[grid]{unit}}. \code{NA}, the default, means unset: the
-label is sized to its content and does not wrap.
-\code{unit(1, "npc")} is the useful value for a plot title, whose
-cell really is the full plot width. See \emph{Block labels}.}
+\item{width}{Width at which the label wraps, as a \code{\link[grid:unit]{grid::unit()}}.
+\code{NA} (default) does not wrap. \code{unit(1, "npc")} suits a plot title.}
 
-\item{...}{Additional arguments passed to
-\code{ggplot2::element_text()} (e.g. \code{colour}, \code{hjust}).}
+\item{...}{Passed to \code{\link[ggplot2:element]{ggplot2::element_text()}}, such as \code{colour} or
+\code{hjust}.}
 }
 \value{
-An S7 object of class \code{element_markdown}, inheriting from
-\code{ggplot2::element_text}.
+A theme element of class \code{element_markdown}, a kind of
+\code{element_text}.
 }
 \description{
-Use as a theme element for axis titles, axis labels, plot titles or any
-other text element. The label is parsed as markdown (including
-\code{$...$} math), and rendered via MicroTeX.
-}
-\details{
-This is an S7 subclass of \code{ggplot2::element_text}, so it inherits
-the standard text properties (size, colour, hjust, ...) from the theme
-and merges correctly with inherited theme entries.
+A theme element that renders text, such as an axis or plot title, as
+markdown with \verb{$math$}. It takes the same settings as
+\code{\link[ggplot2:element]{ggplot2::element_text()}} and inherits from the theme like it.
 }
 \section{Block labels}{
 
-A label with real block structure (a heading, a list, a table, a
-rule, or more than one paragraph) is laid out by
-\code{\link{markdown_box_grob}} rather than flattened into one run, so
-list markers, indents and block spacing survive. That makes a title
-like this work:
+A label with a heading, a list, a table, a rule or several paragraphs
+is laid out as a small document, as in \code{\link[=markdown_box_grob]{markdown_box_grob()}}:
 
 \preformatted{labs(title = "## Findings\\n\\n- slope $\\\\beta_1$\\n- *p* < 0.001")}
 
-The box's own background, border, padding and corner radius come from
-the stylesheet's \code{body} rule (\code{style = "body \{ background:
-grey95; padding: 8px \}"}), not from arguments here. See
-\code{\link{markdown_style}}.
-
-Three details follow from how ggplot2 measures theme elements:
-
+Its box is styled by the \code{body} rule, as in
+\code{style = "body { background: grey95; padding: 8px }"}.
 \itemize{
-\item \strong{Wrapping is opt-in.} Without \code{width} the label is
-sized to its content, because ggplot2 asks an element for its
-height before placing it, when a relative width would resolve
-against the whole device rather than the element's cell.
-\item \strong{Axis tick labels are never laid out as blocks},
-whatever they contain, for the same reason.
-\item \strong{A rotated label is never laid out as blocks.} The box
-cannot rotate, so a label with both blocks and a non-zero
-\code{angle} keeps the angle, is rendered as a single run, and
-warns. A \code{width} given with an angle becomes the run's
-wrapping measure instead.
+\item Text wraps only if \code{width} is given.
+\item Axis tick labels and rotated labels are never laid out as blocks; a
+rotated one warns.
+\item \code{math_font}, \code{render_mode} and \code{justify} do not apply to blocks; set
+them with \code{\link[=latex_options]{latex_options()}}.
 }
 
-\code{math_font}, \code{render_mode} and \code{justify} are not
-forwarded to the box; a block label takes those from
-\code{\link{latex_options}}.
-
-Note that \pkg{ggtext} also exports a function called
-\code{element_markdown()}. If both packages are attached, the one loaded
-later wins; call \code{gridmicrotex::element_markdown()} explicitly to
-be unambiguous. The two are not interchangeable: ggtext renders
-HTML/CSS and images, this renders LaTeX math.
+ggtext also has an \code{element_markdown()}. If both packages are
+attached, write \code{gridmicrotex::element_markdown()}.
 }
 
 \examples{

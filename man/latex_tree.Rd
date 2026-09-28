@@ -2,7 +2,7 @@
 % Please edit documentation in R/latex-tree.R
 \name{latex_tree}
 \alias{latex_tree}
-\title{Inspect the parsed layout of a LaTeX expression}
+\title{The layout of a LaTeX expression}
 \usage{
 latex_tree(
   tex,
@@ -15,72 +15,52 @@ latex_tree(
 )
 }
 \arguments{
-\item{tex}{Character string of LaTeX math code.}
+\item{tex}{LaTeX, as a character string.}
 
-\item{math_font}{Name of the math font to use (e.g., \code{"stix"}).
-Use \code{""} (default) for Lete Sans Math, which pairs with R's
-default sans-serif text font.
-See \code{\link{available_math_fonts}} for loaded fonts.}
+\item{math_font}{Math font: \code{"lete"} (Lete Sans Math, the default),
+\code{"stix"} (STIX Two Math), or one added with \code{\link[=load_math_font]{load_math_font()}}. See
+\code{\link[=available_math_fonts]{available_math_fonts()}}.}
 
-\item{max_width}{Numeric maximum width in big points for automatic
-line wrapping.  Use \code{0} (default) for no wrapping.}
+\item{max_width}{Width in big points (1/72 inch) at which lines wrap.
+\code{0}, the default, does not wrap.}
 
-\item{tex_style}{Character: TeX style override. One of \code{""}
-(default; let the parser decide), \code{"display"}, \code{"text"},
-\code{"script"}, or \code{"scriptscript"}. See
-\code{\link{latex_grob}} for the semantics of each value.}
+\item{tex_style}{Force a TeX style: \code{"display"}, \code{"text"}, \code{"script"}
+or \code{"scriptscript"}. \code{""}, the default, follows the delimiters. See
+Details.}
 
-\item{input_mode}{How \code{tex} is read.
-\code{"mixed"} (default) reads a label: text, as in a LaTeX paragraph,
-with math between \code{$...$} or \code{\\(...\\)}, and a newline
-starts a new line, as \code{"\\n"} does in R.
-\code{"math"} reads the whole string as math, as between \code{$...$},
-so a word is set as italic letters; write text as \code{\\text{...}}.
-\code{"document"} reads a LaTeX document body by LaTeX's own rules: a
-newline is a space, a blank line (or \code{\\par}) starts an indented
-paragraph, \code{\\section} and its kin are numbered headings, and
-display math is centred on a line of its own. Give \code{max_width} to
-break the paragraphs into lines. The default can be set for the
-session with \code{\link{latex_options}(input_mode = )}.}
+\item{input_mode}{How \code{tex} is read:
+\itemize{
+\item \code{"mixed"} (default): text, with math between \verb{$...$} or \verb{\\(...\\)}.
+A newline starts a new line.
+\item \code{"math"}: everything is math; write text in \verb{\\text\{\}}.
+\item \code{"document"}: a LaTeX document body, with paragraphs, numbered
+headings and displayed equations. Use it with \code{max_width}.
+}}
 
-\item{render_mode}{Character string: \code{"typeface"} (default) renders
-glyphs as native text using the math font, producing
-selectable/accessible text in PDF and SVG output.
-Bundled math fonts and any registered via \code{\link{load_math_font}}
-are read directly from their OTF files: no system-wide font
-install is required.
-Falls back to path mode automatically on devices that lack the
-R \eqn{\geq} 4.3 glyph engine, and on base \code{pdf()} and
-\code{postscript()}, which cannot embed the math font.
-For selectable PDF output, prefer \code{\link[grDevices]{cairo_pdf}}.
-\code{"path"} renders math symbols as filled vector paths (works on
-all devices but text is not selectable in PDF/SVG).}
+\item{render_mode}{\code{"typeface"} (default) draws glyphs as text, which
+can be selected in PDF and SVG output. It needs a device such as
+ragg, svglite or \code{\link[grDevices:cairo]{grDevices::cairo_pdf()}}, and falls back to
+\code{"path"} on others, such as \code{pdf()}. \code{"path"} draws glyphs as
+outlines, which works on every device.}
 
-\item{gp}{Graphical parameters (see \code{\link[grid]{gpar}}).
-Common entries: \code{col} (formula foreground), \code{fontfamily}
-(text font), \code{fontsize} / \code{cex}
-(formula size), and \code{lineheight} (multi-line spacing). See
-\code{\link{latex_grob}} for how each of these flows through
-MicroTeX.}
+\item{gp}{Graphical parameters from \code{\link[grid:gpar]{grid::gpar()}}: \code{col},
+\code{fontfamily}, \code{fontsize}, \code{cex} and \code{lineheight}. See Details.}
 }
 \value{
-A list with class \code{"latex_tree"} containing:
-\describe{
-\item{\code{records}}{Data frame of draw records (one row per
-glyph, path, line, rect, or text block). Columns include
-\code{type}, \code{x}, \code{y}, \code{glyph}, \code{font_size},
-\code{color}, \code{text}, \code{codepoint}, \code{font_file}.}
-\item{\code{bbox}}{Named numeric vector with \code{width},
-\code{height}, \code{depth}, \code{baseline} (all in big points).}
-\item{\code{tex}}{The (macro-expanded) input string.}
-\item{\code{render_mode}}{Rendering mode used for the layout.}
+A list of class \code{"latex_tree"}:
+\itemize{
+\item \code{records}: a data frame with one row per drawn element, with
+columns such as \code{type}, \code{x}, \code{y}, \code{glyph}, \code{font_size}, \code{color} and
+\code{text}.
+\item \code{bbox}: \code{width}, \code{height}, \code{depth} and \code{baseline}, in big points.
+\item \code{tex}: the input.
+\item \code{render_mode}: the render mode used.
 }
 }
 \description{
-Returns the raw draw-record table produced by MicroTeX's layout pass
-together with the bounding-box metadata. Useful for debugging
-alignment issues, building custom grobs on top of the layout, or
-counting glyphs/paths/rules in a formula.
+Returns what a formula is drawn from: one row per glyph, line, rectangle
+or run of text, with its position. Useful for checking alignment or
+building your own grobs.
 }
 \examples{
 \donttest{

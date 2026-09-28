@@ -10,14 +10,12 @@ available_math_fonts()
 A character vector of math font names.
 }
 \description{
-Returns the names of all math fonts currently loaded by MicroTeX.
-These names can be passed to the \code{math_font} parameter of
-\code{\link{latex_grob}} and \code{\link{grid.latex}}.
+Returns the math fonts that can be passed to \code{math_font}.
 }
 \section{Font pairing}{
 
-The bundled math fonts have different styles. For a consistent look,
-pair them with a matching \code{fontfamily} in \code{gp}:
+For a consistent look, pair each math font with a matching
+\code{fontfamily} in \code{gp}:
 
 \tabular{lll}{
 \strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr

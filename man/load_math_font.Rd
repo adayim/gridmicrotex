@@ -7,36 +7,23 @@
 load_math_font(otf_path)
 }
 \arguments{
-\item{otf_path}{Path to the OTF/TTF font file.}
+\item{otf_path}{Path to an OTF or TTF math font.}
 }
 \value{
-Invisibly returns \code{NULL}.
+\code{NULL}, invisibly.
 }
 \description{
-Loads an OTF/TTF \strong{math} font (one carrying an OpenType MATH
-table) into MicroTeX's internal font registry. The MATH table is
-parsed directly in C++ and the required metrics are synthesised on the
-fly. You can download a free math font such as Latin Modern Math
-(the LaTeX default) and load it for math rendering.
+Adds an OpenType math font, such as Latin Modern Math, for use as
+\code{math_font}. The font can then also be used as a \code{fontfamily} for
+plot text.
 }
 \details{
-The font is also registered with the \pkg{systemfonts} package so it
-can be selected for surrounding plot text via
-\code{gp = gpar(fontfamily = "...")} without being installed
-system-wide.
-
-Plain \strong{text} fonts, those used inside \code{\\text\{\}} blocks,
-need no loading at all. They are resolved automatically by
-\pkg{systemfonts} from \code{gp$fontfamily}, or per run with
-\code{\\gmfontfamily\{\}\{\}}.
+Only math fonts need loading. For text, set \code{gp$fontfamily} to any
+installed font.
 }
 \examples{
 \donttest{
-  # Load a math font from a local OTF file. Here we point at the
-  # bundled STIX font so the example is self-contained and loaded.
-  # You don't need to load the bundled fonts to use them — they're registered
-  # with systemfonts on first render — but this shows how to load a custom font.
-  # in practice you would pass the path to any OTF with an OpenType MATH table.
+  # The bundled STIX font stands in for your own math font here
   otf <- system.file("fonts", "STIXTwoMath-Regular.otf",
                      package = "gridmicrotex")
   load_math_font(otf)

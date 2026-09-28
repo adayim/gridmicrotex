@@ -4,7 +4,7 @@
 \alias{define_macro}
 \alias{clear_macros}
 \alias{list_macros}
-\title{Define a user-level LaTeX macro}
+\title{Define a LaTeX shorthand for every label}
 \usage{
 define_macro(name, definition)
 
@@ -13,50 +13,25 @@ clear_macros(name = NULL)
 list_macros()
 }
 \arguments{
-\item{name}{Macro name \strong{without} the leading backslash. For
-\code{clear_macros}, the macro name to drop, or \code{NULL}
-(default) to clear all.}
+\item{name}{Macro name, without the backslash. For \code{clear_macros()},
+\code{NULL} (default) removes all macros.}
 
-\item{definition}{LaTeX source the macro expands to.}
+\item{definition}{The LaTeX the macro stands for.}
 }
 \value{
-\itemize{
-\item \code{define_macro}: Invisibly returns \code{NULL}.
-\item \code{clear_macros}: Invisibly returns \code{NULL}.
-\item \code{list_macros}: A named character vector mapping
-macro names to their expansions. Empty if no macros are defined.
-}
+\code{list_macros()} returns a named character vector of macros and
+their definitions. The others return \code{NULL}, invisibly.
 }
 \description{
-Registers a zero-argument shorthand that every later expression can use,
-expanded by the parser as a \code{\\newcommand} without arguments would
-be. Useful for domain-specific notation (e.g. \code{\\RR} for
-\code{\\mathbb\{R\}}) you reuse across many plots.
+\code{define_macro()} adds a macro without arguments, such as \verb{\\RR} for
+\verb{\\mathbb\{R\}}, that every later label can use. \code{list_macros()} shows
+them and \code{clear_macros()} removes them.
 }
-\section{Choosing between this and \code{\\newcommand}}{
-
-An expression can also define macros itself, as LaTeX does:
-\code{\\newcommand}, \code{\\renewcommand}, \code{\\providecommand},
-\code{\\def} (delimited parameters included), \code{\\let},
-\code{\\DeclareMathOperator} and \code{\\newenvironment}. Those are the
-more capable form: they take up to nine arguments, which
-\code{define_macro()} does not. As in TeX, a definition made inside
-\code{\{...\}} ends with the group, and \code{\\gdef} is global.
-
-\preformatted{
-  # parameterised, but local to this one expression
-  grid.latex(r"(\\def\\norm#1{\\left\\lVert #1 \\right\\rVert}
-                \\norm{\\vec{v}})")
+\details{
+A label can also define its own macros with \verb{\newcommand}, \verb{\\def} and
+the like, including macros with arguments, but those last for that
+label only.
 }
-
-What they cannot do is persist: a \code{\\newcommand} written in one call
-is gone by the next (\code{\\gdef} included). That is the one thing \code{define_macro()} is for.
-Use \code{\\newcommand} / \code{\\def} for an abbreviation local to a
-single label, and \code{define_macro()} for notation you want available
-to every label in a script. A \code{\\renewcommand} in one label
-overrides a \code{define_macro()} macro for that label only.
-}
-
 \examples{
 \donttest{
   define_macro("RR", "\\\\mathbb{R}")

@@ -135,21 +135,17 @@
 #' Declarations for one markdown tag
 #'
 #' @description
-#' A set of CSS declarations, for use as a named argument to
-#' \code{\link{markdown_style}}. Argument names are the CSS property
-#' names with underscores in place of hyphens, so \code{font_size} sets
-#' \code{font-size}.
+#' CSS properties for one tag, for use in [markdown_style()]. Names are
+#' CSS property names with `_` for `-`, so `font_size` sets `font-size`.
 #'
 #' @details
-#' Lengths accept three forms: a bare number is \code{rem}, a multiple of
-#' the body font size (\code{font_size = 2.5}); a string is whatever CSS
-#' says it is (\code{"2.5em"}, \code{"12pt"}, \code{"150\%"}); and a
-#' \code{\link[grid]{unit}} is absolute.
+#' A length can be a number, meaning a multiple of the body font size
+#' (`font_size = 2.5`); a CSS string such as `"2.5em"` or `"12pt"`; or a
+#' [grid::unit()].
 #'
-#' These are the supported properties, and where each one has an effect.
-#' \emph{Inline} means it also works on a \code{<span>} and in
-#' \code{\link{markdown_grob}}, which has no block layout; \emph{block}
-#' means it needs \code{\link{markdown_box_grob}}.
+#' The supported properties are below. *Inline* ones also work on a
+#' `<span>` and in [markdown_grob()]; *block* ones need
+#' [markdown_box_grob()].
 #'
 #' \tabular{lll}{
 #'   \strong{property} \tab \strong{scope} \tab \strong{notes} \cr
@@ -191,35 +187,24 @@
 #'   \code{marker_gap} \tab \code{ul}, \code{ol} \tab marker to text \cr
 #' }
 #'
-#' \code{font_size} also accepts CSS's keywords (\code{xx-small} through
-#' \code{xx-large}, plus \code{smaller} and \code{larger}), taken from the
-#' \code{\\tiny}..\code{\\Huge} ladder MicroTeX implements.
+#' `font_size` also takes the keywords `xx-small` to `xx-large`,
+#' `smaller` and `larger`.
 #'
-#' \strong{The \code{body} rule styles the box itself.} On any other tag,
-#' \code{background}, \code{border}, \code{border_radius}, \code{padding}
-#' and \code{margin} apply to that block. On \code{body} they apply to the
-#' whole \code{\link{markdown_box_grob}}: its fill, its frame, its
-#' corner radius, and the space inside and outside it. That is the only
-#' way to give a \code{\link{element_markdown}} title a background, since
-#' the theme element takes no box arguments of its own:
+#' On `body`, `background`, `border`, `border_radius`, `padding` and
+#' `margin` style the box of [markdown_box_grob()] or of an
+#' [element_markdown()] title:
 #'
 #' \preformatted{body \{ background: grey95; padding: 8px;
 #'         border: 1px solid grey60; border-radius: 4px \}}
 #'
-#' An explicit \code{box_gp}, \code{padding}, \code{margin} or \code{r}
-#' argument to \code{markdown_box_grob()} wins over the rule, the way an
-#' inline style wins in CSS.
+#' The `box_gp`, `padding`, `margin` and `r` arguments of
+#' `markdown_box_grob()` override this rule.
 #'
-#' Anything else is an error: unlike a pasted stylesheet, where an
-#' unknown property is ignored the way a browser ignores it.
+#' An unknown property is an error here, but is ignored in CSS text.
+#' Small caps, `font-variant-numeric` and padding inside an inline
+#' `border` are not supported.
 #'
-#' \strong{What cannot be styled at all.} There is no small-caps
-#' (\code{\\textsc} is not a MicroTeX command), no
-#' \code{font-variant-numeric}, no right-to-left or bidirectional text,
-#' and no padding inside an inline \code{border}: MicroTeX has no
-#' \code{\\fboxsep}, so that inset is fixed.
-#'
-#' @param ... Named declarations.
+#' @param ... Properties, as named arguments.
 #' @return An object of class \code{gridmicrotex_md_style}.
 #' @seealso \code{\link{markdown_style}}, \code{\link{markdown_box_grob}}
 #' @export
@@ -313,52 +298,31 @@ print.gridmicrotex_md_style <- function(x, ...) {
 #' A style for markdown rendering
 #'
 #' @description
-#' Builds the style used by \code{\link{markdown_box_grob}} and
-#' \code{\link{markdown_grob}}: a small CSS cascade over the markdown
-#' tags. One constructor covers creating a style, starting from a preset,
-#' and extending an existing one. For the properties themselves, and
-#' which are honoured where, see \code{\link{md_style}}.
+#' Creates a style for [markdown_grob()], [markdown_box_grob()] and the
+#' ggplot2 markdown functions, from CSS, a preset, or [md_style()]
+#' declarations.
 #'
 #' @details
-#' Tags are named as in HTML, so a stylesheet reads the way a CSS author
-#' expects: \code{body} (the document root, which every other tag
-#' inherits from, and which also styles the box itself; see
-#' \code{\link{md_style}}), \code{p}, \code{h1} ... \code{h6}, \code{ul},
-#' \code{ol}, \code{li}, \code{blockquote}, \code{pre} (a code block),
-#' \code{code} (an inline code span), \code{strong} and \code{em} (what
-#' markdown's \code{**} and \code{*} produce), \code{table}, \code{tr},
-#' \code{td}, \code{th}, \code{hr}, \code{img}, \code{a} (a link),
-#' \code{math} (a paragraph that is nothing but \code{$$...$$}),
-#' \code{footnote}, \code{div} and \code{span}.
+#' Tags are named as in HTML: `body`, `p`, `h1` to `h6`, `ul`, `ol`, `li`,
+#' `blockquote`, `pre` (code block), `code` (inline code), `strong`, `em`,
+#' `table`, `tr`, `td`, `th`, `hr`, `img`, `a` (link), `math` (a `$$...$$`
+#' paragraph), `footnote`, `div` and `span`. Every tag inherits from
+#' `body`, and table cells inherit from `table`.
 #'
-#' The table tags nest as they do in HTML: \code{tr}, \code{td} and
-#' \code{th} inherit through \code{table}, so \code{table \{ color: \}}
-#' reaches the cells. \code{background} on \code{tr} fills the row, on
-#' \code{td}/\code{th} the individual cell.
+#' As in CSS, an inline `style` beats a class (`.note`), which beats a tag
+#' (`h1`), and a later rule beats an earlier one. Colour, font, line
+#' height and alignment are inherited by nested blocks; margins, padding
+#' and borders are not.
 #'
-#' Four things can style a document, and they resolve in CSS's own order:
-#' the built-in defaults, then a type selector (\code{h1}), then a class
-#' selector (\code{.note}), then an inline \code{style} attribute. Ties
-#' are broken by document order, so a later rule wins. Inheritable
-#' properties (\code{color}, the \code{font-*} family,
-#' \code{line-height}, \code{text-align}) fall through into nested
-#' containers, so \code{blockquote \{ color: grey40 \}} greys everything
-#' quoted; box properties (margins, padding, borders) do not.
+#' Tag selectors, class selectors and lists (`h1, h2`) are supported.
+#' Other selectors are ignored.
 #'
-#' The supported CSS is a deliberately small subset: type selectors,
-#' class selectors and selector lists (\code{h1, h2}). Combinators,
-#' pseudo-classes, attribute selectors, \code{#id} and at-rules are
-#' skipped rather than raised, so an existing stylesheet can be handed
-#' over and the parts that apply still take effect.
-#'
-#' @param base \code{NULL} (default) for the built-in defaults, the name
-#'   of a bundled preset such as \code{"github"}, or an existing
-#'   \code{markdown_style} to extend.
-#' @param css A stylesheet: CSS text, or a path to a \code{.css} file.
-#'   Read as a file when it names one.
-#' @param ... Named tag overrides, each an \code{\link{md_style}}. Use a
-#'   leading dot for a class, e.g. \code{.note = md_style(...)}.
-#' @return An object of class \code{gridmicrotex_markdown_style}.
+#' @param base `NULL` (default) for the built-in style, a preset name
+#'   such as `"github"`, or a `markdown_style` to extend.
+#' @param css CSS text, or a path to a `.css` file.
+#' @param ... Tag styles, each an [md_style()]. Start a name with a dot
+#'   for a class, as in `.note = md_style(...)`.
+#' @return A style object of class `"gridmicrotex_markdown_style"`.
 #' @seealso \code{\link{md_style}}, \code{\link{markdown_box_grob}}
 #' @export
 #'

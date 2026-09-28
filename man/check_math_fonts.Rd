@@ -7,19 +7,12 @@
 check_math_fonts()
 }
 \value{
-Invisibly returns the character vector of available math font
-names.
+The names of the available math fonts, invisibly.
 }
 \description{
-Reports which \strong{math} fonts are loaded and available for
-rendering: the MicroTeX version, the loaded math fonts, and whether the
-bundled font files are present.
-}
-\details{
-Text fonts are not covered, because they are not registered here:
-they are resolved on demand by \pkg{systemfonts} from
-\code{gp$fontfamily}. Use \code{systemfonts::match_fonts()} to see
-what a text family resolves to.
+Prints which math fonts are available and whether the bundled font
+files are present. Text fonts are not covered; use
+\code{systemfonts::match_fonts()} to see what a font family resolves to.
 }
 \examples{
 check_math_fonts()
