@@ -78,9 +78,11 @@ dropped and their text kept.
 ## Documents
 
 `markdown_box_grob()` stacks the blocks of a document inside an optional
-box. Text wraps to `width`.
+box. Text wraps to `width`. Code below is quoted with `~~~r` and `~~~`, 
+instead of `"```"` to avoid conflicts with R Markdown of this vignette.
+But you should use `"```"` in your own code.
 
-```{r block, fig.height = 4, fig.width = 4.6, out.width = "80%"}
+```{r block, fig.height = 3.6, fig.width = 4.6, out.width = "80%"}
 md <- r"(
 # Model summary
 
