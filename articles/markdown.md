@@ -71,7 +71,9 @@ dropped and their text kept.
 
 [`markdown_box_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_box_grob.md)
 stacks the blocks of a document inside an optional box. Text wraps to
-`width`.
+`width`. Code below is quoted with `~~~r` and `~~~`, instead of
+```` "```" ```` to avoid conflicts with R Markdown of this vignette. But
+you should use ```` "```" ```` in your own code.
 
 ``` r
 
