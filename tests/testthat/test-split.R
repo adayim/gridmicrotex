@@ -21,6 +21,22 @@ test_that("content separated by \\\\ honours max_width", {
   }
 })
 
+test_that("a decoration whose only content is another still wraps", {
+  words <- paste(rep("one two three four", 4), collapse = " ")
+  wrapped <- function(tex) {
+    dims(tex, 100)$w <= 110
+  }
+  inner <- c("\\uline{", "\\bgcolor{yellow}{", "\\textcolor{red}{")
+  for (outer in c("{\\large ", "\\uline{", "\\textscale{1.5}{")) {
+    for (i in inner) {
+      tex <- paste0(outer, i, words, "}}")
+      expect_true(wrapped(tex), info = tex)
+    }
+  }
+  # One that fits is untouched.
+  expect_false(dims("{\\large \\uline{a b}}", 100)$split)
+})
+
 test_that("a single flowing paragraph still wraps as it always did", {
   wide <- dims(long_text)
   narrow <- dims(long_text, 200)

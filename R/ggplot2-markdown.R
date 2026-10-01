@@ -326,6 +326,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
   width       <- element@width
   if (unset(width)) width <- NULL
   margin      <- margin %||% element@margin
+  m           <- .margin_args(margin, margin_x, margin_y)
 
   gp <- grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
   if (!is.null(family) && nzchar(family)) gp$fontfamily <- family
@@ -385,19 +386,25 @@ element_markdown <- function(math_font = "", fontsize = NULL,
 
     if (is.null(x)) x <- grid::unit(default_just$hjust, "npc")
     if (is.null(y)) y <- grid::unit(default_just$vjust, "npc")
-    return(markdown_grob(
-      md = label, x = x, y = y,
+    xy <- .margin_shift(x, y, default_just, margin, m)
+    return(.margin_wrap(markdown_grob(
+      md = label, x = xy$x, y = xy$y,
       hjust = hjust, vjust = vjust, rot = angle,
       math_font = math_font, max_width = max_width,
       render_mode = render_mode, justify = justify, style = style,
       gp = gp
-    ))
+    ), margin, m))
   }
 
   # Multiple labels (axis tick labels) -- render a gTree of grobs.
   n <- length(label)
   if (is.null(x)) x <- grid::unit(rep(default_just$hjust, n), "npc")
   if (is.null(y)) y <- grid::unit(rep(default_just$vjust, n), "npc")
+  if (!inherits(x, "unit")) x <- grid::unit(x, "npc")
+  if (!inherits(y, "unit")) y <- grid::unit(y, "npc")
+  xy <- .margin_shift(x, y, default_just, margin, m)
+  x <- xy$x
+  y <- xy$y
 
   grobs <- grid::gList()
   for (i in seq_len(n)) {
@@ -414,6 +421,6 @@ element_markdown <- function(math_font = "", fontsize = NULL,
   }
   # Same class as the LaTeX tick labels, so the width/height methods that
   # let ggplot2 reserve room for the axis strip apply here too.
-  grid::gTree(children = grobs, name = "axis.markdown.labels",
-              cl = "gridmicrotex_labels")
+  .margin_wrap(grid::gTree(children = grobs, name = "axis.markdown.labels",
+                           cl = "gridmicrotex_labels"), margin, m)
 }

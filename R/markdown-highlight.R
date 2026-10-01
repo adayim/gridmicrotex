@@ -267,7 +267,18 @@
       note(paste0("attribute=\"", a, "\" (no <itemData> defines it)"))
       return(NULL)
     }
-    list(re = paste0("(?:", re, ")"),
+    re <- paste0("(?:", re, ")")
+    # PCRE reports a pattern it cannot compile as a warning; found at draw
+    # time it would be raised at every position of every line.
+    ok <- tryCatch({
+      regexpr(paste0("^.{0}\\K", re), "", perl = TRUE)
+      TRUE
+    }, error = function(e) FALSE, warning = function(w) FALSE)
+    if (!ok) {
+      note(paste0("<", kind, "> with an invalid regular expression"))
+      return(NULL)
+    }
+    list(re = re,
          class = if (nzchar(a)) unname(attr_cls[[a]]) else NA_character_,
          action = .hl_action(target, ctx_names, note),
          look_ahead = .hl_bool(xml2::xml_attr(r, "lookAhead")),
@@ -486,9 +497,11 @@
       for (r in cur$rules) {
         if (r$at_start && pos != 1L) next
         if (r$first_non_space && pos != nonblank) next
+        # A pattern PCRE cannot compile is a warning, not an error: without
+        # the second handler it is raised at every position of every line.
         m <- tryCatch(regexpr(paste0(pre, r$re), line, perl = TRUE,
                               useBytes = FALSE),
-                      error = function(e) -1L)
+                      error = function(e) -1L, warning = function(w) -1L)
         if (m[1] != pos) next
         hit <- r
         len <- attr(m, "match.length")
@@ -553,6 +566,9 @@
 # not parse -- a fenced block is often a fragment -- and the caller then
 # falls back to the r.xml grammar.
 .hl_r <- function(lines) {
+  # A string of unknown encoding in a UTF-8 locale -- what readLines() gives
+  # -- has its parse data counted in bytes; one marked UTF-8 in characters.
+  lines <- enc2utf8(lines)
   # Errors only. Catching warnings here would silently drop R's exact
   # backend for a block that parses perfectly well but happens to warn.
   pd <- tryCatch(

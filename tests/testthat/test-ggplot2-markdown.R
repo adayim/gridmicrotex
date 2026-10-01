@@ -92,7 +92,11 @@ test_that("element_markdown installs our grob as the axis titles", {
       axis.title.y = element_markdown()
     )
   gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
-  named <- function(nm) gt$grobs[[which(gt$layout$name == nm)]]
+  # ggplot2 wraps a text grob that has a margin in a titleGrob.
+  named <- function(nm) {
+    g <- gt$grobs[[which(gt$layout$name == nm)]]
+    if (inherits(g, "titleGrob")) g$children[[1]] else g
+  }
 
   # y is rotated and takes a different branch.
   expect_s3_class(named("xlab-b"), "latexgrob")
@@ -162,7 +166,9 @@ test_that("style= reaches both ggplot2 entry points", {
     ggplot2::labs(x = "**wt**") +
     ggplot2::theme(axis.title.x = element_markdown(style = "body { color: red }"))
   gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
-  expect_equal(cols(gt$grobs[[which(gt$layout$name == "xlab-b")]]), "#FF0000")
+  xlab <- gt$grobs[[which(gt$layout$name == "xlab-b")]]
+  if (inherits(xlab, "titleGrob")) xlab <- xlab$children[[1]]
+  expect_equal(cols(xlab), "#FF0000")
   expect_equal(cols(ggplot2::layer_grob(p, i = 2L)[[1]][[1]]), "#1F6FB2")
 })
 

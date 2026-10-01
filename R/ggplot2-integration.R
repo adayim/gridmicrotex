@@ -298,6 +298,8 @@ element_latex <- function(math_font = "", fontsize = NULL,
   max_width   <- element@max_width   %||% 0
   input_mode  <- element@input_mode  %||% "mixed"
   render_mode <- element@render_mode %||% "typeface"
+  margin      <- margin %||% element@margin
+  m           <- .margin_args(margin, margin_x, margin_y)
 
   gp <- grid::gpar(col = colour, fontsize = fontsize, lineheight = lineheight)
   if (!is.null(family) && nzchar(family)) gp$fontfamily <- family
@@ -320,13 +322,14 @@ element_latex <- function(math_font = "", fontsize = NULL,
     label <- strip_dollars(label)
     if (is.null(x)) x <- grid::unit(default_just$hjust, "npc")
     if (is.null(y)) y <- grid::unit(default_just$vjust, "npc")
-    return(latex_grob(
-      tex = label, x = x, y = y,
+    xy <- .margin_shift(x, y, default_just, margin, m)
+    return(.margin_wrap(latex_grob(
+      tex = label, x = xy$x, y = xy$y,
       hjust = hjust, vjust = vjust, rot = angle,
       math_font = math_font, max_width = max_width,
       input_mode = input_mode, render_mode = render_mode,
       gp = gp
-    ))
+    ), margin, m))
   }
 
   # Multiple labels (axis tick labels) — render a gTree of grobs.
@@ -334,6 +337,11 @@ element_latex <- function(math_font = "", fontsize = NULL,
   n <- length(label)
   if (is.null(x)) x <- grid::unit(rep(default_just$hjust, n), "npc")
   if (is.null(y)) y <- grid::unit(rep(default_just$vjust, n), "npc")
+  if (!inherits(x, "unit")) x <- grid::unit(x, "npc")
+  if (!inherits(y, "unit")) y <- grid::unit(y, "npc")
+  xy <- .margin_shift(x, y, default_just, margin, m)
+  x <- xy$x
+  y <- xy$y
 
   grobs <- grid::gList()
   for (i in seq_len(n)) {
@@ -348,8 +356,37 @@ element_latex <- function(math_font = "", fontsize = NULL,
       name = paste0("ticklabel.", i)
     ))
   }
-  grid::gTree(children = grobs, name = "axis.latex.labels",
-              cl = "gridmicrotex_labels")
+  .margin_wrap(grid::gTree(children = grobs, name = "axis.latex.labels",
+                           cl = "gridmicrotex_labels"), margin, m)
+}
+
+# ggplot2 reserves a text element's margin by asking the grob for a size
+# that includes it, and places the text inside that cell; this mirrors
+# ggplot2:::titleGrob. `x` and `y` are the anchor (unit vectors), `just`
+# the rotation-adjusted justification the anchor was chosen with.
+.margin_args <- function(margin, margin_x, margin_y) {
+  margin_x <- isTRUE(margin_x)
+  margin_y <- isTRUE(margin_y)
+  ok <- grid::is.unit(margin) && length(margin) == 4L && (margin_x || margin_y)
+  list(on = ok, x = ok && margin_x, y = ok && margin_y)
+}
+
+.margin_shift <- function(x, y, just, margin, m) {
+  if (m$x) x <- x - margin[2] * just$hjust + margin[4] * (1 - just$hjust)
+  if (m$y) y <- y - margin[1] * just$vjust + margin[3] * (1 - just$vjust)
+  list(x = x, y = y)
+}
+
+.margin_wrap <- function(grob, margin, m) {
+  if (!m$on) return(grob)
+  w <- grid::grobWidth(grob)
+  h <- grid::grobHeight(grob)
+  widths <- if (m$x) grid::unit.c(margin[4], w, margin[2]) else
+    grid::unit(1, "null")
+  heights <- if (m$y) grid::unit.c(margin[1], h, margin[3]) else
+    grid::unit(1, "null")
+  grid::gTree(children = grid::gList(grob), widths = widths,
+              heights = heights, cl = "titleGrob")
 }
 
 # Report the extent of a bundle of tick-label grobs.

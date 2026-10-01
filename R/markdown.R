@@ -321,7 +321,10 @@
     if (length(kv) < 2L) next
     prop <- .md_canonical_props(trimws(tolower(kv[1])))
     # A value can legitimately contain a colon, so rejoin what was split.
-    if (nzchar(prop)) out[[prop]] <- trimws(paste(kv[-1], collapse = ":"))
+    # `!important` has nothing to override here, so only the marker goes.
+    val <- trimws(paste(kv[-1], collapse = ":"))
+    val <- trimws(sub("!\\s*important$", "", val, ignore.case = TRUE))
+    if (nzchar(prop)) out[[prop]] <- val
   }
   if (warn && length(out)) {
     bad <- setdiff(names(out), .MD_STYLE_PROPS)
@@ -355,8 +358,9 @@
       as.list(strsplit(trimws(as.character(v)), "[[:space:]]+")[[1]])
     }
     n <- length(parts)
-    if (n == 0L) next
-    pick <- switch(as.character(min(n, 4L)),
+    # CSS ignores a shorthand with more than four values.
+    if (n == 0L || n > 4L) next
+    pick <- switch(as.character(n),
       "1" = c(1, 1, 1, 1), "2" = c(1, 2, 1, 2),
       "3" = c(1, 2, 3, 2), "4" = c(1, 2, 3, 4))
     for (i in seq_along(sides)) {
@@ -379,8 +383,9 @@
   fam <- switch(tolower(fam %||% ""), monospace = "mono",
                 "sans-serif" = "sans", fam)
   # The name is about to be spliced into LaTeX, so it must not carry
-  # anything the parser reads as syntax.
-  gsub("[{}\\\\]", "", fam %||% "")
+  # anything the parser reads as syntax: braces, a backslash, or a `%`
+  # that would comment out the closing brace.
+  gsub("[{}\\\\%\r\n]", "", fam %||% "")
 }
 
 # CSS counts 600 and up as bold, alongside the two keywords.

@@ -648,12 +648,14 @@
     len <- function(p, horizontal = FALSE) {
       .md_css_length(res[[p]], fontsize, sty$size, horizontal = horizontal) %||% 0
     }
-    pad_l <- len("padding-left", TRUE)
-    pad_r <- len("padding-right", TRUE)
-    pad_t <- len("padding-top")
-    pad_b <- len("padding-bottom")
+    # A negative padding would give the box a negative size, and an
+    # indent can use up the width: nothing below it is ever negative.
+    pad_l <- max(len("padding-left", TRUE), 0)
+    pad_r <- max(len("padding-right", TRUE), 0)
+    pad_t <- max(len("padding-top"), 0)
+    pad_b <- max(len("padding-bottom"), 0)
     indent_blk <- indent + len("margin-left", TRUE) + pad_l
-    avail <- width - indent_blk - pad_r - len("margin-right", TRUE)
+    avail <- max(width - indent_blk - pad_r - len("margin-right", TRUE), 0)
 
     # A block background is the one box property no MicroTeX command can
     # give: every one of them hugs its content, and a code block's fill
@@ -742,7 +744,8 @@
       dims <- tryCatch(.image_dims(blk$path), error = function(e) NULL)
       g <- if (is.null(dims)) NULL else {
         # Scaled down to fit the column, never blown up past natural size.
-        iw <- min(dims$w, avail)
+        # No column left (an indent used it up) means no limit, as for text.
+        iw <- if (avail > 0) min(dims$w, avail) else dims$w
         ih <- iw * dims$h / dims$w
         gg <- .image_grob(blk$path, iw, ih,
                           x = grid::unit(indent_blk, "bigpts"),
@@ -1028,6 +1031,7 @@
     .md_trbl(x$margin, "margin")
   padding <- if (is.null(x$padding)) chrome$padding %||% zero else
     .md_trbl(x$padding, "padding")
+  padding <- pmax(padding, 0)
 
   if (is.null(x$width)) {
     # Natural width. Lay out once at a width nothing realistic wraps at,

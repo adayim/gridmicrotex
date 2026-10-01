@@ -504,6 +504,9 @@ test_that("a style attribute is read for colour, size and family", {
   # The name is spliced into LaTeX, so it must not carry parser syntax.
   expect_equal(.md_to_tex('<span style="font-family:a}b\\c">x</span>'),
                "\\gmfontfamily{abc}{x}")
+  # A `%` would comment out the closing brace.
+  expect_equal(.md_to_tex('<span style="font-family:Foo%bar">x</span>'),
+               "\\gmfontfamily{Foobar}{x}")
 })
 
 test_that("styles nest, compose, and survive a rule", {
