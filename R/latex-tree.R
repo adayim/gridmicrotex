@@ -25,15 +25,20 @@ latex_tree <- function(tex, math_font = "", max_width = 0,
                        tex_style = "",
                        input_mode = c("mixed", "math", "document"),
                        render_mode = c("typeface", "path"),
+                       justify = FALSE,
+                       line_break = c("greedy", "optimal"),
                        gp = grid::gpar()) {
-  .apply_opts("math_font", "render_mode", "tex_style", "input_mode")
+  .apply_opts("math_font", "render_mode", "tex_style", "input_mode",
+              "justify", "line_break")
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
+  line_break <- match.arg(line_break)
+  .check_justify(justify)
 
   parsed <- .parse_from_gp(
     tex = tex, gp = gp, math_font = math_font, max_width = max_width,
     tex_style = tex_style, render_mode = render_mode,
-    input_mode = input_mode
+    input_mode = input_mode, justify = justify, line_break = line_break
   )
   layout <- parsed$layout
 

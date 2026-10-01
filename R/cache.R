@@ -56,10 +56,11 @@
 #'   latex_cache_clear()
 #' }
 latex_cache_limit <- function(n = 512L) {
-  n <- as.integer(n)
-  if (is.na(n) || n < 0L) {
+  if (!is.numeric(n) || length(n) != 1L || is.na(n) || n < 0 ||
+      n != trunc(n) || n > .Machine$integer.max) {
     stop("n must be a non-negative integer.", call. = FALSE)
   }
+  n <- as.integer(n)
   old <- .latex_cache$max_size
   .latex_cache$max_size <- n
   if (n == 0L) latex_cache_clear()

@@ -11,6 +11,8 @@ latex_tree(
   tex_style = "",
   input_mode = c("mixed", "math", "document"),
   render_mode = c("typeface", "path"),
+  justify = FALSE,
+  line_break = c("greedy", "optimal"),
   gp = grid::gpar()
 )
 }
@@ -42,6 +44,13 @@ can be selected in PDF and SVG output. It needs a device such as
 ragg, svglite or \code{\link[grDevices:cairo]{grDevices::cairo_pdf()}}, and falls back to
 \code{"path"} on others, such as \code{pdf()}. \code{"path"} draws glyphs as
 outlines, which works on every device.}
+
+\item{justify}{If \code{TRUE}, wrapped lines are stretched to fill
+\code{max_width}, except the last. Needs \code{max_width}.}
+
+\item{line_break}{\code{"greedy"} (default) fills one line at a time.
+\code{"optimal"} chooses the breaks for the whole paragraph. Needs
+\code{max_width}.}
 
 \item{gp}{Graphical parameters from \code{\link[grid:gpar]{grid::gpar()}}: \code{col},
 \code{fontfamily}, \code{fontsize}, \code{cex} and \code{lineheight}. See Details.}

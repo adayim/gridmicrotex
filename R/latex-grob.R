@@ -320,8 +320,15 @@ grobMark <- function(grob, name) {
   bbright  = 1
 )
 
+.single_just <- function(x, arg) {
+  if (length(x) != 1L || !is.finite(x)) {
+    stop(arg, " must be a numeric or a single string.", call. = FALSE)
+  }
+  x
+}
+
 .resolve_hjust <- function(hjust) {
-  if (is.numeric(hjust)) return(hjust)
+  if (is.numeric(hjust)) return(.single_just(hjust, "hjust"))
   if (!is.character(hjust) || length(hjust) != 1L) {
     stop("hjust must be a numeric or a single string.", call. = FALSE)
   }
@@ -337,7 +344,7 @@ grobMark <- function(grob, name) {
 }
 
 .resolve_vjust <- function(vjust, bbox_bl_bp, bbox_h) {
-  if (is.numeric(vjust)) return(vjust)
+  if (is.numeric(vjust)) return(.single_just(vjust, "vjust"))
   if (!is.character(vjust) || length(vjust) != 1L) {
     stop("vjust must be a numeric or a single string.", call. = FALSE)
   }
@@ -371,7 +378,10 @@ grobMark <- function(grob, name) {
   .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
   input_mode <- match.arg(input_mode, c("math", "mixed", "document"))
-  if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
+  if (!is.numeric(max_width) || length(max_width) != 1L || is.na(max_width) ||
+      max_width < 0) {
+    stop("max_width must be a single non-negative number.", call. = FALSE)
+  }
 
   # Font size is needed before anything else now, because `em`/`ex` in an
   # \includegraphics option resolve against it.
