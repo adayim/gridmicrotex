@@ -406,6 +406,42 @@ grid.newpage()
 grid.latex(r"($x^{2} + y_{i}$)", debug = TRUE)
 ```
 
+## Diagrams
+
+tikz-cd's `tikzcd` and amscd's `CD` draw commutative diagrams: objects in
+a grid joined by arrows. An arrow is written in the cell it leaves, with
+the direction it goes (`r`, `d`, `dr`, `rr`, ...), a label in quotes (a
+prime puts it on the other side), and a style:
+
+```{r tikzcd, fig.height = 1.6, fig.width = 2.6, out.width = "40%"}
+sq <- r"(\begin{tikzcd}
+A \arrow[r, "f"] \arrow[d, "g"'] \arrow[dr, dashed] & B \arrow[d, "h"] \\
+C \arrow[r, hook, "k"'] & D
+\end{tikzcd})"
+grid.newpage()
+grid.latex(sq, x = 0.5, y = 0.5, gp = gpar(fontsize = 14))
+```
+
+Styles include `hook`, `tail`, `two heads`, `mapsto`, `dashed`, `dotted`,
+`Rightarrow`, `equal`, `bend left`, `shift right` and `phantom`; labels take
+`description`, `near start` and `near end`; and `row sep` and `column sep`
+set the spacing. `CD` writes its arrows between the objects instead:
+
+```{r cd, fig.height = 1.6, fig.width = 5.2, out.width = "70%"}
+cd <- r"(\begin{CD}
+A @>f>> B \\
+@VgVV @VVhV \\
+C @>>k> D
+\end{CD})"
+bent <- r"(\begin{tikzcd}[column sep=large]
+A \arrow[r, "f", bend left] \arrow[r, "g"', bend right]
+  & B \arrow[r, two heads, mapsto] & C
+\end{tikzcd})"
+grid.newpage()
+grid.latex(cd, x = 0.2, y = 0.5, gp = gpar(fontsize = 14))
+grid.latex(bent, x = 0.68, y = 0.5, gp = gpar(fontsize = 14))
+```
+
 ## Pasting LaTeX
 
 Tables from `knitr::kable(format = "latex")`, kableExtra, `xtable`, gt
@@ -467,6 +503,6 @@ grid.latex(tt, input_mode = "document", max_width = 4 * 72,
 ## Not supported
 
 - Pages: `\pageref` draws `??` and `\cite` draws `[?]`.
-- Automatic hyphenation and TikZ.
+- Automatic hyphenation, and TikZ beyond `tikz-cd` diagrams.
 - `\usepackage` loads nothing; every supported command is built in.
 - A formula between two right-to-left words is not reordered.
