@@ -1,3 +1,9 @@
+# gridmicrotex (development version)
+
+- New math: `dcases`, `subarray`, `\shortintertext`, `\cancelto`, `\DeclarePairedDelimiter`, `\mkern`, `\mskip`, `\mspace` and `\hskip`. A column's `>{\displaystyle}` (or `\textstyle`, ...) now sets its cells in that style.
+- `\cancel` and `\bcancel` were drawn the wrong way round.
+
+
 # gridmicrotex 0.2.0
 
 - LaTeX is read by a new, faster parser that follows TeX's rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write `\LaTeX{} is`), and `_`, `^`, `#` and `&` outside math warn.
