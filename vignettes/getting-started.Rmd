@@ -434,8 +434,7 @@ grid.latex(snippet, gp = gpar(fontsize = 11))
 
 ## Not supported
 
-- Pages, and numbering across a document: `\ref` draws `??`, `\cite`
-  draws `[?]`, and equations are not numbered.
+- Pages: `\pageref` draws `??` and `\cite` draws `[?]`.
 - Automatic hyphenation, TikZ, theorem environments, `\verb`, small caps
   and the `description` list.
 - `\bfseries`, `\itshape` and similar switches. Use `\textbf{}`,

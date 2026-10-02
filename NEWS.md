@@ -1,6 +1,7 @@
 # gridmicrotex (development version)
 
 - New math: `dcases`, `subarray`, `\shortintertext`, `\cancelto`, `\DeclarePairedDelimiter`, `\mkern`, `\mskip`, `\mspace` and `\hskip`. A column's `>{\displaystyle}` (or `\textstyle`, ...) now sets its cells in that style.
+- Equations in `equation`, `align`, `gather`, `multline`, `flalign`, `alignat` and `eqnarray` are numbered at the right margin, as in LaTeX, in labels and markdown too: write `align*`, or `\notag`, to leave one out. `\tag`, `\tag*`, `\label`, `\ref`, `\eqref` and `\setcounter{equation}{n}` work, and a markdown box counts across its blocks.
 - `\cancel` and `\bcancel` were drawn the wrong way round.
 
 

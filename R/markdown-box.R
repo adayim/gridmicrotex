@@ -412,6 +412,50 @@
   .md_blocks(xml2::xml_children(parsed$doc), parsed$spans, base, style, ctx)
 }
 
+# Equation numbers across blocks. Each block is parsed on its own (see
+# .numbering in cache.R), so the count and the labels are passed on from one
+# block to the next: the blocks are scanned once, in the order they are laid
+# out, for where each starts counting and for every label there is, and each
+# block that has anything to do with numbers keeps its own start and the
+# whole table of labels, which a later block's label may add to.
+.NUMBERED_TEX <- paste0("\\\\(begin\\{(equation|align|alignat|flalign|gather|multline|",
+                        "eqnarray)\\}|tag|label|ref|eqref|setcounter)")
+
+.md_number_blocks <- function(blocks) {
+  state <- list(start = 0L, labels = character(0))
+  numbered <- function(b) {
+    b$type %in% c("paragraph", "mathblock", "heading", "table") &&
+      is.character(b$tex) && nzchar(b$tex) && grepl(.NUMBERED_TEX, b$tex)
+  }
+  # Every block of the tree, in order, replaced by what `f` makes of it.
+  walk <- function(bl, f) {
+    for (i in seq_along(bl)) {
+      b <- bl[[i]]
+      if (!is.null(b$blocks)) {
+        bl[[i]]$blocks <- walk(b$blocks, f)
+      } else if (identical(b$type, "list")) {
+        bl[[i]]$items <- lapply(b$items, walk, f = f)
+      } else if (numbered(b)) {
+        bl[[i]] <- f(b)
+      }
+    }
+    bl
+  }
+  found <- FALSE
+  blocks <- walk(blocks, function(b) {
+    found <<- TRUE
+    b$numbering <- list(start = state$start)
+    state <<- .numbering_scan(.md_document(b$tex), state)
+    b
+  })
+  if (!found) return(blocks)
+  labels <- state$labels
+  walk(blocks, function(b) {
+    b$numbering$labels <- labels
+    b
+  })
+}
+
 # Does this markdown need block layout?
 #
 # Anything that is not a single plain paragraph does: a heading, a list, a
@@ -626,8 +670,14 @@
   first_bl <- NA_real_
   note_bl <- function(v) if (is.na(first_bl)) first_bl <<- v
 
+  # Each block parses with its own place in the document's equation count
+  # (.md_number_blocks()); a container's blocks do the same in turn.
+  outer_numbering <- .numbering$ctx
+  on.exit(.numbering$ctx <- outer_numbering, add = TRUE)
+
   for (i in seq_along(blocks)) {
     blk <- blocks[[i]]
+    .numbering$ctx <- blk$numbering
     # A class matches the element carrying it and nothing else, as in
     # CSS: what reaches the blocks inside a styled <div> reaches them by
     # inheritance, not by matching the div's selector again.
@@ -1275,6 +1325,7 @@ markdown_box_grob <- function(md,
   # <span class> compiles to LaTeX commands during the parse.
   blocks <- .md_parse_blocks(md, .md_base_size(gp), style,
                              .md_cascade(style, "body"))
+  blocks <- .md_number_blocks(blocks)
 
   # A relative width can be resolved by a viewport built here; a natural
   # width cannot, because it is not known until the blocks are measured at
