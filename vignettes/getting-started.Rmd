@@ -501,6 +501,13 @@ grid.latex(tt, input_mode = "document", max_width = 4 * 72,
            x = 0.05, y = 0.95, hjust = 0, vjust = 1, gp = gpar(fontsize = 11))
 ```
 
+## What is supported
+
+A list of every function checked, in KaTeX's order, with how each is drawn, is
+on the package website as `supported-functions.pdf`. `source(system.file(
+"supported/build.R", package = "gridmicrotex"))` and `build_supported()` write
+it, and its LaTeX file, wherever you ask.
+
 ## Not supported
 
 - Pages: `\pageref` draws `??` and `\cite` draws `[?]`.

@@ -5,6 +5,10 @@
 - Tables from `kable()`, kableExtra, xtable, gt and tinytable are read without warnings: `\addlinespace`, `\fontsize`, `\begingroup`, `tabularx` and `tabular*` with their widths, `longtable` with its head and foot, `\makecell`, `\hhline`, `\bfseries` and its kin, `>{}` and `<{}` in a column spec, `\caption*`, and tabularray's `tblr` (rules, spans, colours, fonts and alignments).
 - New text items: `\verb` and `verbatim`, `description` lists (and `\item[label]` in any list), `\textsc` and `\scshape`, `\newtheorem` with `proof`. A font switch such as `\itshape` now lasts across a paragraph break in a document.
 - New commutative diagrams: tikz-cd's `tikzcd` (labels, `hook`, `two heads`, `dashed`, `bend`, `shift`, `Rightarrow`, `description`, ...) and amscd's `CD`.
+- New KaTeX commands: the arrow and set aliases (`\rarr`, `\Reals`, `\R`, `\Bbb`, ...), `\argmax`, `\bra`/`\ket`/`\set`, the text symbols and letters (`\textbar`, `\AE`, `\ss`, ...), `\bigm`, and the colon relations. A document's own definition of a name like `\R` or `\set` replaces ours.
+- New `\hdashline` and `:` in a column spec, for dashed rules in arrays and tables.
+- A subset of siunitx: `\num`, `\si`, `\SI`, `\qty`, `\ang`, ranges, lists and `\DeclareSIUnit`.
+- A list of what is drawn, `inst/supported` (built by `build_supported()`; the PDF is on the website).
 - `\cancel` and `\bcancel` were drawn the wrong way round.
 - kableExtra's `scale_down` drew nothing, and a colour defined with capitals in its name was never found.
 

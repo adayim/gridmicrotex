@@ -46,7 +46,7 @@ test_that("\\verb sets its text as written, in the typewriter face", {
   expect_identical(warns(tex), character(0))
   r <- text_records(tex)
   v <- r[is_mono(r), ]
-  expect_identical(paste(v$text, collapse = ""), ns(r"(a_b & 50% \x{y})"))
+  expect_identical(paste(v$text, collapse = ""), r"(a_b & 50% \x{y})")
   expect_false(any(is_mono(r[!r$text %in% v$text, ])))
   # Any character can delimit it, a brace included.
   expect_identical(lines_of(r"(\verb+a|b+)"), "a|b")
@@ -76,20 +76,18 @@ test_that("verbatim keeps every line, its indentation and its specials", {
   tex <- "\\begin{verbatim}\nx <- 1 # 50%\n  f(x_1) & {y}\n\\end{verbatim}\nafter"
   expect_identical(warns(tex), character(0))
   ls <- lines_of(tex)
-  expect_identical(ls[1:2], ns(c("x <- 1 # 50%", "f(x_1) & {y}")))
+  # Each line is one run, its indentation in it.
+  expect_identical(ls[1:2], c("x <- 1 # 50%", "  f(x_1) & {y}"))
   expect_identical(ls[3], "after")
   r <- text_records(tex)
   expect_true(all(is_mono(r[r$text != "after", ])))
-  # The second line starts to the right of the first: its two spaces.
-  first <- min(r$x[round(r$y) == min(round(r$y))])
-  second <- min(r$x[round(r$y) == sort(unique(round(r$y)))[2]])
-  expect_gt(second, first)
+  expect_equal(sum(r$text != "after"), 2L)
 })
 
 test_that("verbatim reads a backslash command as text and ends at its own \\end", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   tex <- "\\begin{verbatim}\n\\begin{itemize} \\end{itemize}\n\\end{verbatim}"
-  expect_identical(lines_of(tex), ns(r"(\begin{itemize} \end{itemize})"))
+  expect_identical(lines_of(tex), r"(\begin{itemize} \end{itemize})")
   expect_identical(warns(tex), character(0))
 })
 

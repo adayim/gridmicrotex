@@ -141,6 +141,8 @@ private:
   color _color;
   // Draws nothing, and leaves the thickness as space (\addlinespace).
   bool _blank = false;
+  // Dashes, not a line (\hdashline).
+  bool _dashed = false;
 
 public:
   HlineAtom() noexcept
@@ -150,6 +152,8 @@ public:
   }
 
   inline void setWidth(float w) { _width = w; }
+
+  inline void setDashed(bool d) { _dashed = d; }
 
   inline void setShift(float s) { _shift = s; }
 

@@ -25,6 +25,9 @@ navbar:
       - text: "ggplot2"
       - text: Using LaTeX Math in ggplot2
         href: articles/ggplot2-integration.html
+      - text: "Reference"
+      - text: What is supported (PDF)
+        href: supported-functions.pdf
 
 reference:
   - title: Core rendering
