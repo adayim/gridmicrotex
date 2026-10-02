@@ -76,12 +76,36 @@ As in LaTeX:
   line. The last four are numbered at the right margin, a row each
   (`multline`: one), unless starred or marked `\notag`; `\tag{x}` sets a
   number, and `\label` with `\ref` or `\eqref` refer to it.
-- **Lists and tables.** `itemize`, `enumerate` and `tabular` hold text,
-  with math between `$...$`.
+- **Lists and tables.** `itemize`, `enumerate`, `description` and
+  `tabular` hold text, with math between `$...$`.
+- **Theorems.** `\newtheorem` declares them, with the shared and
+  `[section]` counters and a starred, unnumbered form; `proof` ends with
+  a box.
 - **Text.** `--` and `---` are dashes, quotes are curly, and `~` is a
   non-breaking space. `\centering` and `center` centre lines.
+  `\textsc` sets small capitals, and `\verb` and `verbatim` set code
+  as it is typed.
 
 Problems produce one warning, listing each with its line and column.
+
+## A theorem and its proof
+
+```{r theorem, fig.width = 6, fig.height = 1.9, out.width = "90%"}
+thm <- r"(\newtheorem{thm}{Theorem}
+\begin{thm}[Gauss--Markov]\label{gm}
+With uncorrelated errors of equal variance, least squares has the least
+variance among the linear unbiased estimators.
+\end{thm}
+\begin{proof}
+Write any other such estimator as least squares plus a correction, and
+show that the correction can only add variance.
+\end{proof}
+Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.)"
+grid.newpage()
+grid.latex(thm, input_mode = "document", max_width = 5.6 * 72,
+           x = 0.03, y = 0.97, hjust = 0, vjust = 1,
+           gp = gpar(fontsize = 11))
+```
 
 ## Justified text
 

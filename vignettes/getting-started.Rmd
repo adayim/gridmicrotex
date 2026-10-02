@@ -467,7 +467,6 @@ grid.latex(tt, input_mode = "document", max_width = 4 * 72,
 ## Not supported
 
 - Pages: `\pageref` draws `??` and `\cite` draws `[?]`.
-- Automatic hyphenation, TikZ, theorem environments, `\verb`, small caps
-  and the `description` list.
+- Automatic hyphenation and TikZ.
 - `\usepackage` loads nothing; every supported command is built in.
 - A formula between two right-to-left words is not reordered.
