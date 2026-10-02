@@ -214,6 +214,9 @@ public:
    */
   static color getColor(std::string name);
 
+  /** Whether `name` is a colour that is defined: one of the names, not a guess. */
+  static bool hasName(std::string name);
+
   /** Define a color with given name */
   static void defineColor(const std::string& name, color c);
 

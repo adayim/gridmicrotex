@@ -318,6 +318,109 @@ test_that("shorten takes a length off the start or the end of an arrow", {
   expect_match(warns(tikz("A \\arrow[r, shorten <=wide] & B")), "not a size", all = FALSE)
 })
 
+test_that("an arrow can have its own colour, its labels too", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (opt in c("red", "color=red", "draw=red")) {
+    r <- rec(tikz(paste0("A \\arrow[r, \"f\", ", opt, "] \\arrow[d] & B \\\\ C & D")))
+    l <- r[r$type == "line", ]
+    red <- l[toupper(l$color) == "#FF0000", ]
+    black <- l[toupper(l$color) == "#000000", ]
+    expect_gt(nrow(red), 8L)
+    expect_gt(nrow(black), 8L)
+    # The red ones are the horizontal arrow's: none of them goes downward.
+    expect_true(all(abs(red$y - red$y2) < 4))
+    expect_true(any(toupper(r$color[r$type == "glyph"]) == "#FF0000"))
+  }
+  expect_match(warns(tikz("A \\arrow[r, color=wibble] & B")), "colour", all = FALSE)
+})
+
+test_that("from and to name cells outright or by a direction from the cell", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  key <- function(tex) {
+    l <- rec(tex)
+    l <- l[l$type == "line", c("x", "y", "x2", "y2")]
+    round(l[order(l$x, l$y, l$x2), ], 3)
+  }
+  grid <- "A & B \\\\ C & D"
+  expect_identical(key(tikz("A & B \\arrow[dl] \\\\ C & D")),
+                   key(tikz("A & B \\\\ C & D \\arrow[from=1-2, to=2-1]")))
+  expect_identical(key(tikz("A \\arrow[from=r, to=d] & B \\\\ C & D")),
+                   key(tikz("A & B \\arrow[dl] \\\\ C & D")))
+  expect_match(warns(tikz("A \\arrow[to=elsewhere] & B")), "row-column", all = FALSE)
+})
+
+test_that("cramped takes room out of a diagram", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  size <- function(opts) {
+    d <- latex_dims(tikz("A \\arrow[r] \\arrow[d] & B \\\\ C & D", opts), input_mode = "math",
+                    gp = grid::gpar(fontsize = 10))
+    c(w = grid::convertWidth(d$width, "bigpts", valueOnly = TRUE),
+      h = grid::convertHeight(d$height, "bigpts", valueOnly = TRUE))
+  }
+  expect_lt(size("[cramped]")["w"], size("")["w"])
+  expect_lt(size("[cramped]")["h"], size("")["h"])
+})
+
+test_that("an arrow that crosses over cuts a gap in the ones before it", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  pieces <- function(second) {
+    r <- rec(tikz(paste0("A \\arrow[dr] & B \\\\ C ", second, " & D"), "[row sep=large, column sep=large]"))
+    l <- r[r$type == "line", ]
+    # The first arrow's shaft: the longest pieces going down and to the right.
+    l <- l[l$x2 > l$x & l$y2 > l$y & len(l) > 6, ]
+    nrow(l)
+  }
+  expect_equal(pieces(""), 1L)
+  expect_equal(pieces("\\arrow[ur]"), 1L)
+  expect_equal(pieces("\\arrow[ur, crossing over]"), 2L)
+})
+
+test_that("squiggly makes a zigzag shaft, a harpoon has one barb, mapsfrom a bar at the end", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  zig <- rec(tikz("A \\arrow[r, squiggly] & B", "[column sep=large]"))
+  z <- zig[zig$type == "line", ]
+  expect_gt(length(unique(round(z$y, 2))), 5L)
+  small <- function(opt) {
+    r <- rec(tikz(paste0("A \\arrow[r, ", opt, "] & B")))
+    sum(len(r[r$type == "line", ]) < 4)
+  }
+  expect_equal(small("harpoon"), small("") / 2)
+  expect_equal(small("harpoon'"), small("") / 2)
+  m <- rec(tikz("A \\arrow[r, mapsfrom] & B"))
+  vert <- m[m$type == "line" & abs(m$x - m$x2) < 1e-3, ]
+  expect_equal(nrow(vert), 1L)
+  expect_equal(vert$x, max(shafts(m)$x2), tolerance = 1e-3)
+})
+
+test_that("a phantom arrow's label is centred on where its path would be", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- rec(tikz("A \\arrow[r, phantom, \"\\lrcorner\"] & B"))
+  expect_equal(sum(r$type == "line"), 0L)
+  g <- glyphs(r)
+  expect_equal(nrow(g), 3L)
+  mid <- g[g$x > min(g$x) + 5 & g$x < max(g$x) - 5, ]
+  plain <- rec(tikz("A \\arrow[r] & B"))
+  s <- shafts(plain)
+  # Half the label's width left of the middle, give or take.
+  expect_lt(abs(mid$x - (s$x + s$x2) / 2), 6)
+})
+
+test_that("arrows= and labels= are options of every arrow and label", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  dashes <- function(opts) {
+    r <- rec(tikz("A \\arrow[r] & B", opts))
+    sum(r$type == "line" & abs(r$y - r$y2) < 1e-3 & len(r) > 2 & len(r) < 8)
+  }
+  expect_gt(dashes("[arrows=dashed]"), dashes(""))
+  expect_equal(dashes("[arrows={dashed}]"), dashes("[arrows=dashed]"))
+  below <- rec(tikz("A \\arrow[r, \"f\"] & B", "[labels=swap]"))
+  gb <- glyphs(below)
+  expect_gt(gb[gb$x > min(gb$x) + 5 & gb$x < max(gb$x) - 5, ]$y, shafts(below)$y)
+  both <- rec(tikz("A \\arrow[r, \"f\"] & B", "[diagrams={labels=swap}]"))
+  gd <- glyphs(both)
+  expect_gt(gd[gd$x > min(gd$x) + 5 & gd$x < max(gd$x) - 5, ]$y, shafts(both)$y)
+})
+
 cd <- function(body) paste0("\\begin{CD}\n", body, "\n\\end{CD}")
 
 test_that("CD sets objects in rows, with arrows of at least 2.5pc between them", {

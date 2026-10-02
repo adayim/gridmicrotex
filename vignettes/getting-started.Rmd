@@ -423,7 +423,8 @@ grid.latex(sq, x = 0.5, y = 0.5, gp = gpar(fontsize = 14))
 ```
 
 Styles include `hook`, `tail`, `two heads`, `mapsto`, `dashed`, `dotted`,
-`Rightarrow`, `equal`, `bend left`, `shift right` and `phantom`; labels take
+`Rightarrow`, `equal`, `harpoon`, `squiggly`, `bend left`, `shift right`,
+`crossing over`, `phantom` and a colour name; labels take
 `description`, `near start` and `near end`; and `row sep` and `column sep`
 set the spacing. `CD` writes its arrows between the objects instead:
 
