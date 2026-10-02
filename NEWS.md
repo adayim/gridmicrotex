@@ -2,7 +2,9 @@
 
 - New math: `dcases`, `subarray`, `\shortintertext`, `\cancelto`, `\DeclarePairedDelimiter`, `\mkern`, `\mskip`, `\mspace` and `\hskip`. A column's `>{\displaystyle}` (or `\textstyle`, ...) now sets its cells in that style.
 - Equations in `equation`, `align`, `gather`, `multline`, `flalign`, `alignat` and `eqnarray` are numbered at the right margin, as in LaTeX, in labels and markdown too: write `align*`, or `\notag`, to leave one out. `\tag`, `\tag*`, `\label`, `\ref`, `\eqref` and `\setcounter{equation}{n}` work, and a markdown box counts across its blocks.
+- Tables from `kable()`, kableExtra, xtable, gt and tinytable are read without warnings: `\addlinespace`, `\fontsize`, `\begingroup`, `tabularx` and `tabular*` with their widths, `longtable` with its head and foot, `\makecell`, `\hhline`, `\bfseries` and its kin, `>{}` and `<{}` in a column spec, `\caption*`, and tabularray's `tblr` (rules, spans, colours, fonts and alignments).
 - `\cancel` and `\bcancel` were drawn the wrong way round.
+- kableExtra's `scale_down` drew nothing, and a colour defined with capitals in its name was never found.
 
 
 # gridmicrotex 0.2.0
