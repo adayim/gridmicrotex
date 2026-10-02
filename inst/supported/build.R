@@ -100,9 +100,8 @@ build_supported <- function(dir = ".", pdf = TRUE, name = "supported-functions",
   intro <- c(
     "\\begin{center}\\Large\\textbf{What gridmicrotex draws}\\end{center}",
     paste0("Each row is a LaTeX input and what the package makes of it. The examples are those of ",
-           "KaTeX's list of supported functions that the package draws, then what KaTeX does not ",
-           "have; the last page lists what is not supported. A row here is a test: it must be drawn ",
-           "with no warning."),
+           "KaTeX's list of supported functions, then what KaTeX does not have. A row here is a ",
+           "test: it must be drawn with no warning."),
     "")
   cur <- intro
   used <- 70

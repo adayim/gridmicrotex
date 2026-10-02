@@ -4,7 +4,7 @@
 \usepackage{amsmath,amssymb,amscd,tikz-cd}
 \begin{document}
 \begin{center}\Large\textbf{What gridmicrotex draws}\end{center}
-Each row is a LaTeX input and what the package makes of it. The examples are those of KaTeX's list of supported functions that the package draws, then what KaTeX does not have; the last page lists what is not supported. A row here is a test: it must be drawn with no warning.
+Each row is a LaTeX input and what the package makes of it. The examples are those of KaTeX's list of supported functions, then what KaTeX does not have. A row here is a test: it must be drawn with no warning.
 
 \section*{Accents}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
@@ -71,8 +71,24 @@ $} \\
 {\small\verb|\text{\u{a}}|} & {\large $\text{\u{a}}
 $} & {\small\verb|\text{\r{a}}|} & {\large $\text{\r{a}}
 $} \\
+{\small\verb|\text{\H{o}}|} & {\large $\text{\H{o}}
+$} & {\small\verb|\widecheck{ac}|} & {\large $\widecheck{ac}
+$} \\
+{\small\verb|\overgroup{AB}|} & {\large $\overgroup{AB}
+$} & {\small\verb|\undergroup{AB}|} & {\large $\undergroup{AB}
+$} \\
+{\small\verb|\overlinesegment{AB}|} & {\large $\overlinesegment{AB}
+$} & {\small\verb|\underlinesegment{AB}|} & {\large $\underlinesegment{AB}
+$} \\
+{\small\verb|\Overrightarrow{AB}|} & {\large $\Overrightarrow{AB}
+$} & {\small\verb|\overleftharpoon{ac}|} & {\large $\overleftharpoon{ac}
+$} \\
+{\small\verb|\overrightharpoon{ac}|} & {\large $\overrightharpoon{ac}
+$} & & \\
 \end{tabular}
 
+\newpage
+\subsection*{Accents (continued)}
 \section*{Delimiters}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|(~)|} & {\large $(~)
@@ -111,11 +127,6 @@ $} \\
 {\small\verb|\Updownarrow|} & {\large $\Updownarrow
 $} & {\small\verb|\lvert~\rvert|} & {\large $\lvert~\rvert
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Delimiters (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\lVert~\rVert|} & {\large $\lVert~\rVert
 $} & {\small\verb|\backslash|} & {\large $\backslash
 $} \\
@@ -146,6 +157,11 @@ $} \\[4pt]
 $} \\[4pt]
 {\small\verb|\begin{Vmatrix} a & b \\ c & d \end{Vmatrix}|} \\ {\large $\begin{Vmatrix} a & b \\ c & d \end{Vmatrix}
 $} \\[4pt]
+\end{tabular}
+
+\newpage
+\subsection*{Environments (continued)}
+\begin{tabular}{@{}l@{}}
 {\small\verb|\begin{Bmatrix} a & b \\ c & d \end{Bmatrix}|} \\ {\large $\begin{Bmatrix} a & b \\ c & d \end{Bmatrix}
 $} \\[4pt]
 {\small\verb|\def\arraystretch{1.5}\begin{array}{c:c:c} a & b & c \\ \hline d|} \\ {\small\verb|& e & f \\ \hdashline g & h & i \end{array}|} \\ {\large $\def\arraystretch{1.5}\begin{array}{c:c:c} a & b & c \\ \hline d & e & f \\ \hdashline g & h & i \end{array}
@@ -156,11 +172,6 @@ $} \\[4pt]
 $} \\[4pt]
 {\small\verb|\sum_{\begin{subarray}{l} i\in\Lambda\\ 0<j<n\end{subarray}}|} \\ {\large $\sum_{\begin{subarray}{l} i\in\Lambda\\ 0<j<n\end{subarray}}
 $} \\[4pt]
-\end{tabular}
-
-\newpage
-\subsection*{Environments (continued)}
-\begin{tabular}{@{}l@{}}
 {\small\verb|\begin{equation}\begin{split}a|} \\ {\small\verb|&=b+c\\&=e+f\end{split}\end{equation}|} \\ {\large $\begin{equation}\begin{split}a &=b+c\\&=e+f\end{split}\end{equation}
 $} \\[4pt]
 {\small\verb|\begin{align} a&=b+c \\ d+e&=f \end{align}|} \\ {\large $\begin{align} a&=b+c \\ d+e&=f \end{align}
@@ -173,6 +184,8 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
+\newpage
+\subsection*{Environments (continued)}
 \section*{HTML}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\url{https://katex.org/}|} & {\large $\url{https://katex.org/}
@@ -237,11 +250,6 @@ $} \\
 {\small\verb|\varXi|} & {\large $\varXi
 $} & {\small\verb|\varPi|} & {\large $\varPi
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Letters and Unicode (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\varSigma|} & {\large $\varSigma
 $} & {\small\verb|\varUpsilon|} & {\large $\varUpsilon
 $} \\
@@ -287,6 +295,11 @@ $} \\
 {\small\verb|\omega|} & {\large $\omega
 $} & {\small\verb|\varepsilon|} & {\large $\varepsilon
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Letters and Unicode (continued)}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\varkappa|} & {\large $\varkappa
 $} & {\small\verb|\vartheta|} & {\large $\vartheta
 $} \\
@@ -356,11 +369,6 @@ $} \\
 {\small\verb|\real|} & {\large $\real
 $} & {\small\verb|\text{\AE}|} & {\large $\text{\AE}
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Letters and Unicode (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\eth|} & {\large $\eth
 $} & {\small\verb|\hslash|} & {\large $\hslash
 $} \\
@@ -386,11 +394,22 @@ $} \\
 {\small\verb|\tag{hi} x+y^{2x}|} & {\large $\tag{hi} x+y^{2x}
 $} & {\small\verb|\tag*{hi} x+y^{2x}|} & {\large $\tag*{hi} x+y^{2x}
 $} \\
+{\small\verb|\phase{30^\circ}|} & {\large $\phase{30^\circ}
+$} & {\small\verb|\angl{n}|} & {\large $\angl{n}
+$} \\
+{\small\verb|\angln|} & {\large $\angln
+$} & {\small\verb|\text{\textcircled{a}}|} & {\large $\text{\textcircled{a}}
+$} \\
 \end{tabular}
 
 \begin{tabular}{@{}l@{}}
 {\small\verb|\overbrace{a+b+c}^{\text{note}}|} \\ {\large $\overbrace{a+b+c}^{\text{note}}
 $} \\[4pt]
+\end{tabular}
+
+\newpage
+\subsection*{Layout / Annotation (continued)}
+\begin{tabular}{@{}l@{}}
 {\small\verb|\underbrace{a+b+c}_{\text{note}}|} \\ {\large $\underbrace{a+b+c}_{\text{note}}
 $} \\[4pt]
 {\small\verb|\overbracket{a+b+c}^{\text{note}}|} \\ {\large $\overbracket{a+b+c}^{\text{note}}
@@ -417,7 +436,8 @@ $} \\
 $} & {\small\verb|\underset{!}{=}|} & {\large $\underset{!}{=}
 $} \\
 {\small\verb|\sum_{\substack{0<i<m\\0<j<n}}|} & {\large $\sum_{\substack{0<i<m\\0<j<n}}
-$} & & \\
+$} & {\small\verb|\vcenter{x}|} & {\large $\vcenter{x}
+$} \\
 \end{tabular}
 
 \subsection*{Overlap and Spacing}
@@ -435,8 +455,6 @@ $} \\
 $} \\[4pt]
 \end{tabular}
 
-\newpage
-\subsection*{Layout / Overlap and Spacing (continued)}
 \section*{Logic and Set Theory}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb!\gdef\VERT{|}!} & {\large $\gdef\VERT{|}
@@ -488,14 +506,32 @@ $} \\
 $} & & \\
 \end{tabular}
 
+\newpage
+\subsection*{Logic and Set Theory (continued)}
 \section*{Macros}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\def\foo{x^2} \foo + \foo|} & {\large $\def\foo{x^2} \foo + \foo
-$} & & \\
+$} & {\small\verb|\futurelet\q\mathrm x\q|} & {\large $\futurelet\q\mathrm x\q
+$} \\
+{\small\verb|\def\a{1}\xdef\b{\a 2}\b|} & {\large $\def\a{1}\xdef\b{\a 2}\b
+$} & {\small\verb|\TextOrMath{in text}{in math}|} & {\large $\TextOrMath{in text}{in math}
+$} \\
 \end{tabular}
 
 \begin{tabular}{@{}l@{}}
 {\small\verb|\gdef\foo#1{#1^2} \foo{y} + \foo{y}|} \\ {\large $\gdef\foo#1{#1^2} \foo{y} + \foo{y}
+$} \\[4pt]
+{\small\verb|\def\f#1{[#1]}\def\g{abc}\expandafter\f\g|} \\ {\large $\def\f#1{[#1]}\def\g{abc}\expandafter\f\g
+$} \\[4pt]
+{\small\verb|\def\a{1}\edef\b{\a 2}\def\a{9}\b|} \\ {\large $\def\a{1}\edef\b{\a 2}\def\a{9}\b
+$} \\[4pt]
+{\small\verb|\def\a{1}\edef\b{\noexpand\a 2}\def\a{9}\b|} \\ {\large $\def\a{1}\edef\b{\noexpand\a 2}\def\a{9}\b
+$} \\[4pt]
+{\small\verb|\def\foo{\@ifstar{S}{N}}\foo*\;\foo|} \\ {\large $\def\foo{\@ifstar{S}{N}}\foo*\;\foo
+$} \\[4pt]
+{\small\verb|\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo|} \\ {\large $\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo
+$} \\[4pt]
+{\small\verb|\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}|} \\ {\large $\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}
 $} \\[4pt]
 \end{tabular}
 
@@ -534,8 +570,6 @@ $} & {\small\verb|\bigsqcup|} & {\large $\bigsqcup
 $} \\
 \end{tabular}
 
-\newpage
-\subsection*{Operators / Big Operators (continued)}
 \subsection*{Binary Operators}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|+|} & {\large $+
@@ -559,6 +593,11 @@ $} \\
 {\small\verb|*|} & {\large $*
 $} & {\small\verb|\circ|} & {\large $\circ
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Operators / Binary Operators (continued)}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\leftthreetimes|} & {\large $\leftthreetimes
 $} & {\small\verb|\rightthreetimes|} & {\large $\rightthreetimes
 $} \\
@@ -642,8 +681,6 @@ $} & {\small\verb|\wr|} & {\large $\wr
 $} \\
 \end{tabular}
 
-\newpage
-\subsection*{Operators / Binary Operators (continued)}
 \subsection*{Fractions and Binomials}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\frac{a}{b}|} & {\large $\frac{a}{b}
@@ -669,6 +706,8 @@ $} & {\small\verb|{n\brack k}|} & {\large ${n\brack k}
 $} \\
 \end{tabular}
 
+\newpage
+\subsection*{Operators / Fractions and Binomials (continued)}
 \subsection*{Math Operators}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\arcsin|} & {\large $\arcsin
@@ -754,8 +793,6 @@ $} & {\small\verb|\operatornamewithlimits{f}|} & {\large $\operatornamewithlimit
 $} \\
 \end{tabular}
 
-\newpage
-\subsection*{Operators / Math Operators (continued)}
 \subsection*{Square roots}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\sqrt{x}|} & {\large $\sqrt{x}
@@ -763,6 +800,8 @@ $} & {\small\verb|\sqrt[3]{x}|} & {\large $\sqrt[3]{x}
 $} \\
 \end{tabular}
 
+\newpage
+\subsection*{Operators / Square roots (continued)}
 \section*{Relations}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\stackrel{!}{=}|} & {\large $\stackrel{!}{=}
@@ -870,17 +909,17 @@ $} \\
 {\small\verb|\supseteq|} & {\large $\supseteq
 $} & {\small\verb|\colonapprox|} & {\large $\colonapprox
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Relations (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\ggg|} & {\large $\ggg
 $} & {\small\verb|\prec|} & {\large $\prec
 $} \\
 {\small\verb|\supseteqq|} & {\large $\supseteqq
 $} & {\small\verb|\Colonapprox|} & {\large $\Colonapprox
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Relations (continued)}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\gggtr|} & {\large $\gggtr
 $} & {\small\verb|\precapprox|} & {\large $\precapprox
 $} \\
@@ -989,17 +1028,17 @@ $} \\
 {\small\verb|\subsetneq|} & {\large $\subsetneq
 $} & {\small\verb|\gnsim|} & {\large $\gnsim
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Relations / Negated Relations (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\nleqq|} & {\large $\nleqq
 $} & {\small\verb|\nsucceq|} & {\large $\nsucceq
 $} \\
 {\small\verb|\subsetneqq|} & {\large $\subsetneqq
 $} & {\small\verb|\gvertneqq|} & {\large $\gvertneqq
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Relations / Negated Relations (continued)}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\nleqslant|} & {\large $\nleqslant
 $} & {\small\verb|\nsupseteq|} & {\large $\nsupseteq
 $} \\
@@ -1108,17 +1147,17 @@ $} \\
 {\small\verb|\rightleftarrows|} & {\large $\rightleftarrows
 $} & {\small\verb|\downarrow|} & {\large $\downarrow
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Relations / Arrows (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\Longleftarrow|} & {\large $\Longleftarrow
 $} & {\small\verb|\rightleftharpoons|} & {\large $\rightleftharpoons
 $} \\
 {\small\verb|\Downarrow|} & {\large $\Downarrow
 $} & {\small\verb|\longleftrightarrow|} & {\large $\longleftrightarrow
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Relations / Arrows (continued)}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\rightrightarrows|} & {\large $\rightrightarrows
 $} & {\small\verb|\downdownarrows|} & {\large $\downdownarrows
 $} \\
@@ -1227,15 +1266,21 @@ $} \\
 {\small\verb|\xleftharpoondown{abc}|} & {\large $\xleftharpoondown{abc}
 $} & {\small\verb|\xrightharpoondown{abc}|} & {\large $\xrightharpoondown{abc}
 $} \\
+{\small\verb|\xleftrightharpoons{abc}|} & {\large $\xleftrightharpoons{abc}
+$} & {\small\verb|\xrightleftharpoons{abc}|} & {\large $\xrightleftharpoons{abc}
+$} \\
+{\small\verb|\xmapsto{abc}|} & {\large $\xmapsto{abc}
+$} & {\small\verb|\xlongequal{abc}|} & {\large $\xlongequal{abc}
+$} \\
 \end{tabular}
 
 \newpage
 \subsection*{Relations / Arrows (continued)}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\xleftrightharpoons{abc}|} & {\large $\xleftrightharpoons{abc}
-$} & {\small\verb|\xrightleftharpoons{abc}|} & {\large $\xrightleftharpoons{abc}
+{\small\verb|\xtofrom{abc}|} & {\large $\xtofrom{abc}
+$} & {\small\verb|\xtwoheadrightarrow{abc}|} & {\large $\xtwoheadrightarrow{abc}
 $} \\
-{\small\verb|\xmapsto{abc}|} & {\large $\xmapsto{abc}
+{\small\verb|\xtwoheadleftarrow{abc}|} & {\large $\xtwoheadleftarrow{abc}
 $} & & \\
 \end{tabular}
 
@@ -1337,12 +1382,18 @@ $} \\
 {\small\verb|\lim\limits_x|} & {\large $\lim\limits_x
 $} & {\small\verb|\lim\nolimits_x|} & {\large $\lim\nolimits_x
 $} \\
-{\small\verb|\verb!x^2!|} & {\large $\verb!x^2!
-$} & & \\
 \end{tabular}
 
 \newpage
 \subsection*{Style, Color, Size, and Font (continued)}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+{\small\verb|\verb!x^2!|} & {\large $\verb!x^2!
+$} & {\small\verb|\mathchoice{D}{T}{S}{SS}|} & {\large $\mathchoice{D}{T}{S}{SS}
+$} \\
+{\small\verb|\sixptsize sixptsize|} & {\large $\sixptsize sixptsize
+$} & & \\
+\end{tabular}
+
 \section*{Symbols and Punctuation}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\dots|} & {\large $\dots
@@ -1450,17 +1501,17 @@ $} \\
 {\small\verb|\text{\textless}|} & {\large $\text{\textless}
 $} & {\small\verb|\blacktriangledown|} & {\large $\blacktriangledown
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Symbols and Punctuation (continued)}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\text{\textsterling}|} & {\large $\text{\textsterling}
 $} & {\small\verb|\text{\textgreater}|} & {\large $\text{\textgreater}
 $} \\
 {\small\verb|\blacktriangleleft|} & {\large $\blacktriangleleft
 $} & {\small\verb|\yen|} & {\large $\yen
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Symbols and Punctuation (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\text{\textbar}|} & {\large $\text{\textbar}
 $} & {\small\verb|\blacktriangleright|} & {\large $\blacktriangleright
 $} \\
@@ -1605,6 +1656,11 @@ $} \\
 $} & & \\
 \end{tabular}
 
+\begin{tabular}{@{}l@{}}
+{\small\verb|\text{\textsection\textparagraph\textcopyright\texttrademark\textquotedbl}|} \\ {\large $\text{\textsection\textparagraph\textcopyright\texttrademark\textquotedbl}
+$} \\[4pt]
+\end{tabular}
+
 \subsection*{Numbers and units (a subset of siunitx)}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\num{12345.6789}|} & {\large $\num{12345.6789}
@@ -1628,6 +1684,8 @@ $} & & \\
 $} \\[4pt]
 \end{tabular}
 
+\newpage
+\subsection*{Beyond KaTeX / Numbers and units (a subset of siunitx) (continued)}
 \subsection*{Equations}
 \begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|a = b \tag{1}|} & {\large $a = b \tag{1}
@@ -1643,11 +1701,6 @@ $} \\
 $} \\[4pt]
 {\small\verb|\begin{subarray}{c} i<n \\ j<m \end{subarray}|} \\ {\large $\begin{subarray}{c} i<n \\ j<m \end{subarray}
 $} \\[4pt]
-\end{tabular}
-
-\newpage
-\subsection*{Beyond KaTeX / Equations (continued)}
-\begin{tabular}{@{}l@{}}
 {\small\verb|\sqrt[\leftroot{-2}\uproot{2}n]{x}|} \\ {\large $\sqrt[\leftroot{-2}\uproot{2}n]{x}
 $} \\[4pt]
 \end{tabular}
@@ -1672,15 +1725,31 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
-\section*{Not supported}
-\begin{tabular}{@{}lll@{}}
-\verb|\ce{H2O}| & \verb|\pu{1.5 mol/L}| & \verb|\mathchoice{a}{b}{c}{d}| \\
-\verb|\expandafter| & \verb|\futurelet| & \verb|\noexpand| \\
-\verb|\edef| & \verb|\xdef| & \verb|\phase{30^\circ}| \\
-\verb|\angl{n}| & \verb|\vcenter{x}| & \verb|\text{\H{o}}| \\
-\verb|\text{\textcircled{a}}| & \verb|\xlongequal{abc}| & \verb|\xtofrom{abc}| \\
-\verb|\xtwoheadrightarrow{abc}| & \verb|\overgroup{AB}| & \verb|\undergroup{AB}| \\
-\verb|\overlinesegment{AB}| & \verb|\widecheck{ac}| &  \\
+\newpage
+\subsection*{Beyond KaTeX / Commutative diagrams (continued)}
+\section*{Extensions}
+\subsection*{mhchem}
+\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+{\small\verb|\ce{H2O}|} & {\large $\ce{H2O}
+$} & {\small\verb|\ce{CO2 + C -> 2 CO}|} & {\large $\ce{CO2 + C -> 2 CO}
+$} \\
+{\small\verb|\ce{SO4^2- + Ba^2+ -> BaSO4 v}|} & {\large $\ce{SO4^2- + Ba^2+ -> BaSO4 v}
+$} & {\small\verb|\ce{^{227}_{90}Th+}|} & {\large $\ce{^{227}_{90}Th+}
+$} \\
+{\small\verb|\ce{1/2 H2O}|} & {\large $\ce{1/2 H2O}
+$} & {\small\verb|\ce{Fe^{3+} + 3e- -> Fe(s)}|} & {\large $\ce{Fe^{3+} + 3e- -> Fe(s)}
+$} \\
+{\small\verb|\ce{CuSO4*5H2O}|} & {\large $\ce{CuSO4*5H2O}
+$} & {\small\verb|\pu{1.5 mol/L}|} & {\large $\pu{1.5 mol/L}
+$} \\
+{\small\verb|\pu{123 kJ/mol}|} & {\large $\pu{123 kJ/mol}
+$} & {\small\verb|\pu{1.2e-3 mol L-1}|} & {\large $\pu{1.2e-3 mol L-1}
+$} \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}|} \\ {\large $\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}
+$} \\[4pt]
 \end{tabular}
 
 \end{document}

@@ -503,7 +503,8 @@ grid.latex(tt, input_mode = "document", max_width = 4 * 72,
 
 ## What is supported
 
-A list of every function checked, in KaTeX's order, with how each is drawn, is
+Every function on KaTeX's lists of supported functions is drawn, and more. A list of
+them, in KaTeX's order, with how each is drawn, is
 on the package website as `supported-functions.pdf`. `source(system.file(
 "supported/build.R", package = "gridmicrotex"))` and `build_supported()` write
 it, and its LaTeX file, wherever you ask.

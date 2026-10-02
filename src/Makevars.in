@@ -80,6 +80,7 @@ MICROTEX_SOURCES = \
 	$(MICROTEX_DIR)/front/prelude.cpp \
 	$(MICROTEX_DIR)/front/tblr.cpp \
 	$(MICROTEX_DIR)/front/siunitx.cpp \
+	$(MICROTEX_DIR)/front/mhchem.cpp \
 	$(MICROTEX_DIR)/front/lower.cpp
 
 MICROTEX_OBJECTS = $(MICROTEX_SOURCES:.cpp=.o)

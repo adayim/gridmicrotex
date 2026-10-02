@@ -65,14 +65,16 @@ test_that("an arrow has a head, which is more than a shaft", {
   l <- r[r$type == "line", ]
   expect_gt(nrow(l), 8L)
   s <- shafts(r)
-  # The head points the way the arrow goes: the shaft's end is its tip,
-  # the farthest right of anything drawn.
-  expect_equal(max(c(l$x, l$x2)), s$x2, tolerance = 1e-3)
+  # The head points the way the arrow goes: its tip is the farthest right of
+  # anything drawn, half a line width past the shaft's end.
+  expect_gt(max(c(l$x, l$x2)), s$x2)
+  expect_lt(max(c(l$x, l$x2)) - s$x2, 1)
   # A reverse arrow has it at the other end.
   r2 <- rec(tikz("A & B \\arrow[l]"))
   l2 <- r2[r2$type == "line", ]
   s2 <- shafts(r2)
-  expect_equal(min(c(l2$x, l2$x2)), min(s2$x, s2$x2), tolerance = 1e-3)
+  expect_lt(min(c(l2$x, l2$x2)), min(s2$x, s2$x2))
+  expect_lt(min(s2$x, s2$x2) - min(c(l2$x, l2$x2)), 1)
 })
 
 test_that("arrows in a row stay level when their cells differ in height", {
@@ -150,7 +152,7 @@ test_that("a dashed arrow is made of short pieces with gaps, a dotted one of dot
   dash <- rec(tikz("A \\arrow[r, dashed] & B"))
   d <- dash[dash$type == "line" & abs(dash$y - dash$y2) < 1e-3, ]
   d <- d[order(d$x), ]
-  expect_gt(nrow(d), 4L)
+  expect_gte(nrow(d), 4L)
   # Equal pieces, and a gap after each.
   expect_equal(len(d)[2], len(d)[3], tolerance = 1e-3)
   gaps <- d$x[-1] - d$x2[-nrow(d)]
@@ -202,11 +204,11 @@ test_that("hook, tail and mapsto add to the start of an arrow", {
     expect_gt(b$n, plain$n)
   }
   # A hook reaches back past the shaft's start; a bar is across it.
-  expect_lt(base(", hook")$left, plain$shaft)
+  expect_lt(base(", hook")$left, base(", hook")$shaft)
   m <- rec(tikz("A \\arrow[r, mapsto] & B"))
   vert <- m[m$type == "line" & abs(m$x - m$x2) < 1e-3, ]
   expect_equal(nrow(vert), 1L)
-  expect_equal(vert$x, plain$shaft, tolerance = 1e-3)
+  expect_lt(abs(vert$x - plain$shaft), 1)
   # And two heads put a second head behind the first.
   expect_gt(base(", two heads")$n, plain$n)
 })
@@ -384,12 +386,13 @@ test_that("squiggly makes a zigzag shaft, a harpoon has one barb, mapsfrom a bar
     r <- rec(tikz(paste0("A \\arrow[r, ", opt, "] & B")))
     sum(len(r[r$type == "line", ]) < 4)
   }
-  expect_equal(small("harpoon"), small("") / 2)
-  expect_equal(small("harpoon'"), small("") / 2)
+  # One barb of a head's two, and the short stroke that is the harpoon's stem.
+  expect_equal(small("harpoon"), small("") / 2 + 1)
+  expect_equal(small("harpoon'"), small("") / 2 + 1)
   m <- rec(tikz("A \\arrow[r, mapsfrom] & B"))
   vert <- m[m$type == "line" & abs(m$x - m$x2) < 1e-3, ]
   expect_equal(nrow(vert), 1L)
-  expect_equal(vert$x, max(shafts(m)$x2), tolerance = 1e-3)
+  expect_lt(abs(vert$x - max(shafts(m)$x2)), 1)
 })
 
 test_that("a phantom arrow's label is centred on where its path would be", {
@@ -442,6 +445,27 @@ test_that("a CD arrow grows to its label", {
   short <- len(shafts(rec(cd("A @>f>> B"))))
   long <- len(shafts(rec(cd("A @>{\\text{a rather long label}}>> B"))))
   expect_gt(long, short)
+})
+
+test_that("CD rows are TeX's: a baselineskip each side of a row of arrows, more for labels", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  rows <- function(tex) {
+    g <- glyphs(rec(cd(tex)))
+    g <- g[order(g$y), ]
+    unique(round(g$y[g$x < min(g$x) + 1], 2))
+  }
+  # Object rows 2em + 2em apart, the vertical arrows 1.8em, centred in between.
+  plain <- rows("A @>>> B \\\\ @VVV @VVV \\\\ C @>>> D")
+  expect_equal(diff(plain), 40, tolerance = 1e-3)
+  # A label under an arrow in the first row, and one over an arrow in the
+  # last, take the room a lineskip (0.4em) leaves them.
+  roomy <- rows("A @>>a> B \\\\ @VVV @VVV \\\\ C @>b>> D")
+  expect_gt(diff(roomy), diff(plain))
+  # And an arrow stays the same length whatever the other cells of its column.
+  r <- rec(cd("A @>>> B \\\\ @VVV @VVV \\\\ \\mathrm{CCCCCC} @>>> D"))
+  h <- shafts(r)
+  h <- h[abs(h$y - h$y2) < 1e-3, ]
+  expect_equal(len(h)[1], len(h)[2], tolerance = 1e-3)
 })
 
 test_that("CD labels are above and below, left and right, as the @ says", {

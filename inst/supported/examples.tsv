@@ -41,6 +41,15 @@ Accents	ok	\text{\v{a}}
 Accents	ok	\text{\^{a}}
 Accents	ok	\text{\u{a}}
 Accents	ok	\text{\r{a}}
+Accents	ok	\text{\H{o}}
+Accents	ok	\widecheck{ac}
+Accents	ok	\overgroup{AB}
+Accents	ok	\undergroup{AB}
+Accents	ok	\overlinesegment{AB}
+Accents	ok	\underlinesegment{AB}
+Accents	ok	\Overrightarrow{AB}
+Accents	ok	\overleftharpoon{ac}
+Accents	ok	\overrightharpoon{ac}
 Delimiters	ok	(~)
 Delimiters	ok	\lparen~\rparen
 Delimiters	ok	~~~~
@@ -219,6 +228,10 @@ Layout / Annotation	ok	\overbracket{a+b+c}^{\text{note}}
 Layout / Annotation	ok	\underbracket{a+b+c}_{\text{note}}
 Layout / Annotation	ok	\tag{hi} x+y^{2x}
 Layout / Annotation	ok	\tag*{hi} x+y^{2x}
+Layout / Annotation	ok	\phase{30^\circ}
+Layout / Annotation	ok	\angl{n}
+Layout / Annotation	ok	\angln
+Layout / Annotation	ok	\text{\textcircled{a}}
 Layout / Vertical Layout	ok	x_n
 Layout / Vertical Layout	ok	\stackrel{!}{=}
 Layout / Vertical Layout	ok	a \atop b
@@ -230,6 +243,7 @@ Layout / Vertical Layout	ok	\mathreflectbox{x^2}
 Layout / Vertical Layout	ok	_u^o
 Layout / Vertical Layout	ok	\underset{!}{=}
 Layout / Vertical Layout	ok	\sum_{\substack{0<i<m\\0<j<n}}
+Layout / Vertical Layout	ok	\vcenter{x}
 Layout / Overlap and Spacing	ok	{=}\mathllap{/\,}
 Layout / Overlap and Spacing	ok	\left(x^{\smash{2}}\right)
 Layout / Overlap and Spacing	ok	\mathrlap{\,/}{=}
@@ -268,6 +282,15 @@ Logic and Set Theory	ok	\Set{ x \VERT x<\frac 1 2 }
 Logic and Set Theory	ok	\set{x\VERT x<5}
 Macros	ok	\def\foo{x^2} \foo + \foo
 Macros	ok	\gdef\foo#1{#1^2} \foo{y} + \foo{y}
+Macros	ok	\def\f#1{[#1]}\def\g{abc}\expandafter\f\g
+Macros	ok	\futurelet\q\mathrm x\q
+Macros	ok	\def\a{1}\edef\b{\a 2}\def\a{9}\b
+Macros	ok	\def\a{1}\edef\b{\noexpand\a 2}\def\a{9}\b
+Macros	ok	\def\a{1}\xdef\b{\a 2}\b
+Macros	ok	\def\foo{\@ifstar{S}{N}}\foo*\;\foo
+Macros	ok	\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo
+Macros	ok	\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}
+Macros	ok	\TextOrMath{in text}{in math}
 Operators / Big Operators	ok	\sum
 Operators / Big Operators	ok	\prod
 Operators / Big Operators	ok	\bigotimes
@@ -721,6 +744,10 @@ Relations / Arrows	ok	\xrightharpoondown{abc}
 Relations / Arrows	ok	\xleftrightharpoons{abc}
 Relations / Arrows	ok	\xrightleftharpoons{abc}
 Relations / Arrows	ok	\xmapsto{abc}
+Relations / Arrows	ok	\xlongequal{abc}
+Relations / Arrows	ok	\xtofrom{abc}
+Relations / Arrows	ok	\xtwoheadrightarrow{abc}
+Relations / Arrows	ok	\xtwoheadleftarrow{abc}
 Special Notation	ok	\bra{\phi}
 Special Notation	ok	\ket{\psi}
 Special Notation	ok	\braket{\phi\VERT\psi}
@@ -783,6 +810,8 @@ Style, Color, Size, and Font	ok	\scriptscriptstyle x
 Style, Color, Size, and Font	ok	\lim\limits_x
 Style, Color, Size, and Font	ok	\lim\nolimits_x
 Style, Color, Size, and Font	ok	\verb!x^2!
+Style, Color, Size, and Font	ok	\mathchoice{D}{T}{S}{SS}
+Style, Color, Size, and Font	ok	\sixptsize sixptsize
 Symbols and Punctuation	ok	\dots
 Symbols and Punctuation	ok	\KaTeX
 Symbols and Punctuation	ok	\%
@@ -941,6 +970,7 @@ Beyond KaTeX / Commands KaTeX does not have	ok	{subarray}
 Beyond KaTeX / Commands KaTeX does not have	ok	see \tiny
 Beyond KaTeX / Commands KaTeX does not have	ok	\upshape
 Beyond KaTeX / Commands KaTeX does not have	ok	\vfill
+Beyond KaTeX / Commands KaTeX does not have	ok	\text{\textsection\textparagraph\textcopyright\texttrademark\textquotedbl}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{12345.6789}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.5e-4}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.2+-0.3e3}
@@ -964,23 +994,14 @@ Beyond KaTeX / Tables	ok	\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \
 Beyond KaTeX / Commutative diagrams	ok	\begin{tikzcd} A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d, "h"] \\ C \arrow[r, hook, "k"'] & D \end{tikzcd}
 Beyond KaTeX / Commutative diagrams	ok	\begin{tikzcd}[column sep=large] A \arrow[r, "f", bend left] \arrow[r, "g"', bend right] & B \arrow[r, two heads, dashed] & C \end{tikzcd}
 Beyond KaTeX / Commutative diagrams	ok	\begin{CD} A @>f>> B \\ @VgVV @VVhV \\ C @>>k> D \end{CD}
-Not supported	no	\ce{H2O}
-Not supported	no	\pu{1.5 mol/L}
-Not supported	no	\mathchoice{a}{b}{c}{d}
-Not supported	no	\expandafter
-Not supported	no	\futurelet
-Not supported	no	\noexpand
-Not supported	no	\edef
-Not supported	no	\xdef
-Not supported	no	\phase{30^\circ}
-Not supported	no	\angl{n}
-Not supported	no	\vcenter{x}
-Not supported	no	\text{\H{o}}
-Not supported	no	\text{\textcircled{a}}
-Not supported	no	\xlongequal{abc}
-Not supported	no	\xtofrom{abc}
-Not supported	no	\xtwoheadrightarrow{abc}
-Not supported	no	\overgroup{AB}
-Not supported	no	\undergroup{AB}
-Not supported	no	\overlinesegment{AB}
-Not supported	no	\widecheck{ac}
+Extensions / mhchem	ok	\ce{H2O}
+Extensions / mhchem	ok	\ce{CO2 + C -> 2 CO}
+Extensions / mhchem	ok	\ce{SO4^2- + Ba^2+ -> BaSO4 v}
+Extensions / mhchem	ok	\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}
+Extensions / mhchem	ok	\ce{^{227}_{90}Th+}
+Extensions / mhchem	ok	\ce{1/2 H2O}
+Extensions / mhchem	ok	\ce{Fe^{3+} + 3e- -> Fe(s)}
+Extensions / mhchem	ok	\ce{CuSO4*5H2O}
+Extensions / mhchem	ok	\pu{1.5 mol/L}
+Extensions / mhchem	ok	\pu{123 kJ/mol}
+Extensions / mhchem	ok	\pu{1.2e-3 mol L-1}

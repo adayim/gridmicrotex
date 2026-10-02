@@ -26,6 +26,10 @@ LaTeX math and markdown for R graphics: grid, base plots and ggplot2.
 No LaTeX installation needed. Built on the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
 
+Everything on [KaTeX's list of supported functions](https://katex.org/docs/supported)
+is drawn, and more: amsmath and mathtools environments, equation numbers, tables
+from `kable()` and gt, `tikz-cd` diagrams, `\ce{}` chemistry, and a subset of siunitx.
+
 ## Installation
 
 ```r

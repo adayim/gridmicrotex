@@ -30,11 +30,11 @@ test_that("every example listed as supported is drawn with no warning", {
   expect_identical(ok$source[bad], character(0))
 })
 
-test_that("every example listed as not supported still warns", {
+test_that("an example listed as not supported still warns", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   ex <- examples()
   no <- ex[ex$kind == "no", ]
-  expect_gt(nrow(no), 10L)
+  # None is listed now: every function of KaTeX's two lists is drawn.
   drawn <- vapply(no$source, function(s) length(warnings_of(s)) == 0L, NA)
   expect_identical(no$source[drawn], character(0))
 })
@@ -43,7 +43,7 @@ test_that("the sections are KaTeX's, and have rows", {
   ex <- examples()
   sections <- unique(sub(" / .*", "", ex$section))
   for (s in c("Accents", "Delimiters", "Environments", "Operators", "Relations", "Symbols and Punctuation",
-              "Beyond KaTeX", "Not supported")) {
+              "Beyond KaTeX", "Extensions")) {
     expect_true(s %in% sections, info = s)
   }
   expect_false(anyNA(ex$source))

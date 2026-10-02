@@ -8,7 +8,7 @@
 - New KaTeX commands: the arrow and set aliases (`\rarr`, `\Reals`, `\R`, `\Bbb`, ...), `\argmax`, `\bra`/`\ket`/`\set`, the text symbols and letters (`\textbar`, `\AE`, `\ss`, ...), `\bigm`, and the colon relations. A document's own definition of a name like `\R` or `\set` replaces ours.
 - New `\hdashline` and `:` in a column spec, for dashed rules in arrays and tables.
 - A subset of siunitx: `\num`, `\si`, `\SI`, `\qty`, `\ang`, ranges, lists and `\DeclareSIUnit`.
-- A list of what is drawn, `inst/supported` (built by `build_supported()`; the PDF is on the website).
+- Everything on KaTeX's lists of supported functions is drawn: the last gaps, `\mathchoice`, `\vcenter`, `\expandafter`, `\noexpand`, `\futurelet`, `\edef`, `\xdef`, `\phase`, `\angl`, `\H`, `\textcircled`, `\xlongequal`, `\xtofrom`, `\xtwoheadrightarrow`, `\overgroup`, `\overlinesegment`, `\widecheck`, `\Overrightarrow`, `\overleftharpoon`, `\TextOrMath`, `\@ifstar`, `\@ifnextchar`, `\@firstoftwo`, `\sixptsize`, and `\global` before `\edef`, `\let` and `\futurelet`, are filled, and `\ce` and `\pu` read a subset of mhchem. `\arraystretch` spaces the rows of an array. The list is `inst/supported` (built by `build_supported()`; the PDF is on the website).
 - `\cancel` and `\bcancel` were drawn the wrong way round.
 - kableExtra's `scale_down` drew nothing, and a colour defined with capitals in its name was never found.
 
