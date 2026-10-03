@@ -81,6 +81,8 @@ reference:
   - title: Font management
     desc: Load and configure math and text fonts
     contents:
+      - load_font
+      - available_fonts
       - available_math_fonts
       - load_math_font
       - check_math_fonts

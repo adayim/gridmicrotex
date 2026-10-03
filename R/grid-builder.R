@@ -350,7 +350,8 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 # its (indistinguishable) style bit. See src/MicroTeX/lib/atom/font_family_atom.h.
 .GM_DEFAULT_FAMILY <- "gridmicrotex.default"
 
-.resolve_text_family <- function(style, default = NULL, family = NULL) {
+.resolve_text_family <- function(style, default = NULL, family = NULL,
+                                 roles = NULL) {
   if (!is.null(family) && !is.na(family) && nzchar(family)) {
     # \textrm: back to the caller's font, overriding any enclosing
     # \textsf / \texttt rather than inheriting it.
@@ -358,9 +359,33 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
     return(family)
   }
   if (is.na(style)) return(default)
-  if (bitwAnd(style, 128L) != 0L) return("mono")
-  if (bitwAnd(style, 64L) != 0L) return("sans")
+  if (bitwAnd(style, 128L) != 0L) return(roles$mono %||% "mono")
+  if (bitwAnd(style, 64L) != 0L) return(roles$sans %||% "sans")
   default
+}
+
+# The fonts latex_options(sans_font =, mono_font =) name, as .resolve_text_family()
+# takes them. They are read when a label is parsed and written into its
+# layout (.bake_font_roles()), so measuring and drawing use the same ones
+# whatever the options say by the time it is drawn.
+.font_roles <- function() {
+  list(sans = .opt("sans_font"), mono = .opt("mono_font"))
+}
+
+# A record that names no family of its own but is 	extsf or 	exttt takes
+# the font of that role. Records with a family -- \gmfontfamily, CSS -- and
+# every other record are left alone.
+.bake_font_roles <- function(layout, roles) {
+  if (is.null(layout) || !NROW(layout) || is.null(layout$font_family)) {
+    return(layout)
+  }
+  open <- layout$type == "text" & !is.na(layout$font_style) &
+    (is.na(layout$font_family) | !nzchar(layout$font_family))
+  mono <- open & bitwAnd(layout$font_style, 128L) != 0L
+  sans <- open & !mono & bitwAnd(layout$font_style, 64L) != 0L
+  if (!is.null(roles$mono)) layout$font_family[mono] <- roles$mono
+  if (!is.null(roles$sans)) layout$font_family[sans] <- roles$sans
+  layout
 }
 
 # Cache of font file -> glyphFont objects

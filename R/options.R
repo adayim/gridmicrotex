@@ -12,7 +12,10 @@
   justify     = NULL,
   line_break  = NULL,
   markdown_style = NULL,
-  device_math   = NULL
+  device_math   = NULL,
+  main_font   = NULL,
+  sans_font   = NULL,
+  mono_font   = NULL
 )
 
 # Validate the `justify` argument. Kept here so latex_grob(),
@@ -58,9 +61,15 @@
 #'   `legend()` box. Measure it with [latex_dims()] and make room with
 #'   `par(mar = )`. See `vignette("base-graphics")` for the rules and
 #'   limitations.
+#' @param main_font,sans_font,mono_font The fonts for text: the body, `\textsf`
+#'   and `\sffamily`, and `\texttt`, `\ttfamily` and `\verb`. Each is the
+#'   name of a font given to [load_font()], an installed family, or a font
+#'   file, which is loaded. `NULL` keeps the defaults: `gp$fontfamily` (or
+#'   `"sans"`) for the body, `"sans"` and `"mono"`. A `gp$fontfamily` in a
+#'   call wins over `main_font`.
 #' @return The previous settings, invisibly. With no arguments, the
 #'   current settings.
-#' @seealso [available_math_fonts()], [latex_grob()]
+#' @seealso [available_math_fonts()], [load_font()], [latex_grob()]
 #' @export
 #'
 #' @examples
@@ -85,7 +94,9 @@
 latex_options <- function(math_font = NULL, render_mode = NULL,
                           tex_style = NULL, input_mode = NULL,
                           justify = NULL, line_break = NULL,
-                          markdown_style = NULL, device_math = NULL) {
+                          markdown_style = NULL, device_math = NULL,
+                          main_font = NULL, sans_font = NULL,
+                          mono_font = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -154,6 +165,12 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     .gm_base_set(isTRUE(device_math))
     record("device_math", device_math)
   }
+  for (role in c("main_font", "sans_font", "mono_font")) {
+    if (eval(call("missing", as.name(role)))) next
+    value <- get(role)
+    if (!is.null(value)) value <- .resolve_font_option(value, role)
+    record(role, value)
+  }
   invisible(old)
 }
 
@@ -174,9 +191,30 @@ reset_latex_options <- function() {
     justify     = NULL,
     line_break  = NULL,
     markdown_style = NULL,
-    device_math   = NULL
+    device_math   = NULL,
+    main_font   = NULL,
+    sans_font   = NULL,
+    mono_font   = NULL
   )
   invisible(NULL)
+}
+
+# The name a font option's value stands for: a registered font, one of R's
+# own families, or else a file or an installed family, which is loaded. The
+# value recorded is the name, so a path is read once.
+.resolve_font_option <- function(x, what) {
+  if (!is.character(x) || length(x) != 1L || is.na(x) || !nzchar(x)) {
+    stop("`", what, "` must be a single font name or file.", call. = FALSE)
+  }
+  if (x %in% c("sans", "serif", "mono")) return(x)
+  registered <- .font_lookup(x)
+  if (!is.null(registered)) return(registered)
+  tryCatch(
+    load_font(x),
+    error = function(e) {
+      stop("`", what, "`: ", conditionMessage(e), call. = FALSE)
+    }
+  )
 }
 
 # Internal: resolve an argument against latex_options().

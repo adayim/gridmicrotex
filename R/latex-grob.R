@@ -422,36 +422,39 @@ grobMark <- function(grob, name) {
   # Only fontfamily matters for \text{} blocks: bold/italic runs come from
   # the LaTeX source (\textbf, \textit, ...) as per-record font_style, so a
   # gpar()-level fontface is not consulted.
+  # The body font: a family in `gp` wins over latex_options(main_font).
   text_gp <- grid::gpar()
-  if (!is.null(gp$fontfamily)) text_gp$fontfamily <- gp$fontfamily
+  family <- gp$fontfamily %||% .opt("main_font")
+  if (!is.null(family)) text_gp$fontfamily <- family
 
   main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
 
-  measurer <- .make_text_measurer(text_gp)
+  roles <- .font_roles()
+  measurer <- .make_text_measurer(text_gp, roles)
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
 
   text_family <- text_gp$fontfamily %||% ""
 
-  layout <- .parse_latex_cached(
+  layout <- .bake_font_roles(.parse_latex_cached(
     tex = tex, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
     tex_style = tex_style, text_family = text_family, justify = justify,
     optimal_break = identical(line_break, "optimal"), input_mode = input_mode
-  )
+  ), roles)
   # Read off the layout rather than the parse, so a cached one says it too.
   .warn_diagnostics(attr(layout, "diagnostics"))
 
   path_layout <- NULL
   if (with_path_fallback && render_mode == "typeface") {
-    path_layout <- .parse_latex_cached(
+    path_layout <- .bake_font_roles(.parse_latex_cached(
       tex = tex, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style,
       text_family = text_family, justify = justify,
       optimal_break = identical(line_break, "optimal"), input_mode = input_mode
-    )
+    ), roles)
   }
 
   list(
@@ -857,11 +860,13 @@ descentDetails.gridmicrotex_measure <- function(x) {
 #' @param text_gp A \code{\link[grid]{gpar}} object whose
 #'   \code{fontfamily} is used for measurement. The face comes from
 #'   MicroTeX's per-run \code{font_style}, not from \code{text_gp}.
+#' @param roles The fonts for \code{\textsf} and \code{\texttt}
+#'   (\code{.font_roles()}), or NULL for \code{"sans"} and \code{"mono"}.
 #' @return A function taking \code{(text, font_style)} that returns
 #'   \code{c(width_ratio, ascent_ratio, height_ratio)} where ratios
 #'   are relative to the font size.
 #' @noRd
-.make_text_measurer <- function(text_gp) {
+.make_text_measurer <- function(text_gp, roles = NULL) {
   ref_size <- 72  # reference size in points for measurement precision
 
   # Cache the R version check
@@ -885,7 +890,7 @@ descentDetails.gridmicrotex_measure <- function(x) {
     f <- fonts[[fkey]]
     if (!is.null(f)) return(f)
     gp <- grid::gpar(fontsize = ref_size, fontface = .resolve_text_face(style))
-    fam <- .resolve_text_family(style, text_gp$fontfamily, family)
+    fam <- .resolve_text_family(style, text_gp$fontfamily, family, roles)
     if (!is.null(fam)) {
       gp$fontfamily <- fam
     }

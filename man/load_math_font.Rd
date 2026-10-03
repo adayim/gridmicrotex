@@ -15,11 +15,7 @@ load_math_font(otf_path)
 \description{
 Adds an OpenType math font, such as Latin Modern Math, for use as
 \code{math_font}. The font can then also be used as a \code{fontfamily} for
-plot text.
-}
-\details{
-Only math fonts need loading. For text, set \code{gp$fontfamily} to any
-installed font.
+plot text. This is \code{\link[=load_font]{load_font()}} for a font that must have a math table.
 }
 \examples{
 \donttest{
@@ -31,6 +27,7 @@ installed font.
 }
 }
 \seealso{
-\code{\link{available_math_fonts}}, \code{\link{check_math_fonts}},
-\code{\link{latex_options}}, \code{\link{latex_grob}}
+\code{\link{load_font}}, \code{\link{available_math_fonts}},
+\code{\link{check_math_fonts}}, \code{\link{latex_options}},
+\code{\link{latex_grob}}
 }

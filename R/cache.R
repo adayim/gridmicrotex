@@ -138,6 +138,9 @@ latex_cache_info <- function() {
     # define_macro() macros are expanded in C++, so a layout depends on them
     # without `tex` showing it.
     "|", persistent_macro_generation_cpp(),
+    # So are the fonts: one loaded since changes what a name draws and
+    # measures as, and the sans and mono roles change 	extsf and 	exttt.
+    "|", .font_generation(), "/", .opt("sans_font"), "/", .opt("mono_font"),
     sep = ""
   )
 }

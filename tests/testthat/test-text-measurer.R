@@ -184,7 +184,7 @@ test_that("text widths come from the measurer registered for the parse", {
   on.exit(latex_cache_clear(), add = TRUE)
   width_with <- function(ratio) {
     local_mocked_bindings(
-      .make_text_measurer = function(text_gp) {
+      .make_text_measurer = function(text_gp, roles = NULL) {
         function(text, font_style, family = NULL) c(ratio * nchar(text), 0.7, 1)
       },
       .package = "gridmicrotex")

@@ -31,6 +31,12 @@ resolve_math_font <- function(name) {
     return(loaded[idx])
   }
 
+  # A name given to load_font() for a math font, such as a short alias.
+  reg <- .font_lookup(name)
+  if (!is.null(reg) && isTRUE(.font_registry$fonts[[reg]]$math)) {
+    return(.font_registry$fonts[[reg]]$display)
+  }
+
   stop(
     "Math font '", name, "' not found. Available fonts: ",
     paste(loaded, collapse = ", "),
@@ -98,19 +104,115 @@ available_math_fonts <- function() {
   invisible()
 }
 
+#' Load a font
+#'
+#' Registers a font under a name that works everywhere a font is named:
+#' `gp = gpar(fontfamily = )`, [latex_options()] (`main_font`, `sans_font`,
+#' `mono_font`, `math_font`) and `element_latex(family = )`. The font comes
+#' from a file or from an installed family.
+#'
+#' A math font loaded here can also be used as text. A font that is already
+#' installed does not need loading to be used as `gp$fontfamily`; load it to
+#' give it a short name, or to set it as a role in [latex_options()].
+#'
+#' @param x A font file (`.otf`, `.ttf` or `.ttc`), or the name of an
+#'   installed font family.
+#' @param name The name to register the font under. The default is the
+#'   font's family name.
+#' @param bold,italic,bolditalic Files of the other faces of the same
+#'   family, so that bold and italic text uses the real design. Only for a
+#'   file: the faces of an installed family are found automatically. A face
+#'   left out is drawn with the regular file.
+#' @return The name the font is registered under, invisibly.
+#' @seealso [available_fonts()], [latex_options()], [load_math_font()]
+#' @export
+#'
+#' @examples
+#' \donttest{
+#'   # The bundled STIX font stands in for your own font file here
+#'   otf <- system.file("fonts", "STIXTwoMath-Regular.otf",
+#'                      package = "gridmicrotex")
+#'   load_font(otf, name = "My Font")
+#'   available_fonts()
+#' }
+load_font <- function(x, name = NULL, bold = NULL, italic = NULL,
+                      bolditalic = NULL) {
+  .check_string(x, "x")
+  if (!is.null(name)) .check_string(name, "name")
+  if (!microtex_is_inited()) {
+    stop("MicroTeX is not initialized.", call. = FALSE)
+  }
+  .ensure_bundled_fonts_registered()
+
+  others <- list(bold = bold, italic = italic, bolditalic = bolditalic)
+  others <- others[!vapply(others, is.null, logical(1))]
+
+  if (.font_is_file(x)) {
+    faces <- list(plain = .font_file_face(x))
+    for (nm in names(others)) {
+      .check_string(others[[nm]], nm)
+      faces[[nm]] <- .font_file_face(others[[nm]])
+    }
+    source <- "file"
+  } else {
+    if (length(others)) {
+      stop("`bold`, `italic` and `bolditalic` are files of the other faces, ",
+           "so they go with a font file; the faces of an installed family ",
+           "are found automatically.", call. = FALSE)
+    }
+    found <- .system_font_faces(x)
+    if (is.null(found)) {
+      stop("Font '", x, "' is neither a font file nor an installed family.",
+           call. = FALSE)
+    }
+    faces <- found$faces
+    source <- "system"
+  }
+
+  # The engine reads one single-face file; a collection is cut down to the
+  # face asked for first (R/ttc-splitter.R).
+  plain <- faces$plain
+  engine_file <- if (.is_ttc_file(plain$path)) {
+    .extract_ttc_face(plain$path, plain$index)
+  } else {
+    plain$path
+  }
+  display <- microtex_add_font_from_otf(engine_file, 0L)
+  if (!nzchar(display)) {
+    stop("Could not read the font file: ", plain$path, call. = FALSE)
+  }
+  math <- display %in% microtex_math_font_names()
+  if (!math && display %in% microtex_main_font_families()) {
+    .text_font_registered[[engine_file]] <- display
+  }
+  name <- name %||% display
+
+  # An installed family answers to its own name already; anything else is
+  # told to systemfonts, which is what lets ragg and svglite, and
+  # gp$fontfamily, find it.
+  if (source == "file" || !identical(tolower(name), tolower(found$family))) {
+    .register_font_with_systemfonts(name, faces)
+  }
+
+  info <- .font_file_info(plain$path, plain$index)
+  .font_registry_add(list(
+    name = name, display = display, source = source, math = math,
+    mono = info$mono, weight = info$weight, faces = faces
+  ))
+  invisible(name)
+}
+
 #' Load a math font from an OTF file
 #'
 #' Adds an OpenType math font, such as Latin Modern Math, for use as
 #' `math_font`. The font can then also be used as a `fontfamily` for
-#' plot text.
-#'
-#' Only math fonts need loading. For text, set `gp$fontfamily` to any
-#' installed font.
+#' plot text. This is [load_font()] for a font that must have a math table.
 #'
 #' @param otf_path Path to an OTF or TTF math font.
 #' @return `NULL`, invisibly.
-#' @seealso \code{\link{available_math_fonts}}, \code{\link{check_math_fonts}},
-#'   \code{\link{latex_options}}, \code{\link{latex_grob}}
+#' @seealso \code{\link{load_font}}, \code{\link{available_math_fonts}},
+#'   \code{\link{check_math_fonts}}, \code{\link{latex_options}},
+#'   \code{\link{latex_grob}}
 #' @export
 #'
 #' @examples
@@ -125,23 +227,8 @@ load_math_font <- function(otf_path) {
   if (!file.exists(otf_path)) {
     stop("Font file not found: ", otf_path, call. = FALSE)
   }
-
-  # Reject TrueType Collections — MicroTeX::addFont expects a single face.
-  header <- tryCatch(
-    readBin(otf_path, what = "raw", n = 4L),
-    error = function(e) raw()
-  )
-  if (length(header) == 4L && identical(header, charToRaw("ttcf"))) {
-    stop(
-      "TrueType Collection (.ttc) files are not supported.\n",
-      "Extract a single face (.otf/.ttf) and pass that instead.\n",
-      "File: ", otf_path,
-      call. = FALSE
-    )
-  }
-
-  display <- microtex_add_font_from_otf(otf_path, 0L)
-  if (!nzchar(display)) {
+  name <- load_font(otf_path)
+  if (!isTRUE(.font_registry$fonts[[name]]$math)) {
     stop(
       "Could not read OpenType MATH table from: ", basename(otf_path), "\n",
       "The font may not be a math font, or may have an unsupported MATH ",
@@ -149,26 +236,198 @@ load_math_font <- function(otf_path) {
       call. = FALSE
     )
   }
-
-  # Make the font selectable via gp = gpar(fontfamily = <name>).
-  .register_font_with_systemfonts(otf_path, display)
-
   invisible(NULL)
 }
 
-# Register a math font with systemfonts so gp$fontfamily = <name> (or any
-# alias) resolves to `otf_path` for grid text drawing. Silent on failure
-# — registration is best-effort; failing only means gp$fontfamily won't
-# resolve to the bundled OTF.
-.register_font_with_systemfonts <- function(otf_path, display_name,
-                                            aliases = character(0)) {
-  names <- unique(c(display_name, aliases))
-  for (nm in names) {
-    try(
-      systemfonts::register_font(name = nm, plain = otf_path),
-      silent = TRUE
+#' List the fonts that have been loaded
+#'
+#' One row per font that can be named: the bundled math fonts, and every font
+#' given to [load_font()] or to a font option of [latex_options()].
+#'
+#' @param system If `TRUE`, also list the installed font families, which work
+#'   by name without loading. The first call scans the system's fonts, which
+#'   takes a few seconds.
+#' @return A data frame with one row per font: `name`; `math` (it has a math
+#'   table; `NA` for an installed family that is not loaded); `mono`
+#'   (monospaced); `bold` and `italic` (a face of its own is registered, so
+#'   `\textbf` and `\textit` draw its real design); `weight` of the regular
+#'   face; `file` of the regular face; and `source`, one of `"bundled"`,
+#'   `"file"` and `"system"`.
+#' @seealso [load_font()], [available_math_fonts()]
+#' @export
+#'
+#' @examples
+#' available_fonts()
+available_fonts <- function(system = FALSE) {
+  .check_flag(system, "system")
+  .ensure_bundled_fonts_registered()
+  fonts <- .font_registry$fonts
+  rows <- lapply(fonts, function(f) {
+    differs <- function(face) {
+      !is.null(f$faces[[face]]) &&
+        !identical(f$faces[[face]], f$faces$plain)
+    }
+    data.frame(
+      name = f$name, math = f$math, mono = f$mono,
+      bold = differs("bold") || differs("bolditalic"),
+      italic = differs("italic") || differs("bolditalic"),
+      weight = f$weight, file = f$faces$plain$path, source = f$source,
+      stringsAsFactors = FALSE
     )
+  })
+  out <- if (length(rows)) {
+    do.call(rbind, unname(rows))
+  } else {
+    data.frame(name = character(), math = logical(), mono = logical(),
+               bold = logical(), italic = logical(), weight = character(),
+               file = character(), source = character())
   }
+  if (isTRUE(system)) {
+    out <- rbind(out, .system_font_rows(exclude = out$name))
+  }
+  rownames(out) <- NULL
+  out
+}
+
+.check_string <- function(x, what) {
+  if (!is.character(x) || length(x) != 1L || is.na(x) || !nzchar(x)) {
+    stop("`", what, "` must be a single string.", call. = FALSE)
+  }
+  invisible(x)
+}
+
+.check_flag <- function(x, what) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    stop("`", what, "` must be TRUE or FALSE.", call. = FALSE)
+  }
+  invisible(x)
+}
+
+# --- The registry ----------------------------------------------------------
+#
+# name -> one entry: list(name, display, source, math, mono, weight, faces).
+# `display` is the family name the engine knows the file by (what
+# available_math_fonts() lists); `faces` holds up to four of plain, bold,
+# italic and bolditalic, each list(path, index). `generation` goes into the
+# layout cache key (.parse_cache_key()): a layout measured before a font was
+# loaded, or loaded again from another file, is not an answer after.
+.font_registry <- new.env(parent = emptyenv())
+.font_registry$fonts <- list()
+.font_registry$generation <- 0L
+
+.font_generation <- function() .font_registry$generation
+
+# Add or replace one font. A name that differs only in case replaces the
+# earlier one, as lookups ignore case.
+.font_registry_add <- function(entry, bump = TRUE) {
+  old <- match(tolower(entry$name), tolower(names(.font_registry$fonts)))
+  if (!is.na(old)) .font_registry$fonts[[old]] <- NULL
+  .font_registry$fonts[[entry$name]] <- entry
+  # A family string this name was resolved from before is now stale.
+  if (exists(entry$name, envir = .text_font_lookup, inherits = FALSE)) {
+    rm(list = entry$name, envir = .text_font_lookup)
+  }
+  if (bump) .font_registry$generation <- .font_registry$generation + 1L
+  invisible(entry$name)
+}
+
+# The registered name `x` stands for -- ignoring case, and through the
+# "stix" / "lete" aliases -- or NULL.
+.font_lookup <- function(x) {
+  .ensure_bundled_fonts_registered()
+  if (!is.character(x) || length(x) != 1L || is.na(x)) return(NULL)
+  key <- tolower(x)
+  if (key %in% names(.font_aliases)) key <- tolower(.font_aliases[[key]])
+  names_ <- names(.font_registry$fonts)
+  hit <- match(key, tolower(names_))
+  if (is.na(hit)) NULL else names_[hit]
+}
+
+# --- Where a font comes from -----------------------------------------------
+
+.font_is_file <- function(x) {
+  (file.exists(x) && !dir.exists(x)) ||
+    grepl("\\.(otf|ttf|ttc)$", x, ignore.case = TRUE)
+}
+
+.font_file_face <- function(path) {
+  if (!file.exists(path) || dir.exists(path)) {
+    stop("Font file not found: ", path, call. = FALSE)
+  }
+  list(path = normalizePath(path, winslash = "/", mustWork = TRUE), index = 0L)
+}
+
+# The four faces of an installed family, or NULL when `family` is not one.
+# match_fonts() answers every name -- with a fallback such as Arial for one
+# it does not know -- so the file it returns must really be that family.
+.system_font_faces <- function(family) {
+  face <- function(m) list(path = m$path, index = as.integer(m$index))
+  match <- function(...) systemfonts::match_fonts(family, ...)
+  plain <- match()
+  if (!nzchar(plain$path)) return(NULL)
+  info <- tryCatch(systemfonts::font_info(path = plain$path, index = plain$index),
+                   error = function(e) NULL)
+  if (is.null(info) || !identical(tolower(info$family[1]), tolower(family))) {
+    return(NULL)
+  }
+  list(
+    family = info$family[1],
+    faces = list(
+      plain = face(plain),
+      bold = face(match(weight = "bold")),
+      italic = face(match(italic = TRUE)),
+      bolditalic = face(match(italic = TRUE, weight = "bold"))
+    )
+  )
+}
+
+.font_file_info <- function(path, index = 0L) {
+  info <- tryCatch(systemfonts::font_info(path = path, index = index),
+                   error = function(e) NULL)
+  list(
+    mono = !is.null(info) && isTRUE(info$monospace[1]),
+    weight = if (is.null(info)) NA_character_ else as.character(info$weight[1])
+  )
+}
+
+# The installed families not in `exclude`, as rows of available_fonts().
+.system_font_rows <- function(exclude) {
+  sys <- systemfonts::system_fonts()
+  sys <- sys[!tolower(sys$family) %in% tolower(exclude), , drop = FALSE]
+  fams <- unique(sys$family)
+  rows <- lapply(fams, function(f) {
+    s <- sys[sys$family == f, , drop = FALSE]
+    plain <- s[!s$italic & s$weight == "normal", , drop = FALSE]
+    if (!nrow(plain)) plain <- s[1L, , drop = FALSE]
+    data.frame(
+      name = f, math = NA, mono = isTRUE(plain$monospace[1]),
+      bold = any(s$weight >= "bold"), italic = any(s$italic),
+      weight = as.character(plain$weight[1]), file = plain$path[1],
+      source = "system", stringsAsFactors = FALSE
+    )
+  })
+  if (length(rows)) do.call(rbind, rows) else NULL
+}
+
+# Tell systemfonts about a font so gp$fontfamily = <name> resolves to its
+# files on ragg, svglite and the like. A face not given is the plain one.
+.register_font_with_systemfonts <- function(name, faces, quiet = FALSE) {
+  as_arg <- function(f) if (is.null(f)) NULL else list(f$path, f$index)
+  args <- list(name = name, plain = as_arg(faces$plain))
+  for (nm in c("bold", "italic", "bolditalic")) {
+    if (!is.null(faces[[nm]])) args[[nm]] <- as_arg(faces[[nm]])
+  }
+  tryCatch(
+    do.call(systemfonts::register_font, args),
+    error = function(e) {
+      # An installed family of that name keeps it (systemfonts will not
+      # shadow one): the name then draws in the installed font.
+      if (!quiet && !grepl("already exists", conditionMessage(e), fixed = TRUE)) {
+        warning("Could not register '", name, "' with systemfonts: ",
+                conditionMessage(e), call. = FALSE)
+      }
+    }
+  )
   invisible()
 }
 
@@ -184,14 +443,26 @@ load_math_font <- function(otf_path) {
   if (isTRUE(.fonts_state$registered)) return(invisible())
   .fonts_state$registered <- TRUE  # set first so a failure isn't retried each call
 
-  lete <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
-  if (nzchar(lete)) {
-    .register_font_with_systemfonts(lete, "Lete Sans Math", aliases = "lete")
-  }
-
-  stix <- system.file("fonts", "STIXTwoMath-Regular.otf", package = "gridmicrotex")
-  if (nzchar(stix)) {
-    .register_font_with_systemfonts(stix, "STIX Two Math", aliases = "stix")
+  bundled <- list(
+    list(file = "LeteSansMath.otf", name = "Lete Sans Math", alias = "lete"),
+    list(file = "STIXTwoMath-Regular.otf", name = "STIX Two Math",
+         alias = "stix")
+  )
+  for (b in bundled) {
+    path <- system.file("fonts", b$file, package = "gridmicrotex")
+    if (!nzchar(path)) next
+    faces <- list(plain = list(path = path, index = 0L))
+    # Best effort, and silent: an installed copy of the font keeps its name.
+    for (nm in c(b$name, b$alias)) {
+      .register_font_with_systemfonts(nm, faces, quiet = TRUE)
+    }
+    info <- .font_file_info(path)
+    # Not a change to the registry as far as a cached layout can tell: the
+    # engine had these fonts from the start.
+    .font_registry_add(list(
+      name = b$name, display = b$name, source = "bundled", math = TRUE,
+      mono = info$mono, weight = info$weight, faces = faces
+    ), bump = FALSE)
   }
 
   invisible()
