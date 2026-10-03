@@ -77,7 +77,7 @@ geom_latex <- function(mapping = NULL, data = NULL, stat = "identity",
   # latex_options() when the plot is drawn, as it does for annotate("latex"),
   # which never comes through here. Checked now, so a typo fails early.
   given <- list()
-  if (!missing(math_font)) given$math_font <- math_font
+  if (!missing(math_font)) given$math_font <- .check_math_font(math_font)
   if (!missing(input_mode)) given$input_mode <- match.arg(input_mode)
   if (!missing(render_mode)) given$render_mode <- match.arg(render_mode)
 
@@ -137,6 +137,7 @@ element_latex <- function(math_font = "", fontsize = NULL,
                          input_mode = c("mixed", "math", "document"),
                          render_mode = c("typeface", "path"), ...) {
   .apply_opts("math_font", "render_mode", "input_mode")
+  .check_math_font(math_font)
   render_mode <- match.arg(render_mode)
   input_mode <- match.arg(input_mode)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {

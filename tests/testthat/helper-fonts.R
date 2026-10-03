@@ -40,6 +40,18 @@ glyph_files <- function(tex, ...) {
   unique(basename(d$font_file[d$type == "glyph" & nzchar(d$font_file)]))
 }
 
+# A font file with no MATH table -- this machine's "sans" -- loaded as
+# `name`; the test is skipped where there is none.
+load_text_font <- function(name = "Text Only Probe") {
+  file <- systemfonts::match_fonts("sans")$path
+  skip_if(!nzchar(file) || !file.exists(file), "no installed font to load")
+  loaded <- tryCatch(load_font(file, name = name), error = function(e) NULL)
+  skip_if(is.null(loaded), "this machine's sans font cannot be loaded")
+  skip_if(isTRUE(available_fonts()$math[available_fonts()$name == name]),
+          "this machine's sans font has a math table")
+  name
+}
+
 same_file <- function(a, b) {
   identical(normalizePath(a, winslash = "/"), normalizePath(b, winslash = "/"))
 }

@@ -18,10 +18,7 @@
 #' @examples
 #' available_math_fonts()
 available_math_fonts <- function() {
-  # The engine's own names, and the names a font was given with load_font(),
-  # which `math_font` takes as well.
-  fonts <- available_fonts()
-  unique(c(microtex_math_font_names(), fonts$name[fonts$math %in% TRUE]))
+  .math_font_names()
 }
 
 #' @rdname fonts-deprecated

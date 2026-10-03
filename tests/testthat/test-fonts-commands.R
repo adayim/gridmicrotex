@@ -193,7 +193,7 @@ test_that("\\setmathfont changes the math font of its input", {
   # A font with no math table is not one.
   load_cmd_fonts()
   expect_warning(latex_grob("\\setmathfont{No Such Gridmicrotex Font} $x$"),
-                 "\\\\setmathfont: font `No Such Gridmicrotex Font' not found")
+                 "\\\\setmathfont: `No Such Gridmicrotex Font' is not a loaded math font")
 })
 
 test_that("an NFSS family code is read as the typeface it names", {

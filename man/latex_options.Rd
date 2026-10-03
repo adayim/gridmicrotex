@@ -22,7 +22,8 @@ latex_options(
 reset_latex_options()
 }
 \arguments{
-\item{math_font}{Math font; see \code{\link[=available_fonts]{available_fonts()}}.}
+\item{math_font}{Math font: a loaded font with a math table; see
+\code{\link[=available_fonts]{available_fonts()}}.}
 
 \item{render_mode}{\code{"typeface"} or \code{"path"}; see \code{\link[=latex_grob]{latex_grob()}}.}
 

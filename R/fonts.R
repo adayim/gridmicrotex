@@ -31,18 +31,43 @@ resolve_math_font <- function(name) {
     return(loaded[idx])
   }
 
-  # A name given to load_font() for a math font, such as a short alias.
+  # A name given to load_font(), such as a short alias for a math font.
   reg <- .font_lookup(name)
-  if (!is.null(reg) && isTRUE(.font_registry$fonts[[reg]]$math)) {
-    return(.font_registry$fonts[[reg]]$display)
+  if (!is.null(reg)) {
+    if (isTRUE(.font_registry$fonts[[reg]]$math)) {
+      return(.font_registry$fonts[[reg]]$display)
+    }
+    stop(
+      "Font '", reg, "' is loaded, but it has no math table, so it cannot be ",
+      "a math font. The math fonts are: ", paste(.math_font_names(), collapse = ", "),
+      call. = FALSE
+    )
   }
 
   stop(
-    "Math font '", name, "' not found. Available fonts: ",
-    paste(loaded, collapse = ", "),
+    "Math font '", name, "' not found: it is not loaded. Load it with ",
+    "load_font(); the math fonts that are loaded are: ",
+    paste(.math_font_names(), collapse = ", "),
     "\nAliases: ", paste(names(.font_aliases), collapse = ", "),
     call. = FALSE
   )
+}
+
+# The names `math_font` takes: the engine's own, and those a math font was
+# given with load_font().
+.math_font_names <- function() {
+  fonts <- available_fonts()
+  unique(c(microtex_math_font_names(), fonts$name[fonts$math %in% TRUE]))
+}
+
+# A `math_font` given to a function that only stores it, checked now rather
+# than when the plot is drawn. "" is the default, which is not a font.
+.check_math_font <- function(math_font) {
+  if (is.character(math_font) && length(math_font) == 1L && !is.na(math_font) &&
+      nzchar(math_font)) {
+    resolve_math_font(math_font)
+  }
+  invisible(math_font)
 }
 
 # Internal: set the default math font used by MicroTeX.

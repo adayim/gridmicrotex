@@ -21,7 +21,8 @@ latex_tree(
 
 \item{math_font}{Math font: \code{"lete"} (Lete Sans Math, the default),
 \code{"stix"} (STIX Two Math), or one added with \code{\link[=load_font]{load_font()}}. See
-\code{\link[=available_fonts]{available_fonts()}}.}
+\code{\link[=available_fonts]{available_fonts()}}. A font that is not loaded, or has no math table, is
+an error.}
 
 \item{max_width}{Width in big points (1/72 inch) at which lines wrap.
 \code{0}, the default, does not wrap.}

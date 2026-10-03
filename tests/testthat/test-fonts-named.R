@@ -89,7 +89,7 @@ test_that("the superseded math font functions still work", {
   # They are the math rows of the new ones.
   fonts <- available_fonts()
   expect_true(all(fonts$name[fonts$math %in% TRUE] %in% available_math_fonts()))
-  expect_message(check_math_fonts(), "Loaded math fonts")
+  expect_match(testthat::capture_messages(check_math_fonts()), "Loaded math fonts", all = FALSE)
 
   # An installed text font has no MATH table -- unless this machine's "mono"
   # has one, and then it cannot stand in for one.
@@ -190,4 +190,45 @@ test_that("a font option takes a file, an installed family or one of R's familie
 
   reset_latex_options()
   expect_null(latex_options()$mono_font)
+})
+
+test_that("a math_font must be a loaded font with a math table, wherever it is set", {
+  text_font <- load_text_font()
+  load_font(stix(), name = "Math Check Alias")
+  on.exit(reset_latex_options(), add = TRUE)
+
+  # Never loaded, and loaded but not a math font, each say which.
+  never <- "Never Loaded Gridmicrotex"
+  expect_error(gridmicrotex:::resolve_math_font(never), "not found: it is not loaded")
+  expect_error(gridmicrotex:::resolve_math_font(text_font), "no math table")
+  # A math font under a name of its own is one, and is the engine's font.
+  expect_equal(gridmicrotex:::resolve_math_font("Math Check Alias"), "STIX Two Math")
+  # The lists in the messages hold it too.
+  expect_error(gridmicrotex:::resolve_math_font(never), "Math Check Alias")
+
+  entry_points <- list(
+    "latex_options" = function(f) latex_options(math_font = f),
+    "latex_grob" = function(f) latex_grob("$x$", math_font = f),
+    "latex_dims" = function(f) latex_dims("$x$", math_font = f),
+    "latex_tree" = function(f) latex_tree("$x$", math_font = f),
+    "markdown_grob" = function(f) markdown_grob("a $x$", math_font = f),
+    "element_latex" = function(f) element_latex(math_font = f),
+    "element_markdown" = function(f) element_markdown(math_font = f)
+  )
+  if (requireNamespace("ggplot2", quietly = TRUE)) {
+    entry_points[["geom_latex"]] <- function(f) geom_latex(math_font = f)
+    entry_points[["geom_markdown"]] <- function(f) geom_markdown(math_font = f)
+  }
+  for (what in names(entry_points)) {
+    set <- entry_points[[what]]
+    expect_error(set(never), "not loaded", label = what)
+    expect_error(set(text_font), "no math table", label = what)
+    expect_no_error(set("Math Check Alias"))
+    reset_latex_options()
+  }
+
+  # A refused value leaves the option as it was.
+  latex_options(math_font = "stix")
+  expect_error(latex_options(math_font = text_font), "no math table")
+  expect_identical(latex_options()$math_font, "stix")
 })
