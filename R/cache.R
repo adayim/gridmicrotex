@@ -219,6 +219,9 @@ latex_cache_info <- function() {
   used <- new.env(parent = emptyenv())
   register_image_resolver(.image_resolver(text_size, max_width, used))
   on.exit(clear_image_resolver(), add = TRUE)
+  # And the fonts a document names (R/font-spec.R).
+  register_font_resolver(.font_resolver())
+  on.exit(clear_font_resolver(), add = TRUE)
   parse <- function() parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,

@@ -57,6 +57,14 @@ clear_image_resolver <- function() {
     invisible(.Call(`_gridmicrotex_clear_image_resolver`))
 }
 
+register_font_resolver <- function(fn) {
+    invisible(.Call(`_gridmicrotex_register_font_resolver`, fn))
+}
+
+clear_font_resolver <- function() {
+    invisible(.Call(`_gridmicrotex_clear_font_resolver`))
+}
+
 microtex_init_from_otf <- function(otf_path, index = 0L) {
     invisible(.Call(`_gridmicrotex_microtex_init_from_otf`, otf_path, index))
 }

@@ -2,33 +2,6 @@
 # from a file or an installed family, and used by that name. The bundled
 # fonts stand in for "a font file" so that no test needs a file of its own.
 
-stix <- function() {
-  f <- system.file("fonts", "STIXTwoMath-Regular.otf", package = "gridmicrotex")
-  skip_if_not(nzchar(f))
-  f
-}
-lete <- function() {
-  f <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
-  skip_if_not(nzchar(f))
-  f
-}
-
-# The family each text run of a label is drawn in, named by its text.
-drawn_families <- function(g) {
-  pdf(NULL)
-  on.exit(dev.off(), add = TRUE)
-  kids <- grid::makeContent(g)$children
-  txt <- Filter(function(k) inherits(k, "text"), unclass(kids))
-  stats::setNames(
-    vapply(txt, function(k) if (is.null(k$gp$fontfamily)) NA_character_ else k$gp$fontfamily, character(1)),
-    vapply(txt, function(k) trimws(as.character(k$label)), character(1))
-  )
-}
-
-same_file <- function(a, b) {
-  identical(normalizePath(a, winslash = "/"), normalizePath(b, winslash = "/"))
-}
-
 test_that("load_font() registers a file under a name and lists it", {
   expect_identical(load_font(stix(), name = "Named Probe A"), "Named Probe A")
 

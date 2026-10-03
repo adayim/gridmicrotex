@@ -169,6 +169,18 @@ load_font <- function(x, name = NULL, bold = NULL, italic = NULL,
     source <- "system"
   }
 
+  # The same files again, under the same name: nothing to do. A document that
+  # names a font file reaches here at every parse, and a load changes the
+  # layout cache key. With no name given the font's own is meant, which an
+  # entry carries when its name is the one the engine knows it by.
+  for (known in .font_registry$fonts) {
+    if (identical(known$faces, faces) && identical(known$source, source) &&
+        (if (is.null(name)) identical(known$name, known$display)
+         else identical(tolower(known$name), tolower(name)))) {
+      return(invisible(known$name))
+    }
+  }
+
   # The engine reads one single-face file; a collection is cut down to the
   # face asked for first (R/ttc-splitter.R).
   plain <- faces$plain
