@@ -133,6 +133,40 @@ test_that("a document's font beats gp$fontfamily, which beats the option", {
   expect_equal(r[["ab"]], "Cmd Probe Sans")
 })
 
+test_that("a font lasts across a line break, as it does in LaTeX", {
+  load_cmd_fonts()
+  for (mode in c("mixed", "document")) {
+    r <- record_families("{\\fontspec{Cmd Probe Mono} one\\\\ two} three", input_mode = mode)
+    expect_equal(r[c("one", "two")], c(one = "Cmd Probe Mono", two = "Cmd Probe Mono"),
+                 label = mode)
+    expect_true(is.na(r[["three"]]), label = mode)
+  }
+})
+
+test_that("markdown's font-family names its font with \\fontspec", {
+  load_cmd_fonts()
+  md <- function(css, text = "ab", ...) {
+    d <- markdown_grob(sprintf('a <span style="font-family:%s">%s</span> d', css, text),
+                       ...)$layout_df
+    d <- d[d$type == "text" & nzchar(trimws(d$text)), ]
+    stats::setNames(d$font_family, trimws(d$text))
+  }
+  # A loaded font, a name that starts with a bracket in its text, and a break.
+  expect_equal(md("Cmd Probe Mono")[["ab"]], "Cmd Probe Mono")
+  expect_equal(md("Cmd Probe Mono", "[note] x")[["[note] x"]], "Cmd Probe Mono")
+  r <- markdown_grob('<span style="font-family:Cmd Probe Mono">one<br>two</span> three')$layout_df
+  r <- stats::setNames(r$font_family, trimws(r$text))
+  expect_equal(r[["one"]], "Cmd Probe Mono")
+  expect_equal(r[["two"]], "Cmd Probe Mono")
+  # CSS's generics are R's own families.
+  expect_equal(md("monospace")[["ab"]], "mono")
+  expect_equal(md("sans-serif")[["ab"]], "sans")
+  expect_equal(md("serif")[["ab"]], "serif")
+  # A font that is not there is said so, and the default stays.
+  expect_warning(r <- md("No Such Gridmicrotex Face"), "font `No Such Gridmicrotex Face' not found")
+  expect_true(is.na(r[["ab"]]))
+})
+
 test_that("\\gmfontfamily still names a family for one run", {
   r <- record_families("\\gmfontfamily{Georgia}{ab} cd")
   expect_equal(r[["ab"]], "Georgia")

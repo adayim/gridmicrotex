@@ -31,6 +31,8 @@
 .resolve_font_spec <- function(name, options = character(), role = "font") {
   name <- trimws(name)
   if (!nzchar(name)) return(NULL)
+  # R's own families, which markdown's CSS generics come to.
+  if (!identical(role, "math") && name %in% c("sans", "serif", "mono")) return(name)
   found <- .font_spec_find(name, options, role)
   if (is.null(found)) return(NULL)
   entry <- .font_registry$fonts[[found]]

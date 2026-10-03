@@ -376,8 +376,8 @@
 
 # font-family is a fallback list, so take the first entry. Map the CSS
 # generics onto the aliases grid already understands and pass anything
-# else through: what the name resolves to is the device's business, same
-# as gpar(fontfamily=). Returns "" when there is no usable name.
+# else through: \fontspec finds it among the loaded and installed fonts
+# (R/font-spec.R). Returns "" when there is no usable name.
 .md_css_family <- function(val_raw) {
   fam <- gsub("^[\"']|[\"']$", "", trimws(strsplit(val_raw %||% "", ",")[[1]]))[1]
   fam <- switch(tolower(fam %||% ""), monospace = "mono",
@@ -491,7 +491,9 @@
       if (val %in% c("italic", "oblique")) add("\\textit{")
     } else if (prop == "font-family") {
       fam <- .md_css_family(val_raw)
-      if (nzchar(fam)) add(paste0("\\gmfontfamily{", fam, "}{"))
+      # A group around \fontspec, whose `{}` keeps a `[` that starts the
+      # text from being read as the command's options.
+      if (nzchar(fam)) add(paste0("{\\fontspec{", fam, "}{}"))
     }
   }
   list(open = paste(open, collapse = ""), close = paste(close, collapse = ""))
@@ -981,9 +983,8 @@
 #' `line-through`), `font-size` (such as `12pt`, `1.2em` or `smaller`)
 #' and `font-family`; other properties are ignored. Colours
 #' are R colour names, CSS names, `#rgb`, `#rrggbb` or `rgb()`.
-#' `font-family` takes `serif`, `sans-serif`, `monospace` or an installed
-#' font; to use a font file that is not installed, register it first with
-#' `systemfonts::register_font()`.
+#' `font-family` takes `serif`, `sans-serif`, `monospace`, an installed
+#' font, or a font named with [load_font()].
 #'
 #' Tags nest and can hold markdown and math. Other tags are dropped and
 #' their text kept. Links keep their text only. Images must be local PNG,

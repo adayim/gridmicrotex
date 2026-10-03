@@ -331,13 +331,13 @@ grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)",
            gp = gpar(fontfamily = "sans"))
 ```
 
-`\gmfontfamily{family}{text}` sets the font of one run, and `\textrm{}`
-returns to `gp$fontfamily`:
+`\textsf{}` and `\texttt{}` set text in the sans and mono fonts, and
+`\textrm{}` returns to `gp$fontfamily`:
 
-```{r gmfontfamily, fig.height=0.8, fig.width=4.5, out.width="85%", dev = "ragg_png", dev.args = list()}
+```{r textrm, fig.height=0.8, fig.width=4.5, out.width="85%", dev = "ragg_png", dev.args = list()}
 grid.newpage()
 grid.latex(
-  r"(\textsf{sans \textrm{body} sans} \quad \gmfontfamily{mono}{mono})",
+  r"(\textsf{sans \textrm{body} sans} \quad \texttt{mono})",
   gp = gpar(fontfamily = "serif")
 )
 ```

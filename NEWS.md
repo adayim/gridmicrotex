@@ -44,7 +44,6 @@
 - New `"github"` style preset, shipped as a CSS file.
 - `<div class=>` and `<div style=>` style a chunk of markdown; `<span class=>` styles an inline run.
 - New `justify` and `line_break` arguments control paragraph line breaking.
-- New `\gmfontfamily{family}{content}` sets the font for one run of text.
 - `\includegraphics[width=,height=,scale=,keepaspectratio]{file}` draws PNG, JPEG and SVG images inline in a formula; it previously parsed and drew nothing. The extension may be omitted and `\graphicspath{}` is searched, as in LaTeX. An SVG is drawn as real vector, so it stays sharp at any output resolution. 
 - New `p{len}` column type gives `tabular` fixed-width, wrapping cells.
 - `\url{}` and `\href{}{}` render as styled text instead of literally.

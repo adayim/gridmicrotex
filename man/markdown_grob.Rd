@@ -52,9 +52,8 @@ A \code{style} attribute can set \code{color}, \code{text-decoration} (\code{und
 \code{line-through}), \code{font-size} (such as \verb{12pt}, \verb{1.2em} or \code{smaller})
 and \code{font-family}; other properties are ignored. Colours
 are R colour names, CSS names, \verb{#rgb}, \verb{#rrggbb} or \code{rgb()}.
-\code{font-family} takes \code{serif}, \code{sans-serif}, \code{monospace} or an installed
-font; to use a font file that is not installed, register it first with
-\code{systemfonts::register_font()}.
+\code{font-family} takes \code{serif}, \code{sans-serif}, \code{monospace}, an installed
+font, or a font named with \code{\link[=load_font]{load_font()}}.
 
 Tags nest and can hold markdown and math. Other tags are dropped and
 their text kept. Links keep their text only. Images must be local PNG,
