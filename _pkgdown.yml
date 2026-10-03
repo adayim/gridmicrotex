@@ -28,6 +28,8 @@ navbar:
       - text: "Reference"
       - text: What is supported (PDF)
         href: supported-functions.pdf
+      - text: What is supported (LaTeX source)
+        href: supported-functions.tex
 
 reference:
   - title: Core rendering

@@ -5,6 +5,9 @@
 #   source(system.file("supported/build.R", package = "gridmicrotex"))
 #   build_supported(tempdir())      # writes supported-functions.tex and .pdf
 #
+# Neither file is kept in the package: they are made from examples.tsv. The website's copies are
+# in pkgdown/assets/ -- run build_supported() and copy both there when the examples change.
+#
 # The package has no pages (a grob is one piece), so a page is what lies between two \newpage
 # lines of the file, and the page numbers are the footer drawn here. A row is `ok` when LaTeX sets
 # it too (its output is shown), `nolatex` when only the package does (the name is listed, since
