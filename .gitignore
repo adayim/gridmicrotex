@@ -19,10 +19,4 @@ src/MicroTeX/lib/**/*.o
 docs
 /doc/
 /Meta/
-debug_*
-tools/
-.positai
-CLAUDE\.md
 
-/.claude/
-/.vscode/
