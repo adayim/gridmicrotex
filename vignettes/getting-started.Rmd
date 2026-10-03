@@ -342,8 +342,32 @@ grid.latex(
 )
 ```
 
-`load_math_font("MyFont.otf")` adds any OpenType math font. Text fonts
-need no loading. `check_math_fonts()` lists what is available.
+`load_math_font("MyFont.otf")` adds any OpenType math font.
+`check_math_fonts()` lists what is available.
+
+### Your own fonts
+
+`load_font()` names a font file, or an installed family, once. The name
+then works wherever a font is named: in `gp`, in `latex_options()`
+(`main_font`, `sans_font`, `mono_font`) and in the LaTeX itself, with the
+commands of fontspec and unicode-math (`\setmainfont`, `\setsansfont`,
+`\setmonofont`, `\setmathfont`, `\fontspec`, `\newfontfamily`) and
+`\fontfamily{...}\selectfont`, which also reads LaTeX's family codes such as
+`ppl` for Palatino.
+
+```{r load-font, fig.height=0.8, fig.width=4.5, out.width="85%"}
+# A font file of your own, here the bundled Lete Sans Math
+otf <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
+load_font(otf, name = "My Font", bold = otf)
+
+grid.newpage()
+grid.latex(r"(\setmainfont{My Font} body, \textbf{bold} and
+          {\fontspec{STIX Two Math} another font})")
+```
+
+Text in a loaded font is drawn from its file on every device, `pdf()`
+included. `bold` and `italic` are the files of those faces, so `\textbf` and
+`\textit` use the real design. `available_fonts()` lists what is loaded.
 
 ## Devices
 
