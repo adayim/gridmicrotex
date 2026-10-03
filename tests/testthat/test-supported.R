@@ -62,7 +62,8 @@ test_that("the document is built: a LaTeX file, and a PDF with a page number on 
   dir <- tempfile("supported")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
-  made <- suppressWarnings(env$build_supported(dir))
+  # pdf(): its page objects can be counted, and it needs no installed font (cairo_pdf is the default).
+  made <- suppressWarnings(env$build_supported(dir, device = "pdf"))
   expect_true(all(file.exists(made)))
   tex <- readLines(made[["tex"]], encoding = "UTF-8")
   pages <- sum(tex == "\\newpage") + 1L
