@@ -944,6 +944,12 @@ descentDetails.gridmicrotex_measure <- function(x) {
     c(max(ext[1, ]), max(ext[2, ]))
   }
 
+  .measure_registered_run <- function(text, font_style, font_family) {
+    fam <- .resolve_text_family(font_style, text_gp$fontfamily, font_family, roles)
+    face <- if (!is.null(fam)) .registered_face(fam, font_style)
+    if (is.null(face)) NULL else .measure_registered(text, face)
+  }
+
   measure <- function(text, font_style, font_family) {
     key <- paste0(as.integer(font_style), "\x1f", font_family, "\x1f", text)
     # The key becomes a variable name, which R caps at 10000 bytes, so a
@@ -962,6 +968,14 @@ descentDetails.gridmicrotex_measure <- function(x) {
       result <- c(0, 0.8, 1)
       if (cacheable) cache[[key]] <- result
       return(result)
+    }
+
+    # A font that was loaded is measured from its own file, shaped (R/font-glyph.R),
+    # so no device is asked and the answer is the same on every one.
+    registered <- .measure_registered_run(text, font_style, font_family)
+    if (!is.null(registered)) {
+      if (cacheable) cache[[key]] <- registered
+      return(registered)
     }
 
     # Ensure a graphics device is available for measurement. A parse opens

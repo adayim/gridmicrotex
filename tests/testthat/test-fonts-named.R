@@ -136,13 +136,10 @@ test_that("mono_font and sans_font set the font of \\texttt and \\textsf", {
   old <- latex_options(mono_font = "Named Probe M")
   expect_equal(records()[["ab"]], "Named Probe M")
   expect_true(is.na(records()[["cd"]]))
-  expect_equal(drawn_families(latex_grob(tex))[c("ab", "cd")],
-               c(ab = "Named Probe M", cd = "sans"))
 
   latex_options(sans_font = "named probe s")
   expect_equal(latex_options()$sans_font, "Named Probe S")
-  expect_equal(drawn_families(latex_grob(tex))[c("ab", "cd")],
-               c(ab = "Named Probe M", cd = "Named Probe S"))
+  expect_equal(records()[["cd"]], "Named Probe S")
   # The body is neither.
   expect_true(is.na(records()[["ef"]]))
 
@@ -159,16 +156,17 @@ test_that("main_font is the body font, and gp$fontfamily wins over it", {
   load_font(stix(), name = "Named Probe Body")
   tex <- "\\text{ef} \\texttt{ab}"
 
-  expect_true(is.na(drawn_families(latex_grob(tex))[["ef"]]))
+  expect_null(latex_grob(tex)$text_gp$fontfamily)
 
   latex_options(main_font = "Named Probe Body")
-  fam <- drawn_families(latex_grob(tex))
-  expect_equal(fam[["ef"]], "Named Probe Body")
-  # \texttt is not the body.
-  expect_equal(fam[["ab"]], "mono")
+  g <- latex_grob(tex)
+  expect_equal(g$text_gp$fontfamily, "Named Probe Body")
+  # \texttt is not the body: it is still the device's mono.
+  expect_equal(drawn_families(g)[["ab"]], "mono")
 
-  fam <- drawn_families(latex_grob(tex, gp = grid::gpar(fontfamily = "serif")))
-  expect_equal(fam[["ef"]], "serif")
+  g <- latex_grob(tex, gp = grid::gpar(fontfamily = "serif"))
+  expect_equal(g$text_gp$fontfamily, "serif")
+  expect_equal(drawn_families(g)[["ef"]], "serif")
 })
 
 test_that("a font option takes a file, an installed family or one of R's families", {

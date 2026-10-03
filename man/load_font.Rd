@@ -31,6 +31,15 @@ from a file or from an installed family.
 A math font loaded here can also be used as text. A font that is already
 installed does not need loading to be used as \code{gp$fontfamily}; load it to
 give it a short name, or to set it as a role in \code{\link[=latex_options]{latex_options()}}.
+
+The text of a loaded font is measured and drawn by gridmicrotex from the
+font's own file, so it looks the same on every device, base \code{pdf()}
+included, with its kerning and ligatures. It is drawn as glyphs where the
+device has them and as outlines where it has not (and for rotated text).
+Other families are drawn by the device, as are right-to-left text and a
+character the font has no glyph for, which the device may find in another
+font. In base graphics with \code{latex_options(device_math = TRUE)} the device
+draws all text, so it has to know the font itself.
 }
 \examples{
 \donttest{

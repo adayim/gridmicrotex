@@ -115,6 +115,15 @@ available_math_fonts <- function() {
 #' installed does not need loading to be used as `gp$fontfamily`; load it to
 #' give it a short name, or to set it as a role in [latex_options()].
 #'
+#' The text of a loaded font is measured and drawn by gridmicrotex from the
+#' font's own file, so it looks the same on every device, base `pdf()`
+#' included, with its kerning and ligatures. It is drawn as glyphs where the
+#' device has them and as outlines where it has not (and for rotated text).
+#' Other families are drawn by the device, as are right-to-left text and a
+#' character the font has no glyph for, which the device may find in another
+#' font. In base graphics with `latex_options(device_math = TRUE)` the device
+#' draws all text, so it has to know the font itself.
+#'
 #' @param x A font file (`.otf`, `.ttf` or `.ttc`), or the name of an
 #'   installed font family.
 #' @param name The name to register the font under. The default is the

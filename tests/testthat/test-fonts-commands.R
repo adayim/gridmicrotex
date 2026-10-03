@@ -3,8 +3,10 @@
 # NFSS's \fontfamily -- in a label and in a whole file.
 
 load_cmd_fonts <- function() {
-  load_font(stix(), name = "Cmd Probe Mono")
-  load_font(lete(), name = "Cmd Probe Sans")
+  load_font(stix(), name = "Cmd Probe Mono", bold = lete(), italic = lete(),
+            bolditalic = lete())
+  load_font(lete(), name = "Cmd Probe Sans", bold = stix(), italic = stix(),
+            bolditalic = stix())
 }
 
 test_that("\\setmonofont, \\setsansfont and \\setmainfont set the fonts of their roles", {
@@ -105,7 +107,14 @@ test_that("an option the engine does not read is warned and ignored", {
 test_that("a document's font beats gp$fontfamily, which beats the option", {
   load_cmd_fonts()
   on.exit(reset_latex_options(), add = TRUE)
-  body <- function(tex, ...) drawn_families(latex_grob(tex, ...))[["ab"]]
+  # The family of the body text: a document's own, which the records carry,
+  # else the grob's.
+  body <- function(tex, ...) {
+    g <- latex_grob(tex, ...)
+    d <- g$layout_df
+    fam <- d$font_family[d$type == "text" & trimws(d$text) == "ab"]
+    if (length(fam) && !is.na(fam[[1L]])) fam[[1L]] else g$text_gp$fontfamily %||% NA_character_
+  }
   expect_true(is.na(body("\\text{ab}")))
 
   latex_options(main_font = "Cmd Probe Mono")
