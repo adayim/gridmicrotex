@@ -207,7 +207,7 @@ Letters and Unicode	ok	\Re
 Letters and Unicode	ok	\text{\ae}
 Letters and Unicode	ok	\daleth
 Letters and Unicode	ok	\hbar
-Letters and Unicode	ok	\real
+Letters and Unicode	nolatex	\real
 Letters and Unicode	ok	\text{\AE}
 Letters and Unicode	ok	\eth
 Letters and Unicode	ok	\hslash
@@ -254,7 +254,7 @@ Logic and Set Theory	ok	\emptyset
 Logic and Set Theory	ok	\exists
 Logic and Set Theory	ok	\subset
 Logic and Set Theory	ok	\because
-Logic and Set Theory	ok	\empty
+Logic and Set Theory	nolatex	\empty
 Logic and Set Theory	nolatex	\exist
 Logic and Set Theory	ok	\supset
 Logic and Set Theory	ok	\mapsto

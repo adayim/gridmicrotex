@@ -2,7 +2,8 @@
 \documentclass[9pt]{extarticle}
 \usepackage[letterpaper,margin=0.7in]{geometry}
 \usepackage[utf8]{inputenc}
-\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,ulem,xcolor,mathdots,amsthm}
+\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,xcolor,mathdots,amsthm}
+\usepackage[normalem]{ulem}
 \usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde}
 \usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing}
 \begin{document}
@@ -319,13 +320,12 @@ $} \\
 $} & {\small\verb|\daleth|} & {\large $\daleth
 $} & {\small\verb|\hbar|} & {\large $\hbar
 $} \\
-{\small\verb|\real|} & {\large $\real
-$} & {\small\verb|\text{\AE}|} & {\large $\text{\AE}
+{\small\verb|\text{\AE}|} & {\large $\text{\AE}
 $} & {\small\verb|\eth|} & {\large $\eth
+$} & {\small\verb|\hslash|} & {\large $\hslash
 $} \\
-{\small\verb|\hslash|} & {\large $\hslash
-$} & {\small\verb|\text{\oe}|} & {\large $\text{\oe}
-$} & & \\
+{\small\verb|\text{\oe}|} & {\large $\text{\oe}
+$} & & & & \\
 \end{tabular}
 
 {\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
@@ -339,8 +339,8 @@ $} & & \\
 {\small\verb|\Reals|} & {\small\verb|\image|} & {\small\verb|\weierp|} \\
 {\small\verb|\alef|} & {\small\verb|\N|} & {\small\verb|\Z|} \\
 {\small\verb|\alefsym|} & {\small\verb|\cnums|} & {\small\verb|\natnums|} \\
-{\small\verb|\Complex|} & {\small\verb|\R|} & {\small\verb|\reals|} \\
-{\small\verb|\char"263a|} &  &  \\
+{\small\verb|\Complex|} & {\small\verb|\R|} & {\small\verb|\real|} \\
+{\small\verb|\reals|} & {\small\verb|\char"263a|} &  \\
 \end{tabular}
 
 \section*{Layout}
@@ -449,38 +449,36 @@ $} & {\small\verb|\exists|} & {\large $\exists
 $} & {\small\verb|\subset|} & {\large $\subset
 $} \\
 {\small\verb|\because|} & {\large $\because
-$} & {\small\verb|\empty|} & {\large $\empty
 $} & {\small\verb|\supset|} & {\large $\supset
+$} & {\small\verb|\mapsto|} & {\large $\mapsto
 $} \\
-{\small\verb|\mapsto|} & {\large $\mapsto
-$} & {\small\verb|\varnothing|} & {\large $\varnothing
+{\small\verb|\varnothing|} & {\large $\varnothing
 $} & {\small\verb|\nexists|} & {\large $\nexists
+$} & {\small\verb|\mid|} & {\large $\mid
 $} \\
-{\small\verb|\mid|} & {\large $\mid
-$} & {\small\verb|\to|} & {\large $\to
+{\small\verb|\to|} & {\large $\to
 $} & {\small\verb|\implies|} & {\large $\implies
+$} & {\small\verb|\in|} & {\large $\in
 $} \\
-{\small\verb|\in|} & {\large $\in
-$} & {\small\verb|\land|} & {\large $\land
+{\small\verb|\land|} & {\large $\land
 $} & {\small\verb|\gets|} & {\large $\gets
+$} & {\small\verb|\impliedby|} & {\large $\impliedby
 $} \\
-{\small\verb|\impliedby|} & {\large $\impliedby
-$} & {\small\verb|\lor|} & {\large $\lor
+{\small\verb|\lor|} & {\large $\lor
 $} & {\small\verb|\leftrightarrow|} & {\large $\leftrightarrow
+$} & {\small\verb|\iff|} & {\large $\iff
 $} \\
-{\small\verb|\iff|} & {\large $\iff
-$} & {\small\verb|\notin|} & {\large $\notin
+{\small\verb|\notin|} & {\large $\notin
 $} & {\small\verb|\ni|} & {\large $\ni
+$} & {\small\verb|\neg|} & {\large $\neg
 $} \\
-{\small\verb|\neg|} & {\large $\neg
-$} & & & & \\
 \end{tabular}
 
 {\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
 
 \begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
-{\small\verb|\exist|} & {\small\verb|\isin|} & {\small\verb|\notni|} \\
-{\small\verb|\set{x\VERT x<5}|} &  &  \\
+{\small\verb|\empty|} & {\small\verb|\exist|} & {\small\verb|\isin|} \\
+{\small\verb|\notni|} & {\small\verb|\set{x\VERT x<5}|} &  \\
 \end{tabular}
 
 \begin{tabular}{@{}l@{}}

@@ -17,7 +17,8 @@
   r"(\documentclass[9pt]{extarticle})",
   r"(\usepackage[letterpaper,margin=0.7in]{geometry})",
   r"(\usepackage[utf8]{inputenc})",
-  r"(\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,ulem,xcolor,mathdots,amsthm})",
+  r"(\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,xcolor,mathdots,amsthm})",
+  r"(\usepackage[normalem]{ulem})",
   r"(\usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde})",
   r"(\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing})")
 

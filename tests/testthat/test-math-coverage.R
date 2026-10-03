@@ -492,3 +492,15 @@ test_that("a dimension ends where its unit does: \\mkern8mu(a) is 8mu and then (
   same(r"(x\kern1em[a])", r"(x\kern1em{}[a])")
   expect_identical(warns(r"(x\mkern8mu(a))"), character(0))
 })
+
+test_that("\\textsc in math is text: upright, with its spaces, and \\Eqcolon is =::", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- rec(r"(\begin{array}{l}\textsc{Small caps}\end{array})")
+  expect_equal(paste(r$text[r$type == "text"], collapse = ""), "SMALL CAPS")
+  same(r"(\Eqcolon)", r"(\Eqqcolon)")
+})
+
+test_that("\\models is a bar joined to an equal sign, as LaTeX's", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  same(r"(\models)", r"(\mathrel{\mathrel{\vert}\joinrel=})")
+})
