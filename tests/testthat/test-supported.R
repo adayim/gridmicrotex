@@ -1,7 +1,9 @@
 # inst/supported/examples.tsv is the list of what the package draws, which
 # build.R sets as a document: so each row is a claim, and checked here. An
-# "ok" row is drawn with no warning; a "no" row is one the package does not
-# draw, and still warns of it -- when one is supported, its row moves up.
+# "ok" row is drawn with no warning, and LaTeX sets it too (the .tex compiles
+# with pdflatex); "nolatex" is drawn with no warning and has no LaTeX
+# equivalent; a "no" row is one the package does not draw, and still warns of
+# it -- when one is supported, its row moves up.
 
 examples <- function() {
   path <- system.file("supported/examples.tsv", package = "gridmicrotex")
@@ -24,7 +26,7 @@ warnings_of <- function(tex) {
 test_that("every example listed as supported is drawn with no warning", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   ex <- examples()
-  ok <- ex[ex$kind == "ok", ]
+  ok <- ex[ex$kind %in% c("ok", "nolatex"), ]
   expect_gt(nrow(ok), 900L)
   bad <- vapply(ok$source, function(s) length(warnings_of(s)) > 0L, NA)
   expect_identical(ok$source[bad], character(0))
@@ -47,7 +49,7 @@ test_that("the sections are KaTeX's, and have rows", {
     expect_true(s %in% sections, info = s)
   }
   expect_false(anyNA(ex$source))
-  expect_true(all(ex$kind %in% c("ok", "no")))
+  expect_true(all(ex$kind %in% c("ok", "nolatex", "no")))
 })
 
 test_that("the document is built: a LaTeX file, and a PDF with a page number on every page", {
@@ -68,7 +70,10 @@ test_that("the document is built: a LaTeX file, and a PDF with a page number on 
   expect_true(any(tex == "\\begin{document}") && any(tex == "\\end{document}"))
   # Every example is in it, in its table.
   ex <- examples()
-  expect_gt(sum(grepl("\\\\verb", tex)), 0.9 * sum(ex$kind == "ok"))
+  expect_gt(sum(grepl("\\\\verb", tex)), 0.9 * sum(ex$kind != "no"))
+  # Three examples to a row where they fit, and only ASCII, which LaTeX reads as it is.
+  expect_gt(sum(grepl("\\hspace{14pt}}l@{\\hspace{4pt}}l@{\\hspace{14pt}}l@{\\hspace{4pt}}l@{}", tex, fixed = TRUE)), 5L)
+  expect_false(any(grepl("[^ -~]", tex)))
   # The PDF has as many pages as the file.
   bytes <- readBin(made[["pdf"]], "raw", file.size(made[["pdf"]]))
   bytes[bytes == as.raw(0L)] <- as.raw(32L)

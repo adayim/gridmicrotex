@@ -1,25 +1,36 @@
-# The list of what gridmicrotex draws: every example of examples.tsv set in a
-# table, in the order KaTeX's "Supported Functions" page uses, and rendered by
-# the package itself to a PDF -- one page at a time, since a grob is one piece
-# and has no pages. The page numbers are the footer drawn here.
+# The list of what gridmicrotex draws. examples.tsv holds the examples, in the order of KaTeX's
+# "Supported Functions" page; supported-functions.tex sets them, three to a row where they fit, in
+# an ordinary LaTeX file that pdflatex compiles; and the package renders that same file to a PDF.
 #
 #   source(system.file("supported/build.R", package = "gridmicrotex"))
-#   build_supported(tempdir())     # writes supported-functions.tex and .pdf
+#   build_supported(tempdir())      # writes supported-functions.tex and .pdf
 #
-# The .tex it writes is an ordinary LaTeX file (it needs amsmath, amssymb,
-# amscd and tikz-cd) that real LaTeX sets as well.
+# The package has no pages (a grob is one piece), so a page is what lies between two \newpage
+# lines of the file, and the page numbers are the footer drawn here. A row is `ok` when LaTeX sets
+# it too (its output is shown), `nolatex` when only the package does (the name is listed, since
+# there is nothing to compare it with).
 
-build_supported <- function(dir = ".", pdf = TRUE, name = "supported-functions",
-                            examples = system.file("supported/examples.tsv",
-                                                   package = "gridmicrotex")) {
+.sup_page <- c(w = 8.5, h = 11)
+.sup_margin <- c(side = 0.7, top = 0.65, bottom = 0.85)
+
+.sup_preamble <- c(
+  r"(\documentclass[9pt]{extarticle})",
+  r"(\usepackage[letterpaper,margin=0.7in]{geometry})",
+  r"(\usepackage[utf8]{inputenc})",
+  r"(\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,ulem,xcolor,mathdots,amsthm})",
+  r"(\usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde})",
+  r"(\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing})")
+
+supported_tex <- function(path = "supported-functions.tex",
+                          examples = system.file("supported/examples.tsv", package = "gridmicrotex")) {
   stopifnot(nzchar(examples), file.exists(examples))
   ex <- utils::read.delim(examples, quote = "", comment.char = "", stringsAsFactors = FALSE,
                           encoding = "UTF-8")
-  size <- 9                       # points
-  page <- c(w = 8.5, h = 11)      # inches
-  margin <- c(side = 0.7, top = 0.65, bottom = 0.85)
-  budget <- (page[["h"]] - margin[["top"]] - margin[["bottom"]]) * 72
-  width <- (page[["w"]] - 2 * margin[["side"]]) * 72
+  ex <- ex[ex$kind %in% c("ok", "nolatex") & !grepl("[^ -~]", ex$source), ]
+  size <- 9                                   # points
+  budget <- (.sup_page[["h"]] - .sup_margin[["top"]] - .sup_margin[["bottom"]]) * 72
+  width <- (.sup_page[["w"]] - 2 * .sup_margin[["side"]]) * 72
+  tt <- 4.8                                   # a source character, Courier, points (cmtt is narrower)
 
   verb <- function(s) {
     for (d in c("|", "!", "+", "=", "/", "@", "~", ";")) {
@@ -27,13 +38,12 @@ build_supported <- function(dir = ".", pdf = TRUE, name = "supported-functions",
     }
     paste0("\\texttt{", gsub("([#$%&_{}])", "\\\\\\1", s), "}")
   }
-  # `s` in pieces of up to `width` characters, cut at spaces.
-  wrap_source <- function(s, width) {
+  wrap_source <- function(s, n) {
     words <- strsplit(s, " ", fixed = TRUE)[[1]]
     lines <- character()
     cur <- ""
     for (w in words) {
-      if (nzchar(cur) && nchar(cur) + 1L + nchar(w) > width) {
+      if (nzchar(cur) && nchar(cur) + 1L + nchar(w) > n) {
         lines <- c(lines, cur)
         cur <- w
       } else {
@@ -42,26 +52,32 @@ build_supported <- function(dir = ".", pdf = TRUE, name = "supported-functions",
     }
     c(lines, cur)
   }
-  math <- function(s) paste0("{\\large $", s, "\n$}")
   small <- function(s) paste0("{\\small", s, "}")
+  is_display <- function(s) grepl(r"(^\\begin\{(align|alignat|gather|equation|multline|flalign|eqnarray)\*?\})", s) ||
+    grepl("\\tag", s, fixed = TRUE)
+  display_tex <- function(s) if (grepl("\\tag", s, fixed = TRUE) && !grepl("^\\\\begin", s)) paste0("\\[", s, "\\]") else s
 
-  height <- function(s) {
+  measure <- function(s) {
     d <- tryCatch(suppressWarnings(
-      gridmicrotex::latex_dims(s, input_mode = "math", gp = grid::gpar(fontsize = size))),
+      gridmicrotex::latex_dims(s, input_mode = "math", gp = grid::gpar(fontsize = 10))),
       error = function(e) NULL)
-    if (is.null(d)) return(14)
-    max(12, grid::convertHeight(d$height, "bigpts", valueOnly = TRUE)) + 5
+    if (is.null(d)) return(c(w = 40, h = 14))
+    c(w = grid::convertWidth(d$width, "bigpts", valueOnly = TRUE),
+      h = grid::convertHeight(d$height, "bigpts", valueOnly = TRUE))
   }
 
   pages <- list()
   cur <- character()
   used <- 0
   buf <- character()
-  kind <- "pair2"
-  spec <- c(pair2 = "@{}l@{\\qquad}l@{\\qquad\\qquad}l@{\\qquad}l@{}", one = "@{}l@{}",
-            names = "@{}lll@{}")
+  kind <- "t3"
   title <- ""
-
+  spec <- c(
+    t3 = "@{}l@{\\hspace{4pt}}l@{\\hspace{14pt}}l@{\\hspace{4pt}}l@{\\hspace{14pt}}l@{\\hspace{4pt}}l@{}",
+    t2 = "@{}l@{\\hspace{4pt}}l@{\\hspace{20pt}}l@{\\hspace{4pt}}l@{}",
+    one = "@{}l@{}",
+    n3 = "@{}l@{\\hspace{14pt}}l@{\\hspace{14pt}}l@{}",
+    n1 = "@{}l@{}")
   flush_table <- function() {
     if (length(buf)) {
       cur <<- c(cur, paste0("\\begin{tabular}{", spec[[kind]], "}"), buf, "\\end{tabular}", "")
@@ -74,46 +90,56 @@ build_supported <- function(dir = ".", pdf = TRUE, name = "supported-functions",
     cur <<- character()
     used <<- 0
     if (nzchar(title)) {
-      cur <<- paste0("\\subsection*{", title, " (continued)}")
+      cur <<- c(paste0("\\subsection*{", title, " (continued)}"), "")
       used <<- 22
     }
   }
-  heading <- function(level, text, h, keep = 90) {
-    if (used + h + keep > budget) new_page()
+  heading <- function(level, text, h, keep) {
+    if (used + h + keep > budget) {
+      title <<- ""                  # the section before it has ended: no "(continued)"
+      new_page()
+    }
     flush_table()
-    cur <<- c(cur, paste0("\\", level, "*{", text, "}"))
+    cur <<- c(cur, paste0("\\", level, "*{", text, "}"), "")
     used <<- used + h
   }
   row <- function(tex, h, k) {
-    if (k != kind || used + h > budget) {
-      if (used + h > budget) {
-        new_page()
-      } else {
-        flush_table()
-      }
+    if (used + h > budget) {
+      new_page()
+      kind <<- k
+    } else if (k != kind) {
+      flush_table()
       kind <<- k
     }
     buf <<- c(buf, tex)
     used <<- used + h
   }
+  block <- function(lines, h) {       # a paragraph of its own
+    flush_table()
+    if (used + h > budget) new_page()
+    cur <<- c(cur, lines, "")
+    used <<- used + h
+  }
 
   intro <- c(
     "\\begin{center}\\Large\\textbf{What gridmicrotex draws}\\end{center}",
-    paste0("Each row is a LaTeX input and what the package makes of it. The examples are those of ",
-           "KaTeX's list of supported functions, then what KaTeX does not have. A row here is a ",
-           "test: it must be drawn with no warning."),
+    "",
+    paste0("Each row is a LaTeX input and what the package makes of it, three to a line where they fit, in ",
+           "the order of KaTeX's list of supported functions, then what KaTeX does not have. A row is a ",
+           "test: it must be drawn with no warning. Where LaTeX has nothing to compare with, only the ",
+           "name is listed."),
+    "",
+    "\\textbf{This PDF is rendered with this package}.",
     "")
   cur <- intro
-  used <- 70
+  used <- 90
 
-  sections <- unique(ex$section)
   last_top <- ""
-  for (sec in sections) {
+  for (sec in unique(ex$section)) {
     part <- strsplit(sec, " / ", fixed = TRUE)[[1]]
     e <- ex[ex$section == sec, ]
     top <- part[1]
     sub <- if (length(part) > 1) part[2] else NULL
-    # A section heading when the top level changes.
     if (!identical(top, last_top)) {
       heading("section", top, 26, keep = 140)
       last_top <- top
@@ -123,68 +149,91 @@ build_supported <- function(dir = ".", pdf = TRUE, name = "supported-functions",
       heading("subsection", sub, 20, keep = 110)
       title <- paste(top, "/", sub)
     }
-    if (all(e$kind == "no")) {
-      items <- vapply(e$source, verb, "", USE.NAMES = FALSE)
-      for (i in seq(1L, length(items), by = 3L)) {
-        cells <- items[i:min(i + 2L, length(items))]
-        row(paste0(paste(c(cells, rep("", 3L - length(cells))), collapse = " & "), " \\\\"), 14, "names")
+
+    ok <- e[e$kind == "ok", ]
+    if (nrow(ok)) {
+      shown <- !vapply(ok$source, is_display, NA)
+      inline <- ok[shown, ]
+      m <- t(vapply(inline$source, measure, c(w = 0, h = 0)))
+      sw <- nchar(inline$source) * tt
+      tier <- ifelse(sw <= 86 & m[, "w"] <= 62, 3L, ifelse(sw <= 150 & m[, "w"] <= 100, 2L, 1L))
+      cell <- function(i) paste(small(verb(inline$source[i])), "&", paste0("{\\large $", inline$source[i], "\n$}"))
+      hh <- pmax(12, m[, "h"] + 5)
+      for (t in 3:2) {
+        for (grp in unname(split(which(tier == t), ceiling(seq_along(which(tier == t)) / t)))) {
+          cells <- vapply(grp, cell, "")
+          cells <- c(cells, rep("&", t - length(cells)))
+          row(paste0(paste(cells, collapse = " & "), " \\\\"), max(hh[grp]), paste0("t", t))
+        }
       }
-      next
-    }
-    e <- e[e$kind == "ok", ]
-    long <- nchar(e$source) > 30
-    short <- e[!long, ]
-    longer <- e[long, ]
-    if (nrow(short)) {
-      cells <- vapply(short$source, function(s) paste(small(verb(s)), "&", math(s)), "", USE.NAMES = FALSE)
-      hs <- vapply(short$source, height, 0, USE.NAMES = FALSE)
-      for (i in seq(1L, length(cells), by = 2L)) {
-        j <- min(i + 1L, length(cells))
-        right <- if (j > i) cells[j] else "&"
-        row(paste0(cells[i], " & ", right, " \\\\"), max(hs[i:j]), "pair2")
+      for (i in which(tier == 1L)) {
+        lines <- wrap_source(inline$source[i], 64)
+        row(paste0(paste(vapply(lines, function(l) small(verb(l)), ""), collapse = " \\\\ "), " \\\\ ",
+                   paste0("{\\large $", inline$source[i], "\n$}"), " \\\\[4pt]"),
+            hh[i] + 12 * length(lines) + 6, "one")
+      }
+      for (s in ok$source[!shown]) {
+        lines <- wrap_source(s, 64)
+        h <- tryCatch(grid::convertHeight(gridmicrotex::latex_dims(display_tex(s), input_mode = "document",
+                                                                      max_width = width,
+                                                                      gp = grid::gpar(fontsize = 10))$height,
+                                         "bigpts", valueOnly = TRUE), error = function(e) 40)
+        block(c(small(paste(vapply(lines, verb, ""), collapse = " ")), "", display_tex(s)),
+              h + 12 * length(lines) + 34)
       }
     }
-    # A long one: its source in lines of at most 64 characters, then what it makes.
-    for (i in seq_len(nrow(longer))) {
-      s <- longer$source[i]
-      lines <- wrap_source(s, 64)
-      cell <- paste0(paste(vapply(lines, function(l) small(verb(l)), ""), collapse = " \\\\ "),
-                     " \\\\ ", math(s), " \\\\[4pt]")
-      row(cell, height(s) + 12 * length(lines) + 6, "one")
+
+    no <- e[e$kind == "nolatex", ]
+    if (nrow(no)) {
+      block(c("{\\small\\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}"), 16)
+      short <- nchar(no$source) <= 26
+      items <- vapply(no$source, function(s) small(verb(s)), "", USE.NAMES = FALSE)
+      for (grp in unname(split(which(short), ceiling(seq_along(which(short)) / 3)))) {
+        cells <- c(items[grp], rep("", 3L - length(grp)))
+        row(paste0(paste(cells, collapse = " & "), " \\\\"), 12, "n3")
+      }
+      for (i in which(!short)) row(paste0(items[i], " \\\\"), 12, "n1")
     }
   }
   new_page()
   pages <- pages[vapply(pages, length, 0L) > 0L]
 
-  tex <- c(
-    "% Written by inst/supported/build.R from examples.tsv; set by gridmicrotex or by LaTeX.",
-    "\\documentclass[9pt]{extarticle}",
-    "\\usepackage[letterpaper,margin=0.7in]{geometry}",
-    "\\usepackage{amsmath,amssymb,amscd,tikz-cd}",
-    "\\begin{document}",
-    unlist(lapply(seq_along(pages), function(k) c(if (k > 1L) "\\newpage", pages[[k]]))),
-    "\\end{document}")
-  tex_file <- file.path(dir, paste0(name, ".tex"))
-  writeLines(tex, tex_file, useBytes = TRUE)
+  body <- unlist(lapply(seq_along(pages), function(k) c(if (k > 1L) "\\newpage", pages[[k]])))
+  tex <- c("% Written by inst/supported/build.R from examples.tsv. Compile with pdflatex, or render with gridmicrotex.",
+           .sup_preamble, "\\begin{document}", body, "\\end{document}")
+  writeLines(tex, path, useBytes = TRUE)
+  invisible(path)
+}
 
-  if (pdf) {
-    pdf_file <- file.path(dir, paste0(name, ".pdf"))
-    # The base pdf() device: it draws math as paths, and its typewriter is
-    # Courier, which is what the layout measures closely enough that the
-    # columns of sources do not run into the next. (On some systems the
-    # cairo device's "mono" is a much wider font than the one measured.)
-    grDevices::pdf(pdf_file, width = page[["w"]], height = page[["h"]], onefile = TRUE)
-    on.exit(grDevices::dev.off(), add = TRUE)
-    for (k in seq_along(pages)) {
-      grid::grid.newpage()
-      gridmicrotex::grid.latex(
-        paste(pages[[k]], collapse = "\n"), input_mode = "document", max_width = width,
-        x = grid::unit(margin[["side"]], "in"), y = grid::unit(page[["h"]] - margin[["top"]], "in"),
-        hjust = 0, vjust = 1, gp = grid::gpar(fontsize = size))
-      grid::grid.text(sprintf("gridmicrotex: what is supported - page %d of %d", k, length(pages)),
-                      x = 0.5, y = grid::unit(0.45, "in"), gp = grid::gpar(fontsize = 8, col = "grey40"))
-    }
-    return(invisible(c(tex = tex_file, pdf = pdf_file)))
+# The PDF of a file like that: each page, between its \newpage lines, drawn as one grob.
+render_supported_tex <- function(tex = "supported-functions.tex", pdf = sub("\\.tex$", ".pdf", tex)) {
+  lines <- readLines(tex, encoding = "UTF-8")
+  from <- which(lines == "\\begin{document}")[1]
+  to <- which(lines == "\\end{document}")[1]
+  body <- lines[(from + 1L):(to - 1L)]
+  page <- split(body, cumsum(body == "\\newpage"))
+  page <- lapply(page, function(p) p[p != "\\newpage"])
+  width <- (.sup_page[["w"]] - 2 * .sup_margin[["side"]]) * 72
+  # The base pdf() device: it draws math as paths, and its typewriter is Courier, which is what
+  # the layout measures closely enough that the columns of sources do not run into each other.
+  grDevices::pdf(pdf, width = .sup_page[["w"]], height = .sup_page[["h"]], onefile = TRUE)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  for (k in seq_along(page)) {
+    grid::grid.newpage()
+    gridmicrotex::grid.latex(
+      paste(page[[k]], collapse = "\n"), input_mode = "document", max_width = width,
+      x = grid::unit(.sup_margin[["side"]], "in"),
+      y = grid::unit(.sup_page[["h"]] - .sup_margin[["top"]], "in"),
+      hjust = 0, vjust = 1, gp = grid::gpar(fontsize = 9))
+    grid::grid.text(sprintf("gridmicrotex: what is supported - page %d of %d", k, length(page)),
+                    x = 0.5, y = grid::unit(0.45, "in"), gp = grid::gpar(fontsize = 8, col = "grey40"))
   }
-  invisible(c(tex = tex_file))
+  invisible(pdf)
+}
+
+build_supported <- function(dir = ".", pdf = TRUE, name = "supported-functions",
+                            examples = system.file("supported/examples.tsv", package = "gridmicrotex")) {
+  tex <- supported_tex(file.path(dir, paste0(name, ".tex")), examples)
+  if (!pdf) return(invisible(c(tex = tex)))
+  invisible(c(tex = tex, pdf = render_supported_tex(tex, file.path(dir, paste0(name, ".pdf")))))
 }

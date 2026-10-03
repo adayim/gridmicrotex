@@ -42,19 +42,17 @@ Accents	ok	\text{\^{a}}
 Accents	ok	\text{\u{a}}
 Accents	ok	\text{\r{a}}
 Accents	ok	\text{\H{o}}
-Accents	ok	\widecheck{ac}
-Accents	ok	\overgroup{AB}
-Accents	ok	\undergroup{AB}
-Accents	ok	\overlinesegment{AB}
-Accents	ok	\underlinesegment{AB}
-Accents	ok	\Overrightarrow{AB}
-Accents	ok	\overleftharpoon{ac}
-Accents	ok	\overrightharpoon{ac}
+Accents	nolatex	\widecheck{ac}
+Accents	nolatex	\overgroup{AB}
+Accents	nolatex	\undergroup{AB}
+Accents	nolatex	\overlinesegment{AB}
+Accents	nolatex	\underlinesegment{AB}
+Accents	nolatex	\Overrightarrow{AB}
+Accents	nolatex	\overleftharpoon{ac}
+Accents	nolatex	\overrightharpoon{ac}
 Delimiters	ok	(~)
 Delimiters	ok	\lparen~\rparen
-Delimiters	ok	~~~~
 Delimiters	ok	\lceil~\rceil
-Delimiters	ok	~~~~~
 Delimiters	ok	\uparrow
 Delimiters	ok	[~]
 Delimiters	ok	\lbrack~\rbrack
@@ -76,12 +74,12 @@ Delimiters	ok	\Updownarrow
 Delimiters	ok	\lvert~\rvert
 Delimiters	ok	\lVert~\rVert
 Delimiters	ok	\backslash
-Delimiters	ok	\lang~\rang
-Delimiters	ok	\left\lt~\right\gt
+Delimiters	nolatex	\lang~\rang
+Delimiters	nolatex	\left\lt~\right\gt
 Delimiters	ok	\llbracket~\rrbracket
 Delimiters	ok	/
-Delimiters	ok	\lBrace~\rBrace
-Delimiters	ok	\left(\LARGE{AB}\right)
+Delimiters	nolatex	\lBrace~\rBrace
+Delimiters	nolatex	\left(\LARGE{AB}\right)
 Delimiters	ok	( \big( \Big( \bigg( \Bigg(
 Environments	ok	\begin{matrix} a & b \\ c & d \end{matrix}
 Environments	ok	\begin{array}{cc}a & b\\c & d\end{array}
@@ -90,7 +88,7 @@ Environments	ok	\begin{bmatrix} a & b \\ c & d \end{bmatrix}
 Environments	ok	\begin{vmatrix} a & b \\ c & d \end{vmatrix}
 Environments	ok	\begin{Vmatrix} a & b \\ c & d \end{Vmatrix}
 Environments	ok	\begin{Bmatrix} a & b \\ c & d \end{Bmatrix}
-Environments	ok	\def\arraystretch{1.5}\begin{array}{c:c:c} a & b & c \\ \hline d & e & f \\ \hdashline g & h & i \end{array}
+Environments	nolatex	\def\arraystretch{1.5}\begin{array}{c:c:c} a & b & c \\ \hline d & e & f \\ \hdashline g & h & i \end{array}
 Environments	ok	x = \begin{cases} a &\text{if } b \\ c &\text{if } d \end{cases}
 Environments	ok	\begin{smallmatrix} a & b \\ c & d \end{smallmatrix}
 Environments	ok	\sum_{\begin{subarray}{l} i\in\Lambda\\ 0<j<n\end{subarray}}
@@ -99,34 +97,34 @@ Environments	ok	\begin{align} a&=b+c \\ d+e&=f \end{align}
 Environments	ok	\begin{gather} a=b \\ e=b+c \end{gather}
 Environments	ok	\begin{alignat}{2}10&x+&3&y=2\\3&x+&13&y=4\end{alignat}
 Environments	ok	\begin{CD}A @>a>> B \\@VbVV @AAcA\\C @= D\end{CD}
-HTML	ok	\href{https://katex.org/}{\KaTeX}
-HTML	ok	\url{https://katex.org/}
-HTML	ok	\htmlId{bar}{x}
-HTML	ok	\htmlClass{foo}{x}
-HTML	ok	\htmlStyle{color: red;}{x}
-HTML	ok	\htmlData{foo=a, bar=b}{x}
-Letters and Unicode	ok	\Alpha
-Letters and Unicode	ok	\Beta
+HTML	nolatex	\href{https://katex.org/}{\KaTeX}
+HTML	nolatex	\url{https://katex.org/}
+HTML	nolatex	\htmlId{bar}{x}
+HTML	nolatex	\htmlClass{foo}{x}
+HTML	nolatex	\htmlStyle{color: red;}{x}
+HTML	nolatex	\htmlData{foo=a, bar=b}{x}
+Letters and Unicode	nolatex	\Alpha
+Letters and Unicode	nolatex	\Beta
 Letters and Unicode	ok	\Gamma
 Letters and Unicode	ok	\Delta
-Letters and Unicode	ok	\Epsilon
-Letters and Unicode	ok	\Zeta
-Letters and Unicode	ok	\Eta
+Letters and Unicode	nolatex	\Epsilon
+Letters and Unicode	nolatex	\Zeta
+Letters and Unicode	nolatex	\Eta
 Letters and Unicode	ok	\Theta
-Letters and Unicode	ok	\Iota
-Letters and Unicode	ok	\Kappa
+Letters and Unicode	nolatex	\Iota
+Letters and Unicode	nolatex	\Kappa
 Letters and Unicode	ok	\Lambda
-Letters and Unicode	ok	\Mu
-Letters and Unicode	ok	\Nu
+Letters and Unicode	nolatex	\Mu
+Letters and Unicode	nolatex	\Nu
 Letters and Unicode	ok	\Xi
-Letters and Unicode	ok	\Omicron
+Letters and Unicode	nolatex	\Omicron
 Letters and Unicode	ok	\Pi
-Letters and Unicode	ok	\Rho
+Letters and Unicode	nolatex	\Rho
 Letters and Unicode	ok	\Sigma
-Letters and Unicode	ok	\Tau
+Letters and Unicode	nolatex	\Tau
 Letters and Unicode	ok	\Upsilon
 Letters and Unicode	ok	\Phi
-Letters and Unicode	ok	\Chi
+Letters and Unicode	nolatex	\Chi
 Letters and Unicode	ok	\Psi
 Letters and Unicode	ok	\Omega
 Letters and Unicode	ok	\varGamma
@@ -154,7 +152,7 @@ Letters and Unicode	ok	\lambda
 Letters and Unicode	ok	\mu
 Letters and Unicode	ok	\nu
 Letters and Unicode	ok	\xi
-Letters and Unicode	ok	\omicron
+Letters and Unicode	nolatex	\omicron
 Letters and Unicode	ok	\pi
 Letters and Unicode	ok	\rho
 Letters and Unicode	ok	\sigma
@@ -167,7 +165,7 @@ Letters and Unicode	ok	\omega
 Letters and Unicode	ok	\varepsilon
 Letters and Unicode	ok	\varkappa
 Letters and Unicode	ok	\vartheta
-Letters and Unicode	ok	\thetasym
+Letters and Unicode	nolatex	\thetasym
 Letters and Unicode	ok	\varpi
 Letters and Unicode	ok	\varrho
 Letters and Unicode	ok	\varsigma
@@ -176,31 +174,31 @@ Letters and Unicode	ok	\digamma
 Letters and Unicode	ok	\imath
 Letters and Unicode	ok	\nabla
 Letters and Unicode	ok	\Im
-Letters and Unicode	ok	\Reals
+Letters and Unicode	nolatex	\Reals
 Letters and Unicode	ok	\text{\OE}
 Letters and Unicode	ok	\jmath
 Letters and Unicode	ok	\partial
-Letters and Unicode	ok	\image
+Letters and Unicode	nolatex	\image
 Letters and Unicode	ok	\wp
 Letters and Unicode	ok	\text{\o}
 Letters and Unicode	ok	\aleph
 Letters and Unicode	ok	\Game
 Letters and Unicode	ok	\Bbbk
-Letters and Unicode	ok	\weierp
+Letters and Unicode	nolatex	\weierp
 Letters and Unicode	ok	\text{\O}
-Letters and Unicode	ok	\alef
+Letters and Unicode	nolatex	\alef
 Letters and Unicode	ok	\Finv
-Letters and Unicode	ok	\N
-Letters and Unicode	ok	\Z
+Letters and Unicode	nolatex	\N
+Letters and Unicode	nolatex	\Z
 Letters and Unicode	ok	\text{\ss}
-Letters and Unicode	ok	\alefsym
-Letters and Unicode	ok	\cnums
-Letters and Unicode	ok	\natnums
+Letters and Unicode	nolatex	\alefsym
+Letters and Unicode	nolatex	\cnums
+Letters and Unicode	nolatex	\natnums
 Letters and Unicode	ok	\text{\aa}
 Letters and Unicode	ok	\text{\i}
 Letters and Unicode	ok	\beth
-Letters and Unicode	ok	\Complex
-Letters and Unicode	ok	\R
+Letters and Unicode	nolatex	\Complex
+Letters and Unicode	nolatex	\R
 Letters and Unicode	ok	\text{\AA}
 Letters and Unicode	ok	\text{\j}
 Letters and Unicode	ok	\gimel
@@ -213,9 +211,9 @@ Letters and Unicode	ok	\real
 Letters and Unicode	ok	\text{\AE}
 Letters and Unicode	ok	\eth
 Letters and Unicode	ok	\hslash
-Letters and Unicode	ok	\reals
+Letters and Unicode	nolatex	\reals
 Letters and Unicode	ok	\text{\oe}
-Letters and Unicode	ok	\char"263a
+Letters and Unicode	nolatex	\char"263a
 Layout / Annotation	ok	\cancel{5}
 Layout / Annotation	ok	\overbrace{a+b+c}^{\text{note}}
 Layout / Annotation	ok	\bcancel{5}
@@ -228,9 +226,9 @@ Layout / Annotation	ok	\overbracket{a+b+c}^{\text{note}}
 Layout / Annotation	ok	\underbracket{a+b+c}_{\text{note}}
 Layout / Annotation	ok	\tag{hi} x+y^{2x}
 Layout / Annotation	ok	\tag*{hi} x+y^{2x}
-Layout / Annotation	ok	\phase{30^\circ}
-Layout / Annotation	ok	\angl{n}
-Layout / Annotation	ok	\angln
+Layout / Annotation	nolatex	\phase{30^\circ}
+Layout / Annotation	nolatex	\angl{n}
+Layout / Annotation	nolatex	\angln
 Layout / Annotation	ok	\text{\textcircled{a}}
 Layout / Vertical Layout	ok	x_n
 Layout / Vertical Layout	ok	\stackrel{!}{=}
@@ -239,17 +237,16 @@ Layout / Vertical Layout	ok	e^x
 Layout / Vertical Layout	ok	\overset{!}{=}
 Layout / Vertical Layout	ok	a\raisebox{0.25em}{$b$}c
 Layout / Vertical Layout	ok	\reflectbox{KaTeX}
-Layout / Vertical Layout	ok	\mathreflectbox{x^2}
+Layout / Vertical Layout	nolatex	\mathreflectbox{x^2}
 Layout / Vertical Layout	ok	_u^o
 Layout / Vertical Layout	ok	\underset{!}{=}
 Layout / Vertical Layout	ok	\sum_{\substack{0<i<m\\0<j<n}}
-Layout / Vertical Layout	ok	\vcenter{x}
+Layout / Vertical Layout	nolatex	\vcenter{x}
 Layout / Overlap and Spacing	ok	{=}\mathllap{/\,}
 Layout / Overlap and Spacing	ok	\left(x^{\smash{2}}\right)
 Layout / Overlap and Spacing	ok	\mathrlap{\,/}{=}
 Layout / Overlap and Spacing	ok	\sqrt{\smash[b]{y}}
 Layout / Overlap and Spacing	ok	\displaystyle\sum_{\mathclap{1\le i\le j\le n}} x_{ij}
-Logic and Set Theory	ok	\gdef\VERT{|}
 Logic and Set Theory	ok	\forall
 Logic and Set Theory	ok	\complement
 Logic and Set Theory	ok	\therefore
@@ -258,7 +255,7 @@ Logic and Set Theory	ok	\exists
 Logic and Set Theory	ok	\subset
 Logic and Set Theory	ok	\because
 Logic and Set Theory	ok	\empty
-Logic and Set Theory	ok	\exist
+Logic and Set Theory	nolatex	\exist
 Logic and Set Theory	ok	\supset
 Logic and Set Theory	ok	\mapsto
 Logic and Set Theory	ok	\varnothing
@@ -270,16 +267,16 @@ Logic and Set Theory	ok	\in
 Logic and Set Theory	ok	\land
 Logic and Set Theory	ok	\gets
 Logic and Set Theory	ok	\impliedby
-Logic and Set Theory	ok	\isin
+Logic and Set Theory	nolatex	\isin
 Logic and Set Theory	ok	\lor
 Logic and Set Theory	ok	\leftrightarrow
 Logic and Set Theory	ok	\iff
 Logic and Set Theory	ok	\notin
 Logic and Set Theory	ok	\ni
-Logic and Set Theory	ok	\notni
+Logic and Set Theory	nolatex	\notni
 Logic and Set Theory	ok	\neg
-Logic and Set Theory	ok	\Set{ x \VERT x<\frac 1 2 }
-Logic and Set Theory	ok	\set{x\VERT x<5}
+Logic and Set Theory	nolatex	\Set{ x \VERT x<\frac 1 2 }
+Logic and Set Theory	nolatex	\set{x\VERT x<5}
 Macros	ok	\def\foo{x^2} \foo + \foo
 Macros	ok	\gdef\foo#1{#1^2} \foo{y} + \foo{y}
 Macros	ok	\def\f#1{[#1]}\def\g{abc}\expandafter\f\g
@@ -287,9 +284,9 @@ Macros	ok	\futurelet\q\mathrm x\q
 Macros	ok	\def\a{1}\edef\b{\a 2}\def\a{9}\b
 Macros	ok	\def\a{1}\edef\b{\noexpand\a 2}\def\a{9}\b
 Macros	ok	\def\a{1}\xdef\b{\a 2}\b
-Macros	ok	\def\foo{\@ifstar{S}{N}}\foo*\;\foo
-Macros	ok	\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo
-Macros	ok	\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}
+Macros	nolatex	\def\foo{\@ifstar{S}{N}}\foo*\;\foo
+Macros	nolatex	\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo
+Macros	nolatex	\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}
 Macros	ok	\TextOrMath{in text}{in math}
 Operators / Big Operators	ok	\sum
 Operators / Big Operators	ok	\prod
@@ -308,8 +305,8 @@ Operators / Big Operators	ok	\smallint
 Operators / Big Operators	ok	\biguplus
 Operators / Big Operators	ok	\bigcup
 Operators / Big Operators	ok	\oint
-Operators / Big Operators	ok	\oiint
-Operators / Big Operators	ok	\oiiint
+Operators / Big Operators	nolatex	\oiint
+Operators / Big Operators	nolatex	\oiiint
 Operators / Big Operators	ok	\bigsqcup
 Operators / Binary Operators	ok	+
 Operators / Binary Operators	ok	\cdot
@@ -384,7 +381,7 @@ Operators / Fractions and Binomials	ok	\tfrac{a}{b}
 Operators / Fractions and Binomials	ok	\genfrac ( ] {2pt}{1}a{a+1}
 Operators / Fractions and Binomials	ok	{a \over b}
 Operators / Fractions and Binomials	ok	\dfrac{a}{b}
-Operators / Fractions and Binomials	ok	{a \above{2pt} b+1}
+Operators / Fractions and Binomials	nolatex	{a \above{2pt} b+1}
 Operators / Fractions and Binomials	ok	a/b
 Operators / Fractions and Binomials	ok	\cfrac{a}{1 + \cfrac{1}{b}}
 Operators / Fractions and Binomials	ok	\binom{n}{k}
@@ -394,7 +391,7 @@ Operators / Fractions and Binomials	ok	{n \choose k}
 Operators / Fractions and Binomials	ok	\tbinom{n}{k}
 Operators / Fractions and Binomials	ok	{n\brack k}
 Operators / Math Operators	ok	\arcsin
-Operators / Math Operators	ok	\cosec
+Operators / Math Operators	nolatex	\cosec
 Operators / Math Operators	ok	\deg
 Operators / Math Operators	ok	\sec
 Operators / Math Operators	ok	\arccos
@@ -405,11 +402,11 @@ Operators / Math Operators	ok	\arctan
 Operators / Math Operators	ok	\cot
 Operators / Math Operators	ok	\exp
 Operators / Math Operators	ok	\sinh
-Operators / Math Operators	ok	\arctg
-Operators / Math Operators	ok	\cotg
+Operators / Math Operators	nolatex	\arctg
+Operators / Math Operators	nolatex	\cotg
 Operators / Math Operators	ok	\hom
-Operators / Math Operators	ok	\sh
-Operators / Math Operators	ok	\arcctg
+Operators / Math Operators	nolatex	\sh
+Operators / Math Operators	nolatex	\arcctg
 Operators / Math Operators	ok	\coth
 Operators / Math Operators	ok	\ker
 Operators / Math Operators	ok	\tan
@@ -417,22 +414,22 @@ Operators / Math Operators	ok	\arg
 Operators / Math Operators	ok	\csc
 Operators / Math Operators	ok	\lg
 Operators / Math Operators	ok	\tanh
-Operators / Math Operators	ok	\ch
-Operators / Math Operators	ok	\ctg
+Operators / Math Operators	nolatex	\ch
+Operators / Math Operators	nolatex	\ctg
 Operators / Math Operators	ok	\ln
-Operators / Math Operators	ok	\tg
+Operators / Math Operators	nolatex	\tg
 Operators / Math Operators	ok	\cos
-Operators / Math Operators	ok	\cth
+Operators / Math Operators	nolatex	\cth
 Operators / Math Operators	ok	\log
-Operators / Math Operators	ok	\th
+Operators / Math Operators	nolatex	\th
 Operators / Math Operators	ok	\operatorname{f}
-Operators / Math Operators	ok	\argmax
+Operators / Math Operators	nolatex	\argmax
 Operators / Math Operators	ok	\injlim
 Operators / Math Operators	ok	\min
 Operators / Math Operators	ok	\varinjlim
-Operators / Math Operators	ok	\argmin
+Operators / Math Operators	nolatex	\argmin
 Operators / Math Operators	ok	\lim
-Operators / Math Operators	ok	\plim
+Operators / Math Operators	nolatex	\plim
 Operators / Math Operators	ok	\varliminf
 Operators / Math Operators	ok	\det
 Operators / Math Operators	ok	\liminf
@@ -474,7 +471,7 @@ Relations	ok	\approxcolon
 Relations	ok	\Eqqcolon
 Relations	ok	\ll
 Relations	ok	\Subset
-Relations	ok	\approxcoloncolon
+Relations	nolatex	\approxcoloncolon
 Relations	ok	\eqsim
 Relations	ok	\lll
 Relations	ok	\subset
@@ -484,7 +481,7 @@ Relations	ok	\llless
 Relations	ok	\subseteq
 Relations	ok	\asymp
 Relations	ok	\eqslantless
-Relations	ok	\lt
+Relations	nolatex	\lt
 Relations	ok	\subseteqq
 Relations	ok	\backepsilon
 Relations	ok	\equiv
@@ -500,7 +497,7 @@ Relations	ok	\multimap
 Relations	ok	\succcurlyeq
 Relations	ok	\between
 Relations	ok	\ge
-Relations	ok	\origof
+Relations	nolatex	\origof
 Relations	ok	\succeq
 Relations	ok	\bowtie
 Relations	ok	\geq
@@ -527,7 +524,7 @@ Relations	ok	\gggtr
 Relations	ok	\precapprox
 Relations	ok	\thickapprox
 Relations	ok	\coloneq
-Relations	ok	\gt
+Relations	nolatex	\gt
 Relations	ok	\preccurlyeq
 Relations	ok	\thicksim
 Relations	ok	\Coloneq
@@ -551,7 +548,7 @@ Relations	ok	\gtrsim
 Relations	ok	\shortmid
 Relations	ok	\vartriangle
 Relations	ok	\cong
-Relations	ok	\imageof
+Relations	nolatex	\imageof
 Relations	ok	\shortparallel
 Relations	ok	\vartriangleleft
 Relations	ok	\curlyeqprec
@@ -564,7 +561,7 @@ Relations	ok	\simcolon
 Relations	ok	\vcentcolon
 Relations	ok	\dashv
 Relations	ok	\le
-Relations	ok	\simcoloncolon
+Relations	nolatex	\simcoloncolon
 Relations	ok	\vdash
 Relations	ok	\dblcolon
 Relations	ok	\leq
@@ -612,7 +609,7 @@ Relations / Negated Relations	ok	\notin
 Relations / Negated Relations	ok	\ntrianglelefteq
 Relations / Negated Relations	ok	\supsetneq
 Relations / Negated Relations	ok	\lnsim
-Relations / Negated Relations	ok	\notni
+Relations / Negated Relations	nolatex	\notni
 Relations / Negated Relations	ok	\ntriangleright
 Relations / Negated Relations	ok	\supsetneqq
 Relations / Negated Relations	ok	\lvertneqq
@@ -639,23 +636,23 @@ Relations / Negated Relations	ok	\nsim
 Relations / Negated Relations	ok	\precnapprox
 Relations / Arrows	ok	\circlearrowleft
 Relations / Arrows	ok	\leftharpoonup
-Relations / Arrows	ok	\rArr
+Relations / Arrows	nolatex	\rArr
 Relations / Arrows	ok	\circlearrowright
 Relations / Arrows	ok	\leftleftarrows
-Relations / Arrows	ok	\rarr
+Relations / Arrows	nolatex	\rarr
 Relations / Arrows	ok	\curvearrowleft
 Relations / Arrows	ok	\leftrightarrow
 Relations / Arrows	ok	\restriction
 Relations / Arrows	ok	\curvearrowright
 Relations / Arrows	ok	\Leftrightarrow
 Relations / Arrows	ok	\rightarrow
-Relations / Arrows	ok	\Darr
+Relations / Arrows	nolatex	\Darr
 Relations / Arrows	ok	\leftrightarrows
 Relations / Arrows	ok	\Rightarrow
-Relations / Arrows	ok	\dArr
+Relations / Arrows	nolatex	\dArr
 Relations / Arrows	ok	\leftrightharpoons
 Relations / Arrows	ok	\rightarrowtail
-Relations / Arrows	ok	\darr
+Relations / Arrows	nolatex	\darr
 Relations / Arrows	ok	\leftrightsquigarrow
 Relations / Arrows	ok	\rightharpoondown
 Relations / Arrows	ok	\dashleftarrow
@@ -682,37 +679,37 @@ Relations / Arrows	ok	\Rsh
 Relations / Arrows	ok	\gets
 Relations / Arrows	ok	\Longrightarrow
 Relations / Arrows	ok	\searrow
-Relations / Arrows	ok	\Harr
+Relations / Arrows	nolatex	\Harr
 Relations / Arrows	ok	\looparrowleft
 Relations / Arrows	ok	\swarrow
-Relations / Arrows	ok	\hArr
+Relations / Arrows	nolatex	\hArr
 Relations / Arrows	ok	\looparrowright
 Relations / Arrows	ok	\to
-Relations / Arrows	ok	\harr
-Relations / Arrows	ok	\Lrarr
+Relations / Arrows	nolatex	\harr
+Relations / Arrows	nolatex	\Lrarr
 Relations / Arrows	ok	\twoheadleftarrow
 Relations / Arrows	ok	\hookleftarrow
-Relations / Arrows	ok	\lrArr
+Relations / Arrows	nolatex	\lrArr
 Relations / Arrows	ok	\twoheadrightarrow
 Relations / Arrows	ok	\hookrightarrow
-Relations / Arrows	ok	\lrarr
-Relations / Arrows	ok	\Uarr
+Relations / Arrows	nolatex	\lrarr
+Relations / Arrows	nolatex	\Uarr
 Relations / Arrows	ok	\iff
 Relations / Arrows	ok	\Lsh
-Relations / Arrows	ok	\uArr
+Relations / Arrows	nolatex	\uArr
 Relations / Arrows	ok	\impliedby
 Relations / Arrows	ok	\mapsto
-Relations / Arrows	ok	\uarr
+Relations / Arrows	nolatex	\uarr
 Relations / Arrows	ok	\implies
 Relations / Arrows	ok	\nearrow
 Relations / Arrows	ok	\uparrow
-Relations / Arrows	ok	\Larr
+Relations / Arrows	nolatex	\Larr
 Relations / Arrows	ok	\nleftarrow
 Relations / Arrows	ok	\Uparrow
-Relations / Arrows	ok	\lArr
+Relations / Arrows	nolatex	\lArr
 Relations / Arrows	ok	\nLeftarrow
 Relations / Arrows	ok	\updownarrow
-Relations / Arrows	ok	\larr
+Relations / Arrows	nolatex	\larr
 Relations / Arrows	ok	\nleftrightarrow
 Relations / Arrows	ok	\Updownarrow
 Relations / Arrows	ok	\leadsto
@@ -728,7 +725,7 @@ Relations / Arrows	ok	\leftarrowtail
 Relations / Arrows	ok	\nwarrow
 Relations / Arrows	ok	\mapsfrom
 Relations / Arrows	ok	\leftharpoondown
-Relations / Arrows	ok	\Rarr
+Relations / Arrows	nolatex	\Rarr
 Relations / Arrows	ok	\xleftarrow{abc}
 Relations / Arrows	ok	\xrightarrow[under]{over}
 Relations / Arrows	ok	\xLeftarrow{abc}
@@ -744,20 +741,20 @@ Relations / Arrows	ok	\xrightharpoondown{abc}
 Relations / Arrows	ok	\xleftrightharpoons{abc}
 Relations / Arrows	ok	\xrightleftharpoons{abc}
 Relations / Arrows	ok	\xmapsto{abc}
-Relations / Arrows	ok	\xlongequal{abc}
-Relations / Arrows	ok	\xtofrom{abc}
-Relations / Arrows	ok	\xtwoheadrightarrow{abc}
-Relations / Arrows	ok	\xtwoheadleftarrow{abc}
-Special Notation	ok	\bra{\phi}
-Special Notation	ok	\ket{\psi}
-Special Notation	ok	\braket{\phi\VERT\psi}
-Special Notation	ok	\Bra{\phi}
-Special Notation	ok	\Ket{\psi}
+Relations / Arrows	nolatex	\xlongequal{abc}
+Relations / Arrows	nolatex	\xtofrom{abc}
+Relations / Arrows	nolatex	\xtwoheadrightarrow{abc}
+Relations / Arrows	nolatex	\xtwoheadleftarrow{abc}
+Special Notation	nolatex	\bra{\phi}
+Special Notation	nolatex	\ket{\psi}
+Special Notation	nolatex	\braket{\phi\VERT\psi}
+Special Notation	nolatex	\Bra{\phi}
+Special Notation	nolatex	\Ket{\psi}
 Style, Color, Size, and Font	ok	\color{blue} F=ma
 Style, Color, Size, and Font	ok	\textcolor{blue}{F=ma}
-Style, Color, Size, and Font	ok	\textcolor{#228B22}{F=ma}
-Style, Color, Size, and Font	ok	\colorbox{aqua}{$F=ma$}
-Style, Color, Size, and Font	ok	\fcolorbox{red}{aqua}{$F=ma$}
+Style, Color, Size, and Font	nolatex	\textcolor{#228B22}{F=ma}
+Style, Color, Size, and Font	nolatex	\colorbox{aqua}{$F=ma$}
+Style, Color, Size, and Font	nolatex	\fcolorbox{red}{aqua}{$F=ma$}
 Style, Color, Size, and Font	ok	\mathrm{Ab0}
 Style, Color, Size, and Font	ok	\mathbf{Ab0}
 Style, Color, Size, and Font	ok	\mathsf{Ab0}
@@ -769,7 +766,7 @@ Style, Color, Size, and Font	ok	\bf Ab0
 Style, Color, Size, and Font	ok	\sf Ab0
 Style, Color, Size, and Font	ok	\rm Ab0
 Style, Color, Size, and Font	ok	\bold{Ab0}
-Style, Color, Size, and Font	ok	\mathsfit{Ab0}
+Style, Color, Size, and Font	nolatex	\mathsfit{Ab0}
 Style, Color, Size, and Font	ok	\textnormal{Ab0}
 Style, Color, Size, and Font	ok	\boldsymbol{Ab0}
 Style, Color, Size, and Font	ok	\Bbb{AB}
@@ -792,17 +789,17 @@ Style, Color, Size, and Font	ok	\emph{Ab0}
 Style, Color, Size, and Font	ok	\mathscr{AB}
 Style, Color, Size, and Font	ok	\textsf{\textbf{H}}
 Style, Color, Size, and Font	ok	\mathsf{\mathbf{H}}
-Style, Color, Size, and Font	ok	\pmb{\mu}
-Style, Color, Size, and Font	ok	\Huge AB
-Style, Color, Size, and Font	ok	\normalsize AB
-Style, Color, Size, and Font	ok	\huge AB
-Style, Color, Size, and Font	ok	\small AB
-Style, Color, Size, and Font	ok	\LARGE AB
-Style, Color, Size, and Font	ok	\footnotesize AB
-Style, Color, Size, and Font	ok	\Large AB
-Style, Color, Size, and Font	ok	\scriptsize AB
-Style, Color, Size, and Font	ok	\large AB
-Style, Color, Size, and Font	ok	\tiny AB
+Style, Color, Size, and Font	nolatex	\pmb{\mu}
+Style, Color, Size, and Font	nolatex	\Huge AB
+Style, Color, Size, and Font	nolatex	\normalsize AB
+Style, Color, Size, and Font	nolatex	\huge AB
+Style, Color, Size, and Font	nolatex	\small AB
+Style, Color, Size, and Font	nolatex	\LARGE AB
+Style, Color, Size, and Font	nolatex	\footnotesize AB
+Style, Color, Size, and Font	nolatex	\Large AB
+Style, Color, Size, and Font	nolatex	\scriptsize AB
+Style, Color, Size, and Font	nolatex	\large AB
+Style, Color, Size, and Font	nolatex	\tiny AB
 Style, Color, Size, and Font	ok	\displaystyle\sum_{i=1}^n
 Style, Color, Size, and Font	ok	\textstyle\sum_{i=1}^n
 Style, Color, Size, and Font	ok	\scriptstyle x
@@ -811,15 +808,15 @@ Style, Color, Size, and Font	ok	\lim\limits_x
 Style, Color, Size, and Font	ok	\lim\nolimits_x
 Style, Color, Size, and Font	ok	\verb!x^2!
 Style, Color, Size, and Font	ok	\mathchoice{D}{T}{S}{SS}
-Style, Color, Size, and Font	ok	\sixptsize sixptsize
+Style, Color, Size, and Font	nolatex	\sixptsize sixptsize
 Symbols and Punctuation	ok	\dots
-Symbols and Punctuation	ok	\KaTeX
+Symbols and Punctuation	nolatex	\KaTeX
 Symbols and Punctuation	ok	\%
 Symbols and Punctuation	ok	\cdots
-Symbols and Punctuation	ok	\LaTeX
+Symbols and Punctuation	nolatex	\LaTeX
 Symbols and Punctuation	ok	\#
 Symbols and Punctuation	ok	\ddots
-Symbols and Punctuation	ok	\TeX
+Symbols and Punctuation	nolatex	\TeX
 Symbols and Punctuation	ok	\&
 Symbols and Punctuation	ok	\ldots
 Symbols and Punctuation	ok	\nabla
@@ -828,7 +825,7 @@ Symbols and Punctuation	ok	\vdots
 Symbols and Punctuation	ok	\infty
 Symbols and Punctuation	ok	\text{\textunderscore}
 Symbols and Punctuation	ok	\dotsb
-Symbols and Punctuation	ok	\infin
+Symbols and Punctuation	nolatex	\infin
 Symbols and Punctuation	ok	\text{--}
 Symbols and Punctuation	ok	\dotsc
 Symbols and Punctuation	ok	\checkmark
@@ -842,7 +839,7 @@ Symbols and Punctuation	ok	\text{\textemdash}
 Symbols and Punctuation	ok	\dotso
 Symbols and Punctuation	ok	\text{\textdagger}
 Symbols and Punctuation	ok	\text{\textasciitilde}
-Symbols and Punctuation	ok	\sdot
+Symbols and Punctuation	nolatex	\sdot
 Symbols and Punctuation	ok	\ddag
 Symbols and Punctuation	ok	\text{\textasciicircum}
 Symbols and Punctuation	ok	\mathellipsis
@@ -852,7 +849,7 @@ Symbols and Punctuation	ok	\text{\textellipsis}
 Symbols and Punctuation	ok	\text{\textdaggerdbl}
 Symbols and Punctuation	ok	\text{\textquoteleft}
 Symbols and Punctuation	ok	\Box
-Symbols and Punctuation	ok	\Dagger
+Symbols and Punctuation	nolatex	\Dagger
 Symbols and Punctuation	ok	\lq
 Symbols and Punctuation	ok	\square
 Symbols and Punctuation	ok	\angle
@@ -891,7 +888,7 @@ Symbols and Punctuation	ok	\blacktriangleright
 Symbols and Punctuation	ok	\surd
 Symbols and Punctuation	ok	\text{\textbardbl}
 Symbols and Punctuation	ok	\diamond
-Symbols and Punctuation	ok	\degree
+Symbols and Punctuation	nolatex	\degree
 Symbols and Punctuation	ok	\text{\textbraceleft}
 Symbols and Punctuation	ok	\Diamond
 Symbols and Punctuation	ok	\text{\textdegree}
@@ -907,76 +904,42 @@ Symbols and Punctuation	ok	\diagup
 Symbols and Punctuation	ok	\text{\S}
 Symbols and Punctuation	ok	\bigstar
 Symbols and Punctuation	ok	\flat
-Symbols and Punctuation	ok	\text{\sect}
+Symbols and Punctuation	nolatex	\text{\sect}
 Symbols and Punctuation	ok	\clubsuit
 Symbols and Punctuation	ok	\natural
 Symbols and Punctuation	ok	\copyright
-Symbols and Punctuation	ok	\clubs
+Symbols and Punctuation	nolatex	\clubs
 Symbols and Punctuation	ok	\sharp
 Symbols and Punctuation	ok	\circledR
 Symbols and Punctuation	ok	\diamondsuit
 Symbols and Punctuation	ok	\heartsuit
 Symbols and Punctuation	ok	\text{\textregistered}
-Symbols and Punctuation	ok	\diamonds
-Symbols and Punctuation	ok	\hearts
+Symbols and Punctuation	nolatex	\diamonds
+Symbols and Punctuation	nolatex	\hearts
 Symbols and Punctuation	ok	\circledS
 Symbols and Punctuation	ok	\spadesuit
-Symbols and Punctuation	ok	\spades
+Symbols and Punctuation	nolatex	\spades
 Symbols and Punctuation	ok	\maltese
 Symbols and Punctuation	ok	\minuso
 Units	ok	\rule{1em}{1em}
-Units	ok	\scriptscriptstyle\rule{1em}{1em}
-Units	ok	\huge\rule{1em}{1em}
-Units	ok	\rule{18mu}{18mu}
-Units	ok	\scriptscriptstyle\rule{18mu}{18mu}
-Units	ok	\huge\rule{18mu}{18mu}
+Units	nolatex	\scriptscriptstyle\rule{1em}{1em}
+Units	nolatex	\huge\rule{1em}{1em}
+Units	nolatex	\rule{18mu}{18mu}
+Units	nolatex	\scriptscriptstyle\rule{18mu}{18mu}
+Units	nolatex	\huge\rule{18mu}{18mu}
 Units	ok	\rule{10pt}{10pt}
-Units	ok	\scriptscriptstyle\rule{10pt}{10pt}
-Units	ok	\huge\rule{10pt}{10pt}
-Beyond KaTeX / Commands KaTeX does not have	ok	Deprecated
-Beyond KaTeX / Commands KaTeX does not have	ok	see {array}
-Beyond KaTeX / Commands KaTeX does not have	ok	see \Vert
-Beyond KaTeX / Commands KaTeX does not have	ok	see \vert
-Beyond KaTeX / Commands KaTeX does not have	ok	\bfseries
-Beyond KaTeX / Commands KaTeX does not have	ok	see {cases}
-Beyond KaTeX / Commands KaTeX does not have	ok	Deprecated by mhchem
-Beyond KaTeX / Commands KaTeX does not have	ok	Deprecated by mhchem;
-Beyond KaTeX / Commands KaTeX does not have	ok	A PR is pending.
-Beyond KaTeX / Commands KaTeX does not have	ok	\Digamma
-Beyond KaTeX / Commands KaTeX does not have	ok	\em
-Beyond KaTeX / Commands KaTeX does not have	ok	Non standard
-Beyond KaTeX / Commands KaTeX does not have	ok	{eqnarray}
-Beyond KaTeX / Commands KaTeX does not have	ok	\euro
-Beyond KaTeX / Commands KaTeX does not have	ok	\hbox to
-Beyond KaTeX / Commands KaTeX does not have	ok	\idotsint
-Beyond KaTeX / Commands KaTeX does not have	ok	\iiiint
-Beyond KaTeX / Commands KaTeX does not have	ok	\itshape
-Beyond KaTeX / Commands KaTeX does not have	ok	\Koppa
-Beyond KaTeX / Commands KaTeX does not have	ok	\koppa
-Beyond KaTeX / Commands KaTeX does not have	ok	See {matrix}
-Beyond KaTeX / Commands KaTeX does not have	ok	\mdseries
-Beyond KaTeX / Commands KaTeX does not have	ok	{multiline}
-Beyond KaTeX / Commands KaTeX does not have	ok	\normalfont
-Beyond KaTeX / Commands KaTeX does not have	ok	{picture}
-Beyond KaTeX / Commands KaTeX does not have	ok	See {pmatrix}
-Beyond KaTeX / Commands KaTeX does not have	ok	See \Bbb{Q}
-Beyond KaTeX / Commands KaTeX does not have	ok	\Sampi
-Beyond KaTeX / Commands KaTeX does not have	ok	\sampi
-Beyond KaTeX / Commands KaTeX does not have	ok	\smiley
-Beyond KaTeX / Commands KaTeX does not have	ok	see \space
-Beyond KaTeX / Commands KaTeX does not have	ok	\Stigma
-Beyond KaTeX / Commands KaTeX does not have	ok	\stigma
-Beyond KaTeX / Commands KaTeX does not have	ok	{subarray}
-Beyond KaTeX / Commands KaTeX does not have	ok	see \tiny
-Beyond KaTeX / Commands KaTeX does not have	ok	\upshape
-Beyond KaTeX / Commands KaTeX does not have	ok	\vfill
-Beyond KaTeX / Commands KaTeX does not have	ok	\text{\textsection\textparagraph\textcopyright\texttrademark\textquotedbl}
+Units	nolatex	\scriptscriptstyle\rule{10pt}{10pt}
+Units	nolatex	\huge\rule{10pt}{10pt}
+Beyond KaTeX / More commands	nolatex	\euro
+Beyond KaTeX / More commands	ok	\idotsint
+Beyond KaTeX / More commands	ok	\iiiint
+Beyond KaTeX / More commands	ok	\text{\textsection\textparagraph\textcopyright\texttrademark}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{12345.6789}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.5e-4}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.2+-0.3e3}
+Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.2(3)e3}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\SI{9.81}{\meter\per\second\squared}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\qty{1.5}{\kilo\gram}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\si{kg.m/s^2}
+Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\si{kg.m.s^-2}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\ang{1;2;3}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\numrange{1}{10}
 Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\SIrange{1}{5}{\volt}
@@ -988,7 +951,7 @@ Beyond KaTeX / Equations	ok	\bigl\lvert x \bigr\rvert
 Beyond KaTeX / Equations	ok	\begin{dcases} x & x>0 \\ -x & \text{otherwise} \end{dcases}
 Beyond KaTeX / Equations	ok	\begin{subarray}{c} i<n \\ j<m \end{subarray}
 Beyond KaTeX / Equations	ok	\sqrt[\leftroot{-2}\uproot{2}n]{x}
-Beyond KaTeX / Tables	ok	\begin{array}{c:c} a & b \\ \hdashline c & d \end{array}
+Beyond KaTeX / Tables	nolatex	\begin{array}{c:c} a & b \\ \hdashline c & d \end{array}
 Beyond KaTeX / Tables	ok	\begin{tabular}{|l|r|} \hline a & 1 \\ \hline b & 22 \\ \hline \end{tabular}
 Beyond KaTeX / Tables	ok	\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\ \verb|verbatim| \end{array}
 Beyond KaTeX / Commutative diagrams	ok	\begin{tikzcd} A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d, "h"] \\ C \arrow[r, hook, "k"'] & D \end{tikzcd}
@@ -1002,6 +965,6 @@ Extensions / mhchem	ok	\ce{^{227}_{90}Th+}
 Extensions / mhchem	ok	\ce{1/2 H2O}
 Extensions / mhchem	ok	\ce{Fe^{3+} + 3e- -> Fe(s)}
 Extensions / mhchem	ok	\ce{CuSO4*5H2O}
-Extensions / mhchem	ok	\pu{1.5 mol/L}
-Extensions / mhchem	ok	\pu{123 kJ/mol}
-Extensions / mhchem	ok	\pu{1.2e-3 mol L-1}
+Extensions / mhchem	nolatex	\pu{1.5 mol/L}
+Extensions / mhchem	nolatex	\pu{123 kJ/mol}
+Extensions / mhchem	nolatex	\pu{1.2e-3 mol L-1}

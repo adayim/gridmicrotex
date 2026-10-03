@@ -394,3 +394,101 @@ test_that("\\Overrightarrow, \\overleftharpoon and \\overrightharpoon are drawn 
   expect_equal(nrow(long(parts(r"(\Overrightarrow{AB})")$lines)), 2L)
   expect_equal(nrow(long(parts(r"(\overrightharpoon{AB})")$lines)), 1L)
 })
+
+# --- Symbols that drew wrong against LaTeX's own (the supported-functions list, compared) ------------
+
+test_that("\\utilde sets a tilde under all of its argument", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  r <- rec(r"(\utilde{ABCD})")
+  g <- r[r$type == "glyph", ]
+  expect_equal(nrow(g), 5L)
+  letters <- g[g$font_size == max(g$font_size), ]
+  tilde <- g[g$font_size != max(g$font_size), ]
+  expect_equal(nrow(tilde), 1L)
+  # Below the baseline, from the first letter on, not an accent drawn alone before them.
+  expect_gt(tilde$y, max(letters$y) + 3)
+  expect_lte(tilde$x, min(letters$x))
+  expect_identical(warns(r"(\utilde{ABCD})"), character(0))
+})
+
+test_that("a slash is an ordinary character, as in TeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  same(r"(a/b)", r"(a{/}b)")
+})
+
+test_that("\\copyright is a copyright sign and \\surd is drawn", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  same(r"(\copyright)", r"(\mathord{©})")
+  expect_false(isTRUE(all.equal(rec(r"(\copyright)")$x, rec(r"(\circledR)")$x)) &&
+                 isTRUE(all.equal(rec(r"(\copyright)")$y, rec(r"(\circledR)")$y)) &&
+                 identical(rec(r"(\copyright)")$glyph, rec(r"(\circledR)")$glyph))
+  expect_equal(sum(rec(r"(\surd)")$type == "glyph"), 1L)
+})
+
+test_that("\\pod, \\pmod and \\mod space as amsmath does: 8mu in text style, 18mu in display", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  same(r"(\textstyle x\pod a)", r"(\textstyle x\mkern8mu(a))")
+  same(r"(\displaystyle x\pod a)", r"(\displaystyle x\mkern18mu(a))")
+  same(r"(\textstyle x\pmod a)", r"(\textstyle x\mkern8mu(\mathrm{mod}\mkern6mu a))")
+  same(r"(\textstyle x\mod a)", r"(\textstyle x\mkern12mu\mathrm{mod}\,\,a)")
+})
+
+test_that("\\boxed sets its content in display style", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  same(r"(\textstyle\boxed{\frac ab})", r"(\textstyle\fbox{\displaystyle\frac ab})")
+})
+
+test_that("the text of \\xrightarrow and kin is set in script style", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (cmd in c("xrightarrow", "xleftarrow", "xRightarrow", "xhookrightarrow", "xmapsto")) {
+    r <- rec(paste0("\\", cmd, "{a}"))
+    g <- r[r$type == "glyph", ]
+    # The arrow is at the size of the line, its text at 0.7 of it.
+    expect_equal(sort(unique(g$font_size)) / max(g$font_size), c(0.7, 1), info = cmd)
+  }
+  r <- rec(r"(\xrightarrow[b]{a})")
+  g <- r[r$type == "glyph", ]
+  expect_equal(sum(g$font_size < max(g$font_size)), 2L)
+})
+
+test_that("\\big to \\Bigg are 1.2, 1.8, 2.4 and 3 times the size", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  tall <- function(tex) {
+    d <- latex_dims(tex, input_mode = "math", gp = grid::gpar(fontsize = 10))
+    grid::convertHeight(d$height, "bigpts", valueOnly = TRUE)
+  }
+  h <- vapply(c(r"(\big()", r"(\Big()", r"(\bigg()", r"(\Bigg()"), tall, 0)
+  expect_true(all(diff(h) > 0))
+  expect_equal(unname(h) / 10, c(1.2, 1.8, 2.4, 3), tolerance = 0.2)
+})
+
+test_that("\\substack and subarray are as wide as their rows, with no padding", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  sub_x <- function(tex) {
+    r <- rec(tex)
+    g <- r[r$type == "glyph" & r$font_size < max(r$font_size), ]
+    min(g$x)
+  }
+  plain <- sub_x(r"(\textstyle\sum_{i})")
+  expect_equal(sub_x(r"(\textstyle\sum_{\substack{i\\j}})"), plain, tolerance = 0.02)
+  expect_equal(sub_x(r"(\textstyle\sum_{\begin{subarray}{c}i\\j\end{subarray}})"), plain, tolerance = 0.02)
+})
+
+test_that("\\ldots and \\cdots are three spaced dots, as TeX's are", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  wide <- function(tex) {
+    d <- latex_dims(tex, input_mode = "math", gp = grid::gpar(fontsize = 10))
+    grid::convertWidth(d$width, "bigpts", valueOnly = TRUE)
+  }
+  # Three periods and the two thin spaces between them: about 1.1 em.
+  expect_equal(wide(r"(\textstyle\ldots)") / 10, 1.1, tolerance = 0.25)
+  expect_equal(wide(r"(\textstyle\cdots)") / 10, 1.1, tolerance = 0.25)
+  expect_identical(warns(r"(\text{a\ldots b}\; x_1,\ldots,x_n)"), character(0))
+})
+
+test_that("a dimension ends where its unit does: \\mkern8mu(a) is 8mu and then (a)", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  same(r"(x\mkern8mu(a))", r"(x\mkern8mu{}(a))")
+  same(r"(x\kern1em[a])", r"(x\kern1em{}[a])")
+  expect_identical(warns(r"(x\mkern8mu(a))"), character(0))
+})

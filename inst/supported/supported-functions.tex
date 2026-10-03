@@ -1,149 +1,148 @@
-% Written by inst/supported/build.R from examples.tsv; set by gridmicrotex or by LaTeX.
+% Written by inst/supported/build.R from examples.tsv. Compile with pdflatex, or render with gridmicrotex.
 \documentclass[9pt]{extarticle}
 \usepackage[letterpaper,margin=0.7in]{geometry}
-\usepackage{amsmath,amssymb,amscd,tikz-cd}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,ulem,xcolor,mathdots,amsthm}
+\usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde}
+\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing}
 \begin{document}
 \begin{center}\Large\textbf{What gridmicrotex draws}\end{center}
-Each row is a LaTeX input and what the package makes of it. The examples are those of KaTeX's list of supported functions, then what KaTeX does not have. A row here is a test: it must be drawn with no warning.
+
+Each row is a LaTeX input and what the package makes of it, three to a line where they fit, in the order of KaTeX's list of supported functions, then what KaTeX does not have. A row is a test: it must be drawn with no warning. Where LaTeX has nothing to compare with, only the name is listed.
+
+\textbf{This PDF is rendered with this package}.
 
 \section*{Accents}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|a'|} & {\large $a'
 $} & {\small\verb|\tilde{a}|} & {\large $\tilde{a}
+$} & {\small\verb|\mathring{g}|} & {\large $\mathring{g}
 $} \\
-{\small\verb|\mathring{g}|} & {\large $\mathring{g}
-$} & {\small\verb|a''|} & {\large $a''
-$} \\
-{\small\verb|\widetilde{ac}|} & {\large $\widetilde{ac}
+{\small\verb|a''|} & {\large $a''
+$} & {\small\verb|\widetilde{ac}|} & {\large $\widetilde{ac}
 $} & {\small\verb|a^{\prime}|} & {\large $a^{\prime}
 $} \\
 {\small\verb|\utilde{AB}|} & {\large $\utilde{AB}
 $} & {\small\verb|\acute{a}|} & {\large $\acute{a}
+$} & {\small\verb|\vec{F}|} & {\large $\vec{F}
 $} \\
-{\small\verb|\vec{F}|} & {\large $\vec{F}
-$} & {\small\verb|\bar{y}|} & {\large $\bar{y}
-$} \\
-{\small\verb|\overleftarrow{AB}|} & {\large $\overleftarrow{AB}
-$} & {\small\verb|\overrightarrow{AB}|} & {\large $\overrightarrow{AB}
-$} \\
-{\small\verb|\breve{a}|} & {\large $\breve{a}
-$} & {\small\verb|\underleftarrow{AB}|} & {\large $\underleftarrow{AB}
-$} \\
-{\small\verb|\underrightarrow{AB}|} & {\large $\underrightarrow{AB}
+{\small\verb|\bar{y}|} & {\large $\bar{y}
+$} & {\small\verb|\breve{a}|} & {\large $\breve{a}
 $} & {\small\verb|\check{a}|} & {\large $\check{a}
 $} \\
 {\small\verb|\dot{a}|} & {\large $\dot{a}
-$} & {\small\verb|\overleftrightarrow{AB}|} & {\large $\overleftrightarrow{AB}
-$} \\
-{\small\verb|\overbrace{AB}|} & {\large $\overbrace{AB}
+$} & {\small\verb|\overbrace{AB}|} & {\large $\overbrace{AB}
 $} & {\small\verb|\ddot{a}|} & {\large $\ddot{a}
 $} \\
-{\small\verb|\underleftrightarrow{AB}|} & {\large $\underleftrightarrow{AB}
-$} & {\small\verb|\underbrace{AB}|} & {\large $\underbrace{AB}
-$} \\
-{\small\verb|\dddot{a}|} & {\large $\dddot{a}
+{\small\verb|\underbrace{AB}|} & {\large $\underbrace{AB}
+$} & {\small\verb|\dddot{a}|} & {\large $\dddot{a}
 $} & {\small\verb|\overline{AB}|} & {\large $\overline{AB}
 $} \\
 {\small\verb|\overbracket{AB}|} & {\large $\overbracket{AB}
 $} & {\small\verb|\ddddot{a}|} & {\large $\ddddot{a}
+$} & {\small\verb|\underline{AB}|} & {\large $\underline{AB}
 $} \\
-{\small\verb|\underline{AB}|} & {\large $\underline{AB}
-$} & {\small\verb|\underbracket{AB}|} & {\large $\underbracket{AB}
-$} \\
-{\small\verb|\grave{a}|} & {\large $\grave{a}
+{\small\verb|\underbracket{AB}|} & {\large $\underbracket{AB}
+$} & {\small\verb|\grave{a}|} & {\large $\grave{a}
 $} & {\small\verb|\underbar{X}|} & {\large $\underbar{X}
 $} \\
 {\small\verb|\hat{\theta}|} & {\large $\hat{\theta}
 $} & {\small\verb|\widehat{ac}|} & {\large $\widehat{ac}
+$} & {\small\verb|\text{\'{a}}|} & {\large $\text{\'{a}}
 $} \\
-{\small\verb|\text{\'{a}}|} & {\large $\text{\'{a}}
-$} & {\small\verb|\text{\~{a}}|} & {\large $\text{\~{a}}
-$} \\
-{\small\verb|\text{\.{a}}|} & {\large $\text{\.{a}}
+{\small\verb|\text{\~{a}}|} & {\large $\text{\~{a}}
+$} & {\small\verb|\text{\.{a}}|} & {\large $\text{\.{a}}
 $} & {\small\verb|\text{\`{a}}|} & {\large $\text{\`{a}}
 $} \\
 {\small\verb|\text{\={a}}|} & {\large $\text{\={a}}
 $} & {\small\verb|\text{\"{a}}|} & {\large $\text{\"{a}}
+$} & {\small\verb|\text{\v{a}}|} & {\large $\text{\v{a}}
 $} \\
-{\small\verb|\text{\v{a}}|} & {\large $\text{\v{a}}
-$} & {\small\verb|\text{\^{a}}|} & {\large $\text{\^{a}}
-$} \\
-{\small\verb|\text{\u{a}}|} & {\large $\text{\u{a}}
+{\small\verb|\text{\^{a}}|} & {\large $\text{\^{a}}
+$} & {\small\verb|\text{\u{a}}|} & {\large $\text{\u{a}}
 $} & {\small\verb|\text{\r{a}}|} & {\large $\text{\r{a}}
 $} \\
 {\small\verb|\text{\H{o}}|} & {\large $\text{\H{o}}
-$} & {\small\verb|\widecheck{ac}|} & {\large $\widecheck{ac}
-$} \\
-{\small\verb|\overgroup{AB}|} & {\large $\overgroup{AB}
-$} & {\small\verb|\undergroup{AB}|} & {\large $\undergroup{AB}
-$} \\
-{\small\verb|\overlinesegment{AB}|} & {\large $\overlinesegment{AB}
-$} & {\small\verb|\underlinesegment{AB}|} & {\large $\underlinesegment{AB}
-$} \\
-{\small\verb|\Overrightarrow{AB}|} & {\large $\Overrightarrow{AB}
-$} & {\small\verb|\overleftharpoon{ac}|} & {\large $\overleftharpoon{ac}
-$} \\
-{\small\verb|\overrightharpoon{ac}|} & {\large $\overrightharpoon{ac}
-$} & & \\
+$} & & & & \\
 \end{tabular}
 
-\newpage
-\subsection*{Accents (continued)}
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\overleftarrow{AB}|} & {\large $\overleftarrow{AB}
+$} & {\small\verb|\overrightarrow{AB}|} & {\large $\overrightarrow{AB}
+$} \\
+{\small\verb|\underleftarrow{AB}|} & {\large $\underleftarrow{AB}
+$} & {\small\verb|\underrightarrow{AB}|} & {\large $\underrightarrow{AB}
+$} \\
+{\small\verb|\overleftrightarrow{AB}|} & {\large $\overleftrightarrow{AB}
+$} & {\small\verb|\underleftrightarrow{AB}|} & {\large $\underleftrightarrow{AB}
+$} \\
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\widecheck{ac}|} & {\small\verb|\overgroup{AB}|} & {\small\verb|\undergroup{AB}|} \\
+{\small\verb|\overlinesegment{AB}|} & {\small\verb|\underlinesegment{AB}|} & {\small\verb|\Overrightarrow{AB}|} \\
+{\small\verb|\overleftharpoon{ac}|} & {\small\verb|\overrightharpoon{ac}|} &  \\
+\end{tabular}
+
 \section*{Delimiters}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|(~)|} & {\large $(~)
 $} & {\small\verb|\lparen~\rparen|} & {\large $\lparen~\rparen
-$} \\
-{\small\verb|~~~~|} & {\large $~~~~
 $} & {\small\verb|\lceil~\rceil|} & {\large $\lceil~\rceil
 $} \\
-{\small\verb|~~~~~|} & {\large $~~~~~
-$} & {\small\verb|\uparrow|} & {\large $\uparrow
-$} \\
-{\small\verb|[~]|} & {\large $[~]
+{\small\verb|\uparrow|} & {\large $\uparrow
+$} & {\small\verb|[~]|} & {\large $[~]
 $} & {\small\verb|\lbrack~\rbrack|} & {\large $\lbrack~\rbrack
 $} \\
 {\small\verb|\lfloor~\rfloor|} & {\large $\lfloor~\rfloor
 $} & {\small\verb|\downarrow|} & {\large $\downarrow
+$} & {\small\verb|\{ \}|} & {\large $\{ \}
 $} \\
-{\small\verb|\{ \}|} & {\large $\{ \}
-$} & {\small\verb|\lbrace \rbrace|} & {\large $\lbrace \rbrace
-$} \\
-{\small\verb|\lmoustache \rmoustache|} & {\large $\lmoustache \rmoustache
+{\small\verb|\lbrace \rbrace|} & {\large $\lbrace \rbrace
 $} & {\small\verb|\updownarrow|} & {\large $\updownarrow
+$} & {\small\verb|\langle~\rangle|} & {\large $\langle~\rangle
 $} \\
-{\small\verb|\langle~\rangle|} & {\large $\langle~\rangle
-$} & {\small\verb|\lgroup~\rgroup|} & {\large $\lgroup~\rgroup
-$} \\
-{\small\verb|\Uparrow|} & {\large $\Uparrow
+{\small\verb|\lgroup~\rgroup|} & {\large $\lgroup~\rgroup
+$} & {\small\verb|\Uparrow|} & {\large $\Uparrow
 $} & {\small\verb|\vert|} & {\large $\vert
 $} \\
-{\small\verb|\ulcorner \urcorner|} & {\large $\ulcorner \urcorner
-$} & {\small\verb|\Downarrow|} & {\large $\Downarrow
+{\small\verb|\Downarrow|} & {\large $\Downarrow
+$} & {\small\verb|\Vert|} & {\large $\Vert
+$} & {\small\verb|\Updownarrow|} & {\large $\Updownarrow
 $} \\
-{\small\verb|\Vert|} & {\large $\Vert
-$} & {\small\verb|\llcorner \lrcorner|} & {\large $\llcorner \lrcorner
-$} \\
-{\small\verb|\Updownarrow|} & {\large $\Updownarrow
-$} & {\small\verb|\lvert~\rvert|} & {\large $\lvert~\rvert
-$} \\
-{\small\verb|\lVert~\rVert|} & {\large $\lVert~\rVert
+{\small\verb|\lvert~\rvert|} & {\large $\lvert~\rvert
+$} & {\small\verb|\lVert~\rVert|} & {\large $\lVert~\rVert
 $} & {\small\verb|\backslash|} & {\large $\backslash
 $} \\
-{\small\verb|\lang~\rang|} & {\large $\lang~\rang
-$} & {\small\verb|\left\lt~\right\gt|} & {\large $\left\lt~\right\gt
+{\small\verb|/|} & {\large $/
+$} & & & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\lmoustache \rmoustache|} & {\large $\lmoustache \rmoustache
+$} & {\small\verb|\ulcorner \urcorner|} & {\large $\ulcorner \urcorner
 $} \\
-{\small\verb|\llbracket~\rrbracket|} & {\large $\llbracket~\rrbracket
-$} & {\small\verb|/|} & {\large $/
-$} \\
-{\small\verb|\lBrace~\rBrace|} & {\large $\lBrace~\rBrace
-$} & {\small\verb|\left(\LARGE{AB}\right)|} & {\large $\left(\LARGE{AB}\right)
+{\small\verb|\llcorner \lrcorner|} & {\large $\llcorner \lrcorner
+$} & {\small\verb|\llbracket~\rrbracket|} & {\large $\llbracket~\rrbracket
 $} \\
 {\small\verb|( \big( \Big( \bigg( \Bigg(|} & {\large $( \big( \Big( \bigg( \Bigg(
 $} & & \\
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\lang~\rang|} & {\small\verb|\left\lt~\right\gt|} & {\small\verb|\lBrace~\rBrace|} \\
+{\small\verb|\left(\LARGE{AB}\right)|} &  &  \\
+\end{tabular}
+
+\newpage
 \section*{Environments}
+
 \begin{tabular}{@{}l@{}}
 {\small\verb|\begin{matrix} a & b \\ c & d \end{matrix}|} \\ {\large $\begin{matrix} a & b \\ c & d \end{matrix}
 $} \\[4pt]
@@ -157,14 +156,7 @@ $} \\[4pt]
 $} \\[4pt]
 {\small\verb|\begin{Vmatrix} a & b \\ c & d \end{Vmatrix}|} \\ {\large $\begin{Vmatrix} a & b \\ c & d \end{Vmatrix}
 $} \\[4pt]
-\end{tabular}
-
-\newpage
-\subsection*{Environments (continued)}
-\begin{tabular}{@{}l@{}}
 {\small\verb|\begin{Bmatrix} a & b \\ c & d \end{Bmatrix}|} \\ {\large $\begin{Bmatrix} a & b \\ c & d \end{Bmatrix}
-$} \\[4pt]
-{\small\verb|\def\arraystretch{1.5}\begin{array}{c:c:c} a & b & c \\ \hline d|} \\ {\small\verb|& e & f \\ \hdashline g & h & i \end{array}|} \\ {\large $\def\arraystretch{1.5}\begin{array}{c:c:c} a & b & c \\ \hline d & e & f \\ \hdashline g & h & i \end{array}
 $} \\[4pt]
 {\small\verb|x = \begin{cases} a &\text{if } b \\ c &\text{if } d \end{cases}|} \\ {\large $x = \begin{cases} a &\text{if } b \\ c &\text{if } d \end{cases}
 $} \\[4pt]
@@ -172,243 +164,207 @@ $} \\[4pt]
 $} \\[4pt]
 {\small\verb|\sum_{\begin{subarray}{l} i\in\Lambda\\ 0<j<n\end{subarray}}|} \\ {\large $\sum_{\begin{subarray}{l} i\in\Lambda\\ 0<j<n\end{subarray}}
 $} \\[4pt]
-{\small\verb|\begin{equation}\begin{split}a|} \\ {\small\verb|&=b+c\\&=e+f\end{split}\end{equation}|} \\ {\large $\begin{equation}\begin{split}a &=b+c\\&=e+f\end{split}\end{equation}
-$} \\[4pt]
-{\small\verb|\begin{align} a&=b+c \\ d+e&=f \end{align}|} \\ {\large $\begin{align} a&=b+c \\ d+e&=f \end{align}
-$} \\[4pt]
-{\small\verb|\begin{gather} a=b \\ e=b+c \end{gather}|} \\ {\large $\begin{gather} a=b \\ e=b+c \end{gather}
-$} \\[4pt]
-{\small\verb|\begin{alignat}{2}10&x+&3&y=2\\3&x+&13&y=4\end{alignat}|} \\ {\large $\begin{alignat}{2}10&x+&3&y=2\\3&x+&13&y=4\end{alignat}
-$} \\[4pt]
 {\small\verb|\begin{CD}A @>a>> B \\@VbVV @AAcA\\C @= D\end{CD}|} \\ {\large $\begin{CD}A @>a>> B \\@VbVV @AAcA\\C @= D\end{CD}
 $} \\[4pt]
 \end{tabular}
 
+{\small\verb|\begin{equation}\begin{split}a| \verb|&=b+c\\&=e+f\end{split}\end{equation}|}
+
+\begin{equation}\begin{split}a &=b+c\\&=e+f\end{split}\end{equation}
+
 \newpage
 \subsection*{Environments (continued)}
+
+{\small\verb|\begin{align} a&=b+c \\ d+e&=f \end{align}|}
+
+\begin{align} a&=b+c \\ d+e&=f \end{align}
+
+{\small\verb|\begin{gather} a=b \\ e=b+c \end{gather}|}
+
+\begin{gather} a=b \\ e=b+c \end{gather}
+
+{\small\verb|\begin{alignat}{2}10&x+&3&y=2\\3&x+&13&y=4\end{alignat}|}
+
+\begin{alignat}{2}10&x+&3&y=2\\3&x+&13&y=4\end{alignat}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\def\arraystretch{1.5}\begin{array}{c:c:c} a & b & c \\ \hline d & e & f \\ \hdashline g & h & i \end{array}|} \\
+\end{tabular}
+
 \section*{HTML}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\url{https://katex.org/}|} & {\large $\url{https://katex.org/}
-$} & {\small\verb|\htmlId{bar}{x}|} & {\large $\htmlId{bar}{x}
-$} \\
-{\small\verb|\htmlClass{foo}{x}|} & {\large $\htmlClass{foo}{x}
-$} & {\small\verb|\htmlStyle{color: red;}{x}|} & {\large $\htmlStyle{color: red;}{x}
-$} \\
-{\small\verb|\htmlData{foo=a, bar=b}{x}|} & {\large $\htmlData{foo=a, bar=b}{x}
-$} & & \\
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\url{https://katex.org/}|} & {\small\verb|\htmlId{bar}{x}|} & {\small\verb|\htmlClass{foo}{x}|} \\
+{\small\verb|\htmlStyle{color: red;}{x}|} & {\small\verb|\htmlData{foo=a, bar=b}{x}|} &  \\
 \end{tabular}
 
 \begin{tabular}{@{}l@{}}
-{\small\verb|\href{https://katex.org/}{\KaTeX}|} \\ {\large $\href{https://katex.org/}{\KaTeX}
-$} \\[4pt]
+{\small\verb|\href{https://katex.org/}{\KaTeX}|} \\
 \end{tabular}
 
 \section*{Letters and Unicode}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\Alpha|} & {\large $\Alpha
-$} & {\small\verb|\Beta|} & {\large $\Beta
-$} \\
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\Gamma|} & {\large $\Gamma
 $} & {\small\verb|\Delta|} & {\large $\Delta
-$} \\
-{\small\verb|\Epsilon|} & {\large $\Epsilon
-$} & {\small\verb|\Zeta|} & {\large $\Zeta
-$} \\
-{\small\verb|\Eta|} & {\large $\Eta
 $} & {\small\verb|\Theta|} & {\large $\Theta
 $} \\
-{\small\verb|\Iota|} & {\large $\Iota
-$} & {\small\verb|\Kappa|} & {\large $\Kappa
-$} \\
 {\small\verb|\Lambda|} & {\large $\Lambda
-$} & {\small\verb|\Mu|} & {\large $\Mu
-$} \\
-{\small\verb|\Nu|} & {\large $\Nu
 $} & {\small\verb|\Xi|} & {\large $\Xi
-$} \\
-{\small\verb|\Omicron|} & {\large $\Omicron
 $} & {\small\verb|\Pi|} & {\large $\Pi
 $} \\
-{\small\verb|\Rho|} & {\large $\Rho
-$} & {\small\verb|\Sigma|} & {\large $\Sigma
-$} \\
-{\small\verb|\Tau|} & {\large $\Tau
+{\small\verb|\Sigma|} & {\large $\Sigma
 $} & {\small\verb|\Upsilon|} & {\large $\Upsilon
-$} \\
-{\small\verb|\Phi|} & {\large $\Phi
-$} & {\small\verb|\Chi|} & {\large $\Chi
+$} & {\small\verb|\Phi|} & {\large $\Phi
 $} \\
 {\small\verb|\Psi|} & {\large $\Psi
 $} & {\small\verb|\Omega|} & {\large $\Omega
+$} & {\small\verb|\varGamma|} & {\large $\varGamma
 $} \\
-{\small\verb|\varGamma|} & {\large $\varGamma
-$} & {\small\verb|\varDelta|} & {\large $\varDelta
-$} \\
-{\small\verb|\varTheta|} & {\large $\varTheta
+{\small\verb|\varDelta|} & {\large $\varDelta
+$} & {\small\verb|\varTheta|} & {\large $\varTheta
 $} & {\small\verb|\varLambda|} & {\large $\varLambda
 $} \\
 {\small\verb|\varXi|} & {\large $\varXi
 $} & {\small\verb|\varPi|} & {\large $\varPi
+$} & {\small\verb|\varSigma|} & {\large $\varSigma
 $} \\
-{\small\verb|\varSigma|} & {\large $\varSigma
-$} & {\small\verb|\varUpsilon|} & {\large $\varUpsilon
-$} \\
-{\small\verb|\varPhi|} & {\large $\varPhi
+{\small\verb|\varUpsilon|} & {\large $\varUpsilon
+$} & {\small\verb|\varPhi|} & {\large $\varPhi
 $} & {\small\verb|\varPsi|} & {\large $\varPsi
 $} \\
 {\small\verb|\varOmega|} & {\large $\varOmega
 $} & {\small\verb|\alpha|} & {\large $\alpha
+$} & {\small\verb|\beta|} & {\large $\beta
 $} \\
-{\small\verb|\beta|} & {\large $\beta
-$} & {\small\verb|\gamma|} & {\large $\gamma
-$} \\
-{\small\verb|\delta|} & {\large $\delta
+{\small\verb|\gamma|} & {\large $\gamma
+$} & {\small\verb|\delta|} & {\large $\delta
 $} & {\small\verb|\epsilon|} & {\large $\epsilon
 $} \\
 {\small\verb|\zeta|} & {\large $\zeta
 $} & {\small\verb|\eta|} & {\large $\eta
+$} & {\small\verb|\theta|} & {\large $\theta
 $} \\
-{\small\verb|\theta|} & {\large $\theta
-$} & {\small\verb|\iota|} & {\large $\iota
-$} \\
-{\small\verb|\kappa|} & {\large $\kappa
+{\small\verb|\iota|} & {\large $\iota
+$} & {\small\verb|\kappa|} & {\large $\kappa
 $} & {\small\verb|\lambda|} & {\large $\lambda
 $} \\
 {\small\verb|\mu|} & {\large $\mu
 $} & {\small\verb|\nu|} & {\large $\nu
-$} \\
-{\small\verb|\xi|} & {\large $\xi
-$} & {\small\verb|\omicron|} & {\large $\omicron
+$} & {\small\verb|\xi|} & {\large $\xi
 $} \\
 {\small\verb|\pi|} & {\large $\pi
 $} & {\small\verb|\rho|} & {\large $\rho
+$} & {\small\verb|\sigma|} & {\large $\sigma
 $} \\
-{\small\verb|\sigma|} & {\large $\sigma
-$} & {\small\verb|\tau|} & {\large $\tau
-$} \\
-{\small\verb|\upsilon|} & {\large $\upsilon
+{\small\verb|\tau|} & {\large $\tau
+$} & {\small\verb|\upsilon|} & {\large $\upsilon
 $} & {\small\verb|\phi|} & {\large $\phi
 $} \\
 {\small\verb|\chi|} & {\large $\chi
 $} & {\small\verb|\psi|} & {\large $\psi
+$} & {\small\verb|\omega|} & {\large $\omega
 $} \\
-{\small\verb|\omega|} & {\large $\omega
-$} & {\small\verb|\varepsilon|} & {\large $\varepsilon
+{\small\verb|\varepsilon|} & {\large $\varepsilon
+$} & {\small\verb|\varkappa|} & {\large $\varkappa
+$} & {\small\verb|\vartheta|} & {\large $\vartheta
+$} \\
+{\small\verb|\varpi|} & {\large $\varpi
+$} & {\small\verb|\varrho|} & {\large $\varrho
+$} & {\small\verb|\varsigma|} & {\large $\varsigma
+$} \\
+{\small\verb|\varphi|} & {\large $\varphi
+$} & {\small\verb|\digamma|} & {\large $\digamma
+$} & {\small\verb|\imath|} & {\large $\imath
+$} \\
+{\small\verb|\nabla|} & {\large $\nabla
+$} & {\small\verb|\Im|} & {\large $\Im
+$} & {\small\verb|\text{\OE}|} & {\large $\text{\OE}
+$} \\
+{\small\verb|\jmath|} & {\large $\jmath
+$} & {\small\verb|\partial|} & {\large $\partial
+$} & {\small\verb|\wp|} & {\large $\wp
+$} \\
+{\small\verb|\text{\o}|} & {\large $\text{\o}
+$} & {\small\verb|\aleph|} & {\large $\aleph
+$} & {\small\verb|\Game|} & {\large $\Game
+$} \\
+{\small\verb|\Bbbk|} & {\large $\Bbbk
+$} & {\small\verb|\text{\O}|} & {\large $\text{\O}
+$} & {\small\verb|\Finv|} & {\large $\Finv
+$} \\
+{\small\verb|\text{\ss}|} & {\large $\text{\ss}
+$} & {\small\verb|\text{\aa}|} & {\large $\text{\aa}
+$} & {\small\verb|\text{\i}|} & {\large $\text{\i}
+$} \\
+{\small\verb|\beth|} & {\large $\beth
+$} & {\small\verb|\text{\AA}|} & {\large $\text{\AA}
+$} & {\small\verb|\text{\j}|} & {\large $\text{\j}
+$} \\
+{\small\verb|\gimel|} & {\large $\gimel
+$} & {\small\verb|\ell|} & {\large $\ell
+$} & {\small\verb|\Re|} & {\large $\Re
 $} \\
 \end{tabular}
 
 \newpage
 \subsection*{Letters and Unicode (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\varkappa|} & {\large $\varkappa
-$} & {\small\verb|\vartheta|} & {\large $\vartheta
-$} \\
-{\small\verb|\thetasym|} & {\large $\thetasym
-$} & {\small\verb|\varpi|} & {\large $\varpi
-$} \\
-{\small\verb|\varrho|} & {\large $\varrho
-$} & {\small\verb|\varsigma|} & {\large $\varsigma
-$} \\
-{\small\verb|\varphi|} & {\large $\varphi
-$} & {\small\verb|\digamma|} & {\large $\digamma
-$} \\
-{\small\verb|\imath|} & {\large $\imath
-$} & {\small\verb|\nabla|} & {\large $\nabla
-$} \\
-{\small\verb|\Im|} & {\large $\Im
-$} & {\small\verb|\Reals|} & {\large $\Reals
-$} \\
-{\small\verb|\text{\OE}|} & {\large $\text{\OE}
-$} & {\small\verb|\jmath|} & {\large $\jmath
-$} \\
-{\small\verb|\partial|} & {\large $\partial
-$} & {\small\verb|\image|} & {\large $\image
-$} \\
-{\small\verb|\wp|} & {\large $\wp
-$} & {\small\verb|\text{\o}|} & {\large $\text{\o}
-$} \\
-{\small\verb|\aleph|} & {\large $\aleph
-$} & {\small\verb|\Game|} & {\large $\Game
-$} \\
-{\small\verb|\Bbbk|} & {\large $\Bbbk
-$} & {\small\verb|\weierp|} & {\large $\weierp
-$} \\
-{\small\verb|\text{\O}|} & {\large $\text{\O}
-$} & {\small\verb|\alef|} & {\large $\alef
-$} \\
-{\small\verb|\Finv|} & {\large $\Finv
-$} & {\small\verb|\N|} & {\large $\N
-$} \\
-{\small\verb|\Z|} & {\large $\Z
-$} & {\small\verb|\text{\ss}|} & {\large $\text{\ss}
-$} \\
-{\small\verb|\alefsym|} & {\large $\alefsym
-$} & {\small\verb|\cnums|} & {\large $\cnums
-$} \\
-{\small\verb|\natnums|} & {\large $\natnums
-$} & {\small\verb|\text{\aa}|} & {\large $\text{\aa}
-$} \\
-{\small\verb|\text{\i}|} & {\large $\text{\i}
-$} & {\small\verb|\beth|} & {\large $\beth
-$} \\
-{\small\verb|\Complex|} & {\large $\Complex
-$} & {\small\verb|\R|} & {\large $\R
-$} \\
-{\small\verb|\text{\AA}|} & {\large $\text{\AA}
-$} & {\small\verb|\text{\j}|} & {\large $\text{\j}
-$} \\
-{\small\verb|\gimel|} & {\large $\gimel
-$} & {\small\verb|\ell|} & {\large $\ell
-$} \\
-{\small\verb|\Re|} & {\large $\Re
-$} & {\small\verb|\text{\ae}|} & {\large $\text{\ae}
-$} \\
-{\small\verb|\daleth|} & {\large $\daleth
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\text{\ae}|} & {\large $\text{\ae}
+$} & {\small\verb|\daleth|} & {\large $\daleth
 $} & {\small\verb|\hbar|} & {\large $\hbar
 $} \\
 {\small\verb|\real|} & {\large $\real
 $} & {\small\verb|\text{\AE}|} & {\large $\text{\AE}
+$} & {\small\verb|\eth|} & {\large $\eth
 $} \\
-{\small\verb|\eth|} & {\large $\eth
-$} & {\small\verb|\hslash|} & {\large $\hslash
-$} \\
-{\small\verb|\reals|} & {\large $\reals
+{\small\verb|\hslash|} & {\large $\hslash
 $} & {\small\verb|\text{\oe}|} & {\large $\text{\oe}
-$} \\
-{\small\verb|\char"263a|} & {\large $\char"263a
 $} & & \\
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\Alpha|} & {\small\verb|\Beta|} & {\small\verb|\Epsilon|} \\
+{\small\verb|\Zeta|} & {\small\verb|\Eta|} & {\small\verb|\Iota|} \\
+{\small\verb|\Kappa|} & {\small\verb|\Mu|} & {\small\verb|\Nu|} \\
+{\small\verb|\Omicron|} & {\small\verb|\Rho|} & {\small\verb|\Tau|} \\
+{\small\verb|\Chi|} & {\small\verb|\omicron|} & {\small\verb|\thetasym|} \\
+{\small\verb|\Reals|} & {\small\verb|\image|} & {\small\verb|\weierp|} \\
+{\small\verb|\alef|} & {\small\verb|\N|} & {\small\verb|\Z|} \\
+{\small\verb|\alefsym|} & {\small\verb|\cnums|} & {\small\verb|\natnums|} \\
+{\small\verb|\Complex|} & {\small\verb|\R|} & {\small\verb|\reals|} \\
+{\small\verb|\char"263a|} &  &  \\
+\end{tabular}
+
 \section*{Layout}
+
 \subsection*{Annotation}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\cancel{5}|} & {\large $\cancel{5}
 $} & {\small\verb|\bcancel{5}|} & {\large $\bcancel{5}
+$} & {\small\verb|\xcancel{ABC}|} & {\large $\xcancel{ABC}
 $} \\
-{\small\verb|\xcancel{ABC}|} & {\large $\xcancel{ABC}
-$} & {\small\verb|\not =|} & {\large $\not =
-$} \\
-{\small\verb|\text{\sout{abc}}|} & {\large $\text{\sout{abc}}
+{\small\verb|\not =|} & {\large $\not =
+$} & {\small\verb|\text{\sout{abc}}|} & {\large $\text{\sout{abc}}
+$} & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\overbrace{a+b+c}^{\text{note}}|} & {\large $\overbrace{a+b+c}^{\text{note}}
 $} & {\small\verb|\boxed{\pi=\frac c d}|} & {\large $\boxed{\pi=\frac c d}
 $} \\
-{\small\verb|\tag{hi} x+y^{2x}|} & {\large $\tag{hi} x+y^{2x}
-$} & {\small\verb|\tag*{hi} x+y^{2x}|} & {\large $\tag*{hi} x+y^{2x}
-$} \\
-{\small\verb|\phase{30^\circ}|} & {\large $\phase{30^\circ}
-$} & {\small\verb|\angl{n}|} & {\large $\angl{n}
-$} \\
-{\small\verb|\angln|} & {\large $\angln
-$} & {\small\verb|\text{\textcircled{a}}|} & {\large $\text{\textcircled{a}}
-$} \\
+{\small\verb|\text{\textcircled{a}}|} & {\large $\text{\textcircled{a}}
+$} & & \\
 \end{tabular}
 
-\begin{tabular}{@{}l@{}}
-{\small\verb|\overbrace{a+b+c}^{\text{note}}|} \\ {\large $\overbrace{a+b+c}^{\text{note}}
-$} \\[4pt]
-\end{tabular}
-
-\newpage
-\subsection*{Layout / Annotation (continued)}
 \begin{tabular}{@{}l@{}}
 {\small\verb|\underbrace{a+b+c}_{\text{note}}|} \\ {\large $\underbrace{a+b+c}_{\text{note}}
 $} \\[4pt]
@@ -418,34 +374,60 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
+{\small\verb|\tag{hi} x+y^{2x}|}
+
+\[\tag{hi} x+y^{2x}\]
+
+{\small\verb|\tag*{hi} x+y^{2x}|}
+
+\[\tag*{hi} x+y^{2x}\]
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\phase{30^\circ}|} & {\small\verb|\angl{n}|} & {\small\verb|\angln|} \\
+\end{tabular}
+
+\newpage
 \subsection*{Vertical Layout}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|x_n|} & {\large $x_n
 $} & {\small\verb|\stackrel{!}{=}|} & {\large $\stackrel{!}{=}
+$} & {\small\verb|a \atop b|} & {\large $a \atop b
 $} \\
-{\small\verb|a \atop b|} & {\large $a \atop b
-$} & {\small\verb|e^x|} & {\large $e^x
+{\small\verb|e^x|} & {\large $e^x
+$} & {\small\verb|\overset{!}{=}|} & {\large $\overset{!}{=}
+$} & {\small\verb|_u^o|} & {\large $_u^o
 $} \\
-{\small\verb|\overset{!}{=}|} & {\large $\overset{!}{=}
-$} & {\small\verb|a\raisebox{0.25em}{$b$}c|} & {\large $a\raisebox{0.25em}{$b$}c
-$} \\
-{\small\verb|\reflectbox{KaTeX}|} & {\large $\reflectbox{KaTeX}
-$} & {\small\verb|\mathreflectbox{x^2}|} & {\large $\mathreflectbox{x^2}
-$} \\
-{\small\verb|_u^o|} & {\large $_u^o
-$} & {\small\verb|\underset{!}{=}|} & {\large $\underset{!}{=}
+{\small\verb|\underset{!}{=}|} & {\large $\underset{!}{=}
+$} & & & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|a\raisebox{0.25em}{$b$}c|} & {\large $a\raisebox{0.25em}{$b$}c
+$} & {\small\verb|\reflectbox{KaTeX}|} & {\large $\reflectbox{KaTeX}
 $} \\
 {\small\verb|\sum_{\substack{0<i<m\\0<j<n}}|} & {\large $\sum_{\substack{0<i<m\\0<j<n}}
-$} & {\small\verb|\vcenter{x}|} & {\large $\vcenter{x}
-$} \\
+$} & & \\
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\mathreflectbox{x^2}|} & {\small\verb|\vcenter{x}|} &  \\
 \end{tabular}
 
 \subsection*{Overlap and Spacing}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|{=}\mathllap{/\,}|} & {\large ${=}\mathllap{/\,}
-$} & {\small\verb|\left(x^{\smash{2}}\right)|} & {\large $\left(x^{\smash{2}}\right)
-$} \\
-{\small\verb|\mathrlap{\,/}{=}|} & {\large $\mathrlap{\,/}{=}
+$} & {\small\verb|\mathrlap{\,/}{=}|} & {\large $\mathrlap{\,/}{=}
+$} & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\left(x^{\smash{2}}\right)|} & {\large $\left(x^{\smash{2}}\right)
 $} & {\small\verb|\sqrt{\smash[b]{y}}|} & {\large $\sqrt{\smash[b]{y}}
 $} \\
 \end{tabular}
@@ -456,60 +438,58 @@ $} \\[4pt]
 \end{tabular}
 
 \section*{Logic and Set Theory}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb!\gdef\VERT{|}!} & {\large $\gdef\VERT{|}
-$} & {\small\verb|\forall|} & {\large $\forall
-$} \\
-{\small\verb|\complement|} & {\large $\complement
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\forall|} & {\large $\forall
+$} & {\small\verb|\complement|} & {\large $\complement
 $} & {\small\verb|\therefore|} & {\large $\therefore
 $} \\
 {\small\verb|\emptyset|} & {\large $\emptyset
 $} & {\small\verb|\exists|} & {\large $\exists
+$} & {\small\verb|\subset|} & {\large $\subset
 $} \\
-{\small\verb|\subset|} & {\large $\subset
-$} & {\small\verb|\because|} & {\large $\because
+{\small\verb|\because|} & {\large $\because
+$} & {\small\verb|\empty|} & {\large $\empty
+$} & {\small\verb|\supset|} & {\large $\supset
 $} \\
-{\small\verb|\empty|} & {\large $\empty
-$} & {\small\verb|\exist|} & {\large $\exist
-$} \\
-{\small\verb|\supset|} & {\large $\supset
-$} & {\small\verb|\mapsto|} & {\large $\mapsto
-$} \\
-{\small\verb|\varnothing|} & {\large $\varnothing
+{\small\verb|\mapsto|} & {\large $\mapsto
+$} & {\small\verb|\varnothing|} & {\large $\varnothing
 $} & {\small\verb|\nexists|} & {\large $\nexists
 $} \\
 {\small\verb|\mid|} & {\large $\mid
 $} & {\small\verb|\to|} & {\large $\to
+$} & {\small\verb|\implies|} & {\large $\implies
 $} \\
-{\small\verb|\implies|} & {\large $\implies
-$} & {\small\verb|\in|} & {\large $\in
-$} \\
-{\small\verb|\land|} & {\large $\land
+{\small\verb|\in|} & {\large $\in
+$} & {\small\verb|\land|} & {\large $\land
 $} & {\small\verb|\gets|} & {\large $\gets
 $} \\
 {\small\verb|\impliedby|} & {\large $\impliedby
-$} & {\small\verb|\isin|} & {\large $\isin
-$} \\
-{\small\verb|\lor|} & {\large $\lor
+$} & {\small\verb|\lor|} & {\large $\lor
 $} & {\small\verb|\leftrightarrow|} & {\large $\leftrightarrow
 $} \\
 {\small\verb|\iff|} & {\large $\iff
 $} & {\small\verb|\notin|} & {\large $\notin
-$} \\
-{\small\verb|\ni|} & {\large $\ni
-$} & {\small\verb|\notni|} & {\large $\notni
+$} & {\small\verb|\ni|} & {\large $\ni
 $} \\
 {\small\verb|\neg|} & {\large $\neg
-$} & {\small\verb|\Set{ x \VERT x<\frac 1 2 }|} & {\large $\Set{ x \VERT x<\frac 1 2 }
-$} \\
-{\small\verb|\set{x\VERT x<5}|} & {\large $\set{x\VERT x<5}
-$} & & \\
+$} & & & & \\
 \end{tabular}
 
-\newpage
-\subsection*{Logic and Set Theory (continued)}
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\exist|} & {\small\verb|\isin|} & {\small\verb|\notni|} \\
+{\small\verb|\set{x\VERT x<5}|} &  &  \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\Set{ x \VERT x<\frac 1 2 }|} \\
+\end{tabular}
+
 \section*{Macros}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\def\foo{x^2} \foo + \foo|} & {\large $\def\foo{x^2} \foo + \foo
 $} & {\small\verb|\futurelet\q\mathrm x\q|} & {\large $\futurelet\q\mathrm x\q
 $} \\
@@ -527,1156 +507,994 @@ $} \\[4pt]
 $} \\[4pt]
 {\small\verb|\def\a{1}\edef\b{\noexpand\a 2}\def\a{9}\b|} \\ {\large $\def\a{1}\edef\b{\noexpand\a 2}\def\a{9}\b
 $} \\[4pt]
-{\small\verb|\def\foo{\@ifstar{S}{N}}\foo*\;\foo|} \\ {\large $\def\foo{\@ifstar{S}{N}}\foo*\;\foo
-$} \\[4pt]
-{\small\verb|\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo|} \\ {\large $\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo
-$} \\[4pt]
-{\small\verb|\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}|} \\ {\large $\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}
-$} \\[4pt]
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\def\foo{\@ifstar{S}{N}}\foo*\;\foo|} \\
+{\small\verb|\def\foo{\@ifnextchar[{Y}{N}}\foo[x]\;\foo|} \\
+{\small\verb|\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}|} \\
+\end{tabular}
+
+\newpage
 \section*{Operators}
+
 \subsection*{Big Operators}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\sum|} & {\large $\sum
 $} & {\small\verb|\prod|} & {\large $\prod
+$} & {\small\verb|\bigotimes|} & {\large $\bigotimes
 $} \\
-{\small\verb|\bigotimes|} & {\large $\bigotimes
-$} & {\small\verb|\bigvee|} & {\large $\bigvee
-$} \\
-{\small\verb|\int|} & {\large $\int
+{\small\verb|\bigvee|} & {\large $\bigvee
+$} & {\small\verb|\int|} & {\large $\int
 $} & {\small\verb|\coprod|} & {\large $\coprod
 $} \\
 {\small\verb|\bigoplus|} & {\large $\bigoplus
 $} & {\small\verb|\bigwedge|} & {\large $\bigwedge
+$} & {\small\verb|\iint|} & {\large $\iint
 $} \\
-{\small\verb|\iint|} & {\large $\iint
-$} & {\small\verb|\intop|} & {\large $\intop
-$} \\
-{\small\verb|\bigodot|} & {\large $\bigodot
+{\small\verb|\intop|} & {\large $\intop
+$} & {\small\verb|\bigodot|} & {\large $\bigodot
 $} & {\small\verb|\bigcap|} & {\large $\bigcap
 $} \\
 {\small\verb|\iiint|} & {\large $\iiint
 $} & {\small\verb|\smallint|} & {\large $\smallint
+$} & {\small\verb|\biguplus|} & {\large $\biguplus
 $} \\
-{\small\verb|\biguplus|} & {\large $\biguplus
-$} & {\small\verb|\bigcup|} & {\large $\bigcup
-$} \\
-{\small\verb|\oint|} & {\large $\oint
-$} & {\small\verb|\oiint|} & {\large $\oiint
-$} \\
-{\small\verb|\oiiint|} & {\large $\oiiint
+{\small\verb|\bigcup|} & {\large $\bigcup
+$} & {\small\verb|\oint|} & {\large $\oint
 $} & {\small\verb|\bigsqcup|} & {\large $\bigsqcup
 $} \\
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\oiint|} & {\small\verb|\oiiint|} &  \\
+\end{tabular}
+
 \subsection*{Binary Operators}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|+|} & {\large $+
 $} & {\small\verb|\cdot|} & {\large $\cdot
+$} & {\small\verb|\gtrdot|} & {\large $\gtrdot
 $} \\
-{\small\verb|\gtrdot|} & {\large $\gtrdot
-$} & {\small\verb|x \pmod a|} & {\large $x \pmod a
-$} \\
-{\small\verb|-|} & {\large $-
+{\small\verb|x \pmod a|} & {\large $x \pmod a
+$} & {\small\verb|-|} & {\large $-
 $} & {\small\verb|\cdotp|} & {\large $\cdotp
 $} \\
 {\small\verb|\intercal|} & {\large $\intercal
 $} & {\small\verb|x \pod a|} & {\large $x \pod a
+$} & {\small\verb|/|} & {\large $/
 $} \\
-{\small\verb|/|} & {\large $/
-$} & {\small\verb|\centerdot|} & {\large $\centerdot
-$} \\
-{\small\verb|\land|} & {\large $\land
+{\small\verb|\centerdot|} & {\large $\centerdot
+$} & {\small\verb|\land|} & {\large $\land
 $} & {\small\verb|\rhd|} & {\large $\rhd
 $} \\
 {\small\verb|*|} & {\large $*
 $} & {\small\verb|\circ|} & {\large $\circ
+$} & {\small\verb|\leftthreetimes|} & {\large $\leftthreetimes
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Operators / Binary Operators (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\leftthreetimes|} & {\large $\leftthreetimes
-$} & {\small\verb|\rightthreetimes|} & {\large $\rightthreetimes
-$} \\
-{\small\verb|\amalg|} & {\large $\amalg
+{\small\verb|\rightthreetimes|} & {\large $\rightthreetimes
+$} & {\small\verb|\amalg|} & {\large $\amalg
 $} & {\small\verb|\circledast|} & {\large $\circledast
 $} \\
 {\small\verb|\ldotp|} & {\large $\ldotp
 $} & {\small\verb|\rtimes|} & {\large $\rtimes
+$} & {\small\verb|\And|} & {\large $\And
 $} \\
-{\small\verb|\And|} & {\large $\And
-$} & {\small\verb|\circledcirc|} & {\large $\circledcirc
-$} \\
-{\small\verb|\lor|} & {\large $\lor
+{\small\verb|\circledcirc|} & {\large $\circledcirc
+$} & {\small\verb|\lor|} & {\large $\lor
 $} & {\small\verb|\setminus|} & {\large $\setminus
 $} \\
 {\small\verb|\ast|} & {\large $\ast
 $} & {\small\verb|\circleddash|} & {\large $\circleddash
+$} & {\small\verb|\lessdot|} & {\large $\lessdot
 $} \\
-{\small\verb|\lessdot|} & {\large $\lessdot
-$} & {\small\verb|\smallsetminus|} & {\large $\smallsetminus
-$} \\
-{\small\verb|\barwedge|} & {\large $\barwedge
+{\small\verb|\smallsetminus|} & {\large $\smallsetminus
+$} & {\small\verb|\barwedge|} & {\large $\barwedge
 $} & {\small\verb|\Cup|} & {\large $\Cup
 $} \\
 {\small\verb|\lhd|} & {\large $\lhd
 $} & {\small\verb|\sqcap|} & {\large $\sqcap
+$} & {\small\verb|\bigcirc|} & {\large $\bigcirc
 $} \\
-{\small\verb|\bigcirc|} & {\large $\bigcirc
-$} & {\small\verb|\cup|} & {\large $\cup
-$} \\
-{\small\verb|\ltimes|} & {\large $\ltimes
+{\small\verb|\cup|} & {\large $\cup
+$} & {\small\verb|\ltimes|} & {\large $\ltimes
 $} & {\small\verb|\sqcup|} & {\large $\sqcup
 $} \\
 {\small\verb|\bmod|} & {\large $\bmod
 $} & {\small\verb|\curlyvee|} & {\large $\curlyvee
+$} & {\small\verb|x \mod a|} & {\large $x \mod a
 $} \\
-{\small\verb|x \mod a|} & {\large $x \mod a
-$} & {\small\verb|\times|} & {\large $\times
-$} \\
-{\small\verb|\boxdot|} & {\large $\boxdot
+{\small\verb|\times|} & {\large $\times
+$} & {\small\verb|\boxdot|} & {\large $\boxdot
 $} & {\small\verb|\curlywedge|} & {\large $\curlywedge
 $} \\
 {\small\verb|\mp|} & {\large $\mp
 $} & {\small\verb|\unlhd|} & {\large $\unlhd
+$} & {\small\verb|\boxminus|} & {\large $\boxminus
 $} \\
-{\small\verb|\boxminus|} & {\large $\boxminus
-$} & {\small\verb|\div|} & {\large $\div
-$} \\
-{\small\verb|\odot|} & {\large $\odot
+{\small\verb|\div|} & {\large $\div
+$} & {\small\verb|\odot|} & {\large $\odot
 $} & {\small\verb|\unrhd|} & {\large $\unrhd
 $} \\
 {\small\verb|\boxplus|} & {\large $\boxplus
 $} & {\small\verb|\divideontimes|} & {\large $\divideontimes
+$} & {\small\verb|\ominus|} & {\large $\ominus
 $} \\
-{\small\verb|\ominus|} & {\large $\ominus
-$} & {\small\verb|\uplus|} & {\large $\uplus
-$} \\
-{\small\verb|\boxtimes|} & {\large $\boxtimes
+{\small\verb|\uplus|} & {\large $\uplus
+$} & {\small\verb|\boxtimes|} & {\large $\boxtimes
 $} & {\small\verb|\dotplus|} & {\large $\dotplus
 $} \\
 {\small\verb|\oplus|} & {\large $\oplus
 $} & {\small\verb|\vee|} & {\large $\vee
+$} & {\small\verb|\bullet|} & {\large $\bullet
 $} \\
-{\small\verb|\bullet|} & {\large $\bullet
-$} & {\small\verb|\doublebarwedge|} & {\large $\doublebarwedge
-$} \\
-{\small\verb|\otimes|} & {\large $\otimes
+{\small\verb|\doublebarwedge|} & {\large $\doublebarwedge
+$} & {\small\verb|\otimes|} & {\large $\otimes
 $} & {\small\verb|\veebar|} & {\large $\veebar
 $} \\
 {\small\verb|\Cap|} & {\large $\Cap
 $} & {\small\verb|\doublecap|} & {\large $\doublecap
+$} & {\small\verb|\oslash|} & {\large $\oslash
 $} \\
-{\small\verb|\oslash|} & {\large $\oslash
-$} & {\small\verb|\wedge|} & {\large $\wedge
-$} \\
-{\small\verb|\cap|} & {\large $\cap
+{\small\verb|\wedge|} & {\large $\wedge
+$} & {\small\verb|\cap|} & {\large $\cap
 $} & {\small\verb|\doublecup|} & {\large $\doublecup
 $} \\
 {\small\verb|\pm|} & {\large $\pm
 $} & {\small\verb|\wr|} & {\large $\wr
-$} \\
+$} & & \\
 \end{tabular}
 
 \subsection*{Fractions and Binomials}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\frac{a}{b}|} & {\large $\frac{a}{b}
 $} & {\small\verb|\tfrac{a}{b}|} & {\large $\tfrac{a}{b}
-$} \\
-{\small\verb|\genfrac ( ] {2pt}{1}a{a+1}|} & {\large $\genfrac ( ] {2pt}{1}a{a+1}
 $} & {\small\verb|{a \over b}|} & {\large ${a \over b}
 $} \\
 {\small\verb|\dfrac{a}{b}|} & {\large $\dfrac{a}{b}
-$} & {\small\verb|{a \above{2pt} b+1}|} & {\large ${a \above{2pt} b+1}
+$} & {\small\verb|a/b|} & {\large $a/b
+$} & {\small\verb|\binom{n}{k}|} & {\large $\binom{n}{k}
 $} \\
-{\small\verb|a/b|} & {\large $a/b
-$} & {\small\verb|\cfrac{a}{1 + \cfrac{1}{b}}|} & {\large $\cfrac{a}{1 + \cfrac{1}{b}}
-$} \\
-{\small\verb|\binom{n}{k}|} & {\large $\binom{n}{k}
-$} & {\small\verb|\dbinom{n}{k}|} & {\large $\dbinom{n}{k}
-$} \\
-{\small\verb|{n\brace k}|} & {\large ${n\brace k}
+{\small\verb|\dbinom{n}{k}|} & {\large $\dbinom{n}{k}
+$} & {\small\verb|{n\brace k}|} & {\large ${n\brace k}
 $} & {\small\verb|{n \choose k}|} & {\large ${n \choose k}
 $} \\
 {\small\verb|\tbinom{n}{k}|} & {\large $\tbinom{n}{k}
 $} & {\small\verb|{n\brack k}|} & {\large ${n\brack k}
+$} & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\genfrac ( ] {2pt}{1}a{a+1}|} & {\large $\genfrac ( ] {2pt}{1}a{a+1}
+$} & {\small\verb|\cfrac{a}{1 + \cfrac{1}{b}}|} & {\large $\cfrac{a}{1 + \cfrac{1}{b}}
 $} \\
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|{a \above{2pt} b+1}|} &  &  \\
+\end{tabular}
+
 \newpage
-\subsection*{Operators / Fractions and Binomials (continued)}
 \subsection*{Math Operators}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\arcsin|} & {\large $\arcsin
-$} & {\small\verb|\cosec|} & {\large $\cosec
-$} \\
-{\small\verb|\deg|} & {\large $\deg
+$} & {\small\verb|\deg|} & {\large $\deg
 $} & {\small\verb|\sec|} & {\large $\sec
 $} \\
 {\small\verb|\arccos|} & {\large $\arccos
 $} & {\small\verb|\cosh|} & {\large $\cosh
+$} & {\small\verb|\dim|} & {\large $\dim
 $} \\
-{\small\verb|\dim|} & {\large $\dim
-$} & {\small\verb|\sin|} & {\large $\sin
-$} \\
-{\small\verb|\arctan|} & {\large $\arctan
+{\small\verb|\sin|} & {\large $\sin
+$} & {\small\verb|\arctan|} & {\large $\arctan
 $} & {\small\verb|\cot|} & {\large $\cot
 $} \\
 {\small\verb|\exp|} & {\large $\exp
 $} & {\small\verb|\sinh|} & {\large $\sinh
+$} & {\small\verb|\hom|} & {\large $\hom
 $} \\
-{\small\verb|\arctg|} & {\large $\arctg
-$} & {\small\verb|\cotg|} & {\large $\cotg
-$} \\
-{\small\verb|\hom|} & {\large $\hom
-$} & {\small\verb|\sh|} & {\large $\sh
-$} \\
-{\small\verb|\arcctg|} & {\large $\arcctg
-$} & {\small\verb|\coth|} & {\large $\coth
-$} \\
-{\small\verb|\ker|} & {\large $\ker
+{\small\verb|\coth|} & {\large $\coth
+$} & {\small\verb|\ker|} & {\large $\ker
 $} & {\small\verb|\tan|} & {\large $\tan
 $} \\
 {\small\verb|\arg|} & {\large $\arg
 $} & {\small\verb|\csc|} & {\large $\csc
+$} & {\small\verb|\lg|} & {\large $\lg
 $} \\
-{\small\verb|\lg|} & {\large $\lg
-$} & {\small\verb|\tanh|} & {\large $\tanh
-$} \\
-{\small\verb|\ch|} & {\large $\ch
-$} & {\small\verb|\ctg|} & {\large $\ctg
-$} \\
-{\small\verb|\ln|} & {\large $\ln
-$} & {\small\verb|\tg|} & {\large $\tg
-$} \\
-{\small\verb|\cos|} & {\large $\cos
-$} & {\small\verb|\cth|} & {\large $\cth
+{\small\verb|\tanh|} & {\large $\tanh
+$} & {\small\verb|\ln|} & {\large $\ln
+$} & {\small\verb|\cos|} & {\large $\cos
 $} \\
 {\small\verb|\log|} & {\large $\log
-$} & {\small\verb|\th|} & {\large $\th
+$} & {\small\verb|\operatorname{f}|} & {\large $\operatorname{f}
+$} & {\small\verb|\injlim|} & {\large $\injlim
 $} \\
-{\small\verb|\operatorname{f}|} & {\large $\operatorname{f}
-$} & {\small\verb|\argmax|} & {\large $\argmax
-$} \\
-{\small\verb|\injlim|} & {\large $\injlim
-$} & {\small\verb|\min|} & {\large $\min
-$} \\
-{\small\verb|\varinjlim|} & {\large $\varinjlim
-$} & {\small\verb|\argmin|} & {\large $\argmin
-$} \\
-{\small\verb|\lim|} & {\large $\lim
-$} & {\small\verb|\plim|} & {\large $\plim
+{\small\verb|\min|} & {\large $\min
+$} & {\small\verb|\varinjlim|} & {\large $\varinjlim
+$} & {\small\verb|\lim|} & {\large $\lim
 $} \\
 {\small\verb|\varliminf|} & {\large $\varliminf
 $} & {\small\verb|\det|} & {\large $\det
+$} & {\small\verb|\liminf|} & {\large $\liminf
 $} \\
-{\small\verb|\liminf|} & {\large $\liminf
-$} & {\small\verb|\Pr|} & {\large $\Pr
-$} \\
-{\small\verb|\varlimsup|} & {\large $\varlimsup
+{\small\verb|\Pr|} & {\large $\Pr
+$} & {\small\verb|\varlimsup|} & {\large $\varlimsup
 $} & {\small\verb|\gcd|} & {\large $\gcd
 $} \\
 {\small\verb|\limsup|} & {\large $\limsup
 $} & {\small\verb|\projlim|} & {\large $\projlim
+$} & {\small\verb|\varprojlim|} & {\large $\varprojlim
 $} \\
-{\small\verb|\varprojlim|} & {\large $\varprojlim
-$} & {\small\verb|\inf|} & {\large $\inf
-$} \\
-{\small\verb|\max|} & {\large $\max
+{\small\verb|\inf|} & {\large $\inf
+$} & {\small\verb|\max|} & {\large $\max
 $} & {\small\verb|\sup|} & {\large $\sup
 $} \\
 {\small\verb|\operatorname*{f}|} & {\large $\operatorname*{f}
-$} & {\small\verb|\operatornamewithlimits{f}|} & {\large $\operatornamewithlimits{f}
-$} \\
+$} & & & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\operatornamewithlimits{f}|} & {\large $\operatornamewithlimits{f}
+$} & & \\
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\cosec|} & {\small\verb|\arctg|} & {\small\verb|\cotg|} \\
+{\small\verb|\sh|} & {\small\verb|\arcctg|} & {\small\verb|\ch|} \\
+{\small\verb|\ctg|} & {\small\verb|\tg|} & {\small\verb|\cth|} \\
+{\small\verb|\th|} & {\small\verb|\argmax|} & {\small\verb|\argmin|} \\
+{\small\verb|\plim|} &  &  \\
 \end{tabular}
 
 \subsection*{Square roots}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\sqrt{x}|} & {\large $\sqrt{x}
 $} & {\small\verb|\sqrt[3]{x}|} & {\large $\sqrt[3]{x}
-$} \\
+$} & & \\
 \end{tabular}
 
-\newpage
-\subsection*{Operators / Square roots (continued)}
 \section*{Relations}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\stackrel{!}{=}|} & {\large $\stackrel{!}{=}
 $} & {\small\verb|=|} & {\large $=
+$} & {\small\verb|\doteqdot|} & {\large $\doteqdot
 $} \\
-{\small\verb|\doteqdot|} & {\large $\doteqdot
-$} & {\small\verb|\lessapprox|} & {\large $\lessapprox
-$} \\
-{\small\verb|\smile|} & {\large $\smile
+{\small\verb|\lessapprox|} & {\large $\lessapprox
+$} & {\small\verb|\smile|} & {\large $\smile
 $} & {\small\verb|<|} & {\large $<
 $} \\
 {\small\verb|\eqcirc|} & {\large $\eqcirc
 $} & {\small\verb|\lesseqgtr|} & {\large $\lesseqgtr
+$} & {\small\verb|\sqsubset|} & {\large $\sqsubset
 $} \\
-{\small\verb|\sqsubset|} & {\large $\sqsubset
-$} & {\small\verb|>|} & {\large $>
-$} \\
-{\small\verb|\eqcolon|} & {\large $\eqcolon
+{\small\verb|>|} & {\large $>
+$} & {\small\verb|\eqcolon|} & {\large $\eqcolon
 $} & {\small\verb|\lesseqqgtr|} & {\large $\lesseqqgtr
 $} \\
 {\small\verb|\sqsubseteq|} & {\large $\sqsubseteq
 $} & {\small\verb|:|} & {\large $:
+$} & {\small\verb|\Eqcolon|} & {\large $\Eqcolon
 $} \\
-{\small\verb|\Eqcolon|} & {\large $\Eqcolon
-$} & {\small\verb|\lessgtr|} & {\large $\lessgtr
-$} \\
-{\small\verb|\sqsupset|} & {\large $\sqsupset
+{\small\verb|\lessgtr|} & {\large $\lessgtr
+$} & {\small\verb|\sqsupset|} & {\large $\sqsupset
 $} & {\small\verb|\approx|} & {\large $\approx
 $} \\
 {\small\verb|\eqqcolon|} & {\large $\eqqcolon
 $} & {\small\verb|\lesssim|} & {\large $\lesssim
+$} & {\small\verb|\sqsupseteq|} & {\large $\sqsupseteq
 $} \\
-{\small\verb|\sqsupseteq|} & {\large $\sqsupseteq
-$} & {\small\verb|\approxcolon|} & {\large $\approxcolon
-$} \\
-{\small\verb|\Eqqcolon|} & {\large $\Eqqcolon
+{\small\verb|\approxcolon|} & {\large $\approxcolon
+$} & {\small\verb|\Eqqcolon|} & {\large $\Eqqcolon
 $} & {\small\verb|\ll|} & {\large $\ll
 $} \\
 {\small\verb|\Subset|} & {\large $\Subset
-$} & {\small\verb|\approxcoloncolon|} & {\large $\approxcoloncolon
-$} \\
-{\small\verb|\eqsim|} & {\large $\eqsim
+$} & {\small\verb|\eqsim|} & {\large $\eqsim
 $} & {\small\verb|\lll|} & {\large $\lll
 $} \\
 {\small\verb|\subset|} & {\large $\subset
 $} & {\small\verb|\approxeq|} & {\large $\approxeq
+$} & {\small\verb|\eqslantgtr|} & {\large $\eqslantgtr
 $} \\
-{\small\verb|\eqslantgtr|} & {\large $\eqslantgtr
-$} & {\small\verb|\llless|} & {\large $\llless
-$} \\
-{\small\verb|\subseteq|} & {\large $\subseteq
+{\small\verb|\llless|} & {\large $\llless
+$} & {\small\verb|\subseteq|} & {\large $\subseteq
 $} & {\small\verb|\asymp|} & {\large $\asymp
 $} \\
 {\small\verb|\eqslantless|} & {\large $\eqslantless
-$} & {\small\verb|\lt|} & {\large $\lt
-$} \\
-{\small\verb|\subseteqq|} & {\large $\subseteqq
+$} & {\small\verb|\subseteqq|} & {\large $\subseteqq
 $} & {\small\verb|\backepsilon|} & {\large $\backepsilon
 $} \\
 {\small\verb|\equiv|} & {\large $\equiv
 $} & {\small\verb|\mid|} & {\large $\mid
+$} & {\small\verb|\succ|} & {\large $\succ
 $} \\
-{\small\verb|\succ|} & {\large $\succ
-$} & {\small\verb|\backsim|} & {\large $\backsim
-$} \\
-{\small\verb|\fallingdotseq|} & {\large $\fallingdotseq
+{\small\verb|\backsim|} & {\large $\backsim
+$} & {\small\verb|\fallingdotseq|} & {\large $\fallingdotseq
 $} & {\small\verb|\models|} & {\large $\models
 $} \\
 {\small\verb|\succapprox|} & {\large $\succapprox
 $} & {\small\verb|\backsimeq|} & {\large $\backsimeq
+$} & {\small\verb|\frown|} & {\large $\frown
 $} \\
-{\small\verb|\frown|} & {\large $\frown
-$} & {\small\verb|\multimap|} & {\large $\multimap
-$} \\
-{\small\verb|\succcurlyeq|} & {\large $\succcurlyeq
+{\small\verb|\multimap|} & {\large $\multimap
+$} & {\small\verb|\succcurlyeq|} & {\large $\succcurlyeq
 $} & {\small\verb|\between|} & {\large $\between
 $} \\
 {\small\verb|\ge|} & {\large $\ge
-$} & {\small\verb|\origof|} & {\large $\origof
-$} \\
-{\small\verb|\succeq|} & {\large $\succeq
+$} & {\small\verb|\succeq|} & {\large $\succeq
 $} & {\small\verb|\bowtie|} & {\large $\bowtie
 $} \\
 {\small\verb|\geq|} & {\large $\geq
 $} & {\small\verb|\owns|} & {\large $\owns
+$} & {\small\verb|\succsim|} & {\large $\succsim
 $} \\
-{\small\verb|\succsim|} & {\large $\succsim
-$} & {\small\verb|\bumpeq|} & {\large $\bumpeq
-$} \\
-{\small\verb|\geqq|} & {\large $\geqq
+{\small\verb|\bumpeq|} & {\large $\bumpeq
+$} & {\small\verb|\geqq|} & {\large $\geqq
 $} & {\small\verb|\parallel|} & {\large $\parallel
 $} \\
 {\small\verb|\Supset|} & {\large $\Supset
 $} & {\small\verb|\Bumpeq|} & {\large $\Bumpeq
+$} & {\small\verb|\geqslant|} & {\large $\geqslant
 $} \\
-{\small\verb|\geqslant|} & {\large $\geqslant
-$} & {\small\verb|\perp|} & {\large $\perp
-$} \\
-{\small\verb|\supset|} & {\large $\supset
+{\small\verb|\perp|} & {\large $\perp
+$} & {\small\verb|\supset|} & {\large $\supset
 $} & {\small\verb|\circeq|} & {\large $\circeq
 $} \\
 {\small\verb|\gg|} & {\large $\gg
 $} & {\small\verb|\pitchfork|} & {\large $\pitchfork
+$} & {\small\verb|\supseteq|} & {\large $\supseteq
 $} \\
-{\small\verb|\supseteq|} & {\large $\supseteq
-$} & {\small\verb|\colonapprox|} & {\large $\colonapprox
-$} \\
-{\small\verb|\ggg|} & {\large $\ggg
+{\small\verb|\colonapprox|} & {\large $\colonapprox
+$} & {\small\verb|\ggg|} & {\large $\ggg
 $} & {\small\verb|\prec|} & {\large $\prec
 $} \\
 {\small\verb|\supseteqq|} & {\large $\supseteqq
 $} & {\small\verb|\Colonapprox|} & {\large $\Colonapprox
+$} & {\small\verb|\gggtr|} & {\large $\gggtr
 $} \\
 \end{tabular}
 
 \newpage
 \subsection*{Relations (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\gggtr|} & {\large $\gggtr
-$} & {\small\verb|\precapprox|} & {\large $\precapprox
-$} \\
-{\small\verb|\thickapprox|} & {\large $\thickapprox
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\precapprox|} & {\large $\precapprox
+$} & {\small\verb|\thickapprox|} & {\large $\thickapprox
 $} & {\small\verb|\coloneq|} & {\large $\coloneq
 $} \\
-{\small\verb|\gt|} & {\large $\gt
-$} & {\small\verb|\preccurlyeq|} & {\large $\preccurlyeq
-$} \\
-{\small\verb|\thicksim|} & {\large $\thicksim
+{\small\verb|\preccurlyeq|} & {\large $\preccurlyeq
+$} & {\small\verb|\thicksim|} & {\large $\thicksim
 $} & {\small\verb|\Coloneq|} & {\large $\Coloneq
 $} \\
 {\small\verb|\gtrapprox|} & {\large $\gtrapprox
 $} & {\small\verb|\preceq|} & {\large $\preceq
+$} & {\small\verb|\trianglelefteq|} & {\large $\trianglelefteq
 $} \\
-{\small\verb|\trianglelefteq|} & {\large $\trianglelefteq
-$} & {\small\verb|\coloneqq|} & {\large $\coloneqq
-$} \\
-{\small\verb|\gtreqless|} & {\large $\gtreqless
+{\small\verb|\coloneqq|} & {\large $\coloneqq
+$} & {\small\verb|\gtreqless|} & {\large $\gtreqless
 $} & {\small\verb|\precsim|} & {\large $\precsim
 $} \\
 {\small\verb|\triangleq|} & {\large $\triangleq
 $} & {\small\verb|\Coloneqq|} & {\large $\Coloneqq
+$} & {\small\verb|\gtreqqless|} & {\large $\gtreqqless
 $} \\
-{\small\verb|\gtreqqless|} & {\large $\gtreqqless
-$} & {\small\verb|\propto|} & {\large $\propto
-$} \\
-{\small\verb|\trianglerighteq|} & {\large $\trianglerighteq
+{\small\verb|\propto|} & {\large $\propto
+$} & {\small\verb|\trianglerighteq|} & {\large $\trianglerighteq
 $} & {\small\verb|\colonsim|} & {\large $\colonsim
 $} \\
 {\small\verb|\gtrless|} & {\large $\gtrless
 $} & {\small\verb|\risingdotseq|} & {\large $\risingdotseq
+$} & {\small\verb|\varpropto|} & {\large $\varpropto
 $} \\
-{\small\verb|\varpropto|} & {\large $\varpropto
-$} & {\small\verb|\Colonsim|} & {\large $\Colonsim
-$} \\
-{\small\verb|\gtrsim|} & {\large $\gtrsim
+{\small\verb|\Colonsim|} & {\large $\Colonsim
+$} & {\small\verb|\gtrsim|} & {\large $\gtrsim
 $} & {\small\verb|\shortmid|} & {\large $\shortmid
 $} \\
 {\small\verb|\vartriangle|} & {\large $\vartriangle
 $} & {\small\verb|\cong|} & {\large $\cong
-$} \\
-{\small\verb|\imageof|} & {\large $\imageof
 $} & {\small\verb|\shortparallel|} & {\large $\shortparallel
 $} \\
 {\small\verb|\vartriangleleft|} & {\large $\vartriangleleft
 $} & {\small\verb|\curlyeqprec|} & {\large $\curlyeqprec
+$} & {\small\verb|\in|} & {\large $\in
 $} \\
-{\small\verb|\in|} & {\large $\in
-$} & {\small\verb|\sim|} & {\large $\sim
-$} \\
-{\small\verb|\vartriangleright|} & {\large $\vartriangleright
+{\small\verb|\sim|} & {\large $\sim
+$} & {\small\verb|\vartriangleright|} & {\large $\vartriangleright
 $} & {\small\verb|\curlyeqsucc|} & {\large $\curlyeqsucc
 $} \\
 {\small\verb|\Join|} & {\large $\Join
 $} & {\small\verb|\simcolon|} & {\large $\simcolon
+$} & {\small\verb|\vcentcolon|} & {\large $\vcentcolon
 $} \\
-{\small\verb|\vcentcolon|} & {\large $\vcentcolon
-$} & {\small\verb|\dashv|} & {\large $\dashv
+{\small\verb|\dashv|} & {\large $\dashv
+$} & {\small\verb|\le|} & {\large $\le
+$} & {\small\verb|\vdash|} & {\large $\vdash
 $} \\
-{\small\verb|\le|} & {\large $\le
-$} & {\small\verb|\simcoloncolon|} & {\large $\simcoloncolon
-$} \\
-{\small\verb|\vdash|} & {\large $\vdash
-$} & {\small\verb|\dblcolon|} & {\large $\dblcolon
-$} \\
-{\small\verb|\leq|} & {\large $\leq
+{\small\verb|\dblcolon|} & {\large $\dblcolon
+$} & {\small\verb|\leq|} & {\large $\leq
 $} & {\small\verb|\simeq|} & {\large $\simeq
 $} \\
 {\small\verb|\vDash|} & {\large $\vDash
 $} & {\small\verb|\doteq|} & {\large $\doteq
+$} & {\small\verb|\leqq|} & {\large $\leqq
 $} \\
-{\small\verb|\leqq|} & {\large $\leqq
-$} & {\small\verb|\smallfrown|} & {\large $\smallfrown
-$} \\
-{\small\verb|\Vdash|} & {\large $\Vdash
+{\small\verb|\smallfrown|} & {\large $\smallfrown
+$} & {\small\verb|\Vdash|} & {\large $\Vdash
 $} & {\small\verb|\Doteq|} & {\large $\Doteq
 $} \\
 {\small\verb|\leqslant|} & {\large $\leqslant
 $} & {\small\verb|\smallsmile|} & {\large $\smallsmile
+$} & {\small\verb|\Vvdash|} & {\large $\Vvdash
 $} \\
-{\small\verb|\Vvdash|} & {\large $\Vvdash
-$} & & \\
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\approxcoloncolon|} & {\small\verb|\lt|} & {\small\verb|\origof|} \\
+{\small\verb|\gt|} & {\small\verb|\imageof|} & {\small\verb|\simcoloncolon|} \\
 \end{tabular}
 
 \subsection*{Negated Relations}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\not =|} & {\large $\not =
 $} & {\small\verb|\gnapprox|} & {\large $\gnapprox
+$} & {\small\verb|\ngeqslant|} & {\large $\ngeqslant
 $} \\
-{\small\verb|\ngeqslant|} & {\large $\ngeqslant
-$} & {\small\verb|\nsubseteq|} & {\large $\nsubseteq
-$} \\
-{\small\verb|\precneqq|} & {\large $\precneqq
+{\small\verb|\nsubseteq|} & {\large $\nsubseteq
+$} & {\small\verb|\precneqq|} & {\large $\precneqq
 $} & {\small\verb|\gneq|} & {\large $\gneq
 $} \\
 {\small\verb|\ngtr|} & {\large $\ngtr
 $} & {\small\verb|\nsubseteqq|} & {\large $\nsubseteqq
+$} & {\small\verb|\precnsim|} & {\large $\precnsim
 $} \\
-{\small\verb|\precnsim|} & {\large $\precnsim
-$} & {\small\verb|\gneqq|} & {\large $\gneqq
-$} \\
-{\small\verb|\nleq|} & {\large $\nleq
+{\small\verb|\gneqq|} & {\large $\gneqq
+$} & {\small\verb|\nleq|} & {\large $\nleq
 $} & {\small\verb|\nsucc|} & {\large $\nsucc
 $} \\
 {\small\verb|\subsetneq|} & {\large $\subsetneq
 $} & {\small\verb|\gnsim|} & {\large $\gnsim
+$} & {\small\verb|\nleqq|} & {\large $\nleqq
 $} \\
-{\small\verb|\nleqq|} & {\large $\nleqq
-$} & {\small\verb|\nsucceq|} & {\large $\nsucceq
-$} \\
-{\small\verb|\subsetneqq|} & {\large $\subsetneqq
+{\small\verb|\nsucceq|} & {\large $\nsucceq
+$} & {\small\verb|\subsetneqq|} & {\large $\subsetneqq
 $} & {\small\verb|\gvertneqq|} & {\large $\gvertneqq
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Relations / Negated Relations (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
 {\small\verb|\nleqslant|} & {\large $\nleqslant
 $} & {\small\verb|\nsupseteq|} & {\large $\nsupseteq
+$} & {\small\verb|\succnapprox|} & {\large $\succnapprox
 $} \\
-{\small\verb|\succnapprox|} & {\large $\succnapprox
-$} & {\small\verb|\lnapprox|} & {\large $\lnapprox
-$} \\
-{\small\verb|\nless|} & {\large $\nless
+{\small\verb|\lnapprox|} & {\large $\lnapprox
+$} & {\small\verb|\nless|} & {\large $\nless
 $} & {\small\verb|\nsupseteqq|} & {\large $\nsupseteqq
 $} \\
 {\small\verb|\succneqq|} & {\large $\succneqq
 $} & {\small\verb|\lneq|} & {\large $\lneq
+$} & {\small\verb|\nmid|} & {\large $\nmid
 $} \\
-{\small\verb|\nmid|} & {\large $\nmid
-$} & {\small\verb|\ntriangleleft|} & {\large $\ntriangleleft
-$} \\
-{\small\verb|\succnsim|} & {\large $\succnsim
+{\small\verb|\ntriangleleft|} & {\large $\ntriangleleft
+$} & {\small\verb|\succnsim|} & {\large $\succnsim
 $} & {\small\verb|\lneqq|} & {\large $\lneqq
 $} \\
 {\small\verb|\notin|} & {\large $\notin
 $} & {\small\verb|\ntrianglelefteq|} & {\large $\ntrianglelefteq
+$} & {\small\verb|\supsetneq|} & {\large $\supsetneq
 $} \\
-{\small\verb|\supsetneq|} & {\large $\supsetneq
-$} & {\small\verb|\lnsim|} & {\large $\lnsim
-$} \\
-{\small\verb|\notni|} & {\large $\notni
+{\small\verb|\lnsim|} & {\large $\lnsim
 $} & {\small\verb|\ntriangleright|} & {\large $\ntriangleright
+$} & {\small\verb|\supsetneqq|} & {\large $\supsetneqq
 $} \\
-{\small\verb|\supsetneqq|} & {\large $\supsetneqq
-$} & {\small\verb|\lvertneqq|} & {\large $\lvertneqq
-$} \\
-{\small\verb|\nparallel|} & {\large $\nparallel
+{\small\verb|\lvertneqq|} & {\large $\lvertneqq
+$} & {\small\verb|\nparallel|} & {\large $\nparallel
 $} & {\small\verb|\ntrianglerighteq|} & {\large $\ntrianglerighteq
 $} \\
 {\small\verb|\varsubsetneq|} & {\large $\varsubsetneq
 $} & {\small\verb|\ncong|} & {\large $\ncong
+$} & {\small\verb|\nprec|} & {\large $\nprec
 $} \\
-{\small\verb|\nprec|} & {\large $\nprec
-$} & {\small\verb|\nvdash|} & {\large $\nvdash
-$} \\
-{\small\verb|\varsubsetneqq|} & {\large $\varsubsetneqq
+{\small\verb|\nvdash|} & {\large $\nvdash
+$} & {\small\verb|\varsubsetneqq|} & {\large $\varsubsetneqq
 $} & {\small\verb|\ne|} & {\large $\ne
 $} \\
 {\small\verb|\npreceq|} & {\large $\npreceq
 $} & {\small\verb|\nvDash|} & {\large $\nvDash
+$} & {\small\verb|\varsupsetneq|} & {\large $\varsupsetneq
 $} \\
-{\small\verb|\varsupsetneq|} & {\large $\varsupsetneq
-$} & {\small\verb|\neq|} & {\large $\neq
-$} \\
-{\small\verb|\nshortmid|} & {\large $\nshortmid
+{\small\verb|\neq|} & {\large $\neq
+$} & {\small\verb|\nshortmid|} & {\large $\nshortmid
 $} & {\small\verb|\nVDash|} & {\large $\nVDash
 $} \\
 {\small\verb|\varsupsetneqq|} & {\large $\varsupsetneqq
 $} & {\small\verb|\ngeq|} & {\large $\ngeq
+$} & {\small\verb|\nshortparallel|} & {\large $\nshortparallel
 $} \\
-{\small\verb|\nshortparallel|} & {\large $\nshortparallel
-$} & {\small\verb|\nVdash|} & {\large $\nVdash
-$} \\
-{\small\verb|\ngeqq|} & {\large $\ngeqq
+{\small\verb|\nVdash|} & {\large $\nVdash
+$} & {\small\verb|\ngeqq|} & {\large $\ngeqq
 $} & {\small\verb|\nsim|} & {\large $\nsim
 $} \\
 {\small\verb|\precnapprox|} & {\large $\precnapprox
-$} & & \\
+$} & & & & \\
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\notni|} &  &  \\
+\end{tabular}
+
+\newpage
 \subsection*{Arrows}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\circlearrowleft|} & {\large $\circlearrowleft
 $} & {\small\verb|\leftharpoonup|} & {\large $\leftharpoonup
-$} \\
-{\small\verb|\rArr|} & {\large $\rArr
 $} & {\small\verb|\circlearrowright|} & {\large $\circlearrowright
 $} \\
 {\small\verb|\leftleftarrows|} & {\large $\leftleftarrows
-$} & {\small\verb|\rarr|} & {\large $\rarr
-$} \\
-{\small\verb|\curvearrowleft|} & {\large $\curvearrowleft
+$} & {\small\verb|\curvearrowleft|} & {\large $\curvearrowleft
 $} & {\small\verb|\leftrightarrow|} & {\large $\leftrightarrow
 $} \\
 {\small\verb|\restriction|} & {\large $\restriction
 $} & {\small\verb|\curvearrowright|} & {\large $\curvearrowright
+$} & {\small\verb|\Leftrightarrow|} & {\large $\Leftrightarrow
 $} \\
-{\small\verb|\Leftrightarrow|} & {\large $\Leftrightarrow
-$} & {\small\verb|\rightarrow|} & {\large $\rightarrow
-$} \\
-{\small\verb|\Darr|} & {\large $\Darr
+{\small\verb|\rightarrow|} & {\large $\rightarrow
 $} & {\small\verb|\leftrightarrows|} & {\large $\leftrightarrows
+$} & {\small\verb|\Rightarrow|} & {\large $\Rightarrow
 $} \\
-{\small\verb|\Rightarrow|} & {\large $\Rightarrow
-$} & {\small\verb|\dArr|} & {\large $\dArr
-$} \\
-{\small\verb|\leftrightharpoons|} & {\large $\leftrightharpoons
-$} & {\small\verb|\rightarrowtail|} & {\large $\rightarrowtail
-$} \\
-{\small\verb|\darr|} & {\large $\darr
-$} & {\small\verb|\leftrightsquigarrow|} & {\large $\leftrightsquigarrow
-$} \\
-{\small\verb|\rightharpoondown|} & {\large $\rightharpoondown
+{\small\verb|\rightarrowtail|} & {\large $\rightarrowtail
+$} & {\small\verb|\rightharpoondown|} & {\large $\rightharpoondown
 $} & {\small\verb|\dashleftarrow|} & {\large $\dashleftarrow
 $} \\
 {\small\verb|\Lleftarrow|} & {\large $\Lleftarrow
 $} & {\small\verb|\rightharpoonup|} & {\large $\rightharpoonup
+$} & {\small\verb|\dashrightarrow|} & {\large $\dashrightarrow
 $} \\
-{\small\verb|\dashrightarrow|} & {\large $\dashrightarrow
-$} & {\small\verb|\longleftarrow|} & {\large $\longleftarrow
-$} \\
-{\small\verb|\rightleftarrows|} & {\large $\rightleftarrows
+{\small\verb|\longleftarrow|} & {\large $\longleftarrow
+$} & {\small\verb|\rightleftarrows|} & {\large $\rightleftarrows
 $} & {\small\verb|\downarrow|} & {\large $\downarrow
 $} \\
 {\small\verb|\Longleftarrow|} & {\large $\Longleftarrow
-$} & {\small\verb|\rightleftharpoons|} & {\large $\rightleftharpoons
+$} & {\small\verb|\Downarrow|} & {\large $\Downarrow
+$} & {\small\verb|\rightrightarrows|} & {\large $\rightrightarrows
 $} \\
-{\small\verb|\Downarrow|} & {\large $\Downarrow
-$} & {\small\verb|\longleftrightarrow|} & {\large $\longleftrightarrow
-$} \\
-\end{tabular}
-
-\newpage
-\subsection*{Relations / Arrows (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\rightrightarrows|} & {\large $\rightrightarrows
-$} & {\small\verb|\downdownarrows|} & {\large $\downdownarrows
-$} \\
-{\small\verb|\Longleftrightarrow|} & {\large $\Longleftrightarrow
+{\small\verb|\downdownarrows|} & {\large $\downdownarrows
 $} & {\small\verb|\rightsquigarrow|} & {\large $\rightsquigarrow
+$} & {\small\verb|\downharpoonleft|} & {\large $\downharpoonleft
 $} \\
-{\small\verb|\downharpoonleft|} & {\large $\downharpoonleft
-$} & {\small\verb|\longmapsto|} & {\large $\longmapsto
-$} \\
-{\small\verb|\Rrightarrow|} & {\large $\Rrightarrow
+{\small\verb|\longmapsto|} & {\large $\longmapsto
+$} & {\small\verb|\Rrightarrow|} & {\large $\Rrightarrow
 $} & {\small\verb|\downharpoonright|} & {\large $\downharpoonright
 $} \\
 {\small\verb|\longrightarrow|} & {\large $\longrightarrow
 $} & {\small\verb|\Rsh|} & {\large $\Rsh
+$} & {\small\verb|\gets|} & {\large $\gets
 $} \\
-{\small\verb|\gets|} & {\large $\gets
-$} & {\small\verb|\Longrightarrow|} & {\large $\Longrightarrow
+{\small\verb|\Longrightarrow|} & {\large $\Longrightarrow
+$} & {\small\verb|\searrow|} & {\large $\searrow
+$} & {\small\verb|\looparrowleft|} & {\large $\looparrowleft
 $} \\
-{\small\verb|\searrow|} & {\large $\searrow
-$} & {\small\verb|\Harr|} & {\large $\Harr
-$} \\
-{\small\verb|\looparrowleft|} & {\large $\looparrowleft
-$} & {\small\verb|\swarrow|} & {\large $\swarrow
-$} \\
-{\small\verb|\hArr|} & {\large $\hArr
+{\small\verb|\swarrow|} & {\large $\swarrow
 $} & {\small\verb|\looparrowright|} & {\large $\looparrowright
+$} & {\small\verb|\to|} & {\large $\to
 $} \\
-{\small\verb|\to|} & {\large $\to
-$} & {\small\verb|\harr|} & {\large $\harr
-$} \\
-{\small\verb|\Lrarr|} & {\large $\Lrarr
-$} & {\small\verb|\twoheadleftarrow|} & {\large $\twoheadleftarrow
-$} \\
-{\small\verb|\hookleftarrow|} & {\large $\hookleftarrow
-$} & {\small\verb|\lrArr|} & {\large $\lrArr
-$} \\
-{\small\verb|\twoheadrightarrow|} & {\large $\twoheadrightarrow
+{\small\verb|\twoheadleftarrow|} & {\large $\twoheadleftarrow
+$} & {\small\verb|\hookleftarrow|} & {\large $\hookleftarrow
 $} & {\small\verb|\hookrightarrow|} & {\large $\hookrightarrow
-$} \\
-{\small\verb|\lrarr|} & {\large $\lrarr
-$} & {\small\verb|\Uarr|} & {\large $\Uarr
 $} \\
 {\small\verb|\iff|} & {\large $\iff
 $} & {\small\verb|\Lsh|} & {\large $\Lsh
-$} \\
-{\small\verb|\uArr|} & {\large $\uArr
 $} & {\small\verb|\impliedby|} & {\large $\impliedby
 $} \\
 {\small\verb|\mapsto|} & {\large $\mapsto
-$} & {\small\verb|\uarr|} & {\large $\uarr
-$} \\
-{\small\verb|\implies|} & {\large $\implies
+$} & {\small\verb|\implies|} & {\large $\implies
 $} & {\small\verb|\nearrow|} & {\large $\nearrow
 $} \\
 {\small\verb|\uparrow|} & {\large $\uparrow
-$} & {\small\verb|\Larr|} & {\large $\Larr
-$} \\
-{\small\verb|\nleftarrow|} & {\large $\nleftarrow
+$} & {\small\verb|\nleftarrow|} & {\large $\nleftarrow
 $} & {\small\verb|\Uparrow|} & {\large $\Uparrow
 $} \\
-{\small\verb|\lArr|} & {\large $\lArr
-$} & {\small\verb|\nLeftarrow|} & {\large $\nLeftarrow
+{\small\verb|\nLeftarrow|} & {\large $\nLeftarrow
+$} & {\small\verb|\updownarrow|} & {\large $\updownarrow
+$} & {\small\verb|\nleftrightarrow|} & {\large $\nleftrightarrow
 $} \\
-{\small\verb|\updownarrow|} & {\large $\updownarrow
-$} & {\small\verb|\larr|} & {\large $\larr
-$} \\
-{\small\verb|\nleftrightarrow|} & {\large $\nleftrightarrow
-$} & {\small\verb|\Updownarrow|} & {\large $\Updownarrow
-$} \\
-{\small\verb|\leadsto|} & {\large $\leadsto
+{\small\verb|\Updownarrow|} & {\large $\Updownarrow
+$} & {\small\verb|\leadsto|} & {\large $\leadsto
 $} & {\small\verb|\nLeftrightarrow|} & {\large $\nLeftrightarrow
 $} \\
 {\small\verb|\upharpoonleft|} & {\large $\upharpoonleft
 $} & {\small\verb|\leftarrow|} & {\large $\leftarrow
+$} & {\small\verb|\nrightarrow|} & {\large $\nrightarrow
 $} \\
-{\small\verb|\nrightarrow|} & {\large $\nrightarrow
-$} & {\small\verb|\upharpoonright|} & {\large $\upharpoonright
-$} \\
-{\small\verb|\Leftarrow|} & {\large $\Leftarrow
+{\small\verb|\upharpoonright|} & {\large $\upharpoonright
+$} & {\small\verb|\Leftarrow|} & {\large $\Leftarrow
 $} & {\small\verb|\nRightarrow|} & {\large $\nRightarrow
 $} \\
 {\small\verb|\upuparrows|} & {\large $\upuparrows
 $} & {\small\verb|\leftarrowtail|} & {\large $\leftarrowtail
+$} & {\small\verb|\nwarrow|} & {\large $\nwarrow
 $} \\
-{\small\verb|\nwarrow|} & {\large $\nwarrow
-$} & {\small\verb|\mapsfrom|} & {\large $\mapsfrom
-$} \\
-{\small\verb|\leftharpoondown|} & {\large $\leftharpoondown
-$} & {\small\verb|\Rarr|} & {\large $\Rarr
-$} \\
-{\small\verb|\xleftarrow{abc}|} & {\large $\xleftarrow{abc}
-$} & {\small\verb|\xrightarrow[under]{over}|} & {\large $\xrightarrow[under]{over}
+{\small\verb|\mapsfrom|} & {\large $\mapsfrom
+$} & {\small\verb|\leftharpoondown|} & {\large $\leftharpoondown
+$} & {\small\verb|\xleftarrow{abc}|} & {\large $\xleftarrow{abc}
 $} \\
 {\small\verb|\xLeftarrow{abc}|} & {\large $\xLeftarrow{abc}
 $} & {\small\verb|\xRightarrow{abc}|} & {\large $\xRightarrow{abc}
+$} & {\small\verb|\xmapsto{abc}|} & {\large $\xmapsto{abc}
 $} \\
-{\small\verb|\xleftrightarrow{abc}|} & {\large $\xleftrightarrow{abc}
-$} & {\small\verb|\xLeftrightarrow{abc}|} & {\large $\xLeftrightarrow{abc}
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\leftrightharpoons|} & {\large $\leftrightharpoons
+$} & {\small\verb|\leftrightsquigarrow|} & {\large $\leftrightsquigarrow
 $} \\
-{\small\verb|\xhookleftarrow{abc}|} & {\large $\xhookleftarrow{abc}
-$} & {\small\verb|\xhookrightarrow{abc}|} & {\large $\xhookrightarrow{abc}
+{\small\verb|\rightleftharpoons|} & {\large $\rightleftharpoons
+$} & {\small\verb|\longleftrightarrow|} & {\large $\longleftrightarrow
 $} \\
-{\small\verb|\xleftharpoonup{abc}|} & {\large $\xleftharpoonup{abc}
-$} & {\small\verb|\xrightharpoonup{abc}|} & {\large $\xrightharpoonup{abc}
+{\small\verb|\Longleftrightarrow|} & {\large $\Longleftrightarrow
+$} & {\small\verb|\twoheadrightarrow|} & {\large $\twoheadrightarrow
 $} \\
-{\small\verb|\xleftharpoondown{abc}|} & {\large $\xleftharpoondown{abc}
-$} & {\small\verb|\xrightharpoondown{abc}|} & {\large $\xrightharpoondown{abc}
+{\small\verb|\xrightarrow[under]{over}|} & {\large $\xrightarrow[under]{over}
+$} & {\small\verb|\xleftrightarrow{abc}|} & {\large $\xleftrightarrow{abc}
 $} \\
-{\small\verb|\xleftrightharpoons{abc}|} & {\large $\xleftrightharpoons{abc}
-$} & {\small\verb|\xrightleftharpoons{abc}|} & {\large $\xrightleftharpoons{abc}
+{\small\verb|\xLeftrightarrow{abc}|} & {\large $\xLeftrightarrow{abc}
+$} & {\small\verb|\xhookleftarrow{abc}|} & {\large $\xhookleftarrow{abc}
 $} \\
-{\small\verb|\xmapsto{abc}|} & {\large $\xmapsto{abc}
-$} & {\small\verb|\xlongequal{abc}|} & {\large $\xlongequal{abc}
+{\small\verb|\xhookrightarrow{abc}|} & {\large $\xhookrightarrow{abc}
+$} & {\small\verb|\xleftharpoonup{abc}|} & {\large $\xleftharpoonup{abc}
 $} \\
+{\small\verb|\xrightharpoonup{abc}|} & {\large $\xrightharpoonup{abc}
+$} & {\small\verb|\xleftharpoondown{abc}|} & {\large $\xleftharpoondown{abc}
+$} \\
+{\small\verb|\xrightharpoondown{abc}|} & {\large $\xrightharpoondown{abc}
+$} & {\small\verb|\xleftrightharpoons{abc}|} & {\large $\xleftrightharpoons{abc}
+$} \\
+{\small\verb|\xrightleftharpoons{abc}|} & {\large $\xrightleftharpoons{abc}
+$} & & \\
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\rArr|} & {\small\verb|\rarr|} & {\small\verb|\Darr|} \\
+{\small\verb|\dArr|} & {\small\verb|\darr|} & {\small\verb|\Harr|} \\
+{\small\verb|\hArr|} & {\small\verb|\harr|} & {\small\verb|\Lrarr|} \\
+{\small\verb|\lrArr|} & {\small\verb|\lrarr|} & {\small\verb|\Uarr|} \\
+{\small\verb|\uArr|} & {\small\verb|\uarr|} & {\small\verb|\Larr|} \\
+{\small\verb|\lArr|} & {\small\verb|\larr|} & {\small\verb|\Rarr|} \\
+{\small\verb|\xlongequal{abc}|} & {\small\verb|\xtofrom{abc}|} & {\small\verb|\xtwoheadrightarrow{abc}|} \\
+{\small\verb|\xtwoheadleftarrow{abc}|} &  &  \\
 \end{tabular}
 
 \newpage
-\subsection*{Relations / Arrows (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\xtofrom{abc}|} & {\large $\xtofrom{abc}
-$} & {\small\verb|\xtwoheadrightarrow{abc}|} & {\large $\xtwoheadrightarrow{abc}
-$} \\
-{\small\verb|\xtwoheadleftarrow{abc}|} & {\large $\xtwoheadleftarrow{abc}
-$} & & \\
-\end{tabular}
-
 \section*{Special Notation}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\bra{\phi}|} & {\large $\bra{\phi}
-$} & {\small\verb|\ket{\psi}|} & {\large $\ket{\psi}
-$} \\
-{\small\verb|\braket{\phi\VERT\psi}|} & {\large $\braket{\phi\VERT\psi}
-$} & {\small\verb|\Bra{\phi}|} & {\large $\Bra{\phi}
-$} \\
-{\small\verb|\Ket{\psi}|} & {\large $\Ket{\psi}
-$} & & \\
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\bra{\phi}|} & {\small\verb|\ket{\psi}|} & {\small\verb|\braket{\phi\VERT\psi}|} \\
+{\small\verb|\Bra{\phi}|} & {\small\verb|\Ket{\psi}|} &  \\
 \end{tabular}
 
 \section*{Style, Color, Size, and Font}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\color{blue} F=ma|} & {\large $\color{blue} F=ma
-$} & {\small\verb|\textcolor{blue}{F=ma}|} & {\large $\textcolor{blue}{F=ma}
-$} \\
-{\small\verb|\textcolor{#228B22}{F=ma}|} & {\large $\textcolor{#228B22}{F=ma}
-$} & {\small\verb|\colorbox{aqua}{$F=ma$}|} & {\large $\colorbox{aqua}{$F=ma$}
-$} \\
-{\small\verb|\fcolorbox{red}{aqua}{$F=ma$}|} & {\large $\fcolorbox{red}{aqua}{$F=ma$}
 $} & {\small\verb|\mathrm{Ab0}|} & {\large $\mathrm{Ab0}
+$} & {\small\verb|\mathbf{Ab0}|} & {\large $\mathbf{Ab0}
 $} \\
-{\small\verb|\mathbf{Ab0}|} & {\large $\mathbf{Ab0}
-$} & {\small\verb|\mathsf{Ab0}|} & {\large $\mathsf{Ab0}
-$} \\
-{\small\verb|\mathnormal{Ab0}|} & {\large $\mathnormal{Ab0}
+{\small\verb|\mathsf{Ab0}|} & {\large $\mathsf{Ab0}
+$} & {\small\verb|\mathnormal{Ab0}|} & {\large $\mathnormal{Ab0}
 $} & {\small\verb|\textbf{Ab0}|} & {\large $\textbf{Ab0}
 $} \\
 {\small\verb|\textsf{Ab0}|} & {\large $\textsf{Ab0}
 $} & {\small\verb|\textrm{Ab0}|} & {\large $\textrm{Ab0}
+$} & {\small\verb|\bf Ab0|} & {\large $\bf Ab0
 $} \\
-{\small\verb|\bf Ab0|} & {\large $\bf Ab0
-$} & {\small\verb|\sf Ab0|} & {\large $\sf Ab0
-$} \\
-{\small\verb|\rm Ab0|} & {\large $\rm Ab0
+{\small\verb|\sf Ab0|} & {\large $\sf Ab0
+$} & {\small\verb|\rm Ab0|} & {\large $\rm Ab0
 $} & {\small\verb|\bold{Ab0}|} & {\large $\bold{Ab0}
 $} \\
-{\small\verb|\mathsfit{Ab0}|} & {\large $\mathsfit{Ab0}
-$} & {\small\verb|\textnormal{Ab0}|} & {\large $\textnormal{Ab0}
-$} \\
-{\small\verb|\boldsymbol{Ab0}|} & {\large $\boldsymbol{Ab0}
+{\small\verb|\textnormal{Ab0}|} & {\large $\textnormal{Ab0}
+$} & {\small\verb|\boldsymbol{Ab0}|} & {\large $\boldsymbol{Ab0}
 $} & {\small\verb|\Bbb{AB}|} & {\large $\Bbb{AB}
 $} \\
 {\small\verb|\text{Ab0}|} & {\large $\text{Ab0}
 $} & {\small\verb|\bm{Ab0}|} & {\large $\bm{Ab0}
+$} & {\small\verb|\mathbb{AB}|} & {\large $\mathbb{AB}
 $} \\
-{\small\verb|\mathbb{AB}|} & {\large $\mathbb{AB}
-$} & {\small\verb|\textup{Ab0}|} & {\large $\textup{Ab0}
-$} \\
-{\small\verb|\textmd{Ab0}|} & {\large $\textmd{Ab0}
+{\small\verb|\textup{Ab0}|} & {\large $\textup{Ab0}
+$} & {\small\verb|\textmd{Ab0}|} & {\large $\textmd{Ab0}
 $} & {\small\verb|\frak{Ab0}|} & {\large $\frak{Ab0}
 $} \\
 {\small\verb|\mathit{Ab0}|} & {\large $\mathit{Ab0}
 $} & {\small\verb|\mathtt{Ab0}|} & {\large $\mathtt{Ab0}
+$} & {\small\verb|\mathfrak{Ab0}|} & {\large $\mathfrak{Ab0}
 $} \\
-{\small\verb|\mathfrak{Ab0}|} & {\large $\mathfrak{Ab0}
-$} & {\small\verb|\textit{Ab0}|} & {\large $\textit{Ab0}
-$} \\
-{\small\verb|\texttt{Ab0}|} & {\large $\texttt{Ab0}
+{\small\verb|\textit{Ab0}|} & {\large $\textit{Ab0}
+$} & {\small\verb|\texttt{Ab0}|} & {\large $\texttt{Ab0}
 $} & {\small\verb|\mathcal{AB0}|} & {\large $\mathcal{AB0}
 $} \\
 {\small\verb|\it Ab0|} & {\large $\it Ab0
 $} & {\small\verb|\tt Ab0|} & {\large $\tt Ab0
+$} & {\small\verb|\cal AB0|} & {\large $\cal AB0
 $} \\
-{\small\verb|\cal AB0|} & {\large $\cal AB0
-$} & {\small\verb|\emph{Ab0}|} & {\large $\emph{Ab0}
-$} \\
-{\small\verb|\mathscr{AB}|} & {\large $\mathscr{AB}
-$} & {\small\verb|\textsf{\textbf{H}}|} & {\large $\textsf{\textbf{H}}
-$} \\
-{\small\verb|\mathsf{\mathbf{H}}|} & {\large $\mathsf{\mathbf{H}}
-$} & {\small\verb|\pmb{\mu}|} & {\large $\pmb{\mu}
-$} \\
-{\small\verb|\Huge AB|} & {\large $\Huge AB
-$} & {\small\verb|\normalsize AB|} & {\large $\normalsize AB
-$} \\
-{\small\verb|\huge AB|} & {\large $\huge AB
-$} & {\small\verb|\small AB|} & {\large $\small AB
-$} \\
-{\small\verb|\LARGE AB|} & {\large $\LARGE AB
-$} & {\small\verb|\footnotesize AB|} & {\large $\footnotesize AB
-$} \\
-{\small\verb|\Large AB|} & {\large $\Large AB
-$} & {\small\verb|\scriptsize AB|} & {\large $\scriptsize AB
-$} \\
-{\small\verb|\large AB|} & {\large $\large AB
-$} & {\small\verb|\tiny AB|} & {\large $\tiny AB
-$} \\
-{\small\verb|\displaystyle\sum_{i=1}^n|} & {\large $\displaystyle\sum_{i=1}^n
-$} & {\small\verb|\textstyle\sum_{i=1}^n|} & {\large $\textstyle\sum_{i=1}^n
-$} \\
-{\small\verb|\scriptstyle x|} & {\large $\scriptstyle x
-$} & {\small\verb|\scriptscriptstyle x|} & {\large $\scriptscriptstyle x
+{\small\verb|\emph{Ab0}|} & {\large $\emph{Ab0}
+$} & {\small\verb|\mathscr{AB}|} & {\large $\mathscr{AB}
+$} & {\small\verb|\scriptstyle x|} & {\large $\scriptstyle x
 $} \\
 {\small\verb|\lim\limits_x|} & {\large $\lim\limits_x
 $} & {\small\verb|\lim\nolimits_x|} & {\large $\lim\nolimits_x
+$} & {\small\verb|\verb!x^2!|} & {\large $\verb!x^2!
 $} \\
 \end{tabular}
 
-\newpage
-\subsection*{Style, Color, Size, and Font (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\verb!x^2!|} & {\large $\verb!x^2!
-$} & {\small\verb|\mathchoice{D}{T}{S}{SS}|} & {\large $\mathchoice{D}{T}{S}{SS}
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\textcolor{blue}{F=ma}|} & {\large $\textcolor{blue}{F=ma}
+$} & {\small\verb|\textsf{\textbf{H}}|} & {\large $\textsf{\textbf{H}}
 $} \\
-{\small\verb|\sixptsize sixptsize|} & {\large $\sixptsize sixptsize
+{\small\verb|\mathsf{\mathbf{H}}|} & {\large $\mathsf{\mathbf{H}}
+$} & {\small\verb|\displaystyle\sum_{i=1}^n|} & {\large $\displaystyle\sum_{i=1}^n
+$} \\
+{\small\verb|\textstyle\sum_{i=1}^n|} & {\large $\textstyle\sum_{i=1}^n
+$} & {\small\verb|\scriptscriptstyle x|} & {\large $\scriptscriptstyle x
+$} \\
+{\small\verb|\mathchoice{D}{T}{S}{SS}|} & {\large $\mathchoice{D}{T}{S}{SS}
 $} & & \\
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\textcolor{#228B22}{F=ma}|} & {\small\verb|\colorbox{aqua}{$F=ma$}|} & {\small\verb|\mathsfit{Ab0}|} \\
+{\small\verb|\pmb{\mu}|} & {\small\verb|\Huge AB|} & {\small\verb|\normalsize AB|} \\
+{\small\verb|\huge AB|} & {\small\verb|\small AB|} & {\small\verb|\LARGE AB|} \\
+{\small\verb|\footnotesize AB|} & {\small\verb|\Large AB|} & {\small\verb|\scriptsize AB|} \\
+{\small\verb|\large AB|} & {\small\verb|\tiny AB|} & {\small\verb|\sixptsize sixptsize|} \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\fcolorbox{red}{aqua}{$F=ma$}|} \\
+\end{tabular}
+
 \section*{Symbols and Punctuation}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\dots|} & {\large $\dots
-$} & {\small\verb|\KaTeX|} & {\large $\KaTeX
-$} \\
-{\small\verb|\%|} & {\large $\%
+$} & {\small\verb|\%|} & {\large $\%
 $} & {\small\verb|\cdots|} & {\large $\cdots
 $} \\
-{\small\verb|\LaTeX|} & {\large $\LaTeX
-$} & {\small\verb|\#|} & {\large $\#
+{\small\verb|\#|} & {\large $\#
+$} & {\small\verb|\ddots|} & {\large $\ddots
+$} & {\small\verb|\&|} & {\large $\&
 $} \\
-{\small\verb|\ddots|} & {\large $\ddots
-$} & {\small\verb|\TeX|} & {\large $\TeX
-$} \\
-{\small\verb|\&|} & {\large $\&
-$} & {\small\verb|\ldots|} & {\large $\ldots
-$} \\
-{\small\verb|\nabla|} & {\large $\nabla
+{\small\verb|\ldots|} & {\large $\ldots
+$} & {\small\verb|\nabla|} & {\large $\nabla
 $} & {\small\verb|\_|} & {\large $\_
 $} \\
 {\small\verb|\vdots|} & {\large $\vdots
 $} & {\small\verb|\infty|} & {\large $\infty
-$} \\
-{\small\verb|\text{\textunderscore}|} & {\large $\text{\textunderscore}
 $} & {\small\verb|\dotsb|} & {\large $\dotsb
 $} \\
-{\small\verb|\infin|} & {\large $\infin
-$} & {\small\verb|\text{--}|} & {\large $\text{--}
-$} \\
-{\small\verb|\dotsc|} & {\large $\dotsc
+{\small\verb|\text{--}|} & {\large $\text{--}
+$} & {\small\verb|\dotsc|} & {\large $\dotsc
 $} & {\small\verb|\checkmark|} & {\large $\checkmark
 $} \\
-{\small\verb|\text{\textendash}|} & {\large $\text{\textendash}
-$} & {\small\verb|\dotsi|} & {\large $\dotsi
-$} \\
-{\small\verb|\dag|} & {\large $\dag
+{\small\verb|\dotsi|} & {\large $\dotsi
+$} & {\small\verb|\dag|} & {\large $\dag
 $} & {\small\verb|\text{---}|} & {\large $\text{---}
 $} \\
 {\small\verb|\dotsm|} & {\large $\dotsm
 $} & {\small\verb|\dagger|} & {\large $\dagger
-$} \\
-{\small\verb|\text{\textemdash}|} & {\large $\text{\textemdash}
 $} & {\small\verb|\dotso|} & {\large $\dotso
 $} \\
-{\small\verb|\text{\textdagger}|} & {\large $\text{\textdagger}
-$} & {\small\verb|\text{\textasciitilde}|} & {\large $\text{\textasciitilde}
-$} \\
-{\small\verb|\sdot|} & {\large $\sdot
-$} & {\small\verb|\ddag|} & {\large $\ddag
-$} \\
-{\small\verb|\text{\textasciicircum}|} & {\large $\text{\textasciicircum}
+{\small\verb|\ddag|} & {\large $\ddag
 $} & {\small\verb|\mathellipsis|} & {\large $\mathellipsis
+$} & {\small\verb|\ddagger|} & {\large $\ddagger
 $} \\
-{\small\verb|\ddagger|} & {\large $\ddagger
-$} & {\small\verb|`|} & {\large $`
-$} \\
-{\small\verb|\text{\textellipsis}|} & {\large $\text{\textellipsis}
-$} & {\small\verb|\text{\textdaggerdbl}|} & {\large $\text{\textdaggerdbl}
-$} \\
-{\small\verb|\text{\textquoteleft}|} & {\large $\text{\textquoteleft}
+{\small\verb|`|} & {\large $`
 $} & {\small\verb|\Box|} & {\large $\Box
-$} \\
-{\small\verb|\Dagger|} & {\large $\Dagger
 $} & {\small\verb|\lq|} & {\large $\lq
 $} \\
 {\small\verb|\square|} & {\large $\square
 $} & {\small\verb|\angle|} & {\large $\angle
-$} \\
-{\small\verb|\text{\textquoteright}|} & {\large $\text{\textquoteright}
 $} & {\small\verb|\blacksquare|} & {\large $\blacksquare
 $} \\
 {\small\verb|\measuredangle|} & {\large $\measuredangle
 $} & {\small\verb|\rq|} & {\large $\rq
+$} & {\small\verb|\triangle|} & {\large $\triangle
 $} \\
-{\small\verb|\triangle|} & {\large $\triangle
-$} & {\small\verb|\sphericalangle|} & {\large $\sphericalangle
-$} \\
-{\small\verb|\text{\textquotedblleft}|} & {\large $\text{\textquotedblleft}
+{\small\verb|\sphericalangle|} & {\large $\sphericalangle
 $} & {\small\verb|\triangledown|} & {\large $\triangledown
+$} & {\small\verb|\top|} & {\large $\top
 $} \\
-{\small\verb|\top|} & {\large $\top
-$} & {\small\verb|"|} & {\large $"
-$} \\
-{\small\verb|\triangleleft|} & {\large $\triangleleft
+{\small\verb|"|} & {\large $"
+$} & {\small\verb|\triangleleft|} & {\large $\triangleleft
 $} & {\small\verb|\bot|} & {\large $\bot
 $} \\
-{\small\verb|\text{\textquotedblright}|} & {\large $\text{\textquotedblright}
-$} & {\small\verb|\triangleright|} & {\large $\triangleright
-$} \\
-{\small\verb|\$|} & {\large $\$
+{\small\verb|\triangleright|} & {\large $\triangleright
+$} & {\small\verb|\$|} & {\large $\$
 $} & {\small\verb|\colon|} & {\large $\colon
 $} \\
 {\small\verb|\bigtriangledown|} & {\large $\bigtriangledown
-$} & {\small\verb|\text{\textdollar}|} & {\large $\text{\textdollar}
-$} \\
-{\small\verb|\backprime|} & {\large $\backprime
+$} & {\small\verb|\backprime|} & {\large $\backprime
 $} & {\small\verb|\bigtriangleup|} & {\large $\bigtriangleup
 $} \\
 {\small\verb|\pounds|} & {\large $\pounds
 $} & {\small\verb|\prime|} & {\large $\prime
+$} & {\small\verb|\blacktriangle|} & {\large $\blacktriangle
 $} \\
-{\small\verb|\blacktriangle|} & {\large $\blacktriangle
-$} & {\small\verb|\mathsterling|} & {\large $\mathsterling
+{\small\verb|\mathsterling|} & {\large $\mathsterling
+$} & {\small\verb|\text{\textless}|} & {\large $\text{\textless}
+$} & {\small\verb|\yen|} & {\large $\yen
 $} \\
-{\small\verb|\text{\textless}|} & {\large $\text{\textless}
-$} & {\small\verb|\blacktriangledown|} & {\large $\blacktriangledown
+{\small\verb|\text{\textbar}|} & {\large $\text{\textbar}
+$} & {\small\verb|\surd|} & {\large $\surd
+$} & {\small\verb|\diamond|} & {\large $\diamond
+$} \\
+{\small\verb|\Diamond|} & {\large $\Diamond
+$} & {\small\verb|\lozenge|} & {\large $\lozenge
+$} & {\small\verb|\mho|} & {\large $\mho
 $} \\
 \end{tabular}
 
 \newpage
 \subsection*{Symbols and Punctuation (continued)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|\text{\textsterling}|} & {\large $\text{\textsterling}
-$} & {\small\verb|\text{\textgreater}|} & {\large $\text{\textgreater}
-$} \\
-{\small\verb|\blacktriangleleft|} & {\large $\blacktriangleleft
-$} & {\small\verb|\yen|} & {\large $\yen
-$} \\
-{\small\verb|\text{\textbar}|} & {\large $\text{\textbar}
-$} & {\small\verb|\blacktriangleright|} & {\large $\blacktriangleright
-$} \\
-{\small\verb|\surd|} & {\large $\surd
-$} & {\small\verb|\text{\textbardbl}|} & {\large $\text{\textbardbl}
-$} \\
-{\small\verb|\diamond|} & {\large $\diamond
-$} & {\small\verb|\degree|} & {\large $\degree
-$} \\
-{\small\verb|\text{\textbraceleft}|} & {\large $\text{\textbraceleft}
-$} & {\small\verb|\Diamond|} & {\large $\Diamond
-$} \\
-{\small\verb|\text{\textdegree}|} & {\large $\text{\textdegree}
-$} & {\small\verb|\text{\textbraceright}|} & {\large $\text{\textbraceright}
-$} \\
-{\small\verb|\lozenge|} & {\large $\lozenge
-$} & {\small\verb|\mho|} & {\large $\mho
-$} \\
-{\small\verb|\text{\textbackslash}|} & {\large $\text{\textbackslash}
-$} & {\small\verb|\blacklozenge|} & {\large $\blacklozenge
-$} \\
-{\small\verb|\diagdown|} & {\large $\diagdown
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\blacklozenge|} & {\large $\blacklozenge
+$} & {\small\verb|\diagdown|} & {\large $\diagdown
 $} & {\small\verb|\text{\P}|} & {\large $\text{\P}
 $} \\
 {\small\verb|\star|} & {\large $\star
 $} & {\small\verb|\diagup|} & {\large $\diagup
+$} & {\small\verb|\text{\S}|} & {\large $\text{\S}
 $} \\
-{\small\verb|\text{\S}|} & {\large $\text{\S}
-$} & {\small\verb|\bigstar|} & {\large $\bigstar
+{\small\verb|\bigstar|} & {\large $\bigstar
+$} & {\small\verb|\flat|} & {\large $\flat
+$} & {\small\verb|\clubsuit|} & {\large $\clubsuit
 $} \\
-{\small\verb|\flat|} & {\large $\flat
-$} & {\small\verb|\text{\sect}|} & {\large $\text{\sect}
+{\small\verb|\natural|} & {\large $\natural
+$} & {\small\verb|\copyright|} & {\large $\copyright
+$} & {\small\verb|\sharp|} & {\large $\sharp
 $} \\
-{\small\verb|\clubsuit|} & {\large $\clubsuit
-$} & {\small\verb|\natural|} & {\large $\natural
-$} \\
-{\small\verb|\copyright|} & {\large $\copyright
-$} & {\small\verb|\clubs|} & {\large $\clubs
-$} \\
-{\small\verb|\sharp|} & {\large $\sharp
-$} & {\small\verb|\circledR|} & {\large $\circledR
-$} \\
-{\small\verb|\diamondsuit|} & {\large $\diamondsuit
+{\small\verb|\circledR|} & {\large $\circledR
+$} & {\small\verb|\diamondsuit|} & {\large $\diamondsuit
 $} & {\small\verb|\heartsuit|} & {\large $\heartsuit
 $} \\
-{\small\verb|\text{\textregistered}|} & {\large $\text{\textregistered}
-$} & {\small\verb|\diamonds|} & {\large $\diamonds
+{\small\verb|\circledS|} & {\large $\circledS
+$} & {\small\verb|\spadesuit|} & {\large $\spadesuit
+$} & {\small\verb|\maltese|} & {\large $\maltese
 $} \\
-{\small\verb|\hearts|} & {\large $\hearts
-$} & {\small\verb|\circledS|} & {\large $\circledS
+{\small\verb|\minuso|} & {\large $\minuso
+$} & & & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\text{\textunderscore}|} & {\large $\text{\textunderscore}
+$} & {\small\verb|\text{\textendash}|} & {\large $\text{\textendash}
 $} \\
-{\small\verb|\spadesuit|} & {\large $\spadesuit
-$} & {\small\verb|\spades|} & {\large $\spades
+{\small\verb|\text{\textemdash}|} & {\large $\text{\textemdash}
+$} & {\small\verb|\text{\textdagger}|} & {\large $\text{\textdagger}
 $} \\
-{\small\verb|\maltese|} & {\large $\maltese
-$} & {\small\verb|\minuso|} & {\large $\minuso
+{\small\verb|\text{\textasciitilde}|} & {\large $\text{\textasciitilde}
+$} & {\small\verb|\text{\textasciicircum}|} & {\large $\text{\textasciicircum}
 $} \\
+{\small\verb|\text{\textellipsis}|} & {\large $\text{\textellipsis}
+$} & {\small\verb|\text{\textdaggerdbl}|} & {\large $\text{\textdaggerdbl}
+$} \\
+{\small\verb|\text{\textquoteleft}|} & {\large $\text{\textquoteleft}
+$} & {\small\verb|\text{\textquoteright}|} & {\large $\text{\textquoteright}
+$} \\
+{\small\verb|\text{\textquotedblleft}|} & {\large $\text{\textquotedblleft}
+$} & {\small\verb|\text{\textquotedblright}|} & {\large $\text{\textquotedblright}
+$} \\
+{\small\verb|\text{\textdollar}|} & {\large $\text{\textdollar}
+$} & {\small\verb|\blacktriangledown|} & {\large $\blacktriangledown
+$} \\
+{\small\verb|\text{\textsterling}|} & {\large $\text{\textsterling}
+$} & {\small\verb|\text{\textgreater}|} & {\large $\text{\textgreater}
+$} \\
+{\small\verb|\blacktriangleleft|} & {\large $\blacktriangleleft
+$} & {\small\verb|\blacktriangleright|} & {\large $\blacktriangleright
+$} \\
+{\small\verb|\text{\textbardbl}|} & {\large $\text{\textbardbl}
+$} & {\small\verb|\text{\textbraceleft}|} & {\large $\text{\textbraceleft}
+$} \\
+{\small\verb|\text{\textdegree}|} & {\large $\text{\textdegree}
+$} & {\small\verb|\text{\textbraceright}|} & {\large $\text{\textbraceright}
+$} \\
+{\small\verb|\text{\textbackslash}|} & {\large $\text{\textbackslash}
+$} & {\small\verb|\text{\textregistered}|} & {\large $\text{\textregistered}
+$} \\
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\KaTeX|} & {\small\verb|\LaTeX|} & {\small\verb|\TeX|} \\
+{\small\verb|\infin|} & {\small\verb|\sdot|} & {\small\verb|\Dagger|} \\
+{\small\verb|\degree|} & {\small\verb|\text{\sect}|} & {\small\verb|\clubs|} \\
+{\small\verb|\diamonds|} & {\small\verb|\hearts|} & {\small\verb|\spades|} \\
 \end{tabular}
 
 \section*{Units}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\rule{1em}{1em}|} & {\large $\rule{1em}{1em}
-$} & {\small\verb|\huge\rule{1em}{1em}|} & {\large $\huge\rule{1em}{1em}
-$} \\
-{\small\verb|\rule{18mu}{18mu}|} & {\large $\rule{18mu}{18mu}
-$} & {\small\verb|\huge\rule{18mu}{18mu}|} & {\large $\huge\rule{18mu}{18mu}
-$} \\
-{\small\verb|\rule{10pt}{10pt}|} & {\large $\rule{10pt}{10pt}
-$} & {\small\verb|\huge\rule{10pt}{10pt}|} & {\large $\huge\rule{10pt}{10pt}
-$} \\
+$} & {\small\verb|\rule{10pt}{10pt}|} & {\large $\rule{10pt}{10pt}
+$} & & \\
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\huge\rule{1em}{1em}|} & {\small\verb|\rule{18mu}{18mu}|} & {\small\verb|\huge\rule{18mu}{18mu}|} \\
+{\small\verb|\huge\rule{10pt}{10pt}|} &  &  \\
 \end{tabular}
 
 \begin{tabular}{@{}l@{}}
-{\small\verb|\scriptscriptstyle\rule{1em}{1em}|} \\ {\large $\scriptscriptstyle\rule{1em}{1em}
+{\small\verb|\scriptscriptstyle\rule{1em}{1em}|} \\
+{\small\verb|\scriptscriptstyle\rule{18mu}{18mu}|} \\
+{\small\verb|\scriptscriptstyle\rule{10pt}{10pt}|} \\
+\end{tabular}
+
+\section*{Beyond KaTeX}
+
+\subsection*{More commands}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\idotsint|} & {\large $\idotsint
+$} & {\small\verb|\iiiint|} & {\large $\iiiint
+$} & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\text{\textsection\textparagraph\textcopyright\texttrademark}|} \\ {\large $\text{\textsection\textparagraph\textcopyright\texttrademark}
 $} \\[4pt]
-{\small\verb|\scriptscriptstyle\rule{18mu}{18mu}|} \\ {\large $\scriptscriptstyle\rule{18mu}{18mu}
-$} \\[4pt]
-{\small\verb|\scriptscriptstyle\rule{10pt}{10pt}|} \\ {\large $\scriptscriptstyle\rule{10pt}{10pt}
-$} \\[4pt]
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\euro|} &  &  \\
 \end{tabular}
 
 \newpage
-\subsection*{Units (continued)}
-\section*{Beyond KaTeX}
-\subsection*{Commands KaTeX does not have}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|Deprecated|} & {\large $Deprecated
-$} & {\small\verb|see {array}|} & {\large $see {array}
-$} \\
-{\small\verb|see \Vert|} & {\large $see \Vert
-$} & {\small\verb|see \vert|} & {\large $see \vert
-$} \\
-{\small\verb|\bfseries|} & {\large $\bfseries
-$} & {\small\verb|see {cases}|} & {\large $see {cases}
-$} \\
-{\small\verb|Deprecated by mhchem|} & {\large $Deprecated by mhchem
-$} & {\small\verb|Deprecated by mhchem;|} & {\large $Deprecated by mhchem;
-$} \\
-{\small\verb|A PR is pending.|} & {\large $A PR is pending.
-$} & {\small\verb|\Digamma|} & {\large $\Digamma
-$} \\
-{\small\verb|\em|} & {\large $\em
-$} & {\small\verb|Non standard|} & {\large $Non standard
-$} \\
-{\small\verb|{eqnarray}|} & {\large ${eqnarray}
-$} & {\small\verb|\euro|} & {\large $\euro
-$} \\
-{\small\verb|\hbox to|} & {\large $\hbox to
-$} & {\small\verb|\idotsint|} & {\large $\idotsint
-$} \\
-{\small\verb|\iiiint|} & {\large $\iiiint
-$} & {\small\verb|\itshape|} & {\large $\itshape
-$} \\
-{\small\verb|\Koppa|} & {\large $\Koppa
-$} & {\small\verb|\koppa|} & {\large $\koppa
-$} \\
-{\small\verb|See {matrix}|} & {\large $See {matrix}
-$} & {\small\verb|\mdseries|} & {\large $\mdseries
-$} \\
-{\small\verb|{multiline}|} & {\large ${multiline}
-$} & {\small\verb|\normalfont|} & {\large $\normalfont
-$} \\
-{\small\verb|{picture}|} & {\large ${picture}
-$} & {\small\verb|See {pmatrix}|} & {\large $See {pmatrix}
-$} \\
-{\small\verb|See \Bbb{Q}|} & {\large $See \Bbb{Q}
-$} & {\small\verb|\Sampi|} & {\large $\Sampi
-$} \\
-{\small\verb|\sampi|} & {\large $\sampi
-$} & {\small\verb|\smiley|} & {\large $\smiley
-$} \\
-{\small\verb|see \space|} & {\large $see \space
-$} & {\small\verb|\Stigma|} & {\large $\Stigma
-$} \\
-{\small\verb|\stigma|} & {\large $\stigma
-$} & {\small\verb|{subarray}|} & {\large ${subarray}
-$} \\
-{\small\verb|see \tiny|} & {\large $see \tiny
-$} & {\small\verb|\upshape|} & {\large $\upshape
-$} \\
-{\small\verb|\vfill|} & {\large $\vfill
-$} & & \\
-\end{tabular}
-
-\begin{tabular}{@{}l@{}}
-{\small\verb|\text{\textsection\textparagraph\textcopyright\texttrademark\textquotedbl}|} \\ {\large $\text{\textsection\textparagraph\textcopyright\texttrademark\textquotedbl}
-$} \\[4pt]
-\end{tabular}
-
 \subsection*{Numbers and units (a subset of siunitx)}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\num{12345.6789}|} & {\large $\num{12345.6789}
 $} & {\small\verb|\num{1.5e-4}|} & {\large $\num{1.5e-4}
+$} & {\small\verb|\num{1.2(3)e3}|} & {\large $\num{1.2(3)e3}
 $} \\
-{\small\verb|\num{1.2+-0.3e3}|} & {\large $\num{1.2+-0.3e3}
-$} & {\small\verb|\qty{1.5}{\kilo\gram}|} & {\large $\qty{1.5}{\kilo\gram}
-$} \\
-{\small\verb|\si{kg.m/s^2}|} & {\large $\si{kg.m/s^2}
+{\small\verb|\si{kg.m.s^-2}|} & {\large $\si{kg.m.s^-2}
 $} & {\small\verb|\ang{1;2;3}|} & {\large $\ang{1;2;3}
-$} \\
-{\small\verb|\numrange{1}{10}|} & {\large $\numrange{1}{10}
-$} & {\small\verb|\SIrange{1}{5}{\volt}|} & {\large $\SIrange{1}{5}{\volt}
+$} & {\small\verb|\numrange{1}{10}|} & {\large $\numrange{1}{10}
 $} \\
 {\small\verb|\numlist{1;2;3}|} & {\large $\numlist{1;2;3}
-$} & & \\
+$} & & & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\qty{1.5}{\kilo\gram}|} & {\large $\qty{1.5}{\kilo\gram}
+$} & {\small\verb|\SIrange{1}{5}{\volt}|} & {\large $\SIrange{1}{5}{\volt}
+$} \\
 \end{tabular}
 
 \begin{tabular}{@{}l@{}}
@@ -1684,16 +1502,16 @@ $} & & \\
 $} \\[4pt]
 \end{tabular}
 
-\newpage
-\subsection*{Beyond KaTeX / Numbers and units (a subset of siunitx) (continued)}
 \subsection*{Equations}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
-{\small\verb|a = b \tag{1}|} & {\large $a = b \tag{1}
-$} & {\small\verb|a = b \tag*{(*)}|} & {\large $a = b \tag*{(*)}
-$} \\
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\cancelto{0}{x}|} & {\large $\cancelto{0}{x}
-$} & {\small\verb|\bigl\lvert x \bigr\rvert|} & {\large $\bigl\lvert x \bigr\rvert
-$} \\
+$} & & & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\bigl\lvert x \bigr\rvert|} & {\large $\bigl\lvert x \bigr\rvert
+$} & & \\
 \end{tabular}
 
 \begin{tabular}{@{}l@{}}
@@ -1705,17 +1523,32 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
+{\small\verb|a = b \tag{1}|}
+
+\[a = b \tag{1}\]
+
+{\small\verb|a = b \tag*{(*)}|}
+
+\[a = b \tag*{(*)}\]
+
 \subsection*{Tables}
+
 \begin{tabular}{@{}l@{}}
-{\small\verb|\begin{array}{c:c} a & b \\ \hdashline c & d \end{array}|} \\ {\large $\begin{array}{c:c} a & b \\ \hdashline c & d \end{array}
-$} \\[4pt]
 {\small\verb!\begin{tabular}{|l|r|} \hline a & 1 \\ \hline b & 22 \\ \hline!} \\ {\small\verb|\end{tabular}|} \\ {\large $\begin{tabular}{|l|r|} \hline a & 1 \\ \hline b & 22 \\ \hline \end{tabular}
 $} \\[4pt]
 {\small\verb|\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\|} \\ {\small\verb!\verb|verbatim| \end{array}!} \\ {\large $\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\ \verb|verbatim| \end{array}
 $} \\[4pt]
 \end{tabular}
 
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\begin{array}{c:c} a & b \\ \hdashline c & d \end{array}|} \\
+\end{tabular}
+
+\newpage
 \subsection*{Commutative diagrams}
+
 \begin{tabular}{@{}l@{}}
 {\small\verb|\begin{tikzcd} A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d,|} \\ {\small\verb|"h"] \\ C \arrow[r, hook, "k"'] & D \end{tikzcd}|} \\ {\large $\begin{tikzcd} A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d, "h"] \\ C \arrow[r, hook, "k"'] & D \end{tikzcd}
 $} \\[4pt]
@@ -1725,31 +1558,36 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
-\newpage
-\subsection*{Beyond KaTeX / Commutative diagrams (continued)}
 \section*{Extensions}
+
 \subsection*{mhchem}
-\begin{tabular}{@{}l@{\qquad}l@{\qquad\qquad}l@{\qquad}l@{}}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\ce{H2O}|} & {\large $\ce{H2O}
-$} & {\small\verb|\ce{CO2 + C -> 2 CO}|} & {\large $\ce{CO2 + C -> 2 CO}
-$} \\
-{\small\verb|\ce{SO4^2- + Ba^2+ -> BaSO4 v}|} & {\large $\ce{SO4^2- + Ba^2+ -> BaSO4 v}
-$} & {\small\verb|\ce{^{227}_{90}Th+}|} & {\large $\ce{^{227}_{90}Th+}
-$} \\
-{\small\verb|\ce{1/2 H2O}|} & {\large $\ce{1/2 H2O}
-$} & {\small\verb|\ce{Fe^{3+} + 3e- -> Fe(s)}|} & {\large $\ce{Fe^{3+} + 3e- -> Fe(s)}
-$} \\
-{\small\verb|\ce{CuSO4*5H2O}|} & {\large $\ce{CuSO4*5H2O}
-$} & {\small\verb|\pu{1.5 mol/L}|} & {\large $\pu{1.5 mol/L}
-$} \\
-{\small\verb|\pu{123 kJ/mol}|} & {\large $\pu{123 kJ/mol}
-$} & {\small\verb|\pu{1.2e-3 mol L-1}|} & {\large $\pu{1.2e-3 mol L-1}
+$} & {\small\verb|\ce{1/2 H2O}|} & {\large $\ce{1/2 H2O}
+$} & {\small\verb|\ce{CuSO4*5H2O}|} & {\large $\ce{CuSO4*5H2O}
 $} \\
 \end{tabular}
 
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\ce{CO2 + C -> 2 CO}|} & {\large $\ce{CO2 + C -> 2 CO}
+$} & {\small\verb|\ce{^{227}_{90}Th+}|} & {\large $\ce{^{227}_{90}Th+}
+$} \\
+{\small\verb|\ce{Fe^{3+} + 3e- -> Fe(s)}|} & {\large $\ce{Fe^{3+} + 3e- -> Fe(s)}
+$} & & \\
+\end{tabular}
+
 \begin{tabular}{@{}l@{}}
+{\small\verb|\ce{SO4^2- + Ba^2+ -> BaSO4 v}|} \\ {\large $\ce{SO4^2- + Ba^2+ -> BaSO4 v}
+$} \\[4pt]
 {\small\verb|\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}|} \\ {\large $\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}
 $} \\[4pt]
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\pu{1.5 mol/L}|} & {\small\verb|\pu{123 kJ/mol}|} & {\small\verb|\pu{1.2e-3 mol L-1}|} \\
 \end{tabular}
 
 \end{document}

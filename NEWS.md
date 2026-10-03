@@ -9,6 +9,7 @@
 - New `\hdashline` and `:` in a column spec, for dashed rules in arrays and tables.
 - A subset of siunitx: `\num`, `\si`, `\SI`, `\qty`, `\ang`, ranges, lists and `\DeclareSIUnit`.
 - Everything on KaTeX's lists of supported functions is drawn: the last gaps, `\mathchoice`, `\vcenter`, `\expandafter`, `\noexpand`, `\futurelet`, `\edef`, `\xdef`, `\phase`, `\angl`, `\H`, `\textcircled`, `\xlongequal`, `\xtofrom`, `\xtwoheadrightarrow`, `\overgroup`, `\overlinesegment`, `\widecheck`, `\Overrightarrow`, `\overleftharpoon`, `\TextOrMath`, `\@ifstar`, `\@ifnextchar`, `\@firstoftwo`, `\sixptsize`, and `\global` before `\edef`, `\let` and `\futurelet`, are filled, and `\ce` and `\pu` read a subset of mhchem. `\arraystretch` spaces the rows of an array. The list is `inst/supported` (built by `build_supported()`; the PDF is on the website).
+- Checked against pdflatex, example by example: `\utilde` drew a small tilde before its argument; `\copyright` drew ®; `\surd` drew nothing; `/` was spaced as an operator; `\pod`, `\pmod` and `\mod` left a quad; `\boxed` was not in display style; the text of `\xrightarrow` and kin was too big; `\big` to `\Bigg` were too small; `\substack` was padded; `\ldots` and `\cdots` were one tight glyph; and `\mkern8mu(a)` lost everything after `8mu`.
 - `\cancel` and `\bcancel` were drawn the wrong way round.
 - kableExtra's `scale_down` drew nothing, and a colour defined with capitals in its name was never found.
 
