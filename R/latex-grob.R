@@ -15,8 +15,8 @@
 #'   formula's baseline on `y`.
 #' @param rot Rotation in degrees, counter-clockwise.
 #' @param math_font Math font: `"lete"` (Lete Sans Math, the default),
-#'   `"stix"` (STIX Two Math), or one added with [load_math_font()]. See
-#'   [available_math_fonts()].
+#'   `"stix"` (STIX Two Math), or one added with [load_font()]. See
+#'   [available_fonts()].
 #' @param max_width Width in big points (1/72 inch) at which lines wrap.
 #'   `0`, the default, does not wrap.
 #' @param tex_style Force a TeX style: `"display"`, `"text"`, `"script"`

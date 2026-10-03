@@ -43,8 +43,8 @@ formula's baseline on \code{y}.}
 \item{rot}{Rotation in degrees, counter-clockwise.}
 
 \item{math_font}{Math font: \code{"lete"} (Lete Sans Math, the default),
-\code{"stix"} (STIX Two Math), or one added with \code{\link[=load_math_font]{load_math_font()}}. See
-\code{\link[=available_math_fonts]{available_math_fonts()}}.}
+\code{"stix"} (STIX Two Math), or one added with \code{\link[=load_font]{load_font()}}. See
+\code{\link[=available_fonts]{available_fonts()}}.}
 
 \item{max_width}{Width in big points (1/72 inch) at which lines wrap.
 \code{0}, the default, does not wrap.}

@@ -21,11 +21,24 @@ face; \code{file} of the regular face; and \code{source}, one of \code{"bundled"
 }
 \description{
 One row per font that can be named: the bundled math fonts, and every font
-given to \code{\link[=load_font]{load_font()}} or to a font option of \code{\link[=latex_options]{latex_options()}}.
+given to \code{\link[=load_font]{load_font()}} or to a font option of \code{\link[=latex_options]{latex_options()}}. The
+math fonts, which \code{math_font} takes, are the rows with \code{math} \code{TRUE}.
 }
+\section{Font pairing}{
+
+For a consistent look, pair a math font with a matching \code{fontfamily} in
+\code{gp}:
+
+\tabular{lll}{
+\strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
+Lete Sans Math (\code{"lete"}, default) \tab Sans-serif \tab \code{"sans"} \cr
+STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
+}
+}
+
 \examples{
 available_fonts()
 }
 \seealso{
-\code{\link[=load_font]{load_font()}}, \code{\link[=available_math_fonts]{available_math_fonts()}}
+\code{\link[=load_font]{load_font()}}, \code{\link[=latex_options]{latex_options()}}
 }

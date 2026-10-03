@@ -51,5 +51,5 @@ draws all text, so it has to know the font itself.
 }
 }
 \seealso{
-\code{\link[=available_fonts]{available_fonts()}}, \code{\link[=latex_options]{latex_options()}}, \code{\link[=load_math_font]{load_math_font()}}
+\code{\link[=available_fonts]{available_fonts()}}, \code{\link[=latex_options]{latex_options()}}
 }

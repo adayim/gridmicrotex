@@ -16,8 +16,8 @@ element_latex(
 }
 \arguments{
 \item{math_font}{Math font: \code{"lete"} (Lete Sans Math, the default),
-\code{"stix"} (STIX Two Math), or one added with \code{\link[=load_math_font]{load_math_font()}}. See
-\code{\link[=available_math_fonts]{available_math_fonts()}}.}
+\code{"stix"} (STIX Two Math), or one added with \code{\link[=load_font]{load_font()}}. See
+\code{\link[=available_fonts]{available_fonts()}}.}
 
 \item{fontsize}{Font size in points. \code{NULL} (default) uses the theme's
 size.}

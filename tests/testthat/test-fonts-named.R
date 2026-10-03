@@ -83,9 +83,13 @@ test_that("load_font() refuses what it cannot load", {
   expect_error(load_font(fam, bold = stix()), "installed family")
 })
 
-test_that("load_math_font() still loads a math font and still refuses text fonts", {
+test_that("the superseded math font functions still work", {
   expect_silent(load_math_font(stix()))
   expect_true("STIX Two Math" %in% available_math_fonts())
+  # They are the math rows of the new ones.
+  fonts <- available_fonts()
+  expect_true(all(fonts$name[fonts$math %in% TRUE] %in% available_math_fonts()))
+  expect_message(check_math_fonts(), "Loaded math fonts")
 
   # An installed text font has no MATH table -- unless this machine's "mono"
   # has one, and then it cannot stand in for one.

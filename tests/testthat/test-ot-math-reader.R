@@ -57,10 +57,10 @@ test_that("a Coverage table of overlapping ranges is read in bounded time", {
   f <- file.path(tempdir(), "CoverageProbe.otf")
   writeBin(c(raw, pad, patched), f)
   on.exit(unlink(f), add = TRUE)
-  expect_lt(system.time(suppressWarnings(load_math_font(f)))[["elapsed"]], 5)
+  expect_lt(system.time(suppressWarnings(load_font(f)))[["elapsed"]], 5)
 })
 
-test_that("load_math_font reads a bare OTF", {
+test_that("load_font reads a bare OTF", {
   # A copy of Lete under a unique file name, loaded as a custom font.
   src <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
   skip_if_not(nzchar(src))
@@ -68,21 +68,21 @@ test_that("load_math_font reads a bare OTF", {
   file.copy(src, tmp, overwrite = TRUE)
   on.exit(unlink(tmp), add = TRUE)
 
-  # load_math_font is silent on success; it might warn if systemfonts
-  # reports a duplicate registration.
-  suppressWarnings(load_math_font(tmp))
+  # load_font might warn if systemfonts reports a duplicate registration.
+  suppressWarnings(load_font(tmp))
   # The font registers under its family name (Lete Sans Math) — same as
   # the bundled font because it IS the same OTF.
-  expect_true("Lete Sans Math" %in% available_math_fonts())
+  fonts <- available_fonts()
+  expect_true("Lete Sans Math" %in% fonts$name[fonts$math])
 })
 
-test_that("the deprecated aliases still work, and say so", {
+test_that("load_math_font() reads a bare OTF, as before", {
   src <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
   skip_if_not(nzchar(src))
-  tmp <- file.path(tempdir(), "A3ProbeDeprecated.otf")
+  tmp <- file.path(tempdir(), "A3ProbeSuperseded.otf")
   file.copy(src, tmp, overwrite = TRUE)
   on.exit(unlink(tmp), add = TRUE)
 
+  suppressWarnings(load_math_font(tmp))
   expect_true("Lete Sans Math" %in% available_math_fonts())
-
 })

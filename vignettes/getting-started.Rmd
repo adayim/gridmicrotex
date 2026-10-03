@@ -342,12 +342,10 @@ grid.latex(
 )
 ```
 
-`load_math_font("MyFont.otf")` adds any OpenType math font.
-`check_math_fonts()` lists what is available.
-
 ### Your own fonts
 
-`load_font()` names a font file, or an installed family, once. The name
+`load_font()` names a font file, or an installed family, once, and loads
+an OpenType math font for `math_font` the same way. The name
 then works wherever a font is named: in `gp`, in `latex_options()`
 (`main_font`, `sans_font`, `mono_font`) and in the LaTeX itself, with the
 commands of fontspec and unicode-math (`\setmainfont`, `\setsansfont`,

@@ -35,7 +35,7 @@
   if (!"Lete Sans Math" %in% microtex_math_font_names()) {
     packageStartupMessage(
       "gridmicrotex: bundled default math font (Lete Sans Math) failed ",
-      "to register. Run check_math_fonts() for details."
+      "to register. Run available_fonts() for details."
     )
   }
 }

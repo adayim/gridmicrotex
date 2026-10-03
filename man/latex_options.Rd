@@ -22,7 +22,7 @@ latex_options(
 reset_latex_options()
 }
 \arguments{
-\item{math_font}{Math font; see \code{\link[=available_math_fonts]{available_math_fonts()}}.}
+\item{math_font}{Math font; see \code{\link[=available_fonts]{available_fonts()}}.}
 
 \item{render_mode}{\code{"typeface"} or \code{"path"}; see \code{\link[=latex_grob]{latex_grob()}}.}
 
@@ -96,5 +96,5 @@ if (!identical(Sys.getenv("IN_PKGDOWN"), "true"))
 }
 }
 \seealso{
-\code{\link[=available_math_fonts]{available_math_fonts()}}, \code{\link[=load_font]{load_font()}}, \code{\link[=latex_grob]{latex_grob()}}
+\code{\link[=available_fonts]{available_fonts()}}, \code{\link[=load_font]{load_font()}}, \code{\link[=latex_grob]{latex_grob()}}
 }

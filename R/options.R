@@ -40,7 +40,7 @@
 #' Size and line spacing are set with `gp` (`fontsize`, `cex`,
 #' `lineheight`), not here.
 #'
-#' @param math_font Math font; see [available_math_fonts()].
+#' @param math_font Math font; see [available_fonts()].
 #' @param render_mode `"typeface"` or `"path"`; see [latex_grob()].
 #' @param tex_style `""`, `"display"`, `"text"`, `"script"` or
 #'   `"scriptscript"`; see [latex_grob()].
@@ -69,7 +69,7 @@
 #'   call wins over `main_font`.
 #' @return The previous settings, invisibly. With no arguments, the
 #'   current settings.
-#' @seealso [available_math_fonts()], [load_font()], [latex_grob()]
+#' @seealso [available_fonts()], [load_font()], [latex_grob()]
 #' @export
 #'
 #' @examples

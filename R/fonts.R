@@ -45,30 +45,6 @@ resolve_math_font <- function(name) {
   )
 }
 
-#' List available math fonts
-#'
-#' Returns the math fonts that can be passed to `math_font`.
-#'
-#' @section Font pairing:
-#' For a consistent look, pair each math font with a matching
-#' `fontfamily` in `gp`:
-#'
-#' \tabular{lll}{
-#'   \strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
-#'   Lete Sans Math (\code{"lete"}, default) \tab Sans-serif \tab \code{"sans"} \cr
-#'   STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
-#' }
-#' Additional math fonts can be loaded with \code{\link{load_math_font}}.
-#'
-#' @return A character vector of math font names.
-#' @export
-#'
-#' @examples
-#' available_math_fonts()
-available_math_fonts <- function() {
-  microtex_math_font_names()
-}
-
 # Internal: set the default math font used by MicroTeX.
 # Public entry point is `latex_options(math_font = ...)`.
 .set_math_font <- function(name) {
@@ -78,7 +54,7 @@ available_math_fonts <- function() {
 
   if (is.null(name) || !nzchar(name)) {
     stop(
-      "Please provide a math font name. Use available_math_fonts() to list choices.",
+      "Please provide a math font name. Use available_fonts() to list choices.",
       call. = FALSE
     )
   }
@@ -88,7 +64,7 @@ available_math_fonts <- function() {
   if (!ok) {
     stop(
       "Failed to set math font '", resolved, "'. Available fonts: ",
-      paste(available_math_fonts(), collapse = ", "),
+      paste(microtex_math_font_names(), collapse = ", "),
       call. = FALSE
     )
   }
@@ -133,7 +109,7 @@ available_math_fonts <- function() {
 #'   file: the faces of an installed family are found automatically. A face
 #'   left out is drawn with the regular file.
 #' @return The name the font is registered under, invisibly.
-#' @seealso [available_fonts()], [latex_options()], [load_math_font()]
+#' @seealso [available_fonts()], [latex_options()]
 #' @export
 #'
 #' @examples
@@ -223,58 +199,32 @@ load_font <- function(x, name = NULL, bold = NULL, italic = NULL,
   invisible(name)
 }
 
-#' Load a math font from an OTF file
-#'
-#' Adds an OpenType math font, such as Latin Modern Math, for use as
-#' `math_font`. The font can then also be used as a `fontfamily` for
-#' plot text. This is [load_font()] for a font that must have a math table.
-#'
-#' @param otf_path Path to an OTF or TTF math font.
-#' @return `NULL`, invisibly.
-#' @seealso \code{\link{load_font}}, \code{\link{available_math_fonts}},
-#'   \code{\link{check_math_fonts}}, \code{\link{latex_options}},
-#'   \code{\link{latex_grob}}
-#' @export
-#'
-#' @examples
-#' \donttest{
-#'   # The bundled STIX font stands in for your own math font here
-#'   otf <- system.file("fonts", "STIXTwoMath-Regular.otf",
-#'                      package = "gridmicrotex")
-#'   load_math_font(otf)
-#'   available_math_fonts()
-#' }
-load_math_font <- function(otf_path) {
-  if (!file.exists(otf_path)) {
-    stop("Font file not found: ", otf_path, call. = FALSE)
-  }
-  name <- load_font(otf_path)
-  if (!isTRUE(.font_registry$fonts[[name]]$math)) {
-    stop(
-      "Could not read OpenType MATH table from: ", basename(otf_path), "\n",
-      "The font may not be a math font, or may have an unsupported MATH ",
-      "table layout.",
-      call. = FALSE
-    )
-  }
-  invisible(NULL)
-}
-
 #' List the fonts that have been loaded
 #'
 #' One row per font that can be named: the bundled math fonts, and every font
-#' given to [load_font()] or to a font option of [latex_options()].
+#' given to [load_font()] or to a font option of [latex_options()]. The
+#' math fonts, which `math_font` takes, are the rows with `math` `TRUE`.
 #'
 #' @param system If `TRUE`, also list the installed font families, which work
 #'   by name without loading. The first call scans the system's fonts, which
 #'   takes a few seconds.
+#' @section Font pairing:
+#' For a consistent look, pair a math font with a matching `fontfamily` in
+#' `gp`:
+#'
+#' \tabular{lll}{
+#'   \strong{Math font}     \tab \strong{Style}  \tab \strong{Suggested text font} \cr
+#'   Lete Sans Math (\code{"lete"}, default) \tab Sans-serif \tab \code{"sans"} \cr
+#'   STIX Two Math (\code{"stix"})   \tab Serif  \tab \code{"serif"} \cr
+#' }
+#'
 #' @return A data frame with one row per font: `name`; `math` (it has a math
 #'   table; `NA` for an installed family that is not loaded); `mono`
 #'   (monospaced); `bold` and `italic` (a face of its own is registered, so
 #'   `\textbf` and `\textit` draw its real design); `weight` of the regular
 #'   face; `file` of the regular face; and `source`, one of `"bundled"`,
 #'   `"file"` and `"system"`.
-#' @seealso [load_font()], [available_math_fonts()]
+#' @seealso [load_font()], [latex_options()]
 #' @export
 #'
 #' @examples
@@ -328,7 +278,7 @@ available_fonts <- function(system = FALSE) {
 #
 # name -> one entry: list(name, display, source, math, mono, weight, faces).
 # `display` is the family name the engine knows the file by (what
-# available_math_fonts() lists); `faces` holds up to four of plain, bold,
+# available_fonts() lists); `faces` holds up to four of plain, bold,
 # italic and bolditalic, each list(path, index). `generation` goes into the
 # layout cache key (.parse_cache_key()): a layout measured before a font was
 # loaded, or loaded again from another file, is not an answer after.
@@ -487,39 +437,4 @@ available_fonts <- function(system = FALSE) {
   }
 
   invisible()
-}
-
-#' Check math font status
-#'
-#' Prints which math fonts are available and whether the bundled font
-#' files are present. Text fonts are not covered; use
-#' `systemfonts::match_fonts()` to see what a font family resolves to.
-#'
-#' @return The names of the available math fonts, invisibly.
-#' @seealso \code{\link{available_math_fonts}}, \code{\link{load_math_font}}
-#' @export
-#'
-#' @examples
-#' check_math_fonts()
-check_math_fonts <- function() {
-  if (!microtex_is_inited()) {
-    message("MicroTeX is not initialized.")
-    return(invisible(character(0)))
-  }
-
-  fonts <- microtex_math_font_names()
-  message("MicroTeX version: ", microtex_version())
-  message("Loaded math fonts (", length(fonts), "):")
-  for (f in fonts) {
-    message("  - ", f)
-  }
-
-  pkg <- "gridmicrotex"
-  message("Bundled font files:")
-  for (file in c("LeteSansMath.otf", "STIXTwoMath-Regular.otf")) {
-    p <- system.file("fonts", file, package = pkg)
-    message("  - ", file, ": ", if (nzchar(p)) "found" else "MISSING")
-  }
-
-  invisible(fonts)
 }
