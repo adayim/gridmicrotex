@@ -1,6 +1,10 @@
+math_fonts <- function() {
+  fonts <- available_fonts()
+  fonts$name[fonts$math %in% TRUE]
+}
+
 test_that("bundled default math font (Lete) loads and resolves", {
-  fonts <- available_math_fonts()
-  expect_true("Lete Sans Math" %in% fonts)
+  expect_true("Lete Sans Math" %in% math_fonts())
 
   expect_equal(gridmicrotex:::resolve_math_font("lete"), "Lete Sans Math")
   expect_equal(gridmicrotex:::resolve_math_font("letesans"), "Lete Sans Math")
@@ -12,8 +16,7 @@ test_that("bundled default math font (Lete) loads and resolves", {
 })
 
 test_that("bundled STIX math font loads, resolves aliases, and renders", {
-  fonts <- available_math_fonts()
-  expect_true("STIX Two Math" %in% fonts)
+  expect_true("STIX Two Math" %in% math_fonts())
 
   expect_equal(gridmicrotex:::resolve_math_font("stix"), "STIX Two Math")
   expect_equal(gridmicrotex:::resolve_math_font("stix2"), "STIX Two Math")

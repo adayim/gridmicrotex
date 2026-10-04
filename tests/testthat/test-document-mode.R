@@ -81,7 +81,10 @@ test_that("a display is centred on a line of its own, as in LaTeX", {
               r"(\begin{gather}x\end{gather})", r"(\begin{displaymath}x\end{displaymath})")) {
     t <- latex_tree(paste0("Before ", d, " after."), input_mode = "document")
     y <- tapply(t$records$y, t$records$type, max)
-    txt <- t$records$y[t$records$type == "text"]
+    # A numbered display has its number among the text records, on the
+    # display's own line: only the prose above and below it is counted.
+    on_display <- round(t$records$y) %in% round(t$records$y[t$records$type == "glyph"])
+    txt <- t$records$y[t$records$type == "text" & !on_display]
     expect_identical(length(unique(txt)), 2L, info = d)
     expect_true(y[["glyph"]] > min(txt) && y[["glyph"]] < max(txt), info = d)
   }

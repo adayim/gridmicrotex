@@ -332,8 +332,8 @@ test_that("an interrupt while text is being measured stops the layout", {
     grDevices::dev.off()
   }, add = TRUE)
   measurer <- .make_text_measurer
-  local_mocked_bindings(.make_text_measurer = function(text_gp) {
-    measure <- measurer(text_gp)
+  local_mocked_bindings(.make_text_measurer = function(text_gp, roles = NULL) {
+    measure <- measurer(text_gp, roles)
     function(text, font_style, font_family = "") {
       if (grepl("STOP", text, fixed = TRUE)) signal_interrupt()
       measure(text, font_style, font_family)

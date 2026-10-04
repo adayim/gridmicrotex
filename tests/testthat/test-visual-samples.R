@@ -148,3 +148,30 @@ test_that("visual: text direction", {
     }
   })
 })
+
+test_that("visual: diagram gallery", {
+  skip_if_not_installed("vdiffr")
+  skip_on_os("mac")
+  vdiffr::expect_doppelganger("diagram-gallery", function() {
+    place(24, 14, "tikz-cd: a square", paste0(
+      "\\begin{tikzcd}\n",
+      "A \\arrow[r, \"f\"] \\arrow[d, \"g\"'] \\arrow[dr, dashed] & B \\arrow[d, \"h\"] \\\\\n",
+      "C \\arrow[r, hook, \"k\"'] & D\n",
+      "\\end{tikzcd}"), 14)
+    place(250, 14, "styles", paste0(
+      "\\begin{tikzcd}[row sep=large, column sep=large]\n",
+      "A \\arrow[r, \"f\", bend left=40] \\arrow[r, \"g\"', bend right=40] & B \\arrow[r, two heads, mapsto]",
+      " & C \\arrow[d, Rightarrow, \"\\alpha\"{description}] \\\\\n",
+      "D \\arrow[u, shift left=2, \"a\"] \\arrow[u, shift right=2, \"b\"', dotted]",
+      " & E \\arrow[l, tail, \"t\"] & F \\arrow[ul, equal] \\arrow[l, \"x\"{near start}]\n",
+      "\\end{tikzcd}"), 14)
+    place(24, 170, "amscd", paste0(
+      "\\begin{CD}\n",
+      "A @>f>> B @>>g> C \\\\\n",
+      "@VhVV @. @AAkA \\\\\n",
+      "D @= E @<<< F \\\\\n",
+      "@| @VVV \\\\\n",
+      "G @>>> H\n",
+      "\\end{CD}"), 14)
+  })
+})

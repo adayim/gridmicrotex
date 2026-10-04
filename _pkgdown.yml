@@ -25,6 +25,11 @@ navbar:
       - text: "ggplot2"
       - text: Using LaTeX Math in ggplot2
         href: articles/ggplot2-integration.html
+      - text: "Reference"
+      - text: What is supported (PDF)
+        href: supported-functions.pdf
+      - text: What is supported (LaTeX source)
+        href: supported-functions.tex
 
 reference:
   - title: Core rendering
@@ -78,9 +83,8 @@ reference:
   - title: Font management
     desc: Load and configure math and text fonts
     contents:
-      - available_math_fonts
-      - load_math_font
-      - check_math_fonts
+      - load_font
+      - available_fonts
   - title: Misc utilities
     desc: Utilities for working with LaTeX strings and rendering
     contents:

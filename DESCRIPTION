@@ -30,7 +30,7 @@ Imports:
     grDevices,
     grid,
     Rcpp,
-    systemfonts,
+    systemfonts (>= 1.2.0),
     tools,
     utils,
     xml2

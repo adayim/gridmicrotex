@@ -87,7 +87,7 @@ geom_markdown <- function(mapping = NULL, data = NULL, stat = "identity",
   # As geom_latex(): only what the caller gave, checked now; the grob fills
   # the rest from latex_options() when the plot is drawn.
   given <- list(style = style)
-  if (!missing(math_font)) given$math_font <- math_font
+  if (!missing(math_font)) given$math_font <- .check_math_font(math_font)
   if (!missing(render_mode)) given$render_mode <- match.arg(render_mode)
   if (!missing(justify)) {
     .check_justify(justify)
@@ -176,6 +176,7 @@ element_markdown <- function(math_font = "", fontsize = NULL,
                              render_mode = c("typeface", "path"),
                              justify = FALSE, style = NA, width = NA, ...) {
   .apply_opts("math_font", "render_mode", "justify")
+  .check_math_font(math_font)
   render_mode <- match.arg(render_mode)
   .check_justify(justify)
   if (!requireNamespace("ggplot2", quietly = TRUE)) {

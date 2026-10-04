@@ -11,7 +11,11 @@ using namespace std;
 using namespace microtex;
 
 sptr<Box> BigSymbolAtom::createBox(Env& env) {
-  auto b = microtex::createVDelim(_delim, env, _size);
+  // \big, \Big, \bigg and \Bigg are 1.2, 1.8, 2.4 and 3 times the size, as TeX sets
+  // them: the first variant of the delimiter that is so tall, else its assembly.
+  static const float kTimes[] = {1.f, 1.2f, 1.8f, 2.4f, 3.f};
+  const float times = kTimes[std::min(std::max(_size, 0), 4)];
+  auto b = microtex::createVDelim(_delim->name(), env, times * Units::fsize(UnitType::em, 1.f, env), false);
   const auto axis = env.mathConsts().axisHeight() * env.scale();
   b->_shift = -(b->vlen() / 2 - b->_height) - axis;
   return sptrOf<HBox>(b);
@@ -52,6 +56,10 @@ sptr<Box> RaiseAtom::createBox(Env& env) {
 
 sptr<Box> ResizeAtom::createBox(Env& env) {
   auto box = _base->createBox(env);
+  // Only if it is wider than the line, which there may be none of.
+  if (_atMost && (env.textWidth() == POS_INF || box->_width <= Units::fsize(_width, env))) {
+    return box;
+  }
   // A size the box does not have cannot be scaled to: it is ignored, as
   // `!` would be.
   const bool w = _width.isValid() && box->_width > 0;
@@ -164,6 +172,12 @@ sptr<Box> VCenterAtom::createBox(Env& env) {
   return hb;
 }
 
+sptr<Box> MathChoiceAtom::createBox(Env& env) {
+  const TexStyle style = env.style();
+  const int k = style <= TexStyle::display1 ? 0 : style <= TexStyle::text1 ? 1 : style <= TexStyle::script1 ? 2 : 3;
+  return _choice[k] == nullptr ? sptrOf<StrutBox>(0.f, 0.f, 0.f, 0.f) : _choice[k]->createBox(env);
+}
+
 LongDivAtom::LongDivAtom(long divisor, long dividend) : _divisor(divisor), _dividend(dividend) {
   _halign = Alignment::right;
   setAlignTop(true);
@@ -223,10 +237,29 @@ void LongDivAtom::calculate(vector<string>& results) const {
 sptr<Box> CancelAtom::createBox(Env& env) {
   auto box = _base->createBox(env);
   vector<float> lines;
+  const float rt = env.mathConsts().fractionRuleThickness() * env.scale();
+  // y runs down from the top of the box: a slash, as the cancel package's
+  // \cancel draws it, goes from the bottom left to the top right.
   if (_cancelType == SLASH) {
-    lines = {0, 0, box->_width, box->_height + box->_depth};
+    lines = {0, box->_height + box->_depth, box->_width, 0};
   } else if (_cancelType == BACKSLASH) {
-    lines = {box->_width, 0, 0, box->_height + box->_depth};
+    lines = {0, 0, box->_width, box->_height + box->_depth};
+  } else if (_cancelType == ARROW) {
+    // \cancelto: the slash, ending in an arrow head at the top right.
+    const float w = box->_width;
+    const float h = box->_height + box->_depth;
+    lines = {0, h, w, 0};
+    const float len = std::sqrt(w * w + h * h);
+    if (len > 0) {
+      const float head = std::min(len, std::max(0.25f * len, 4 * rt));
+      const float bx = -w / len, by = h / len;  // back along the shaft
+      const float theta = 0.45f;
+      for (const float sign : {1.f, -1.f}) {
+        const float c = std::cos(theta), s = sign * std::sin(theta);
+        lines.insert(
+          lines.end(), {w, 0.f, w + head * (bx * c - by * s), head * (bx * s + by * c)});
+      }
+    }
   } else if (_cancelType == CROSS) {
     lines = {
       0,
@@ -248,7 +281,6 @@ sptr<Box> CancelAtom::createBox(Env& env) {
     return box;
   }
 
-  const float rt = env.mathConsts().fractionRuleThickness() * env.scale();
   auto overlap = sptrOf<LineBox>(lines, rt);
   overlap->_width = box->_width;
   overlap->_height = box->_height;

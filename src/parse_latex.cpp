@@ -36,6 +36,24 @@ static Rcpp::DataFrame diagnostics_of_last_parse() {
     return out;
 }
 
+// Where the equation count and the labels stand after the parse just done,
+// for a host that parses a document in pieces and passes them on: the
+// count, and the labels as a named character vector.
+static void numbering_of_last_parse(Rcpp::List& result) {
+    const auto& state = front::lastNumbering();
+    Rcpp::CharacterVector values(state.labels.size());
+    Rcpp::CharacterVector keys(state.labels.size());
+    R_xlen_t i = 0;
+    for (const auto& kv : state.labels) {
+        keys[i] = Rcpp::String(kv.first, CE_UTF8);
+        values[i] = Rcpp::String(kv.second, CE_UTF8);
+        i++;
+    }
+    values.attr("names") = keys;
+    result.attr("eq_end") = state.equation;
+    result.attr("labels") = values;
+}
+
 // RAII guard: restores the global render-mode flag on scope exit
 struct RenderModeGuard {
     ~RenderModeGuard() { MicroTeX::setRenderGlyphUsePath(true); }
@@ -91,7 +109,10 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            std::string tex_style = "",
                            bool justify = false,
                            bool optimal_break = false,
-                           std::string input_mode = "math") {
+                           std::string input_mode = "math",
+                           int eq_start = 0,
+                           Rcpp::Nullable<Rcpp::CharacterVector> label_keys = R_NilValue,
+                           Rcpp::Nullable<Rcpp::CharacterVector> label_values = R_NilValue) {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
@@ -117,6 +138,25 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // text run around them -- which is what lets the backend order
     // right-to-left text correctly and kern across spaces.
     RowAtom::_mergeText = (max_width <= 0);
+
+    // Where this input starts counting equations, and the labels it knows
+    // from the pieces before it. Consumed by the parse; a failed one must
+    // not leave them for the next.
+    struct NumberingGuard {
+        ~NumberingGuard() { front::setStartNumbering(front::NumberingState()); }
+    } numbering_guard;
+    {
+        front::NumberingState start;
+        start.equation = eq_start;
+        if (label_keys.isNotNull() && label_values.isNotNull()) {
+            const Rcpp::CharacterVector keys(label_keys);
+            const Rcpp::CharacterVector values(label_values);
+            for (R_xlen_t i = 0; i < keys.size() && i < values.size(); i++) {
+                start.labels[Rcpp::as<std::string>(keys[i])] = Rcpp::as<std::string>(values[i]);
+            }
+        }
+        front::setStartNumbering(std::move(start));
+    }
 
     // Decode foreground color
     color fg = decodeColor(fg_color);
@@ -482,6 +522,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
     // What the new front end found wrong with the input and recovered
     // from; R turns it into warnings.
     result.attr("diagnostics") = diagnostics_of_last_parse();
+    numbering_of_last_parse(result);
 
     return result;
 }

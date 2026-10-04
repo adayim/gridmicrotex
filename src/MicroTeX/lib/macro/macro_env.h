@@ -10,6 +10,7 @@
 #include "atom/atom_matrix.h"
 #include "core/formula.h"
 #include "env/units.h"
+#include "front/tblr.h"
 #include "macro/macro.h"
 #include "macro/macro_decl.h"
 #include "utils/exceptions.h"
@@ -27,6 +28,46 @@ inline cmdmacro(matrixATATenv) {
   const auto arr = args.alignment(1);
   arr->checkDimensions();
   return sptrOf<MatrixAtom>(args.isPartial(), arr, MatrixType::matrix);
+}
+
+// LaTeX's own: three columns, right, centre, left, and numbered rows.
+inline cmdmacro(eqnarrayATATenv) {
+  const auto arr = args.alignment(1);
+  arr->checkDimensions();
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, "rcl", true);
+}
+
+// tabular*{width}{columns} and tabularx{width}{columns}.
+inline sptr<Atom> widthTable(CommandArgs& args, bool spread) {
+  const auto arr = args.alignment(3);
+  arr->checkDimensions();
+  auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(2), true);
+  table->setTableWidth(Units::getDimen(args.text(1)), spread);
+  return table;
+}
+
+inline cmdmacro(tabularstarATATenv) {
+  return widthTable(args, true);
+}
+
+inline cmdmacro(tabularxATATenv) {
+  return widthTable(args, false);
+}
+
+// longtable[position]{columns}: a tabular. The lowering has set its rows in
+// order, and its caption above.
+inline cmdmacro(longtableATATenv) {
+  const auto arr = args.alignment(2);
+  arr->checkDimensions();
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
+}
+
+// tabularray's tblr[options]{spec}: a tabular, of the columns its spec gives.
+inline cmdmacro(tblrATATenv) {
+  const auto arr = args.alignment(2);
+  arr->checkDimensions();
+  const auto spec = front::parseTblr("", args.text(1));
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, front::tblrColumns(spec, arr->cols()), true);
 }
 
 inline cmdmacro(arrayATATenv) {
@@ -146,6 +187,14 @@ inline cmdmacro(hline) {
   return sptrOf<HlineAtom>();
 }
 
+// arydshln's \hdashline: a dashed rule across the table.
+inline cmdmacro(hdashline) {
+  if (args.alignmentHere() == nullptr) throw ex_parse("The macro \\hdashline only available in array mode!");
+  auto a = sptrOf<HlineAtom>();
+  a->setDashed(true);
+  return a;
+}
+
 inline cmdmacro(thickhline) {
   if (args.alignmentHere() == nullptr)
     throw ex_parse("The macro \\thickhline only available in array mode!");
@@ -166,6 +215,22 @@ inline cmdmacro(specialrule) {
   } else {
     a->setThicknessScale(2.f);  // an unreadable thickness: \toprule's
   }
+  return a;
+}
+
+// booktabs' \addlinespace[len]: space of that height between two rows, or
+// .5em.
+inline cmdmacro(addlinespace) {
+  if (args.alignmentHere() == nullptr)
+    throw ex_parse("The macro \\addlinespace only available in array mode!");
+  auto a = sptrOf<HlineAtom>();
+  const Dimen gap = Units::getDimen(args.text(1));
+  if (gap.isValid()) {
+    a->setThickness(gap.val, gap.unit);
+  } else {
+    a->setThickness(0.5f, UnitType::em);
+  }
+  a->setBlank(true);
   return a;
 }
 
@@ -417,7 +482,8 @@ inline std::vector<std::string> listParts(const std::string& item) {
   std::vector<std::string> parts{""};
   size_t i = 0;
   while (i < item.size()) {
-    if (!at(i, "\\begin{itemize}") && !at(i, "\\begin{enumerate}")) {
+    if (!at(i, "\\begin{itemize}") && !at(i, "\\begin{enumerate}") &&
+        !at(i, "\\begin{description}")) {
       if (item[i] == '\\' && i + 1 < item.size()) parts.back() += item[i++];
       parts.back() += item[i++];
       continue;
@@ -450,7 +516,8 @@ inline std::vector<std::string> listParts(const std::string& item) {
 inline sptr<Atom> listBuild(
   CommandArgs& args,
   const std::vector<std::string>& items,
-  const std::function<std::string(int)>& marker
+  const std::function<std::string(int)>& marker,
+  bool description = false
 ) {
   if (items.empty()) return nullptr;
   std::string s;
@@ -458,9 +525,21 @@ inline sptr<Atom> listBuild(
     if (!s.empty()) s += "\\\\";
     s += lead + "&" + content;
   };
+  // An item's own label stands for its marker, and a labelled item is no
+  // step of the counter, as in LaTeX.
+  int counted = 0;
   for (size_t i = 0; i < items.size(); i++) {
-    const std::string mark = marker((int)i + 1);
-    const auto parts = listParts(items[i]);
+    std::string body = items[i];
+    const std::string label = listPeelOptional(body);
+    std::string mark;
+    if (description) {
+      mark = label.empty() ? "" : "\\textbf{" + label + "}";
+    } else if (!label.empty()) {
+      mark = args.isMathMode() ? "\\text{" + label + "}" : label;
+    } else {
+      mark = marker(++counted);
+    }
+    const auto parts = listParts(body);
     bool first = true;
     for (size_t k = 0; k < parts.size(); k++) {
       const std::string part = listTrim(parts[k]);
@@ -477,7 +556,8 @@ inline sptr<Atom> listBuild(
   }
   const auto arr = args.alignmentOfText(s);
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(args.isPartial(), arr, "r@{\\quad}X", false);
+  const char* columns = description ? "l@{\\quad}X" : "r@{\\quad}X";
+  return sptrOf<MatrixAtom>(args.isPartial(), arr, columns, false);
 }
 
 inline cmdmacro(itemizeATATenv) {
@@ -494,6 +574,12 @@ inline cmdmacro(enumerateATATenv) {
   return listBuild(args, listSplitItems(body), [&](int n) {
     return "\\mathrm{" + listFormatLabel(opt, n) + "}";
   });
+}
+
+// A description: each item's label, in bold, hangs before its text.
+inline cmdmacro(descriptionATATenv) {
+  std::string body = args.text(1);
+  return listBuild(args, listSplitItems(body), [](int) { return std::string(); }, true);
 }
 
 // endregion

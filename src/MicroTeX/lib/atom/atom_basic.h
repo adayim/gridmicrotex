@@ -139,6 +139,10 @@ private:
   UnitType _thicknessUnit = UnitType::none;
   int _colStart, _colEnd;
   color _color;
+  // Draws nothing, and leaves the thickness as space (\addlinespace).
+  bool _blank = false;
+  // Dashes, not a line (\hdashline).
+  bool _dashed = false;
 
 public:
   HlineAtom() noexcept
@@ -149,11 +153,15 @@ public:
 
   inline void setWidth(float w) { _width = w; }
 
+  inline void setDashed(bool d) { _dashed = d; }
+
   inline void setShift(float s) { _shift = s; }
 
   inline void setColor(color c) { _color = c; }
 
   inline void setThicknessScale(float s) { _thicknessScale = s; }
+
+  inline void setBlank(bool blank) { _blank = blank; }
 
   inline void setThickness(float value, UnitType unit) {
     _thickness = value;
@@ -209,6 +217,9 @@ public:
    * or a predefined color name. Return black if not found.
    */
   static color getColor(std::string name);
+
+  /** Whether `name` is a colour that is defined: one of the names, not a guess. */
+  static bool hasName(std::string name);
 
   /** Define a color with given name */
   static void defineColor(const std::string& name, color c);

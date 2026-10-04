@@ -5,7 +5,9 @@
 
 #include "atom/atom_basic.h"
 #include "atom/atom_misc.h"
+#include "atom/atom_scripts.h"
 #include "atom/atom_sideset.h"
+#include "atom/diagram_atom.h"
 #include "core/formula.h"
 #include "core/split.h"
 #include "graphic/graphic.h"
@@ -66,6 +68,15 @@ inline cmdmacro(xcancel) {
   return _cancel(CancelAtom::CROSS, args);
 }
 
+// cancel's \cancelto{value}{base}: the base struck by an arrow, with the
+// value at its tip as a superscript.
+inline cmdmacro(cancelto) {
+  auto value = args.formula(1);
+  auto base = args.formula(2);
+  if (base == nullptr) throw ex_parse("Cancel content must not be empty!");
+  return sptrOf<ScriptsAtom>(sptrOf<CancelAtom>(base, CancelAtom::ARROW), nullptr, value);
+}
+
 // ulem's: a strike-out and an underline that break with their text, which
 // is text in text and math in math.
 inline cmdmacro(sout) {
@@ -109,8 +120,36 @@ inline cmdmacro(phantom) {
   return sptrOf<PhantomAtom>(args.formula(1, args.isMathMode()), true, true, true);
 }
 
+inline cmdmacro(vcenter) {
+  const auto body = args.formula(1, args.isMathMode());
+  return sptrOf<VCenterAtom>(body != nullptr ? body : sptrOf<EmptyAtom>());
+}
+
+inline cmdmacro(enclose) {
+  const auto& name = args.text(0);
+  using K = EncloseAtom::Kind;
+  const K kind = name == "overlinesegment" ? K::overSegment
+                 : name == "underlinesegment" ? K::underSegment
+                 : name == "angl"             ? K::angle
+                 : name == "phase"            ? K::phase
+                 : name == "overleftharpoon"  ? K::harpoonLeft
+                 : name == "overrightharpoon" ? K::harpoonRight
+                 : name == "Overrightarrow"   ? K::doubleArrow
+                                              : K::circle;
+  return sptrOf<EncloseAtom>(kind, args.formula(1, args.isMathMode()));
+}
+
+// KaTeX's: the first in text, the second in math.
+inline cmdmacro(TextOrMath) {
+  return args.isMathMode() ? args.formula(2, true) : args.formula(1, false);
+}
+
+inline cmdmacro(mathchoice) {
+  return sptrOf<MathChoiceAtom>(args.formula(1), args.formula(2), args.formula(3), args.formula(4));
+}
+
 inline cmdmacro(surd) {
-  return sptrOf<VCenterAtom>(SymbolAtom::get("surdsign"));
+  return sptrOf<VCenterAtom>(SymbolAtom::get("sqrt"));
 }
 
 inline cmdmacro(lmoustache) {

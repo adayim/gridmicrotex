@@ -12,7 +12,10 @@
   justify     = NULL,
   line_break  = NULL,
   markdown_style = NULL,
-  device_math   = NULL
+  device_math   = NULL,
+  main_font   = NULL,
+  sans_font   = NULL,
+  mono_font   = NULL
 )
 
 # Validate the `justify` argument. Kept here so latex_grob(),
@@ -37,7 +40,8 @@
 #' Size and line spacing are set with `gp` (`fontsize`, `cex`,
 #' `lineheight`), not here.
 #'
-#' @param math_font Math font; see [available_math_fonts()].
+#' @param math_font Math font: a loaded font with a math table; see
+#'   [available_fonts()].
 #' @param render_mode `"typeface"` or `"path"`; see [latex_grob()].
 #' @param tex_style `""`, `"display"`, `"text"`, `"script"` or
 #'   `"scriptscript"`; see [latex_grob()].
@@ -58,9 +62,15 @@
 #'   `legend()` box. Measure it with [latex_dims()] and make room with
 #'   `par(mar = )`. See `vignette("base-graphics")` for the rules and
 #'   limitations.
+#' @param main_font,sans_font,mono_font The fonts for text: the body, `\textsf`
+#'   and `\sffamily`, and `\texttt`, `\ttfamily` and `\verb`. Each is the
+#'   name of a font given to [load_font()], an installed family, or a font
+#'   file, which is loaded. `NULL` keeps the defaults: `gp$fontfamily` (or
+#'   `"sans"`) for the body, `"sans"` and `"mono"`. A `gp$fontfamily` in a
+#'   call wins over `main_font`.
 #' @return The previous settings, invisibly. With no arguments, the
 #'   current settings.
-#' @seealso [available_math_fonts()], [latex_grob()]
+#' @seealso [available_fonts()], [load_font()], [latex_grob()]
 #' @export
 #'
 #' @examples
@@ -85,7 +95,9 @@
 latex_options <- function(math_font = NULL, render_mode = NULL,
                           tex_style = NULL, input_mode = NULL,
                           justify = NULL, line_break = NULL,
-                          markdown_style = NULL, device_math = NULL) {
+                          markdown_style = NULL, device_math = NULL,
+                          main_font = NULL, sans_font = NULL,
+                          mono_font = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -96,50 +108,48 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
   # function returns be handed back to restore the settings it describes,
   # unset ones included -- options() works the same way. Treating NULL as
   # "leave alone" made that restore nothing.
-  record <- function(name, value) {
-    .latex_options$values[name] <- list(value)
-  }
+  # Every value is checked before any is applied: a call that fails changes
+  # nothing, so the settings it was given do not half-apply.
+  given <- list()
+  take <- function(name, value) given[name] <<- list(value)
 
   if (!missing(math_font)) {
-    if (is.null(math_font)) {
-      .reset_math_font()
-    } else {
+    if (!is.null(math_font)) {
       stopifnot(is.character(math_font), length(math_font) == 1L)
-      .set_math_font(math_font)
     }
-    record("math_font", math_font)
+    take("math_font", math_font)
   }
   if (!missing(render_mode)) {
     if (!is.null(render_mode)) {
       render_mode <- match.arg(render_mode, c("typeface", "path"))
     }
-    record("render_mode", render_mode)
+    take("render_mode", render_mode)
   }
   if (!missing(tex_style)) {
     if (!is.null(tex_style)) .check_tex_style(tex_style)
-    record("tex_style", tex_style)
+    take("tex_style", tex_style)
   }
   if (!missing(input_mode)) {
     if (!is.null(input_mode)) {
       input_mode <- match.arg(input_mode, c("math", "mixed", "document"))
     }
-    record("input_mode", input_mode)
+    take("input_mode", input_mode)
   }
   if (!missing(justify)) {
     if (!is.null(justify)) .check_justify(justify)
-    record("justify", justify)
+    take("justify", justify)
   }
   if (!missing(line_break)) {
     if (!is.null(line_break)) {
       line_break <- match.arg(line_break, c("greedy", "optimal"))
     }
-    record("line_break", line_break)
+    take("line_break", line_break)
   }
   if (!missing(markdown_style)) {
     # Coerce here rather than at each use, so a bad value is rejected by
     # the call that set it.
     if (!is.null(markdown_style)) markdown_style <- .md_as_style(markdown_style)
-    record("markdown_style", markdown_style)
+    take("markdown_style", markdown_style)
   }
   if (!missing(device_math)) {
     if (!is.null(device_math) &&
@@ -147,13 +157,25 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
          is.na(device_math))) {
       stop("`device_math` must be TRUE or FALSE.", call. = FALSE)
     }
-    # Setting this one has an effect on open devices, in the same way
-    # `math_font` switches the engine font rather than only recording a
-    # preference. Flip the devices before recording, so a failure in the
-    # C layer leaves the option reading FALSE rather than lying.
-    .gm_base_set(isTRUE(device_math))
-    record("device_math", device_math)
+    take("device_math", device_math)
   }
+  for (role in c("main_font", "sans_font", "mono_font")) {
+    if (eval(call("missing", as.name(role)))) next
+    value <- get(role)
+    if (!is.null(value)) value <- .resolve_font_option(value, role)
+    take(role, value)
+  }
+
+  # math_font and device_math have an effect beyond the record: the engine
+  # font, and the open devices. The engine font goes first, as the one that
+  # can still fail (a font that is not loaded); the devices are flipped
+  # before recording, so a failure in the C layer leaves the option reading
+  # FALSE rather than lying.
+  if ("math_font" %in% names(given)) {
+    if (is.null(given$math_font)) .reset_math_font() else .set_math_font(given$math_font)
+  }
+  if ("device_math" %in% names(given)) .gm_base_set(isTRUE(given$device_math))
+  for (name in names(given)) .latex_options$values[name] <- given[name]
   invisible(old)
 }
 
@@ -174,9 +196,30 @@ reset_latex_options <- function() {
     justify     = NULL,
     line_break  = NULL,
     markdown_style = NULL,
-    device_math   = NULL
+    device_math   = NULL,
+    main_font   = NULL,
+    sans_font   = NULL,
+    mono_font   = NULL
   )
   invisible(NULL)
+}
+
+# The name a font option's value stands for: a registered font, one of R's
+# own families, or else a file or an installed family, which is loaded. The
+# value recorded is the name, so a path is read once.
+.resolve_font_option <- function(x, what) {
+  if (!is.character(x) || length(x) != 1L || is.na(x) || !nzchar(x)) {
+    stop("`", what, "` must be a single font name or file.", call. = FALSE)
+  }
+  if (x %in% c("sans", "serif", "mono")) return(x)
+  registered <- .font_lookup(x)
+  if (!is.null(registered)) return(registered)
+  tryCatch(
+    load_font(x),
+    error = function(e) {
+      stop("`", what, "`: ", conditionMessage(e), call. = FALSE)
+    }
+  )
 }
 
 # Internal: resolve an argument against latex_options().

@@ -3,6 +3,7 @@
 #include "macro/macro_boxes.h"
 #include "macro/macro_colors.h"
 #include "macro/macro_delims.h"
+#include "macro/macro_diagram.h"
 #include "macro/macro_env.h"
 #include "macro/macro_fonts.h"
 #include "macro/macro_frac.h"
@@ -37,6 +38,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
 #define mac mac4
   mac(2, 1, macro_rule, "rule"),
   mac(1, 1, macro_includegraphics, "includegraphics"),
+  mac(0, 1, macro_addlinespace, "addlinespace"),
   mac(2, 1, macro_cfrac, "cfrac"),
   // region arrows
   mac(1, 1, macro_xarrow, "xleftarrow"),
@@ -48,6 +50,10 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, 1, macro_xarrow, "xhookleftarrow"),
   mac(1, 1, macro_xarrow, "xhookrightarrow"),
   mac(1, 1, macro_xarrow, "xmapsto"),
+  mac(1, 1, macro_xarrow, "xtwoheadrightarrow"),
+  mac(1, 1, macro_xarrow, "xtwoheadleftarrow"),
+  mac(1, 1, macro_xarrow, "xlongequal"),
+  mac(1, 1, macro_xarrow, "xtofrom"),
   mac(1, 1, macro_xarrow, "xrightharpoondown"),
   mac(1, 1, macro_xarrow, "xrightharpoonup"),
   mac(1, 1, macro_xarrow, "xleftharpoondown"),
@@ -73,6 +79,13 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_matrixATATenv, "matrix@@env"),
   mac(2, macro_arrayATATenv, "array@@env"),
   mac(2, macro_arrayATATenv, "tabular@@env"),
+  mac(2, macro_eqnarrayATATenv, "eqnarray@@env"),
+  mac(3, macro_tabularstarATATenv, "tabular*@@env"),
+  mac(3, macro_tabularxATATenv, "tabularx@@env"),
+  mac(2, macro_longtableATATenv, "longtable@@env"),
+  mac(2, macro_tblrATATenv, "tblr@@env"),
+  mac(2, macro_tblrATATenv, "talltblr@@env"),
+  mac(2, macro_tblrATATenv, "longtblr@@env"),
   mac(2, macro_alignATATenv, "align@@env"),
   mac(2, macro_alignedATATenv, "aligned@@env"),
   mac(2, macro_flalignATATenv, "flalign@@env"),
@@ -83,9 +96,13 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(2, macro_gatheredATATenv, "gathered@@env"),
   mac(1, macro_itemizeATATenv, "itemize@@env"),
   mac(1, macro_enumerateATATenv, "enumerate@@env"),
+  mac(1, macro_descriptionATATenv, "description@@env"),
+  mac(1, macro_tikzcdATATenv, "tikzcd@@env"),
+  mac(1, macro_CDATATenv, "CD@@env"),
   mac(3, macro_multicolumn, "multicolumn"),
   mac(0, macro_hline, "hline"),
   mac(0, macro_thickhline, "thickhline"),
+  mac(0, macro_hdashline, "hdashline"),
   mac(3, macro_specialrule, "specialrule"),
   mac(1, macro_cline, "cline"),
   mac(3, macro_multirow, "multirow"),
@@ -204,11 +221,13 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_accentbiss, "u"),
   mac(1, macro_accentbiss, "v"),
   mac(1, macro_accentbiss, "r"),
+  mac(1, macro_accentbiss, "H"),
   // endregion
   // region math accents
   mac(1, macro_accents, "not"),
   mac(1, macro_accents, "hat"),
   mac(1, macro_accents, "widehat"),
+  mac(1, macro_accents, "widecheck"),
   mac(1, macro_accents, "check"),
   mac(1, macro_accents, "tilde"),
   mac(1, macro_accents, "widetilde"),
@@ -227,6 +246,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(2, macro_underset, "underset"),
   mac(2, macro_underaccent, "underaccent"),
   mac(1, macro_undertilde, "undertilde"),
+  mac(1, macro_undertilde, "utilde"),
   // endregion
   // region microtex styles
   mac(1, macro_everymath, "everymath"),
@@ -287,6 +307,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_cancel, "cancel"),
   mac(1, macro_bcancel, "bcancel"),
   mac(1, macro_xcancel, "xcancel"),
+  mac(2, macro_cancelto, "cancelto"),
   mac(1, macro_sout, "sout"),
   mac(1, macro_uline, "uline"),
   mac(6, macro_zstack, "stackinset"),
@@ -300,6 +321,17 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_phantom, "phantom"),
   mac(1, macro_hphantom, "hphantom"),
   mac(1, macro_vphantom, "vphantom"),
+  mac(1, macro_vcenter, "vcenter"),
+  mac(1, macro_enclose, "overlinesegment"),
+  mac(1, macro_enclose, "underlinesegment"),
+  mac(1, macro_enclose, "angl"),
+  mac(1, macro_enclose, "overleftharpoon"),
+  mac(1, macro_enclose, "overrightharpoon"),
+  mac(1, macro_enclose, "Overrightarrow"),
+  mac(1, macro_enclose, "phase"),
+  mac(1, macro_enclose, "textcircled"),
+  mac(4, macro_mathchoice, "mathchoice"),
+  mac(2, macro_TextOrMath, "TextOrMath"),
   mac(0, macro_spATbreve, "sp@breve"),
   mac(0, macro_nokern, "nokern"),
 };

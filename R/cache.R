@@ -138,8 +138,46 @@ latex_cache_info <- function() {
     # define_macro() macros are expanded in C++, so a layout depends on them
     # without `tex` showing it.
     "|", persistent_macro_generation_cpp(),
+    # So are the fonts: one loaded since changes what a name draws and
+    # measures as, and the sans and mono roles change \textsf and \texttt.
+    "|", .font_generation(), "/", .opt("sans_font"), "/", .opt("mono_font"),
     sep = ""
   )
+}
+
+# Equation numbers across the pieces of one document. A markdown box is laid
+# out a block at a time and each block is parsed on its own, but its displays
+# are numbered as one document's: the count goes on from block to block and
+# a \eqref may name a label in a later one. While a block is parsed,
+# `.numbering$ctx` holds where it starts counting and every label the
+# blocks define (.md_number_blocks()); NULL elsewhere, where an input starts
+# at (1) and knows only its own labels.
+.numbering <- new.env(parent = emptyenv())
+.numbering$ctx <- NULL
+
+.with_numbering <- function(ctx, expr) {
+  if (is.null(ctx)) return(expr)
+  old <- .numbering$ctx
+  .numbering$ctx <- ctx
+  on.exit(.numbering$ctx <- old, add = TRUE)
+  expr
+}
+
+# Where `tex` ends counting equations and the labels there are by then, read
+# from a parse started in `state`: list(start, labels).
+#
+# The parse is cached like any other, so it is measured as one with these
+# arguments would be (the default text font, and the roles); and it is quiet,
+# since the parse that draws the block reports what is wrong with it.
+.numbering_scan <- function(tex, state) {
+  register_text_measurer(.make_text_measurer(grid::gpar(), .font_roles()))
+  on.exit(clear_text_measurer(), add = TRUE)
+  layout <- suppressWarnings(.with_numbering(state, .parse_latex_cached(
+    tex = tex, text_size = 20, line_space = 10, fg_color = "#000000",
+    max_width = 0, math_font = "", main_font = "", use_path = TRUE,
+    input_mode = "document")))
+  list(start = attr(layout, "eq_end") %||% state$start,
+       labels = attr(layout, "labels") %||% state$labels)
 }
 
 # Cached wrapper around parse_latex_cpp. Same signature plus `text_family`
@@ -157,11 +195,20 @@ latex_cache_info <- function() {
   # would have stopped.
   lenient <- !.image_state$strict ||
     (identical(input_mode, "document") && !isTRUE(.image_state$label))
+  # Where it starts counting equations and what labels it knows: not in
+  # `tex`, but in what it draws.
+  ctx <- .numbering$ctx
+  eq_start <- as.integer(ctx$start %||% 0L)
+  labels <- ctx$labels %||% character(0)
+  numbered <- if (is.null(ctx)) "" else
+    paste0("+eq", eq_start, ":", paste(names(labels), labels, sep = "=",
+                                       collapse = ";"))
   key <- .parse_cache_key(tex, text_size, line_space, fg_color, max_width,
                           math_font, main_font, text_family, use_path,
                           tex_style, justify, optimal_break,
                           device = .cache_device(),
-                          input_mode = paste0(input_mode, if (lenient) "+lenient"))
+                          input_mode = paste0(input_mode,
+                                              if (lenient) "+lenient", numbered))
   hit <- .cache_get(key, valid = .images_current)
   if (!is.null(hit)) return(hit)
   # Measuring needs a device. With none open, one pdf(NULL) serves the
@@ -178,11 +225,17 @@ latex_cache_info <- function() {
   used <- new.env(parent = emptyenv())
   register_image_resolver(.image_resolver(text_size, max_width, used))
   on.exit(clear_image_resolver(), add = TRUE)
+  # And the fonts a document names (R/font-spec.R).
+  register_font_resolver(.font_resolver())
+  on.exit(clear_font_resolver(), add = TRUE)
   parse <- function() parse_latex_cpp(
     tex = tex, text_size = text_size, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = use_path, tex_style = tex_style,
-    justify = justify, optimal_break = optimal_break, input_mode = input_mode
+    justify = justify, optimal_break = optimal_break, input_mode = input_mode,
+    eq_start = eq_start,
+    label_keys = if (length(labels)) names(labels),
+    label_values = if (length(labels)) unname(labels)
   )
   layout <- if (lenient) .images_lenient(parse()) else parse()
   if (length(used$stamps)) attr(layout, "images") <- used$stamps
