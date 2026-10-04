@@ -14,6 +14,30 @@
   and tables stay within their box.
 - New `latex_options(device_math = TRUE)` renders `$…$` math in base
   graphics labels.
+- New
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  names a font file or an installed family, with its bold and italic
+  files, and
+  [`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md)
+  lists them.
+  [`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
+  takes `main_font`, `sans_font` and `mono_font`, the fonts of the body,
+  `\textsf` and `\texttt`.
+  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/fonts-deprecated.md),
+  [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/fonts-deprecated.md)
+  and
+  [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/fonts-deprecated.md)
+  are superseded by
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  and
+  [`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md);
+  they still work.
+- Text in a font given to
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  is measured and drawn from the font file, so it looks the same on
+  every device, base [`pdf()`](https://rdrr.io/r/grDevices/pdf.html)
+  included, where a font file never worked before. Other families are
+  still the device’s.
 - An image that cannot be drawn is now an error saying why, figures load
   about ten times faster, and many bugs are fixed.
 
@@ -78,8 +102,6 @@ CRAN release: 2026-08-21
   `<span class=>` styles an inline run.
 - New `justify` and `line_break` arguments control paragraph line
   breaking.
-- New `\gmfontfamily{family}{content}` sets the font for one run of
-  text.
 - `\includegraphics[width=,height=,scale=,keepaspectratio]{file}` draws
   PNG, JPEG and SVG images inline in a formula; it previously parsed and
   drew nothing. The extension may be omitted and `\graphicspath{}` is
@@ -87,11 +109,12 @@ CRAN release: 2026-08-21
   sharp at any output resolution.
 - New `p{len}` column type gives `tabular` fixed-width, wrapping cells.
 - `\url{}` and `\href{}{}` render as styled text instead of literally.
-- `load_font()` is renamed
-  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md);
+- [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  is renamed
+  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/fonts-deprecated.md);
   the old name is deprecated.
 - `check_fonts()` is renamed
-  [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md);
+  [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/fonts-deprecated.md);
   the old name is deprecated.
 - Bug fix: `\rotatebox` past a quarter turn drew text and glyphs 180
   degrees out, so a `\rotatebox{90}` label came out upside down.
@@ -169,8 +192,10 @@ CRAN release: 2026-06-01
 
 CRAN release: 2026-05-18
 
-- Self-contained `load_font()` example so CRAN’s donttest additional
-  checks no longer fail on the unreliable CTAN font download.
+- Self-contained
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  example so CRAN’s donttest additional checks no longer fail on the
+  unreliable CTAN font download.
 - New commands.
 
 ## gridmicrotex 0.0.2

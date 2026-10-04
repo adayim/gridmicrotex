@@ -363,24 +363,65 @@ grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)",
 
 ![](getting-started_files/figure-html/cjk-1.png)
 
-`\gmfontfamily{family}{text}` sets the font of one run, and `\textrm{}`
-returns to `gp$fontfamily`:
+`\textsf{}` and `\texttt{}` set text in the sans and mono fonts, and
+`\textrm{}` returns to `gp$fontfamily`:
 
 ``` r
 
 grid.newpage()
 grid.latex(
-  r"(\textsf{sans \textrm{body} sans} \quad \gmfontfamily{mono}{mono})",
+  r"(\textsf{sans \textrm{body} sans} \quad \texttt{mono})",
   gp = gpar(fontfamily = "serif")
 )
 ```
 
-![](getting-started_files/figure-html/gmfontfamily-1.png)
+![](getting-started_files/figure-html/textrm-1.png)
 
-`load_math_font("MyFont.otf")` adds any OpenType math font. Text fonts
-need no loading.
-[`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md)
-lists what is available.
+### Your own fonts
+
+[`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+names a font file, or an installed family, once, and loads an OpenType
+math font for `math_font` the same way. The name then works wherever a
+font is named: in `gp`, in
+[`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
+(`main_font`, `sans_font`, `mono_font`) and in the LaTeX itself, with
+the commands of fontspec and unicode-math (`\setmainfont`,
+`\setsansfont`, `\setmonofont`, `\setmathfont`, `\fontspec`,
+`\newfontfamily`) and `\fontfamily{...}\selectfont`, which also reads
+LaTeX’s family codes such as `ppl` for Palatino.
+
+``` r
+
+# A font file of your own, here the bundled Lete Sans Math
+otf <- system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex")
+load_font(otf, name = "My Font", bold = otf)
+
+grid.newpage()
+grid.latex(r"(\setmainfont{My Font} body, \textbf{bold} and
+          {\fontspec{STIX Two Math} another font})")
+```
+
+![](getting-started_files/figure-html/load-font-1.png)
+
+Text in a loaded font is drawn from its file on every device,
+[`pdf()`](https://rdrr.io/r/grDevices/pdf.html) included. `bold` and
+`italic` are the files of those faces, so `\textbf` and `\textit` use
+the real design.
+[`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md)
+lists what is loaded.
+
+An installed family is loaded by its name; its bold and italic faces are
+found on their own. The families installed differ from one system to the
+next, so this chunk is not run:
+
+``` r
+
+unique(systemfonts::system_fonts()$family)   # what is installed
+
+load_font("Georgia")                          # registered as "Georgia"
+latex_options(main_font = "Georgia")
+grid.latex(r"(Text in \textbf{Georgia} and $x^2$)")
+```
 
 ## Devices
 
@@ -477,10 +518,54 @@ grid.latex(r"($x^{2} + y_{i}$)", debug = TRUE)
 
 ![](getting-started_files/figure-html/debug-1.png)
 
+## Diagrams
+
+tikz-cd’s `tikzcd` and amscd’s `CD` draw commutative diagrams: objects
+in a grid joined by arrows. An arrow is written in the cell it leaves,
+with the direction it goes (`r`, `d`, `dr`, `rr`, …), a label in quotes
+(a prime puts it on the other side), and a style:
+
+``` r
+
+sq <- r"(\begin{tikzcd}
+A \arrow[r, "f"] \arrow[d, "g"'] \arrow[dr, dashed] & B \arrow[d, "h"] \\
+C \arrow[r, hook, "k"'] & D
+\end{tikzcd})"
+grid.newpage()
+grid.latex(sq, x = 0.5, y = 0.5, gp = gpar(fontsize = 14))
+```
+
+![](getting-started_files/figure-html/tikzcd-1.png)
+
+Styles include `hook`, `tail`, `two heads`, `mapsto`, `dashed`,
+`dotted`, `Rightarrow`, `equal`, `harpoon`, `squiggly`, `bend left`,
+`shift right`, `crossing over`, `phantom` and a colour name; labels take
+`description`, `near start` and `near end`; and `row sep` and
+`column sep` set the spacing. `CD` writes its arrows between the objects
+instead:
+
+``` r
+
+cd <- r"(\begin{CD}
+A @>f>> B \\
+@VgVV @VVhV \\
+C @>>k> D
+\end{CD})"
+bent <- r"(\begin{tikzcd}[column sep=large]
+A \arrow[r, "f", bend left] \arrow[r, "g"', bend right]
+  & B \arrow[r, two heads, mapsto] & C
+\end{tikzcd})"
+grid.newpage()
+grid.latex(cd, x = 0.2, y = 0.5, gp = gpar(fontsize = 14))
+grid.latex(bent, x = 0.68, y = 0.5, gp = gpar(fontsize = 14))
+```
+
+![](getting-started_files/figure-html/cd-1.png)
+
 ## Pasting LaTeX
 
-Tables from `knitr::kable(format = "latex")` or `xtable` can be pasted
-unchanged:
+Tables from `knitr::kable(format = "latex")`, kableExtra, `xtable`, gt
+and tinytable can be pasted unchanged:
 
 ``` r
 
@@ -506,13 +591,56 @@ grid.latex(snippet, gp = gpar(fontsize = 11))
 
 ![](getting-started_files/figure-html/pasted-1.png)
 
+A table is set to the `max_width` it is given, so
+`kable(booktabs = TRUE)` and a full-width kableExtra or gt table can be
+drawn as they are:
+
+``` r
+
+tab <- knitr::kable(head(mtcars[, 1:4], 3), format = "latex",
+                    booktabs = TRUE, digits = 1)
+grid.newpage()
+grid.latex(as.character(tab), input_mode = "document", max_width = 4 * 72,
+           x = 0.05, y = 0.95, hjust = 0, vjust = 1, gp = gpar(fontsize = 11))
+```
+
+![](getting-started_files/figure-html/kable-1.png)
+
+tinytable’s output is read as well:
+
+``` r
+
+tt <- r"(\begin{table}
+\centering
+\begin{tblr}{
+colspec={Q[]Q[r]Q[r]},
+hline{1,3}={1-3}{solid, black, 0.08em},
+hline{2}={1-3}{solid, black, 0.05em},
+row{2}={}{font=\bfseries, bg=yellow},
+}
+Term & Estimate & p \\
+Intercept & 2.14 & 0.003 \\
+Slope & 0.42 & 0.001 \\
+\end{tblr}
+\end{table})"
+grid.newpage()
+grid.latex(tt, input_mode = "document", max_width = 4 * 72,
+           x = 0.05, y = 0.95, hjust = 0, vjust = 1, gp = gpar(fontsize = 11))
+```
+
+![](getting-started_files/figure-html/tinytable-1.png)
+
+## What is supported
+
+Every function on KaTeX’s lists of supported functions is drawn, and
+more. A list of them, in KaTeX’s order, with how each is drawn, is on
+the package website as `supported-functions.pdf`.
+`source(system.file( "supported/build.R", package = "gridmicrotex"))`
+and `build_supported()` write it, and its LaTeX file, wherever you ask.
+
 ## Not supported
 
-- Pages, and numbering across a document: `\ref` draws `??`, `\cite`
-  draws `[?]`, and equations are not numbered.
-- Automatic hyphenation, TikZ, theorem environments, `\verb`, small caps
-  and the `description` list.
-- `\bfseries`, `\itshape` and similar switches. Use `\textbf{}`,
-  `\textit{}`, or `\bf` and `\it`.
+- Pages: `\pageref` draws `??` and `\cite` draws `[?]`.
+- Automatic hyphenation, and TikZ beyond `tikz-cd` diagrams.
 - `\usepackage` loads nothing; every supported command is built in.
 - A formula between two right-to-left words is not reordered.

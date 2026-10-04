@@ -34,6 +34,9 @@ blocks, use markdown_box_grob()."></head><body>
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="../articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Reference</h6></li>
+    <li><a class="dropdown-item" href="../supported-functions.pdf">What is supported (PDF)</a></li>
+    <li><a class="dropdown-item" href="../supported-functions.tex">What is supported (LaTeX source)</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -98,9 +101,8 @@ returns it invisibly.</p>
 <code>line-through</code>), <code>font-size</code> (such as <code>12pt</code>, <code>1.2em</code> or <code>smaller</code>)
 and <code>font-family</code>; other properties are ignored. Colours
 are R colour names, CSS names, <code>#rgb</code>, <code>#rrggbb</code> or <code><a href="https://rdrr.io/r/grDevices/rgb.html" class="external-link">rgb()</a></code>.
-<code>font-family</code> takes <code>serif</code>, <code>sans-serif</code>, <code>monospace</code> or an installed
-font; to use a font file that is not installed, register it first with
-<code><a href="https://systemfonts.r-lib.org/reference/register_font.html" class="external-link">systemfonts::register_font()</a></code>.</p>
+<code>font-family</code> takes <code>serif</code>, <code>sans-serif</code>, <code>monospace</code>, an installed
+font, or a font named with <code><a href="load_font.html">load_font()</a></code>.</p>
 <p>Tags nest and can hold markdown and math. Other tags are dropped and
 their text kept. Links keep their text only. Images must be local PNG,
 JPEG or SVG files. The characters U+E000 to U+E002 are removed from the

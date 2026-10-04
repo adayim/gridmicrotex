@@ -43,6 +43,9 @@
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="../articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Reference</h6></li>
+    <li><a class="dropdown-item" href="../supported-functions.pdf">What is supported (PDF)</a></li>
+    <li><a class="dropdown-item" href="../supported-functions.tex">What is supported (LaTeX source)</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -407,18 +410,54 @@ scripts:</p>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(如果 $x &gt; 0$ 则 $y = x^2$)"</span>,</span>
 <span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"sans"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/cjk-1.png" class="r-plt" alt="" width="55%"></p>
-<p><code>\gmfontfamily{family}{text}</code> sets the font of one run,
-and <code>\textrm{}</code> returns to <code>gp$fontfamily</code>:</p>
+<p><code>\textsf{}</code> and <code>\texttt{}</code> set text in the
+sans and mono fonts, and <code>\textrm{}</code> returns to
+<code>gp$fontfamily</code>:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
-<span>  <span class="st">r"(\textsf{sans \textrm{body} sans} \quad \gmfontfamily{mono}{mono})"</span>,</span>
+<span>  <span class="st">r"(\textsf{sans \textrm{body} sans} \quad \texttt{mono})"</span>,</span>
 <span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontfamily <span class="op">=</span> <span class="st">"serif"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="getting-started_files/figure-html/gmfontfamily-1.png" class="r-plt" alt="" width="85%"></p>
-<p><code>load_math_font("MyFont.otf")</code> adds any OpenType math
-font. Text fonts need no loading. <code><a href="../reference/check_math_fonts.html">check_math_fonts()</a></code> lists
-what is available.</p>
+<p><img src="getting-started_files/figure-html/textrm-1.png" class="r-plt" alt="" width="85%"></p>
+<div class="section level3">
+<h3 id="your-own-fonts">Your own fonts<a class="anchor" aria-label="anchor" href="#your-own-fonts"></a>
+</h3>
+<p><code><a href="../reference/load_font.html">load_font()</a></code> names a font file, or an installed family,
+once, and loads an OpenType math font for <code>math_font</code> the
+same way. The name then works wherever a font is named: in
+<code>gp</code>, in <code><a href="../reference/latex_options.html">latex_options()</a></code>
+(<code>main_font</code>, <code>sans_font</code>, <code>mono_font</code>)
+and in the LaTeX itself, with the commands of fontspec and unicode-math
+(<code>\setmainfont</code>, <code>\setsansfont</code>,
+<code>\setmonofont</code>, <code>\setmathfont</code>,
+<code>\fontspec</code>, <code>\newfontfamily</code>) and
+<code>\fontfamily{...}\selectfont</code>, which also reads LaTeX’s
+family codes such as <code>ppl</code> for Palatino.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># A font file of your own, here the bundled Lete Sans Math</span></span>
+<span><span class="va">otf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"fonts"</span>, <span class="st">"LeteSansMath.otf"</span>, package <span class="op">=</span> <span class="st">"gridmicrotex"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/load_font.html">load_font</a></span><span class="op">(</span><span class="va">otf</span>, name <span class="op">=</span> <span class="st">"My Font"</span>, bold <span class="op">=</span> <span class="va">otf</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\setmainfont{My Font} body, \textbf{bold} and</span></span>
+<span><span class="st">          {\fontspec{STIX Two Math} another font})"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/load-font-1.png" class="r-plt" alt="" width="85%"></p>
+<p>Text in a loaded font is drawn from its file on every device,
+<code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> included. <code>bold</code> and <code>italic</code>
+are the files of those faces, so <code>\textbf</code> and
+<code>\textit</code> use the real design. <code><a href="../reference/available_fonts.html">available_fonts()</a></code>
+lists what is loaded.</p>
+<p>An installed family is loaded by its name; its bold and italic faces
+are found on their own. The families installed differ from one system to
+the next, so this chunk is not run:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="fu">systemfonts</span><span class="fu">::</span><span class="fu"><a href="https://systemfonts.r-lib.org/reference/system_fonts.html" class="external-link">system_fonts</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">family</span><span class="op">)</span>   <span class="co"># what is installed</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/load_font.html">load_font</a></span><span class="op">(</span><span class="st">"Georgia"</span><span class="op">)</span>                          <span class="co"># registered as "Georgia"</span></span>
+<span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>main_font <span class="op">=</span> <span class="st">"Georgia"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(Text in \textbf{Georgia} and $x^2$)"</span><span class="op">)</span></span></code></pre></div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="devices">Devices<a class="anchor" aria-label="anchor" href="#devices"></a>
@@ -440,7 +479,7 @@ formulas included. Turn it off with
 <h2 id="utilities">Utilities<a class="anchor" aria-label="anchor" href="#utilities"></a>
 </h2>
 <p><code><a href="../reference/latex_dims.html">latex_dims()</a></code> measures a formula:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_dims.html">latex_dims</a></span><span class="op">(</span><span class="st">r"(\frac{a}{b})"</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $width</span></span>
 <span><span class="co">#&gt; [1] 7bigpts</span></span>
@@ -458,25 +497,25 @@ formulas included. Turn it off with
 <span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
 <p><code><a href="../reference/latex_options.html">latex_options()</a></code> sets defaults for the session; arguments
 given in a call always win:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span>math_font <span class="op">=</span> <span class="st">"stix"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_options.html">latex_options</a></span><span class="op">(</span><span class="op">)</span>        <span class="co"># show the current settings</span></span>
 <span><span class="fu"><a href="../reference/latex_options.html">reset_latex_options</a></span><span class="op">(</span><span class="op">)</span>  <span class="co"># back to the defaults</span></span></code></pre></div>
 <p><code><a href="../reference/define_macro.html">define_macro()</a></code> adds a shorthand for every later
 label:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/define_macro.html">define_macro</a></span><span class="op">(</span><span class="st">"RR"</span>, <span class="st">r"(\mathbb{R})"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/define_macro.html">define_macro</a></span><span class="op">(</span><span class="st">"eps"</span>, <span class="st">r"(\varepsilon)"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($\forall \eps &gt; 0, \eps \in \RR$)"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/macros-1.png" class="r-plt" alt="" width="50%"></p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="fu"><a href="../reference/define_macro.html">clear_macros</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>A label can also define its own, with <code>\newcommand</code> or
 <code>\def</code>. These last for that label only:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span></span>
 <span>  <span class="st">r"(\def\norm#1{\left\lVert #1 \right\rVert}</span></span>
@@ -484,17 +523,58 @@ label:</p>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/def-inline-1.png" class="r-plt" alt="" width="60%"></p>
 <p><code>debug = TRUE</code> draws the bounding box and baseline:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"($x^{2} + y_{i}$)"</span>, debug <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/debug-1.png" class="r-plt" alt="" width="60%"></p>
 </div>
 <div class="section level2">
+<h2 id="diagrams">Diagrams<a class="anchor" aria-label="anchor" href="#diagrams"></a>
+</h2>
+<p>tikz-cd’s <code>tikzcd</code> and amscd’s <code>CD</code> draw
+commutative diagrams: objects in a grid joined by arrows. An arrow is
+written in the cell it leaves, with the direction it goes
+(<code>r</code>, <code>d</code>, <code>dr</code>, <code>rr</code>, …), a
+label in quotes (a prime puts it on the other side), and a style:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sq</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tikzcd}</span></span>
+<span><span class="st">A \arrow[r, "f"] \arrow[d, "g"'] \arrow[dr, dashed] &amp; B \arrow[d, "h"] \\</span></span>
+<span><span class="st">C \arrow[r, hook, "k"'] &amp; D</span></span>
+<span><span class="st">\end{tikzcd})"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">sq</span>, x <span class="op">=</span> <span class="fl">0.5</span>, y <span class="op">=</span> <span class="fl">0.5</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/tikzcd-1.png" class="r-plt" alt="" width="40%"></p>
+<p>Styles include <code>hook</code>, <code>tail</code>,
+<code>two heads</code>, <code>mapsto</code>, <code>dashed</code>,
+<code>dotted</code>, <code>Rightarrow</code>, <code>equal</code>,
+<code>harpoon</code>, <code>squiggly</code>, <code>bend left</code>,
+<code>shift right</code>, <code>crossing over</code>,
+<code>phantom</code> and a colour name; labels take
+<code>description</code>, <code>near start</code> and
+<code>near end</code>; and <code>row sep</code> and
+<code>column sep</code> set the spacing. <code>CD</code> writes its
+arrows between the objects instead:</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cd</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{CD}</span></span>
+<span><span class="st">A @&gt;f&gt;&gt; B \\</span></span>
+<span><span class="st">@VgVV @VVhV \\</span></span>
+<span><span class="st">C @&gt;&gt;k&gt; D</span></span>
+<span><span class="st">\end{CD})"</span></span>
+<span><span class="va">bent</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tikzcd}[column sep=large]</span></span>
+<span><span class="st">A \arrow[r, "f", bend left] \arrow[r, "g"', bend right]</span></span>
+<span><span class="st">  &amp; B \arrow[r, two heads, mapsto] &amp; C</span></span>
+<span><span class="st">\end{tikzcd})"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">cd</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.5</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">bent</span>, x <span class="op">=</span> <span class="fl">0.68</span>, y <span class="op">=</span> <span class="fl">0.5</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/cd-1.png" class="r-plt" alt="" width="70%"></p>
+</div>
+<div class="section level2">
 <h2 id="pasting-latex">Pasting LaTeX<a class="anchor" aria-label="anchor" href="#pasting-latex"></a>
 </h2>
-<p>Tables from <code>knitr::kable(format = "latex")</code> or
-<code>xtable</code> can be pasted unchanged:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<p>Tables from <code>knitr::kable(format = "latex")</code>, kableExtra,
+<code>xtable</code>, gt and tinytable can be pasted unchanged:</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">snippet</span> <span class="op">&lt;-</span> <span class="st">r"(</span></span>
 <span><span class="st">% latex table generated by kable()</span></span>
 <span><span class="st">\begin{table}[ht]</span></span>
@@ -514,21 +594,54 @@ label:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">snippet</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/pasted-1.png" class="r-plt" alt="" width="55%"></p>
+<p>A table is set to the <code>max_width</code> it is given, so
+<code>kable(booktabs = TRUE)</code> and a full-width kableExtra or gt
+table can be drawn as they are:</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>, <span class="fl">3</span><span class="op">)</span>, format <span class="op">=</span> <span class="st">"latex"</span>,</span>
+<span>                    booktabs <span class="op">=</span> <span class="cn">TRUE</span>, digits <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">tab</span><span class="op">)</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">4</span> <span class="op">*</span> <span class="fl">72</span>,</span>
+<span>           x <span class="op">=</span> <span class="fl">0.05</span>, y <span class="op">=</span> <span class="fl">0.95</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/kable-1.png" class="r-plt" alt="" width="65%"></p>
+<p>tinytable’s output is read as well:</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tt</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{table}</span></span>
+<span><span class="st">\centering</span></span>
+<span><span class="st">\begin{tblr}{</span></span>
+<span><span class="st">colspec={Q[]Q[r]Q[r]},</span></span>
+<span><span class="st">hline{1,3}={1-3}{solid, black, 0.08em},</span></span>
+<span><span class="st">hline{2}={1-3}{solid, black, 0.05em},</span></span>
+<span><span class="st">row{2}={}{font=\bfseries, bg=yellow},</span></span>
+<span><span class="st">}</span></span>
+<span><span class="st">Term &amp; Estimate &amp; p \\</span></span>
+<span><span class="st">Intercept &amp; 2.14 &amp; 0.003 \\</span></span>
+<span><span class="st">Slope &amp; 0.42 &amp; 0.001 \\</span></span>
+<span><span class="st">\end{tblr}</span></span>
+<span><span class="st">\end{table})"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">tt</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">4</span> <span class="op">*</span> <span class="fl">72</span>,</span>
+<span>           x <span class="op">=</span> <span class="fl">0.05</span>, y <span class="op">=</span> <span class="fl">0.95</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/tinytable-1.png" class="r-plt" alt="" width="65%"></p>
+</div>
+<div class="section level2">
+<h2 id="what-is-supported">What is supported<a class="anchor" aria-label="anchor" href="#what-is-supported"></a>
+</h2>
+<p>Every function on KaTeX’s lists of supported functions is drawn, and
+more. A list of them, in KaTeX’s order, with how each is drawn, is on
+the package website as <code>supported-functions.pdf</code>.
+<code>source(system.file( "supported/build.R", package = "gridmicrotex"))</code>
+and <code>build_supported()</code> write it, and its LaTeX file,
+wherever you ask.</p>
 </div>
 <div class="section level2">
 <h2 id="not-supported">Not supported<a class="anchor" aria-label="anchor" href="#not-supported"></a>
 </h2>
 <ul>
-<li>Pages, and numbering across a document: <code>\ref</code> draws
-<code>??</code>, <code>\cite</code> draws <code>[?]</code>, and
-equations are not numbered.</li>
-<li>Automatic hyphenation, TikZ, theorem environments,
-<code>\verb</code>, small caps and the <code>description</code>
-list.</li>
-<li>
-<code>\bfseries</code>, <code>\itshape</code> and similar switches.
-Use <code>\textbf{}</code>, <code>\textit{}</code>, or <code>\bf</code>
-and <code>\it</code>.</li>
+<li>Pages: <code>\pageref</code> draws <code>??</code> and
+<code>\cite</code> draws <code>[?]</code>.</li>
+<li>Automatic hyphenation, and TikZ beyond <code>tikz-cd</code>
+diagrams.</li>
 <li>
 <code>\usepackage</code> loads nothing; every supported command is
 built in.</li>

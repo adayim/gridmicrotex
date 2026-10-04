@@ -28,6 +28,9 @@
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="../articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Reference</h6></li>
+    <li><a class="dropdown-item" href="../supported-functions.pdf">What is supported (PDF)</a></li>
+    <li><a class="dropdown-item" href="../supported-functions.tex">What is supported (LaTeX source)</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -50,6 +53,8 @@
 <ul><li>LaTeX is read by a new, faster parser that follows TeX’s rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write <code>\LaTeX{} is</code>), and <code>_</code>, <code>^</code>, <code>#</code> and <code>&amp;</code> outside math warn.</li>
 <li>New <code>input_mode = "document"</code> renders a LaTeX document body, or a whole pasted paper, wrapped at <code>max_width</code> (see <code><a href="../articles/documents.html">vignette("documents")</a></code>). Markdown is now laid out the same way, so its paragraphs, styled spans and tables stay within their box.</li>
 <li>New <code>latex_options(device_math = TRUE)</code> renders <code>$…$</code> math in base graphics labels.</li>
+<li>New <code><a href="../reference/load_font.html">load_font()</a></code> names a font file or an installed family, with its bold and italic files, and <code><a href="../reference/available_fonts.html">available_fonts()</a></code> lists them. <code><a href="../reference/latex_options.html">latex_options()</a></code> takes <code>main_font</code>, <code>sans_font</code> and <code>mono_font</code>, the fonts of the body, <code>\textsf</code> and <code>\texttt</code>. <code><a href="../reference/fonts-deprecated.html">load_math_font()</a></code>, <code><a href="../reference/fonts-deprecated.html">available_math_fonts()</a></code> and <code><a href="../reference/fonts-deprecated.html">check_math_fonts()</a></code> are superseded by <code><a href="../reference/load_font.html">load_font()</a></code> and <code><a href="../reference/available_fonts.html">available_fonts()</a></code>; they still work.</li>
+<li>Text in a font given to <code><a href="../reference/load_font.html">load_font()</a></code> is measured and drawn from the font file, so it looks the same on every device, base <code><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf()</a></code> included, where a font file never worked before. Other families are still the device’s.</li>
 <li>An image that cannot be drawn is now an error saying why, figures load about ten times faster, and many bugs are fixed.</li>
 </ul></div>
     <div class="section level2">
@@ -71,16 +76,15 @@
 <li>
 <code>&lt;div class=&gt;</code> and <code>&lt;div style=&gt;</code> style a chunk of markdown; <code>&lt;span class=&gt;</code> styles an inline run.</li>
 <li>New <code>justify</code> and <code>line_break</code> arguments control paragraph line breaking.</li>
-<li>New <code>\gmfontfamily{family}{content}</code> sets the font for one run of text.</li>
 <li>
 <code>\includegraphics[width=,height=,scale=,keepaspectratio]{file}</code> draws PNG, JPEG and SVG images inline in a formula; it previously parsed and drew nothing. The extension may be omitted and <code>\graphicspath{}</code> is searched, as in LaTeX. An SVG is drawn as real vector, so it stays sharp at any output resolution.</li>
 <li>New <code>p{len}</code> column type gives <code>tabular</code> fixed-width, wrapping cells.</li>
 <li>
 <code>\url{}</code> and <code>\href{}{}</code> render as styled text instead of literally.</li>
 <li>
-<code>load_font()</code> is renamed <code><a href="../reference/load_math_font.html">load_math_font()</a></code>; the old name is deprecated.</li>
+<code><a href="../reference/load_font.html">load_font()</a></code> is renamed <code><a href="../reference/fonts-deprecated.html">load_math_font()</a></code>; the old name is deprecated.</li>
 <li>
-<code>check_fonts()</code> is renamed <code><a href="../reference/check_math_fonts.html">check_math_fonts()</a></code>; the old name is deprecated.</li>
+<code>check_fonts()</code> is renamed <code><a href="../reference/fonts-deprecated.html">check_math_fonts()</a></code>; the old name is deprecated.</li>
 <li>Bug fix: <code>\rotatebox</code> past a quarter turn drew text and glyphs 180 degrees out, so a <code>\rotatebox{90}</code> label came out upside down.</li>
 <li>Bug fix: <code>\textrm{}</code> now returns text to <code>gp$fontfamily</code>; it previously did nothing.</li>
 <li>Bug fix: <code>\texttt{}</code> drew in the body font instead of a monospace one.</li>
@@ -120,7 +124,7 @@
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.3" id="gridmicrotex-003">gridmicrotex 0.0.3<a class="anchor" aria-label="anchor" href="#gridmicrotex-003"></a></h2><p class="text-muted">CRAN release: 2026-05-18</p>
-<ul><li>Self-contained <code>load_font()</code> example so CRAN’s donttest additional checks no longer fail on the unreliable CTAN font download.</li>
+<ul><li>Self-contained <code><a href="../reference/load_font.html">load_font()</a></code> example so CRAN’s donttest additional checks no longer fail on the unreliable CTAN font download.</li>
 <li>New commands.</li>
 </ul></div>
     <div class="section level2">

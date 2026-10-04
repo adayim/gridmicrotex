@@ -19,7 +19,10 @@ latex_options(
   justify = NULL,
   line_break = NULL,
   markdown_style = NULL,
-  device_math = NULL
+  device_math = NULL,
+  main_font = NULL,
+  sans_font = NULL,
+  mono_font = NULL
 )
 
 reset_latex_options()
@@ -29,8 +32,8 @@ reset_latex_options()
 
 - math_font:
 
-  Math font; see
-  [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md).
+  Math font: a loaded font with a math table; see
+  [`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md).
 
 - render_mode:
 
@@ -83,6 +86,16 @@ reset_latex_options()
   [`vignette("base-graphics")`](https://adayim.github.io/gridmicrotex/articles/base-graphics.md)
   for the rules and limitations.
 
+- main_font, sans_font, mono_font:
+
+  The fonts for text: the body, `\textsf` and `\sffamily`, and
+  `\texttt`, `\ttfamily` and `\verb`. Each is the name of a font given
+  to
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md),
+  an installed family, or a font file, which is loaded. `NULL` keeps the
+  defaults: `gp$fontfamily` (or `"sans"`) for the body, `"sans"` and
+  `"mono"`. A `gp$fontfamily` in a call wins over `main_font`.
+
 ## Value
 
 The previous settings, invisibly. With no arguments, the current
@@ -99,7 +112,8 @@ Size and line spacing are set with `gp` (`fontsize`, `cex`,
 
 ## See also
 
-[`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md),
+[`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md),
+[`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md),
 [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
 
 ## Examples

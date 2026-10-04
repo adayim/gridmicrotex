@@ -75,12 +75,10 @@ Use LaTeX and markdown in ggplot2 plots
 
 Load and configure math and text fonts
 
-- [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md)
-  : List available math fonts
-- [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-  : Load a math font from an OTF file
-- [`check_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/check_math_fonts.md)
-  : Check math font status
+- [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+  : Load a font
+- [`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md)
+  : List the fonts that have been loaded
 
 ## Misc utilities
 

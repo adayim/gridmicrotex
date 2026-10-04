@@ -66,9 +66,9 @@ A `style` attribute can set `color`, `text-decoration` (`underline`,
 `font-family`; other properties are ignored. Colours are R colour names,
 CSS names, `#rgb`, `#rrggbb` or
 [`rgb()`](https://rdrr.io/r/grDevices/rgb.html). `font-family` takes
-`serif`, `sans-serif`, `monospace` or an installed font; to use a font
-file that is not installed, register it first with
-[`systemfonts::register_font()`](https://systemfonts.r-lib.org/reference/register_font.html).
+`serif`, `sans-serif`, `monospace`, an installed font, or a font named
+with
+[`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md).
 
 Tags nest and can hold markdown and math. Other tags are dropped and
 their text kept. Links keep their text only. Images must be local PNG,

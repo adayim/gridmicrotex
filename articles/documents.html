@@ -43,6 +43,9 @@
     <li><a class="dropdown-item" href="../articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="../articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Reference</h6></li>
+    <li><a class="dropdown-item" href="../supported-functions.pdf">What is supported (PDF)</a></li>
+    <li><a class="dropdown-item" href="../supported-functions.tex">What is supported (LaTeX source)</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -90,13 +93,14 @@ or a long caption, with no LaTeX installation.</p>
 <span><span class="st">of squared residuals</span></span>
 <span><span class="st">\[ S(\beta_0, \beta_1) = \sum_{i=1}^{n} (y_i - \beta_0 - \beta_1 x_i)^2. \]</span></span>
 <span><span class="st">Setting both partial derivatives to zero gives the estimates</span></span>
-<span><span class="st">\begin{align*}</span></span>
-<span><span class="st">  \hat\beta_1 &amp;= \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \\</span></span>
-<span><span class="st">  \hat\beta_0 &amp;= \bar y - \hat\beta_1 \bar x.</span></span>
-<span><span class="st">\end{align*}</span></span>
+<span><span class="st">\begin{align}</span></span>
+<span><span class="st">  \hat\beta_1 &amp;= \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \label{slope} \\</span></span>
+<span><span class="st">  \hat\beta_0 &amp;= \bar y - \hat\beta_1 \bar x. \label{intercept}</span></span>
+<span><span class="st">\end{align}</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">The fitted values are $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$, and</span></span>
-<span><span class="st">the residuals $e_i = y_i - \hat y_i$ are what is left over.</span></span>
+<span><span class="st">the residuals $e_i = y_i - \hat y_i$ are what is left over. Together</span></span>
+<span><span class="st">\eqref{slope} and \eqref{intercept} make them sum to zero.</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">\subsection{Assumptions}</span></span>
 <span><span class="st">The errors are taken to be</span></span>
@@ -132,19 +136,49 @@ starred forms are not.</li>
 <strong>Math.</strong> <code>$...$</code> and <code>\(...\)</code>
 are inline. <code>\[...\]</code>, <code>$$...$$</code>,
 <code>equation</code>, <code>align</code>, <code>gather</code> and
-<code>multline</code> are centred on their own line. Equations are not
-numbered.</li>
+<code>multline</code> are centred on their own line. The last four are
+numbered at the right margin, a row each (<code>multline</code>: one),
+unless starred or marked <code>\notag</code>; <code>\tag{x}</code> sets
+a number, and <code>\label</code> with <code>\ref</code> or
+<code>\eqref</code> refer to it.</li>
 <li>
 <strong>Lists and tables.</strong> <code>itemize</code>,
-<code>enumerate</code> and <code>tabular</code> hold text, with math
-between <code>$...$</code>.</li>
+<code>enumerate</code>, <code>description</code> and
+<code>tabular</code> hold text, with math between
+<code>$...$</code>.</li>
+<li>
+<strong>Theorems.</strong> <code>\newtheorem</code> declares them,
+with the shared and <code>[section]</code> counters and a starred,
+unnumbered form; <code>proof</code> ends with a box.</li>
 <li>
 <strong>Text.</strong> <code>--</code> and <code>---</code> are
 dashes, quotes are curly, and <code>~</code> is a non-breaking space.
-<code>\centering</code> and <code>center</code> centre lines.</li>
+<code>\centering</code> and <code>center</code> centre lines.
+<code>\textsc</code> sets small capitals, and <code>\verb</code> and
+<code>verbatim</code> set code as it is typed.</li>
 </ul>
 <p>Problems produce one warning, listing each with its line and
 column.</p>
+</div>
+<div class="section level2">
+<h2 id="a-theorem-and-its-proof">A theorem and its proof<a class="anchor" aria-label="anchor" href="#a-theorem-and-its-proof"></a>
+</h2>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">thm</span> <span class="op">&lt;-</span> <span class="st">r"(\newtheorem{thm}{Theorem}</span></span>
+<span><span class="st">\begin{thm}[Gauss--Markov]\label{gm}</span></span>
+<span><span class="st">With uncorrelated errors of equal variance, least squares has the least</span></span>
+<span><span class="st">variance among the linear unbiased estimators.</span></span>
+<span><span class="st">\end{thm}</span></span>
+<span><span class="st">\begin{proof}</span></span>
+<span><span class="st">Write any other such estimator as least squares plus a correction, and</span></span>
+<span><span class="st">show that the correction can only add variance.</span></span>
+<span><span class="st">\end{proof}</span></span>
+<span><span class="st">Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.)"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">thm</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.6</span> <span class="op">*</span> <span class="fl">72</span>,</span>
+<span>           x <span class="op">=</span> <span class="fl">0.03</span>, y <span class="op">=</span> <span class="fl">0.97</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="documents_files/figure-html/theorem-1.png" class="r-plt" alt="" width="90%"></p>
 </div>
 <div class="section level2">
 <h2 id="justified-text">Justified text<a class="anchor" aria-label="anchor" href="#justified-text"></a>
@@ -152,7 +186,7 @@ column.</p>
 <p><code>justify = TRUE</code> fills every line but the last, and
 <code>line_break = "optimal"</code> chooses the breaks for the whole
 paragraph:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">para</span> <span class="op">&lt;-</span> <span class="st">r"(Least squares has a closed form, which is why it was the</span></span>
 <span><span class="st">method of choice long before computers made iterative fitting cheap. It</span></span>
 <span><span class="st">is also optimal among unbiased linear estimators when the errors are</span></span>
@@ -169,7 +203,7 @@ paragraph:</p>
 </h2>
 <p>Use <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf()</a></code> so the text can be selected.
 <code><a href="../reference/latex_dims.html">latex_dims()</a></code> gives the height to size the page:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/latex_dims.html">latex_dims</a></span><span class="op">(</span><span class="va">body</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.5</span> <span class="op">*</span> <span class="fl">72</span>,</span>
 <span>                gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">height</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">height</span><span class="op">)</span> <span class="op">/</span> <span class="fl">72</span> <span class="op">+</span> <span class="fl">1</span>   <span class="co"># inches, with margins</span></span>
@@ -188,13 +222,12 @@ page.</p>
 </h2>
 <ul>
 <li>
-<code>\ref</code> and <code>\pageref</code> draw <code>??</code>,
-<code>\eqref</code> draws <code>(??)</code> and <code>\cite</code> draws
-<code>[?]</code>, with a warning.</li>
+<code>\pageref</code> draws <code>??</code> and <code>\cite</code>
+draws <code>[?]</code>, with a warning, and so does a <code>\ref</code>
+to a label that is not there.</li>
 <li>A footnote’s text is set where it is written.</li>
 <li>Tables and figures are placed where they are written.</li>
-<li>The preamble, <code>\maketitle</code> and <code>\label</code> draw
-nothing.</li>
+<li>The preamble and <code>\maketitle</code> draw nothing.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

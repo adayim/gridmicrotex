@@ -14,6 +14,8 @@ latex_tree(
   tex_style = "",
   input_mode = c("mixed", "math", "document"),
   render_mode = c("typeface", "path"),
+  justify = FALSE,
+  line_break = c("greedy", "optimal"),
   gp = grid::gpar()
 )
 ```
@@ -28,9 +30,10 @@ latex_tree(
 
   Math font: `"lete"` (Lete Sans Math, the default), `"stix"` (STIX Two
   Math), or one added with
-  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md).
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md).
   See
-  [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md).
+  [`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md).
+  A font that is not loaded, or has no math table, is an error.
 
 - max_width:
 
@@ -63,6 +66,16 @@ latex_tree(
   and falls back to `"path"` on others, such as
   [`pdf()`](https://rdrr.io/r/grDevices/pdf.html). `"path"` draws glyphs
   as outlines, which works on every device.
+
+- justify:
+
+  If `TRUE`, wrapped lines are stretched to fill `max_width`, except the
+  last. Needs `max_width`.
+
+- line_break:
+
+  `"greedy"` (default) fills one line at a time. `"optimal"` chooses the
+  breaks for the whole paragraph. Needs `max_width`.
 
 - gp:
 

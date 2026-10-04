@@ -45,6 +45,9 @@
     <li><a class="dropdown-item" href="articles/markdown.html">Markdown with LaTeX math</a></li>
     <li><h6 class="dropdown-header" data-toc-skip>ggplot2</h6></li>
     <li><a class="dropdown-item" href="articles/ggplot2-integration.html">Using LaTeX Math in ggplot2</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Reference</h6></li>
+    <li><a class="dropdown-item" href="supported-functions.pdf">What is supported (PDF)</a></li>
+    <li><a class="dropdown-item" href="supported-functions.tex">What is supported (LaTeX source)</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -67,6 +70,7 @@
 <!-- badges: start -->
 
 <p>LaTeX math and markdown for R graphics: grid, base plots and ggplot2. No LaTeX installation needed. Built on the <a href="https://github.com/NanoMichael/MicroTeX" class="external-link">MicroTeX</a> layout engine.</p>
+<p>Everything on <a href="https://katex.org/docs/supported" class="external-link">KaTeX’s list of supported functions</a> is drawn, and more: amsmath and mathtools environments, equation numbers, tables from <code>kable()</code> and gt, <code>tikz-cd</code> diagrams, <code>\ce{}</code> chemistry, and a subset of siunitx.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -134,7 +138,7 @@
 <div class="section level2">
 <h2 id="fonts-and-devices">Fonts and devices<a class="anchor" aria-label="anchor" href="#fonts-and-devices"></a>
 </h2>
-<p>Lete Sans Math (the default) and STIX Two Math (<code>math_font = "stix"</code>) are included; <code><a href="reference/load_math_font.html">load_math_font()</a></code> adds others.</p>
+<p>Lete Sans Math (the default) and STIX Two Math (<code>math_font = "stix"</code>) are included. <code><a href="reference/load_font.html">load_font()</a></code> names a font file or an installed family, to use in <code>gp</code>, in <code><a href="reference/latex_options.html">latex_options()</a></code> and in the LaTeX itself (<code>\setmainfont</code>, <code>\fontspec</code>, …); text in it is drawn from the file on every device.</p>
 <p>If the default device on Windows or macOS warns <code>font family not found</code>, use <a href="https://CRAN.R-project.org/package=ragg" class="external-link">ragg</a>, <a href="https://CRAN.R-project.org/package=svglite" class="external-link">svglite</a> or <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf()</a></code> (in knitr: <code>knitr::opts_chunk$set(dev = "ragg_png")</code>), or set <code>render_mode = "path"</code> to draw glyphs as outlines.</p>
 </div>
 <div class="section level2">

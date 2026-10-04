@@ -4,6 +4,11 @@ LaTeX math and markdown for R graphics: grid, base plots and ggplot2. No
 LaTeX installation needed. Built on the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
 
+Everything on [KaTeX’s list of supported
+functions](https://katex.org/docs/supported) is drawn, and more: amsmath
+and mathtools environments, equation numbers, tables from `kable()` and
+gt, `tikz-cd` diagrams, `\ce{}` chemistry, and a subset of siunitx.
+
 ## Installation
 
 ``` r
@@ -95,9 +100,12 @@ bring markdown labels to ggplot2.
 ## Fonts and devices
 
 Lete Sans Math (the default) and STIX Two Math (`math_font = "stix"`)
-are included;
-[`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md)
-adds others.
+are included.
+[`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md)
+names a font file or an installed family, to use in `gp`, in
+[`latex_options()`](https://adayim.github.io/gridmicrotex/reference/latex_options.md)
+and in the LaTeX itself (`\setmainfont`, `\fontspec`, …); text in it is
+drawn from the file on every device.
 
 If the default device on Windows or macOS warns `font family not found`,
 use [ragg](https://CRAN.R-project.org/package=ragg),

@@ -64,9 +64,10 @@ grid.latex(tex, ...)
 
   Math font: `"lete"` (Lete Sans Math, the default), `"stix"` (STIX Two
   Math), or one added with
-  [`load_math_font()`](https://adayim.github.io/gridmicrotex/reference/load_math_font.md).
+  [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md).
   See
-  [`available_math_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_math_fonts.md).
+  [`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md).
+  A font that is not loaded, or has no math table, is an error.
 
 - max_width:
 
