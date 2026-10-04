@@ -1,25 +1,24 @@
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
+0 errors | 0 warnings | 2 notes
 
-The note is `Days since last update`. This release follows 0.1.0 quickly on purpose: it clears the clang-ASAN and gcc-ASAN entries on the additional issues page, which are due by 2026-09-12.
+`R CMD check --as-cran` on Ubuntu (R release), and the same with `NOT_CRAN=true` so that every test runs, give the same two notes:
 
-## The ASAN reports
+* `CRAN incoming feasibility`: the number of updates in the past 6 months. This package has had several releases in a short time.
+* `compilation flags used`: `-mno-omit-leaf-frame-pointer`, which is in Ubuntu's own R build and not in this package's flags.
 
-The overlapping `memcpy` is in ragg's copy of AGG, at `agg_font_cache_manager.h:176`. No frame in either stack belongs to this package. It fires when AGG's 32-slot font cache evicts an entry, and that cache is a session-wide static, so rebuilding all the vignettes in one process eventually reaches it. I have reported it upstream with a reproducer.
-
-This release stays under the threshold: the vignettes now use the platform's default `png()` device, with ragg left in only three small chunks. The R-hub clang-asan and gcc-asan jobs both pass.
+The package also passes the tests and `R CMD check` on GitHub Actions (Ubuntu with oldrel, release and devel; Windows), and `--use-valgrind`, LTO, and the R-hub clang-asan, gcc-asan, clang-ubsan and nold containers show nothing from this package.
 
 ## valgrind and rchk on R-hub
 
-Both jobs are red, and both report only third-party findings.
+These two jobs are red, and both report only third-party findings.
 
-valgrind's own verdict is `Status: OK`. The examples leak nothing; the tests show a few dozen records, none naming this package. They come from systemfonts, librsvg, fontconfig and R itself. The job fails only because R-hub treats a non-zero ERROR SUMMARY as failure, and every leak record counts as an error. Two leaks that were ours are fixed here: the layout engine's static macro tables, and a raw owning pointer in the line splitter.
+valgrind's own verdict is `Status: OK`. Its records are leaks in systemfonts, librsvg, fontconfig and R itself, and a few reads of uninitialised values inside librsvg; no frame of any of them belongs to this package, and there are no invalid reads or writes. The job fails only because R-hub treats a non-zero ERROR SUMMARY as failure, and every leak record counts as an error.
 
-rchk reports two lines inside `Rcpp/protection/Shield.h`, which every package using Rcpp produces. The `_gridmicrotex_*` entries carry no findings.
+rchk reports five lines inside `Rcpp/protection/Armor.h` and `Shield.h`. A small test package with no code of ours gets the same five once one of its functions calls `Rcpp::DataFrame::create` (without that call it gets only the `Shield.h` line), so they come from Rcpp itself (1.1.2) and not from this package. The `_gridmicrotex_*` entries carry no findings.
 
 ## Changes
 
-The typeface fallback is now a message rather than a warning, raised only when `render_mode = "typeface"` was asked for, and at most once per device. `unloadNamespace()` now releases the macro tables and the shared object.
+A new parser for LaTeX, a document mode and a markdown layout built on it, `load_font()`, and bug fixes; see NEWS.md.
 
-The diff is larger than that suggests: the portable C++ moved out of `src/` into the vendored engine directory, leaving only the R binding. No exported function or default changed.
+The diff is large because the portable C++ lives in the vendored engine directory, with only the R binding in `src/`.
