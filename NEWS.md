@@ -1,29 +1,11 @@
-# gridmicrotex (development version)
-
-- New `load_font()` names a font file or an installed family, with its bold and italic files, and `available_fonts()` lists them. `latex_options()` takes `main_font`, `sans_font` and `mono_font`, the fonts of the body, `\textsf` and `\texttt`. `load_math_font()`, `available_math_fonts()` and `check_math_fonts()` are superseded by `load_font()` and `available_fonts()`; they still work.
-- Text in a font given to `load_font()` is measured and drawn from the font file, so it looks the same on every device, base `pdf()` included, where a font file never worked before. Other families are still the device's.
-- The fonts of a label or a document can be named in it, as in fontspec and unicode-math: `\setmainfont`, `\setsansfont`, `\setmonofont`, `\setmathfont`, `\fontspec`, `\newfontfamily` and `\newfontface`, with `Path=`, `Extension=` and the face options. `\fontfamily` also reads LaTeX's family codes (`ppl`, `lmtt`, `ptm`, ...), found among the installed fonts or in a TeX distribution's OpenType files.
-- New math: `dcases`, `subarray`, `\shortintertext`, `\cancelto`, `\DeclarePairedDelimiter`, `\mkern`, `\mskip`, `\mspace` and `\hskip`. A column's `>{\displaystyle}` (or `\textstyle`, ...) now sets its cells in that style.
-- Equations in `equation`, `align`, `gather`, `multline`, `flalign`, `alignat` and `eqnarray` are numbered at the right margin, as in LaTeX, in labels and markdown too: write `align*`, or `\notag`, to leave one out. `\tag`, `\tag*`, `\label`, `\ref`, `\eqref` and `\setcounter{equation}{n}` work, and a markdown box counts across its blocks.
-- Tables from `kable()`, kableExtra, xtable, gt and tinytable are read without warnings: `\addlinespace`, `\fontsize`, `\begingroup`, `tabularx` and `tabular*` with their widths, `longtable` with its head and foot, `\makecell`, `\hhline`, `\bfseries` and its kin, `>{}` and `<{}` in a column spec, `\caption*`, and tabularray's `tblr` (rules, spans, colours, fonts and alignments).
-- New text items: `\verb` and `verbatim`, `description` lists (and `\item[label]` in any list), `\textsc` and `\scshape`, `\newtheorem` with `proof`. A font switch such as `\itshape` now lasts across a paragraph break in a document.
-- New commutative diagrams: tikz-cd's `tikzcd` (labels, `hook`, `two heads`, `dashed`, `bend`, `shift`, `Rightarrow`, `description`, ...) and amscd's `CD`.
-- New KaTeX commands: the arrow and set aliases (`\rarr`, `\Reals`, `\R`, `\Bbb`, ...), `\argmax`, `\bra`/`\ket`/`\set`, the text symbols and letters (`\textbar`, `\AE`, `\ss`, ...), `\bigm`, and the colon relations. A document's own definition of a name like `\R` or `\set` replaces ours.
-- New `\hdashline` and `:` in a column spec, for dashed rules in arrays and tables.
-- A subset of siunitx: `\num`, `\si`, `\SI`, `\qty`, `\ang`, ranges, lists and `\DeclareSIUnit`.
-- Everything on KaTeX's lists of supported functions is drawn: the last gaps, `\mathchoice`, `\vcenter`, `\expandafter`, `\noexpand`, `\futurelet`, `\edef`, `\xdef`, `\phase`, `\angl`, `\H`, `\textcircled`, `\xlongequal`, `\xtofrom`, `\xtwoheadrightarrow`, `\overgroup`, `\overlinesegment`, `\widecheck`, `\Overrightarrow`, `\overleftharpoon`, `\TextOrMath`, `\@ifstar`, `\@ifnextchar`, `\@firstoftwo`, `\sixptsize`, and `\global` before `\edef`, `\let` and `\futurelet`, are filled, and `\ce` and `\pu` read a subset of mhchem. `\arraystretch` spaces the rows of an array. The list is `inst/supported` (built by `build_supported()`; the PDF is on the website).
-- Checked against pdflatex, example by example: `\utilde` drew a small tilde before its argument; `\copyright` drew ®; `\surd` drew nothing; `/` was spaced as an operator; `\pod`, `\pmod` and `\mod` left a quad; `\boxed` was not in display style; the text of `\xrightarrow` and kin was too big; `\big` to `\Bigg` were too small; `\substack` was padded; `\ldots` and `\cdots` were one tight glyph; and `\mkern8mu(a)` lost everything after `8mu`.
-- `\cancel` and `\bcancel` were drawn the wrong way round.
-- kableExtra's `scale_down` drew nothing, and a colour defined with capitals in its name was never found.
-
-
 # gridmicrotex 0.2.0
 
 - LaTeX is read by a new, faster parser that follows TeX's rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write `\LaTeX{} is`), and `_`, `^`, `#` and `&` outside math warn.
 - New `input_mode = "document"` renders a LaTeX document body, or a whole pasted paper, wrapped at `max_width` (see `vignette("documents")`). Markdown is now laid out the same way, so its paragraphs, styled spans and tables stay within their box.
 - New `latex_options(device_math = TRUE)` renders `$…$` math in base graphics labels.
+- New `load_font()` names a font file or an installed family, with its bold and italic files, and `available_fonts()` lists them. `latex_options()` takes `main_font`, `sans_font` and `mono_font`, the fonts of the body, `\textsf` and `\texttt`. `load_math_font()`, `available_math_fonts()` and `check_math_fonts()` are superseded by `load_font()` and `available_fonts()`; they still work.
+- Text in a font given to `load_font()` is measured and drawn from the font file, so it looks the same on every device, base `pdf()` included, where a font file never worked before. Other families are still the device's.
 - An image that cannot be drawn is now an error saying why, figures load about ten times faster, and many bugs are fixed.
-
 
 # gridmicrotex 0.1.1
 
