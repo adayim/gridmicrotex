@@ -10,7 +10,12 @@ kinds <- function(g) {
 cairo_png <- function() grDevices::png(tempfile(fileext = ".png"), type = "cairo")
 
 skip_if_no_glyphs <- function() {
-  cairo_png()
+  # cairo's module does not load everywhere (macOS without XQuartz).
+  opened <- tryCatch({
+    suppressWarnings(cairo_png())
+    TRUE
+  }, error = function(e) FALSE)
+  skip_if_not(opened, "png(type = \"cairo\") is not available")
   on.exit(grDevices::dev.off(), add = TRUE, after = FALSE)
   skip_if_not(isTRUE(grDevices::dev.capabilities()[["glyphs"]]),
               "this device cannot draw glyphs")

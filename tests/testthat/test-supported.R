@@ -63,6 +63,13 @@ test_that("the document is built: a LaTeX file, and a PDF with a page number on 
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE), add = TRUE)
   # pdf(): its page objects can be counted, and it needs no installed font (cairo_pdf is the default).
+  # A few examples are text beyond pdf()'s encoding (an em dash, \OE, ...), which it warns of and
+  # leaves out; R CMD check turns that warning into an error, and the page count is what is tested.
+  strict <- Sys.getenv("_R_CHECK_MBCS_CONVERSION_FAILURE_", unset = NA)
+  Sys.unsetenv("_R_CHECK_MBCS_CONVERSION_FAILURE_")
+  if (!is.na(strict)) {
+    on.exit(Sys.setenv("_R_CHECK_MBCS_CONVERSION_FAILURE_" = strict), add = TRUE)
+  }
   made <- suppressWarnings(env$build_supported(dir, device = "pdf"))
   expect_true(all(file.exists(made)))
   tex <- readLines(made[["tex"]], encoding = "UTF-8")
