@@ -80,7 +80,7 @@ void register_image_resolver(SEXP fn) {
             Rcpp::Function resolve(g_image_resolve_fn);
             Rcpp::CharacterVector d(dirs.size());
             for (std::size_t i = 0; i < dirs.size(); i++) d[i] = Rcpp::String(dirs[i], CE_UTF8);
-            SEXP out = resolve(Rcpp::String(path, CE_UTF8), Rcpp::String(options, CE_UTF8), d);
+            Rcpp::RObject out = resolve(Rcpp::String(path, CE_UTF8), Rcpp::String(options, CE_UTF8), d);
             return Rcpp::as<std::string>(out);
         });
 }
@@ -118,7 +118,7 @@ void register_font_resolver(SEXP fn) {
                 values[i] = Rcpp::String(options[i].second, CE_UTF8);
             }
             values.attr("names") = keys;
-            SEXP out = resolve(Rcpp::String(name, CE_UTF8), values, Rcpp::String(role));
+            Rcpp::RObject out = resolve(Rcpp::String(name, CE_UTF8), values, Rcpp::String(role));
             return Rcpp::as<std::string>(out);
         });
 }

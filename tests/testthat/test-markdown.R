@@ -492,13 +492,19 @@ test_that("a style attribute is read for colour, size and family", {
     expect_equal(sz(bad), 20, label = bad)
   }
 
-  # font-family: CSS generics map to grid's aliases; a name is kept as is.
+  # font-family: CSS generics map to grid's aliases; a name is kept as is. A
+  # name reaches the layout when the font exists, so these are fonts loaded
+  # here and not ones a system may or may not have.
   expect_equal(fam("monospace"), "mono")
   expect_equal(fam("sans-serif"), "sans")
   expect_equal(fam("serif"), "serif")
-  expect_equal(fam("Georgia"), "Georgia")
+  load_font(system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex"),
+            name = "Css Probe Serif")
+  load_font(system.file("fonts", "LeteSansMath.otf", package = "gridmicrotex"),
+            name = "Css Probe Mono")
+  expect_equal(fam("Css Probe Serif"), "Css Probe Serif")
   # A fallback list resolves to its first entry, case preserved.
-  expect_equal(fam("'Courier New', monospace"), "Courier New")
+  expect_equal(fam("'Css Probe Mono', monospace"), "Css Probe Mono")
   expect_match(.md_to_tex('<span style="font-family:Georgia">x</span>'),
                "{\\fontspec{Georgia}{}", fixed = TRUE)
   # The name is spliced into LaTeX, so it must not carry parser syntax.
