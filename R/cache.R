@@ -139,7 +139,7 @@ latex_cache_info <- function() {
     # without `tex` showing it.
     "|", persistent_macro_generation_cpp(),
     # So are the fonts: one loaded since changes what a name draws and
-    # measures as, and the sans and mono roles change 	extsf and 	exttt.
+    # measures as, and the sans and mono roles change \textsf and \texttt.
     "|", .font_generation(), "/", .opt("sans_font"), "/", .opt("mono_font"),
     sep = ""
   )
@@ -165,11 +165,17 @@ latex_cache_info <- function() {
 
 # Where `tex` ends counting equations and the labels there are by then, read
 # from a parse started in `state`: list(start, labels).
+#
+# The parse is cached like any other, so it is measured as one with these
+# arguments would be (the default text font, and the roles); and it is quiet,
+# since the parse that draws the block reports what is wrong with it.
 .numbering_scan <- function(tex, state) {
-  layout <- .with_numbering(state, .parse_latex_cached(
+  register_text_measurer(.make_text_measurer(grid::gpar(), .font_roles()))
+  on.exit(clear_text_measurer(), add = TRUE)
+  layout <- suppressWarnings(.with_numbering(state, .parse_latex_cached(
     tex = tex, text_size = 20, line_space = 10, fg_color = "#000000",
     max_width = 0, math_font = "", main_font = "", use_path = TRUE,
-    input_mode = "document"))
+    input_mode = "document")))
   list(start = attr(layout, "eq_end") %||% state$start,
        labels = attr(layout, "labels") %||% state$labels)
 }

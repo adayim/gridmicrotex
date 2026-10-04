@@ -210,15 +210,19 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
       files <- layout_df$font_file[k]
     }
     indices <- rep(0L, length(ids))
-    for (tg in text_glyphs) {
-      m <- length(tg$ids)
-      ids <- c(ids, tg$ids)
-      x_g <- c(x_g, tg$x)
-      y_g <- c(y_g, tg$y)
-      sizes <- c(sizes, rep(tg$size, m))
-      cols <- c(cols, rep(tg$col, m))
-      files <- c(files, rep(tg$file, m))
-      indices <- c(indices, rep(tg$index, m))
+    if (length(text_glyphs) > 0L) {
+      # One pass over the runs, not a growing vector per run.
+      per_glyph <- function(field) unlist(lapply(text_glyphs, `[[`, field),
+                                          use.names = FALSE)
+      per_run <- function(field) rep(per_glyph(field), times = m)
+      m <- vapply(text_glyphs, function(tg) length(tg$ids), integer(1))
+      ids <- c(ids, per_glyph("ids"))
+      x_g <- c(x_g, per_glyph("x"))
+      y_g <- c(y_g, per_glyph("y"))
+      sizes <- c(sizes, per_run("size"))
+      cols <- c(cols, per_run("col"))
+      files <- c(files, per_run("file"))
+      indices <- c(indices, per_run("index"))
     }
     if (length(ids) > 0L) {
       parts[[n + 1L]] <- .build_glyph_grob(
@@ -409,7 +413,7 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
   list(sans = .opt("sans_font"), mono = .opt("mono_font"))
 }
 
-# A record that names no family of its own but is 	extsf or 	exttt takes
+# A record that names no family of its own but is \textsf or \texttt takes
 # the font of that role. Records with a family -- \gmfontfamily, CSS -- and
 # every other record are left alone.
 .bake_font_roles <- function(layout, roles) {

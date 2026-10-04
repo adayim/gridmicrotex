@@ -352,6 +352,8 @@ test_that("\\global makes the definition after it last past its group", {
   # Without \global the group takes it away again.
   expect_match(warns(r"({\def\a{1}}\a)"), "unknown command")
   expect_identical(warns(r"({\global\def\a{1}}\a)"), character(0))
+  # It is for the next assignment only: another command ends it.
+  expect_match(warns(r"(\global\newcommand{\a}{1}{\def\y{2}}\y)", "mixed"), "unknown command \\\\y")
 })
 
 test_that("\\@ifstar, \\@ifnextchar and \\@firstoftwo are names without \\makeatletter, as in KaTeX", {

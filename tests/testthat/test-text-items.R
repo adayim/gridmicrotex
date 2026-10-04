@@ -157,6 +157,21 @@ test_that("\\textsc draws capitals, the lowercase ones smaller", {
   expect_equal(round(r2$font_size[r2$text == "plain"]), 20)
 })
 
+test_that("\\textsc capitalises the text of a command, not the names it takes", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # The colour is still red: its name was not made RED and lost.
+  r <- text_records("\\textsc{\\textcolor{red}{abc}}", "mixed")
+  expect_identical(paste(r$text, collapse = ""), "ABC")
+  expect_true(all(r$color == "#FF0000"))
+  # A reference keeps its key, so it still finds its label.
+  tex <- "\\begin{equation}\\label{eq:a} x \\end{equation}\\textsc{see \\ref{eq:a}}"
+  expect_true("1" %in% text_records(tex)$text)
+  expect_false("??" %in% text_records(tex)$text)
+  # What a nested command takes as text is still set in capitals.
+  r <- text_records("\\textsc{abc \\textbf{def}}", "mixed")
+  expect_identical(paste(r$text, collapse = ""), "ABCDEF")
+})
+
 thm <- "\\newtheorem{thm}{Theorem}\n"
 
 test_that("a theorem is numbered, titled in bold and set in italics", {

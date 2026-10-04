@@ -132,6 +132,21 @@ test_that("a longtable sets its head and foot once, and its caption above", {
   expect_lt(min(cap$x), min(r$x[r$type == "text" & r$y > min(r$y)]) + 1)
 })
 
+test_that("a longtable whose columns are repeated with a group missing is recovered from", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # *{n}{cols} without its groups once threw a std::out_of_range from the
+  # column count, and the table was drawn as its name with that for a reason.
+  for (spec in c("*", "*{3}", "*{3}{c", "*{99999}{*{99999}{*{99999}{*{99999}{c}}}}")) {
+    tex <- paste0(r"(\begin{longtable})", "{", spec, r"(}\caption{Cap}\\ a \end{longtable})")
+    expect_false(any(grepl("basic_string|substr|out_of_range", warns(tex))), info = spec)
+  }
+  # With one group missing it is a table of one column, and it is drawn.
+  for (spec in c("*", "*{3}")) {
+    tex <- paste0(r"(\begin{longtable})", "{", spec, r"(}\caption{Cap}\\ a \end{longtable})")
+    expect_true("Cap" %in% lines_of(tex), info = spec)
+  }
+})
+
 test_that("\\makecell, \\hhline and the font switches are read", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_identical(lines_of(r"(\begin{tabular}{l}\makecell{a\\b}\end{tabular})"),

@@ -192,6 +192,25 @@ test_that("a font option takes a file, an installed family or one of R's familie
   expect_null(latex_options()$mono_font)
 })
 
+test_that("latex_options() changes nothing when one of its values is refused", {
+  reset_latex_options()
+  on.exit(reset_latex_options(), add = TRUE)
+  latex_options(render_mode = "typeface")
+  expect_error(latex_options(render_mode = "path", main_font = "NoSuchFamilyForGridmicrotex"),
+               "`main_font`")
+  expect_identical(latex_options()$render_mode, "typeface")
+  expect_null(latex_options()$main_font)
+  expect_error(latex_options(render_mode = "path", tex_style = "bogus"))
+  expect_identical(latex_options()$render_mode, "typeface")
+  # With a math font that is refused, the other values are not applied either.
+  expect_error(latex_options(justify = TRUE, math_font = "NoSuchMathFontXyz"))
+  expect_null(latex_options()$justify)
+  # All of them are applied when all are good.
+  latex_options(render_mode = "path", justify = TRUE, sans_font = "serif")
+  expect_identical(latex_options()[c("render_mode", "justify", "sans_font")],
+                   list(render_mode = "path", justify = TRUE, sans_font = "serif"))
+})
+
 test_that("a math_font must be a loaded font with a math table, wherever it is set", {
   text_font <- load_text_font()
   load_font(stix(), name = "Math Check Alias")

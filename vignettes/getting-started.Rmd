@@ -367,6 +367,18 @@ Text in a loaded font is drawn from its file on every device, `pdf()`
 included. `bold` and `italic` are the files of those faces, so `\textbf` and
 `\textit` use the real design. `available_fonts()` lists what is loaded.
 
+An installed family is loaded by its name; its bold and italic faces are found
+on their own. The families installed differ from one system to the next, so
+this chunk is not run:
+
+```{r load-installed-font, eval=FALSE}
+unique(systemfonts::system_fonts()$family)   # what is installed
+
+load_font("Georgia")                          # registered as "Georgia"
+latex_options(main_font = "Georgia")
+grid.latex(r"(Text in \textbf{Georgia} and $x^2$)")
+```
+
 ## Devices
 
 By default glyphs are drawn as text, so PDF and SVG output can be
