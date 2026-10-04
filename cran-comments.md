@@ -7,7 +7,7 @@
 * `CRAN incoming feasibility`: the number of updates in the past 6 months. This package has had several releases in a short time.
 * `compilation flags used`: `-mno-omit-leaf-frame-pointer`, which is in Ubuntu's own R build and not in this package's flags.
 
-The package also passes the tests and `R CMD check` on GitHub Actions (Ubuntu with oldrel, release and devel; Windows), and `--use-valgrind`, LTO, and the R-hub clang-asan, gcc-asan, clang-ubsan and nold containers show nothing from this package.
+The package also passes the tests and `R CMD check` on GitHub Actions (Ubuntu with oldrel, release and devel; Windows; macOS), and `--use-valgrind`, LTO, and the R-hub clang-asan, gcc-asan, clang-ubsan and nold containers show nothing from this package.
 
 ## valgrind and rchk on R-hub
 
