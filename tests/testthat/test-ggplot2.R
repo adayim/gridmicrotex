@@ -146,6 +146,7 @@ test_that("element_latex installs our grob as the axis title", {
   gt <- ggplot2::ggplot_gtable(ggplot2::ggplot_build(p))
 
   g <- gt$grobs[[which(gt$layout$name == "xlab-b")]]
+  g <- if (inherits(g, "titleGrob")) g$children[[1]] else g
   expect_s3_class(g, "latexgrob")
   # Set as math, not as the literal dollar-delimited string.
   expect_true("glyph" %in% g$layout_df$type)
@@ -170,4 +171,19 @@ test_that(".element_grob_latex handles edge cases and multiple labels", {
   result_multi <- gridmicrotex:::.element_grob_latex(
     element_latex(), label = c("$x_1$", NA, "", "$x_4$"))
   expect_equal(length(result_multi$children), 2)
+})
+
+test_that("element_latex reserves its margin, as element_text does", {
+  p <- function(el) {
+    ggplot2::ggplot(data.frame(x = 1, y = 1), ggplot2::aes(x, y)) +
+      ggplot2::geom_point() + ggplot2::labs(x = "$x^2$") +
+      ggplot2::theme(axis.title.x = el)
+  }
+  h <- function(el) {
+    gt <- ggplot2::ggplotGrob(p(el))
+    grid::convertHeight(sum(gt$heights), "bigpts", valueOnly = TRUE)
+  }
+  plain <- h(element_latex())
+  padded <- h(element_latex(margin = ggplot2::margin(t = 40)))
+  expect_equal(padded - plain, 40, tolerance = 1)
 })

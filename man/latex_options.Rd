@@ -13,13 +13,17 @@ latex_options(
   justify = NULL,
   line_break = NULL,
   markdown_style = NULL,
-  device_math = NULL
+  device_math = NULL,
+  main_font = NULL,
+  sans_font = NULL,
+  mono_font = NULL
 )
 
 reset_latex_options()
 }
 \arguments{
-\item{math_font}{Math font; see \code{\link[=available_math_fonts]{available_math_fonts()}}.}
+\item{math_font}{Math font: a loaded font with a math table; see
+\code{\link[=available_fonts]{available_fonts()}}.}
 
 \item{render_mode}{\code{"typeface"} or \code{"path"}; see \code{\link[=latex_grob]{latex_grob()}}.}
 
@@ -47,6 +51,13 @@ Heights are not adjusted: a tall formula can overflow a margin or a
 \code{legend()} box. Measure it with \code{\link[=latex_dims]{latex_dims()}} and make room with
 \code{par(mar = )}. See \code{vignette("base-graphics")} for the rules and
 limitations.}
+
+\item{main_font, sans_font, mono_font}{The fonts for text: the body, \verb{\\textsf}
+and \verb{\\sffamily}, and \verb{\\texttt}, \verb{\\ttfamily} and \verb{\verb}. Each is the
+name of a font given to \code{\link[=load_font]{load_font()}}, an installed family, or a font
+file, which is loaded. \code{NULL} keeps the defaults: \code{gp$fontfamily} (or
+\code{"sans"}) for the body, \code{"sans"} and \code{"mono"}. A \code{gp$fontfamily} in a
+call wins over \code{main_font}.}
 }
 \value{
 The previous settings, invisibly. With no arguments, the
@@ -86,5 +97,5 @@ if (!identical(Sys.getenv("IN_PKGDOWN"), "true"))
 }
 }
 \seealso{
-\code{\link[=available_math_fonts]{available_math_fonts()}}, \code{\link[=latex_grob]{latex_grob()}}
+\code{\link[=available_fonts]{available_fonts()}}, \code{\link[=load_font]{load_font()}}, \code{\link[=latex_grob]{latex_grob()}}
 }

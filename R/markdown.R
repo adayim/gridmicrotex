@@ -321,7 +321,10 @@
     if (length(kv) < 2L) next
     prop <- .md_canonical_props(trimws(tolower(kv[1])))
     # A value can legitimately contain a colon, so rejoin what was split.
-    if (nzchar(prop)) out[[prop]] <- trimws(paste(kv[-1], collapse = ":"))
+    # `!important` has nothing to override here, so only the marker goes.
+    val <- trimws(paste(kv[-1], collapse = ":"))
+    val <- trimws(sub("!\\s*important$", "", val, ignore.case = TRUE))
+    if (nzchar(prop)) out[[prop]] <- val
   }
   if (warn && length(out)) {
     bad <- setdiff(names(out), .MD_STYLE_PROPS)
@@ -355,8 +358,9 @@
       as.list(strsplit(trimws(as.character(v)), "[[:space:]]+")[[1]])
     }
     n <- length(parts)
-    if (n == 0L) next
-    pick <- switch(as.character(min(n, 4L)),
+    # CSS ignores a shorthand with more than four values.
+    if (n == 0L || n > 4L) next
+    pick <- switch(as.character(n),
       "1" = c(1, 1, 1, 1), "2" = c(1, 2, 1, 2),
       "3" = c(1, 2, 3, 2), "4" = c(1, 2, 3, 4))
     for (i in seq_along(sides)) {
@@ -372,15 +376,16 @@
 
 # font-family is a fallback list, so take the first entry. Map the CSS
 # generics onto the aliases grid already understands and pass anything
-# else through: what the name resolves to is the device's business, same
-# as gpar(fontfamily=). Returns "" when there is no usable name.
+# else through: \fontspec finds it among the loaded and installed fonts
+# (R/font-spec.R). Returns "" when there is no usable name.
 .md_css_family <- function(val_raw) {
   fam <- gsub("^[\"']|[\"']$", "", trimws(strsplit(val_raw %||% "", ",")[[1]]))[1]
   fam <- switch(tolower(fam %||% ""), monospace = "mono",
                 "sans-serif" = "sans", fam)
   # The name is about to be spliced into LaTeX, so it must not carry
-  # anything the parser reads as syntax.
-  gsub("[{}\\\\]", "", fam %||% "")
+  # anything the parser reads as syntax: braces, a backslash, or a `%`
+  # that would comment out the closing brace.
+  gsub("[{}\\\\%\r\n]", "", fam %||% "")
 }
 
 # CSS counts 600 and up as bold, alongside the two keywords.
@@ -486,7 +491,9 @@
       if (val %in% c("italic", "oblique")) add("\\textit{")
     } else if (prop == "font-family") {
       fam <- .md_css_family(val_raw)
-      if (nzchar(fam)) add(paste0("\\gmfontfamily{", fam, "}{"))
+      # A group around \fontspec, whose `{}` keeps a `[` that starts the
+      # text from being read as the command's options.
+      if (nzchar(fam)) add(paste0("{\\fontspec{", fam, "}{}"))
     }
   }
   list(open = paste(open, collapse = ""), close = paste(close, collapse = ""))
@@ -976,9 +983,8 @@
 #' `line-through`), `font-size` (such as `12pt`, `1.2em` or `smaller`)
 #' and `font-family`; other properties are ignored. Colours
 #' are R colour names, CSS names, `#rgb`, `#rrggbb` or `rgb()`.
-#' `font-family` takes `serif`, `sans-serif`, `monospace` or an installed
-#' font; to use a font file that is not installed, register it first with
-#' `systemfonts::register_font()`.
+#' `font-family` takes `serif`, `sans-serif`, `monospace`, an installed
+#' font, or a font named with [load_font()].
 #'
 #' Tags nest and can hold markdown and math. Other tags are dropped and
 #' their text kept. Links keep their text only. Images must be local PNG,

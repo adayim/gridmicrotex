@@ -35,13 +35,14 @@ squares, which chooses the intercept and slope that minimise the sum
 of squared residuals
 \[ S(\beta_0, \beta_1) = \sum_{i=1}^{n} (y_i - \beta_0 - \beta_1 x_i)^2. \]
 Setting both partial derivatives to zero gives the estimates
-\begin{align*}
-  \hat\beta_1 &= \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \\
-  \hat\beta_0 &= \bar y - \hat\beta_1 \bar x.
-\end{align*}
+\begin{align}
+  \hat\beta_1 &= \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \label{slope} \\
+  \hat\beta_0 &= \bar y - \hat\beta_1 \bar x. \label{intercept}
+\end{align}
 
 The fitted values are $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$, and
-the residuals $e_i = y_i - \hat y_i$ are what is left over.
+the residuals $e_i = y_i - \hat y_i$ are what is left over. Together
+\eqref{slope} and \eqref{intercept} make them sum to zero.
 
 \subsection{Assumptions}
 The errors are taken to be
@@ -72,13 +73,39 @@ As in LaTeX:
   numbered; starred forms are not.
 - **Math.** `$...$` and `\(...\)` are inline. `\[...\]`, `$$...$$`,
   `equation`, `align`, `gather` and `multline` are centred on their own
-  line. Equations are not numbered.
-- **Lists and tables.** `itemize`, `enumerate` and `tabular` hold text,
-  with math between `$...$`.
+  line. The last four are numbered at the right margin, a row each
+  (`multline`: one), unless starred or marked `\notag`; `\tag{x}` sets a
+  number, and `\label` with `\ref` or `\eqref` refer to it.
+- **Lists and tables.** `itemize`, `enumerate`, `description` and
+  `tabular` hold text, with math between `$...$`.
+- **Theorems.** `\newtheorem` declares them, with the shared and
+  `[section]` counters and a starred, unnumbered form; `proof` ends with
+  a box.
 - **Text.** `--` and `---` are dashes, quotes are curly, and `~` is a
   non-breaking space. `\centering` and `center` centre lines.
+  `\textsc` sets small capitals, and `\verb` and `verbatim` set code
+  as it is typed.
 
 Problems produce one warning, listing each with its line and column.
+
+## A theorem and its proof
+
+```{r theorem, fig.width = 6, fig.height = 1.9, out.width = "90%"}
+thm <- r"(\newtheorem{thm}{Theorem}
+\begin{thm}[Gauss--Markov]\label{gm}
+With uncorrelated errors of equal variance, least squares has the least
+variance among the linear unbiased estimators.
+\end{thm}
+\begin{proof}
+Write any other such estimator as least squares plus a correction, and
+show that the correction can only add variance.
+\end{proof}
+Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.)"
+grid.newpage()
+grid.latex(thm, input_mode = "document", max_width = 5.6 * 72,
+           x = 0.03, y = 0.97, hjust = 0, vjust = 1,
+           gp = gpar(fontsize = 11))
+```
 
 ## Justified text
 
@@ -119,8 +146,8 @@ Split a long one at paragraph breaks and draw each part on its own page.
 
 ## Limitations
 
-- `\ref` and `\pageref` draw `??`, `\eqref` draws `(??)` and `\cite`
-  draws `[?]`, with a warning.
+- `\pageref` draws `??` and `\cite` draws `[?]`, with a warning, and so
+  does a `\ref` to a label that is not there.
 - A footnote's text is set where it is written.
 - Tables and figures are placed where they are written.
-- The preamble, `\maketitle` and `\label` draw nothing.
+- The preamble and `\maketitle` draw nothing.

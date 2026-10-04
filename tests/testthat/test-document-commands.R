@@ -3,6 +3,10 @@
 
 layout_of <- function(tex, mode = "mixed") {
   t <- latex_tree(tex, input_mode = mode, render_mode = "path")
+  # What it draws: the labels it defined and the count it ended at ride on
+  # the layout, and are not drawn.
+  attr(t$records, "labels") <- NULL
+  attr(t$records, "eq_end") <- NULL
   list(records = t$records, bbox = t$bbox)
 }
 
@@ -178,12 +182,13 @@ test_that("links look like LaTeX's, and a URL is drawn as written", {
   expect_length(unique(r$y), 2)
 })
 
-test_that("a starred environment is its plain form", {
+test_that("a starred environment is its plain form, without its number", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_draws_as("\\begin{align*}a&=b\\end{align*}", "\\begin{align}a&=b\\end{align}")
+  expect_draws_as("\\begin{align*}a&=b\\end{align*}", "\\begin{align}a&=b\\notag\\end{align}")
   expect_draws_as("\\begin{alignat*}{1}a&=b\\end{alignat*}",
-                  "\\begin{alignat}{1}a&=b\\end{alignat}")
-  expect_draws_as("\\begin{equation*}x\\end{equation*}", "\\begin{equation}x\\end{equation}")
+                  "\\begin{alignat}{1}a&=b\\notag\\end{alignat}")
+  expect_draws_as("\\begin{equation*}x\\end{equation*}",
+                  "\\begin{equation}x\\notag\\end{equation}")
   # tabular*'s width is ignored.
   expect_draws_as("\\begin{tabular*}{\\textwidth}{lcr}a&b&c\\end{tabular*}",
                   "\\begin{tabular}{lcr}a&b&c\\end{tabular}")

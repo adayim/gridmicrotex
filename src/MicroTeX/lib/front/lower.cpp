@@ -5,7 +5,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
+#include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -25,12 +27,14 @@
 #include "atom/atom_space.h"
 #include "atom/atom_text.h"
 #include "atom/atom_vrow.h"
+#include "atom/font_family_atom.h"
 #include "box/box_factory.h"
 #include "core/localized_num.h"
 #include "env/units.h"
 #include "front/front.h"
 #include "front/hooks.h"
 #include "front/spec.h"
+#include "front/tblr.h"
 #include "graphic/graphic.h"
 #include "macro/macro.h"
 #include "macro/macro_args.h"
@@ -50,6 +54,7 @@ bool isTextFont(const std::string& n) {
 
 float sizeFactor(const std::string& n) {
   if (n == "tiny") return 0.5f;
+  if (n == "sixptsize") return 0.6f;
   if (n == "scriptsize") return 0.7f;
   if (n == "footnotesize") return 0.8f;
   if (n == "small") return 0.9f;
@@ -62,7 +67,7 @@ float sizeFactor(const std::string& n) {
 }
 
 bool isSize(const std::string& n) {
-  return n == "tiny" || n == "scriptsize" || n == "footnotesize" || n == "small" ||
+  return n == "tiny" || n == "sixptsize" || n == "scriptsize" || n == "footnotesize" || n == "small" ||
          n == "normalsize" || n == "large" || n == "Large" || n == "LARGE" || n == "huge" ||
          n == "Huge";
 }
@@ -108,9 +113,142 @@ private:
   std::vector<std::string> _dirs;
 };
 
+/** `s` without the space at either end. */
+std::string trimmed(std::string s) {
+  return trim(s);
+}
+
+/** The equation numbers and labels of the input being lowered. As with the
+ *  image directories, one input's are shared by every Lowerer it takes, so
+ *  a display in a list's item is counted with the rest. */
+struct Numbering {
+  /** The equation counter. */
+  int equation = 0;
+  /** A theorem counter, and the section it was last stepped in: it starts
+   *  again from 1 in the next. */
+  struct Counter {
+    int value = 0;
+    std::string where;
+  };
+  std::map<std::string, Counter> counters;
+  /** What a \label names now, as \@currentlabel: the number of the last
+   *  equation or heading. */
+  std::string current;
+  /** label -> the text a reference to it draws, as LaTeX source. Shared
+   *  with the references, which draw only when the whole input has been
+   *  read: one may come before its label. */
+  std::shared_ptr<std::map<std::string, std::string>> labels =
+    std::make_shared<std::map<std::string, std::string>>();
+};
+
+Numbering* numbering = nullptr;
+
+/** Where the next input starts counting (setStartNumbering()), and where the
+ *  last one ended (lastNumbering()). */
+NumberingState& pendingNumbering() {
+  static NumberingState state;
+  return state;
+}
+
+NumberingState& finalNumbering() {
+  static NumberingState state;
+  return state;
+}
+
+class NumberingScope {
+public:
+  NumberingScope() : _outer(numbering) {
+    if (_outer == nullptr) numbering = &_own;
+  }
+  ~NumberingScope() { numbering = _outer; }
+  NumberingScope(const NumberingScope&) = delete;
+  NumberingScope& operator=(const NumberingScope&) = delete;
+
+  /** Whether this is the Lowerer that takes the whole input. */
+  bool outermost() const { return _outer == nullptr; }
+
+private:
+  Numbering* _outer;
+  Numbering _own;
+};
+
+/** What the input says of its fonts as a whole: the math font a \setmathfont
+ *  named, and the fonts of the roles its preamble set (see
+ *  atom/font_family_atom.h). As with the numbering, one input's are shared by
+ *  every Lowerer it takes, and the outermost one copies them to the Formula. */
+struct FontDefaults {
+  std::string math;
+  int roles[3] = {0, 0, 0};
+};
+
+FontDefaults* fontDefaults = nullptr;
+
+class FontDefaultsScope {
+public:
+  FontDefaultsScope() : _outer(fontDefaults) {
+    if (_outer == nullptr) fontDefaults = &_own;
+  }
+  ~FontDefaultsScope() { fontDefaults = _outer; }
+  FontDefaultsScope(const FontDefaultsScope&) = delete;
+  FontDefaultsScope& operator=(const FontDefaultsScope&) = delete;
+
+  bool outermost() const { return _outer == nullptr; }
+  const FontDefaults& own() const { return _own; }
+
+private:
+  FontDefaults* _outer;
+  FontDefaults _own;
+};
+
+/** \ref and \eqref: the text of the label they name, looked up when the
+ *  atom is built into a box -- the whole input has been read by then -- and
+ *  a bold ?? where there is none. */
+class RefAtom : public Atom {
+public:
+  RefAtom(std::shared_ptr<std::map<std::string, std::string>> labels, std::string key,
+          bool parentheses)
+      : _labels(std::move(labels)), _key(std::move(key)), _parentheses(parentheses) {}
+
+  sptr<Box> createBox(Env& env) override {
+    const auto it = _labels->find(_key);
+    sptr<Atom> text;
+    if (it != _labels->end()) text = buildFragment(it->second, false);
+    if (text == nullptr) {
+      text = sptrOf<FontStyleAtom>(FontStyle::bf, false, sptrOf<TextAtom>(std::string("??"), false));
+    }
+    if (!_parentheses) return text->createBox(env);
+    auto row = sptrOf<RowAtom>();
+    row->add(sptrOf<TextAtom>(std::string("("), false));
+    row->add(text);
+    row->add(sptrOf<TextAtom>(std::string(")"), false));
+    return row->createBox(env);
+  }
+
+private:
+  std::shared_ptr<std::map<std::string, std::string>> _labels;
+  std::string _key;
+  bool _parentheses;
+};
+
 class Lowerer {
 public:
   Lowerer(const Ast& ast, Diagnostics& diags) : _ast(ast), _diags(diags) {}
+
+  /** The outermost Lowerer of an input starts from the state a host set
+   *  (setStartNumbering()), once, and leaves its own end state. */
+  void startNumbering() {
+    if (!_numbering.outermost()) return;
+    NumberingState start = std::move(pendingNumbering());
+    pendingNumbering() = NumberingState();
+    nums().equation = start.equation;
+    *nums().labels = std::move(start.labels);
+  }
+
+  void endNumbering() {
+    if (!_numbering.outermost()) return;
+    finalNumbering().equation = nums().equation;
+    finalNumbering().labels = *nums().labels;
+  }
 
   void run(Formula& f, bool lines, bool paragraphs) {
     if (_ast.root == kNoNode) return;
@@ -118,6 +256,11 @@ public:
       runLines(f, paragraphs);
     } else {
       lowerList(_ast.root, f, 0);
+    }
+    if (_numbering.outermost()) reportReferences();
+    if (_fontDefaults.outermost()) {
+      f._mathFontName = _fontDefaults.own().math;
+      for (int i = 0; i < 3; i++) f._fontRoles[i] = _fontDefaults.own().roles[i];
     }
   }
 
@@ -130,6 +273,38 @@ private:
   std::vector<std::int8_t> _blocks;
   /** Where images are looked for (graphicsDirs). */
   GraphicsDirs _graphicsDirs;
+  /** Equation numbers and labels (Numbering). */
+  NumberingScope _numbering;
+  Numbering& nums() { return *numbering; }
+  /** The math font and the preamble's fonts (FontDefaults). */
+  FontDefaultsScope _fontDefaults;
+  /** Whether the preamble of a document is being lowered, where a font
+   *  role is set for the whole body. */
+  bool _inPreamble = false;
+
+  /** What an alignment's row, or a display, says about its own number:
+   *  \notag, \tag, and the labels written in it. */
+  struct RowNote {
+    bool notag = false;
+    sptr<Atom> tag;
+    /** What a reference to the tagged row draws. */
+    std::string tagSource;
+    bool star = false;
+    std::vector<std::string> labels;
+  };
+  RowNote _note;
+  /** What `gmarraystretch` said for the array that comes next. */
+  float _stretch = 1.f;
+  /** How many alignment rows or displays are being lowered: a \label in
+   *  one names its number, which is known when it ends. */
+  int _inRow = 0;
+  struct Reference {
+    std::string key;
+    SourceSpan at;
+    bool parentheses;
+  };
+  /** The references this Lowerer made, which the outermost one checks. */
+  std::vector<Reference> _refs;
   /** A text argument that stands for one line's part of it while its
    *  command is built once per line (piecesOf()), and that part. */
   NodeId _linePartOf = kNoNode;
@@ -248,7 +423,8 @@ private:
         return;
       }
       case NodeKind::math:
-        f.add(sptrOf<MathAtom>(build(child(id, 0)), x.flag ? TexStyle::display : TexStyle::text));
+        f.add(sptrOf<MathAtom>(x.flag ? displayBody(child(id, 0)) : build(child(id, 0)),
+                               x.flag ? TexStyle::display : TexStyle::text));
         return;
       case NodeKind::list:
         lowerList(id, f, 0);
@@ -369,7 +545,7 @@ private:
       }
       return unknownAtom(name);
     }
-    if (name == "kern") {
+    if (name == "kern" || name == "mkern" || name == "hskip" || name == "mskip") {
       const auto [value, unit] = Units::getDimen(rawOf(child(id, 0)));
       return sptrOf<SpaceAtom>(unit, value, 0.f, 0.f);
     }
@@ -389,18 +565,32 @@ private:
     // Only the lines of a label have indents to suppress; elsewhere it is
     // what it was when the prelude dropped it.
     if (name == "noindent" || isLineAlignment(name)) return nullptr;
-    // What LaTeX draws for a reference it cannot resolve: a bold ??.
+    // Equation numbers, labels and what names them (see Numbering).
+    if (name == "tag" || name == "gmtagstar") {
+      noteTag(id, name == "gmtagstar");
+      return nullptr;
+    }
+    if (name == "notag" || name == "nonumber") {
+      _note.notag = true;
+      return nullptr;
+    }
+    if (name == "label") {
+      label(trimmed(rawOf(child(id, 0))));
+      return nullptr;
+    }
+    if (name == "setcounter") {
+      if (trimmed(rawOf(child(id, 0))) == "equation") {
+        nums().equation = std::atoi(trimmed(rawOf(child(id, 1))).c_str());
+      }
+      return nullptr;
+    }
+    if (name == "ref" || name == "eqref") return reference(id, name == "eqref");
+    // What LaTeX draws for a reference it cannot resolve: a bold ??. A grob
+    // has no pages, nor a bibliography.
     const auto bold = [](const std::string& s) {
       return sptrOf<FontStyleAtom>(FontStyle::bf, false, literalText(s));
     };
-    if (name == "ref" || name == "pageref") return bold("??");
-    if (name == "eqref") {
-      auto row = sptrOf<RowAtom>();
-      row->add(literalText("("));
-      row->add(bold("??"));
-      row->add(literalText(")"));
-      return row;
-    }
+    if (name == "pageref") return bold("??");
     if (isCitation(name)) {
       // What LaTeX draws for citations it cannot resolve: a bold ? for each
       // key, then the note, in brackets -- `\cite[p.~3]{a,b}` is [?, ?, p. 3].
@@ -446,7 +636,22 @@ private:
       return sptrOf<FontStyleAtom>(FontStyle::rm, false, argumentFormula(text, rawOf(text), false));
     }
     if (name == "url" || name == "href") return link(id, f);
+    if (name == "textsc") {
+      // Text, as in LaTeX, in math too: upright, with its spaces.
+      const sptr<Atom> caps = fragment(smallCaps(rawOf(child(id, 0))), false);
+      return node(id).mode == Mode::math ? sptrOf<FontStyleAtom>(FontStyle::rm, false, caps) : caps;
+    }
+    if (name == "gmtheorem") return fragment(theoremHead(id), false);
+    if (name == "verb") {
+      const NodeId text = child(id, 0);
+      return typewriter(rawOf(text), node(text).star);
+    }
     if (name == "includegraphics") return image(id);
+    if (name == "gmarraystretch") {
+      _stretch = static_cast<float>(std::atof(rawOf(child(id, 0)).c_str()));
+      if (!(_stretch > 0.f)) _stretch = 1.f;
+      return nullptr;
+    }
     if (name == "graphicspath") {
       graphicsPath(rawOf(child(id, 0)));
       return nullptr;
@@ -460,6 +665,8 @@ private:
     if (name == "color" && f.isArrayMode()) {
       return sptrOf<CellForegroundAtom>(ColorAtom::getColor(stripComments(rawOf(child(id, 0)))));
     }
+    // A longtable's marker ends its row, and draws nothing.
+    if (isLongtableMarker(name)) return nullptr;
     // In an alignment, a rule or \intertext is its handler's, which works
     // on the alignment's rows.
     if (f.isArrayMode() && (isRule(name) || name == "intertext")) return bridge(id, name, spec, f);
@@ -470,6 +677,161 @@ private:
     // operand here; the old parser read on past the argument for one.
     if (spec->shape != Shape::prefix) return nullptr;
     return bridge(id, name, spec, f);
+  }
+
+  /** `text` as written, in the typewriter face: one run of characters, none
+   *  of them read as LaTeX and none a ligature. A space is kept (a `\verb*`
+   *  shows it as U+2423). */
+  static sptr<Atom> typewriter(const std::string& text, bool visibleSpaces) {
+    std::string shown;
+    for (const char c : text) {
+      if (c == ' ' && visibleSpaces) {
+        shown += "\xe2\x90\xa3";
+      } else {
+        shown += c;
+      }
+    }
+    // Nested, as \texttt is: added to the roman the text around it is set in.
+    return sptrOf<FontStyleAtom>(FontStyle::tt, false, literalText(shown), true);
+  }
+
+  /** The index of the `close` that ends the group `open` at `from` begins,
+   *  or npos. A backslash escapes the next character when `escapes`. */
+  static std::size_t groupEnd(const std::string& s, std::size_t from, char open, char close,
+                              bool escapes) {
+    int depth = 0;
+    for (std::size_t j = from; j < s.size(); j++) {
+      if (escapes && s[j] == '\\') {
+        j++;
+      } else if (s[j] == open) {
+        depth++;
+      } else if (s[j] == close && --depth == 0) {
+        return j;
+      }
+    }
+    return std::string::npos;
+  }
+
+  /** The arguments that follow the control word `name`, which ends at
+   *  `text[at]`, for smallCaps(): the ones the command spec reads as text are
+   *  set in small capitals, the rest (a colour, a label, a file, a font name,
+   *  a dimension, math) as written. Returns the index of the last character
+   *  read. */
+  static std::size_t smallCapsArgs(const std::string& text, std::size_t at, const std::string& name,
+                                   std::string& out) {
+    const CommandSpec* spec = findCommand(name);
+    if (spec == nullptr || spec->shape != Shape::prefix) return at;
+    std::size_t end = at;
+    for (const ArgSpec& a : spec->args) {
+      std::size_t p = end + 1;
+      while (p < text.size() && text[p] == ' ') p++;
+      if (p >= text.size()) break;
+      const char open = a.optional ? '[' : '{';
+      if (text[p] != open) {
+        if (a.optional) continue;
+        break;
+      }
+      const std::size_t last =
+        groupEnd(text, p, open, a.optional ? ']' : '}', a.kind != ArgKind::url);
+      if (last == std::string::npos) break;
+      const bool words = a.kind == ArgKind::text || a.kind == ArgKind::current;
+      const std::string inside = text.substr(p + 1, last - p - 1);
+      out.append(text, end + 1, p - end - 1);
+      out += open;
+      out += words ? smallCaps(inside) : inside;
+      out += text[last];
+      end = last;
+    }
+    return end;
+  }
+
+  /** Small capitals, faked as every device has to: the lowercase letters of
+   *  `text` as capitals at 0.8 of the size, the rest as it is. A command's
+   *  name and what is in math are left alone, and so are the arguments of a
+   *  command that are not text (smallCapsArgs()). Only ASCII letters change. */
+  static std::string smallCaps(const std::string& text) {
+    std::string out, run;
+    const auto flush = [&] {
+      if (!run.empty()) out += "\\textscale{0.8}{" + run + "}";
+      run.clear();
+    };
+    bool math = false;
+    for (std::size_t i = 0; i < text.size(); i++) {
+      const char c = text[i];
+      if (c == '$') {
+        flush();
+        math = !math;
+        out += c;
+      } else if (math) {
+        out += c;
+      } else if (c == '\\') {
+        flush();
+        out += c;
+        // A control word whole, else the one character it escapes.
+        const bool word = i + 1 < text.size() && std::isalpha(static_cast<unsigned char>(text[i + 1])) != 0;
+        std::string name;
+        do {
+          if (++i < text.size()) {
+            out += text[i];
+            if (word) name += text[i];
+          }
+        } while (word && i + 1 < text.size() && std::isalpha(static_cast<unsigned char>(text[i + 1])) != 0);
+        if (word) i = smallCapsArgs(text, i, name, out);
+      } else if (c >= 'a' && c <= 'z') {
+        run += static_cast<char>(c - 'a' + 'A');
+      } else {
+        flush();
+        out += c;
+      }
+    }
+    flush();
+    return out;
+  }
+
+  /** The head of a theorem: "Theorem 2 (note)." in bold, as amsthm's plain
+   *  style sets it, a remark's in italics. `style`, the counter, the
+   *  counter it is set within, the title and the note are its arguments
+   *  (the expander's \newtheorem writes them). A numbered theorem steps its
+   *  counter, which starts again when the section it is within does, and is
+   *  what a \label after it names. */
+  std::string theoremHead(NodeId id) {
+    const std::string style = rawOf(child(id, 0));
+    const std::string counter = rawOf(child(id, 1));
+    const std::string within = rawOf(child(id, 2));
+    const std::string title = rawOf(child(id, 3));
+    const std::string note = rawOf(child(id, 4));
+    std::string number;
+    if (!counter.empty()) {
+      std::string where;
+      if (within == "section") where = std::to_string(_section[0]);
+      if (within == "subsection") where = std::to_string(_section[0]) + "." + std::to_string(_section[1]);
+      Numbering::Counter& c = nums().counters[counter];
+      if (c.where != where) c.value = 0;
+      c.where = where;
+      number = (where.empty() ? "" : where + ".") + std::to_string(++c.value);
+      nums().current = number;
+    }
+    const std::string name = title + (number.empty() ? "" : "\\ " + number);
+    const bool italic = style == "remark";
+    std::string head = (italic ? "\\textit{" : "\\textbf{") + name + "}";
+    if (!note.empty()) head += "\\ (" + note + ")";
+    return head + (italic ? "." : "\\textbf{.}");
+  }
+
+  /** The text of a verbatim environment: a line to a row, flush left. */
+  sptr<Atom> verbatimBlock(const Node& x) {
+    auto lines = sptrOf<VRowAtom>();
+    lines->_halign = Alignment::left;
+    std::size_t from = 0;
+    while (true) {
+      const std::size_t to = x.raw.find('\n', from);
+      const std::string line =
+        x.raw.substr(from, to == std::string::npos ? std::string::npos : to - from);
+      lines->append(typewriter(line.empty() ? " " : line, x.text == "verbatim*"));
+      if (to == std::string::npos) break;
+      from = to + 1;
+    }
+    return lines;
   }
 
   /** \url and \href. A grob has no links, so only their look, LaTeX's
@@ -485,19 +847,7 @@ private:
       TreeArgs a(*this, math, {"textcolor", colour, rawOf(text)}, {kNoNode, kNoNode, text}, &f);
       return cm->call(a);
     }
-    std::string chars;
-    const std::string raw = rawOf(child(id, 0));
-    for (std::size_t i = 0; i < raw.size(); i++) {
-      const char c = raw[i];
-      // `- ` ' as well: a URL is verbatim, and read again as text they
-      // would form TeX's dash and quote ligatures.
-      if (std::string("\\{}$&#_%~^-`'").find(c) != std::string::npos) {
-        chars += "\\char" + std::to_string(static_cast<unsigned char>(c)) + "{}";
-      } else {
-        chars += c;
-      }
-    }
-    return fragment("\\textcolor{" + colour + "}{\\texttt{" + chars + "}}", math);
+    return sptrOf<ColorAtom>(typewriter(rawOf(child(id, 0)), false), TRANSPARENT, ColorAtom::getColor(colour));
   }
 
   /** \includegraphics[options]{path}: the host reads the file and says
@@ -588,6 +938,21 @@ private:
         for (const Diagnostic& d : found.items()) _lx._diags.warn(_at, _who + ": " + d.message);
       }
       return arr;
+    }
+
+    sptr<Atom> formulaChecked(const std::string& latex, bool math) override {
+      if (latex.empty()) return nullptr;
+      Diagnostics found;
+      const Ast ast = parseLatex(latex, math ? Mode::math : Mode::text, found);
+      if (ast.root == kNoNode) return nullptr;
+      Formula g;
+      Lowerer(ast, found).run(g, false, false);
+      for (const Diagnostic& d : found.items()) warn(d.message);
+      return g._root;
+    }
+
+    void warn(const std::string& message) override {
+      if (!_who.empty()) _lx._diags.warn(_at, _who + ": " + message);
     }
 
     /** Report what alignmentOfText() finds at `at`, as `who`'s. */
@@ -855,6 +1220,7 @@ private:
         const auto atom = body();
         return sptrOf<FontStyleAtom>(FontContext::mainFontStyleOf(name), math, atom);
       }
+      if (name == "scshape") return fragment(smallCaps(x.raw), math);
       if (name == "boldmath") {
         // A math style: text in its reach keeps its own.
         return sptrOf<FontStyleAtom>(FontStyle::bf, true, body());
@@ -872,6 +1238,20 @@ private:
         const color c = ColorAtom::getColor(rawOf(child(id, 0)));
         return sptrOf<ColorAtom>(body(), TRANSPARENT, c);
       }
+      if (name == "fontsize") {
+        // The size over the 10pt of \normalsize, which a grob's own size
+        // stands for, as \large's 1.2 does.
+        const std::string raw = rawOf(child(id, 0));
+        char* end = nullptr;
+        const float points = std::strtof(raw.c_str(), &end);
+        auto a = body();
+        if (a == nullptr) a = sptrOf<EmptyAtom>();
+        if (end == raw.c_str() || !std::isfinite(points) || points <= 0) {
+          _diags.warn(x.span, "\\fontsize: `" + raw + "' is not a positive size; the size is kept");
+          return a;
+        }
+        return sized(a, std::min(points / 10.f, 16384.f));
+      }
       if (name == "relscale") {
         // relsize's: a size relative to the one around it, which still
         // breaks with its text, as \large's does.
@@ -887,12 +1267,122 @@ private:
         // As \scalebox's: at most TeX's largest dimension, as a factor.
         return sized(a, std::min(factor, 16384.f));
       }
+      if (name == "setmainfont" || name == "setsansfont" || name == "setmonofont") {
+        auto a = body();
+        if (a == nullptr) a = sptrOf<EmptyAtom>();
+        const int role =
+          name == "setmainfont" ? roleMain : name == "setsansfont" ? roleSans : roleMono;
+        const int index = fontIndex(id, 1);
+        if (index == 0) return a;
+        // In a preamble, for the whole body: the atom here is thrown away.
+        if (_inPreamble) fontDefaults->roles[role] = index;
+        return sptrOf<FontRoleAtom>(role, index, a);
+      }
+      if (name == "setmathfont") {
+        setMathFont(id);
+        auto a = body();
+        return a == nullptr ? sptrOf<EmptyAtom>() : a;
+      }
+      if (name == "fontspec" || name == "fontfamily") {
+        auto a = body();
+        if (a == nullptr) a = sptrOf<EmptyAtom>();
+        const int index = fontIndex(id, name == "fontspec" ? 1 : 0);
+        return index == 0 ? a : sptr<Atom>(new FontFamilyAtom(index, a));
+      }
       // \displaystyle and kin
       auto g = body();
       return sptrOf<StyleAtom>(texStyleOf(name), g == nullptr ? sptrOf<EmptyAtom>() : g);
     } catch (const std::exception& e) {
       _diags.warn(x.span, "\\" + name + ": " + clean(e.what()));
       return nullptr;
+    }
+  }
+
+  // --- fonts: \setmainfont, \fontspec, \fontfamily, \setmathfont --------------
+
+  /** fontspec's options, `key=value,key,...`, from the optional arguments
+   *  either side of the font's name. The engine reads Path, Extension and
+   *  the four faces; any other is warned and left out. */
+  std::vector<std::pair<std::string, std::string>> fontOptions(NodeId id, const std::string& who) {
+    std::vector<std::pair<std::string, std::string>> out;
+    if (node(id).text == "fontfamily") return out;
+    static const std::set<std::string> known = {"Path",       "Extension",  "UprightFont",
+                                                "BoldFont",   "ItalicFont", "BoldItalicFont"};
+    for (const std::uint32_t at : {0u, 2u}) {
+      const std::string raw = stripComments(rawOf(child(id, at)));
+      int depth = 0;
+      std::size_t start = 0;
+      for (std::size_t i = 0; i <= raw.size(); i++) {
+        const char c = i < raw.size() ? raw[i] : ',';
+        if (c == '{') depth++;
+        if (c == '}') depth--;
+        if (c != ',' || depth > 0) continue;
+        const std::string item = raw.substr(start, i - start);
+        start = i + 1;
+        const auto eq = item.find('=');
+        const std::string key = trimmed(item.substr(0, eq));
+        std::string value = eq == std::string::npos ? "" : trimmed(item.substr(eq + 1));
+        if (value.size() >= 2 && value.front() == '{' && value.back() == '}') {
+          value = trimmed(value.substr(1, value.size() - 2));
+        }
+        if (key.empty()) continue;
+        if (known.count(key) != 0) {
+          out.emplace_back(key, value);
+        } else {
+          _diags.warn(node(id).span,
+                      who + ": the option `" + key + "' is not supported and is ignored");
+        }
+      }
+    }
+    return out;
+  }
+
+  /** What the host makes of the font a font command names (front/hooks.h):
+   *  its own name for it, or "" with a warning when there is none. */
+  std::string resolveFont(NodeId id, std::uint32_t nameArg) {
+    const std::string& command = node(id).text;
+    const std::string who = "\\" + command;
+    const std::string name = trimmed(stripComments(rawOf(child(id, nameArg))));
+    if (name.empty()) {
+      _diags.warn(node(id).span, who + ": no font name; the font is kept");
+      return "";
+    }
+    const std::string role = command == "setmainfont"   ? "main"
+                             : command == "setsansfont" ? "sans"
+                             : command == "setmonofont" ? "mono"
+                             : command == "setmathfont" ? "math"
+                             : command == "fontfamily"  ? "nfss"
+                                                        : "font";
+    const auto options = fontOptions(id, who);
+    std::string found = name;
+    if (const FontResolver& resolve = fontResolver()) found = resolve(name, options, role);
+    if (found.empty()) {
+      _diags.warn(node(id).span,
+                  role == "math"
+                    ? who + ": `" + name + "' is not a loaded math font (load it with load_font()); "
+                          "the default is used"
+                    : who + ": font `" + name + "' not found; the default is used");
+    }
+    return found;
+  }
+
+  /** The family index of a font command's font, 0 when it has none. */
+  int fontIndex(NodeId id, std::uint32_t nameArg) {
+    const std::string family = resolveFont(id, nameArg);
+    return family.empty() ? 0 : register_font_family(family);
+  }
+
+  /** \setmathfont: a formula has one math font, so it is the input's, wherever
+   *  the command stands, and a second, different one is not used. */
+  void setMathFont(NodeId id) {
+    const std::string font = resolveFont(id, 1);
+    if (font.empty()) return;
+    std::string& math = fontDefaults->math;
+    if (math.empty() || math == font) {
+      math = font;
+    } else {
+      _diags.warn(node(id).span, "\\setmathfont: a formula has one math font; `" + font +
+                                   "' is ignored and `" + math + "' is used");
     }
   }
 
@@ -1217,6 +1707,7 @@ private:
     const Node& x = node(id);
     const int level = headingLevel(x.text);
     const std::string number = headingNumber(level, x.star);
+    if (!number.empty()) nums().current = number;
     // The number and the quad after it, and the title: the last argument
     // (the first is the short one). Each is made once -- the title's
     // warnings are said once -- and shared by both settings below.
@@ -1291,7 +1782,10 @@ private:
     if (l.prose != nullptr && l.prose->_root != nullptr) {
       startLine(l);
       indentIfNeeded(l);
-      l.line->add(wrap(l, sptrOf<FontStyleAtom>(FontStyle::rm, false, l.prose->_root)));
+      // A font switch in force sits inside the \rm that sets the text, or
+      // the \rm would undo it; the rest of what is in force is around it.
+      const sptr<Atom> styled = wrap(l, l.prose->_root, true, true);
+      l.line->add(wrap(l, sptrOf<FontStyleAtom>(FontStyle::rm, false, styled), true, false));
       l.drawn = true;
       l.afterHeading = false;
       if (l.align != Alignment::left) l.lineAlign = l.align;
@@ -1358,10 +1852,12 @@ private:
     return x.kind == NodeKind::group && (x.aux == 2 || (x.aux >= 4 && x.aux <= 7));
   }
 
-  /** itemize or enumerate, which a document sets apart from its text. */
+  /** A list or verbatim text, which a document sets apart from its text. */
   bool isList(NodeId id) const {
     const Node& x = node(id);
-    return x.kind == NodeKind::environment && (x.text == "itemize" || x.text == "enumerate");
+    return x.kind == NodeKind::environment &&
+           (x.text == "itemize" || x.text == "enumerate" || x.text == "description" ||
+            x.text == "verbatim" || x.text == "verbatim*");
   }
 
   /** A space a break takes with it: not `~`, which TeX never drops. */
@@ -1427,7 +1923,7 @@ private:
     beforeLine(l);
     Formula g;
     if (node(id).kind == NodeKind::math) {
-      auto m = build(child(id, 0));
+      auto m = displayBody(child(id, 0));
       g.add(sptrOf<StyleAtom>(TexStyle::display, m == nullptr ? sptrOf<EmptyAtom>() : m));
     } else {
       lowerItem(id, g);
@@ -1462,9 +1958,12 @@ private:
 
   /** `atom` under the declarations whose bodies a document is reading line
    *  by line, innermost first; `sizes` false leaves out \small and kin. */
-  sptr<Atom> wrap(const Label& l, sptr<Atom> atom, bool sizes = true) {
+  sptr<Atom> wrap(const Label& l, sptr<Atom> atom, bool sizes = true,
+                  std::optional<bool> fonts = std::nullopt) {
     for (auto it = l.decls.rbegin(); it != l.decls.rend(); ++it) {
       if (!sizes && isSize(node(*it).text)) continue;
+      // Only the font switches, or none of them.
+      if (fonts && *fonts != isTextFont(node(*it).text)) continue;
       const sptr<Atom> inner = atom;
       auto wrapped = declarationAtom(*it, [&] { return inner; });
       if (wrapped != nullptr) atom = wrapped;
@@ -1560,7 +2059,10 @@ private:
       Label preamble(scratch);
       preamble.document = l.document;
       const Diagnostics::Quiet quiet(_diags);
+      const bool was = _inPreamble;
+      _inPreamble = true;
       feedItem(preamble, id);
+      _inPreamble = was;
     }
   }
 
@@ -1623,7 +2125,7 @@ private:
         if (x.flag) {
           // Display style for the display math alone.
           beforeLine(l);
-          auto g = build(list);
+          auto g = displayBody(list);
           l.line->add(sptrOf<StyleAtom>(TexStyle::display, g == nullptr ? sptrOf<EmptyAtom>() : g));
           return;
         }
@@ -1692,7 +2194,9 @@ private:
     const auto letter = [&](NodeId arg, const char* allowed, char fallback) {
       const std::string s = rawOf(arg);
       const auto at = s.find_first_not_of(" \t\r\n");
-      if (at == std::string::npos || std::strchr(allowed, s[at]) == nullptr) return fallback;
+      if (at == std::string::npos || s[at] == '\0' || std::strchr(allowed, s[at]) == nullptr) {
+        return fallback;
+      }
       return s[at];
     };
     const char p = letter(child(id, 0), "tb", 'c');
@@ -1707,6 +2211,7 @@ private:
   sptr<Atom> environment(NodeId id) {
     const Node& x = node(id);
     if (x.text == "minipage") return minipage(id);
+    if (x.text == "verbatim" || x.text == "verbatim*") return verbatimBlock(x);
     const EnvSpec* spec = findEnvironment(x.text);
     const std::string macName = (spec != nullptr ? x.text : std::string("matrix")) + "@@env";
     MacroInfo* mac = MacroInfo::get(macName);
@@ -1746,11 +2251,35 @@ private:
    *  and a rule or \intertext ends one itself (command()). */
   sptr<ArrayFormula> alignmentOf(NodeId env) {
     auto arr = sptrOf<ArrayFormula>();
+    arr->_stretch = _stretch;
+    _stretch = 1.f;
     if (env == kNoNode || node(env).kind != NodeKind::environment) return arr;
+    if (isTblrEnvironment(node(env).text)) return tblrAlignmentOf(env);
     const bool text = node(env).flag;
+    // The rows of align, gather, ... are numbered, unless the environment is
+    // starred; a multline has one number, on its last line.
+    const bool family = isNumberedEnvironment(node(env).text);
+    const bool automatic = family && !node(env).star;
+    const bool once = family && node(env).text == "multline";
+    // What the row of an enclosing display was told is set aside: this
+    // alignment's rows are told their own.
+    RowNote outer = std::move(_note);
+    _note = RowNote();
+    _inRow++;
+    int lastRow = -1;
+    std::vector<NodeId> rows;
     for (std::uint32_t r = 0; r < count(env); r++) {
-      const NodeId row = child(env, r);
-      if (node(row).kind != NodeKind::row) continue;
+      if (node(child(env, r)).kind == NodeKind::row) rows.push_back(child(env, r));
+    }
+    // A longtable's head and foot rows are set once: first and last.
+    const bool longtable = node(env).text == "longtable";
+    if (longtable) rows = longtableOrder(rows);
+    for (std::size_t k = 0; k < rows.size(); k++) {
+      const NodeId row = rows[k];
+      if (longtable && k == 0 && captionRow(env, row, *arr)) {
+        arr->addRow();
+        continue;
+      }
       for (std::uint32_t c = 0; c < count(row); c++) {
         if (c > 0) arr->addCol();
         if (text) {
@@ -1760,10 +2289,346 @@ private:
         }
       }
       const std::string& end = node(row).text;
+      // A rule or \intertext ends its row too, and is not an equation.
+      const bool marker = isLongtableMarker(end);
+      const bool equation = end.empty() || end == "\\" || end == "cr" || marker;
+      const bool blank = isBlankRow(row);
+      if (equation && !blank) lastRow = arr->rows();
+      if (family && equation && !once) finishRow(*arr, arr->rows(), automatic && !blank);
       if (!node(row).raw.empty()) arr->addRowGap(Units::getDimen(node(row).raw));
-      if (end == "\\" || end == "cr") arr->addRow();
+      // A row moved from the end of the table has no end of its own.
+      if (end == "\\" || end == "cr" || marker || (end.empty() && k + 1 < rows.size())) {
+        arr->addRow();
+      }
+    }
+    if (family && once && lastRow >= 0) finishRow(*arr, lastRow, automatic);
+    _inRow--;
+    RowNote inner = std::move(_note);
+    _note = std::move(outer);
+    if (!family) {
+      // A split or aligned in an equation: its \label, \tag and \notag are
+      // the equation's.
+      if (inner.tag != nullptr && _note.tag == nullptr) {
+        _note.tag = inner.tag;
+        _note.tagSource = inner.tagSource;
+        _note.star = inner.star;
+      }
+      _note.notag = _note.notag || inner.notag;
+      _note.labels.insert(_note.labels.end(), inner.labels.begin(), inner.labels.end());
     }
     return arr;
+  }
+
+  static bool isLongtableMarker(const std::string& name) {
+    return name == "endhead" || name == "endfirsthead" || name == "endfoot" ||
+           name == "endlastfoot";
+  }
+
+  /** A longtable's rows, in the order a single page sets them: the first
+   *  head (the head, where there is no first one), the rows, and the last
+   *  foot (the foot). A group ends at the row that has its marker. */
+  std::vector<NodeId> longtableOrder(const std::vector<NodeId>& rows) const {
+    std::vector<NodeId> firstHead, head, foot, lastFoot, group;
+    for (const NodeId row : rows) {
+      group.push_back(row);
+      const std::string& end = node(row).text;
+      std::vector<NodeId>* to = end == "endfirsthead"  ? &firstHead
+                                : end == "endhead"     ? &head
+                                : end == "endfoot"     ? &foot
+                                : end == "endlastfoot" ? &lastFoot
+                                                       : nullptr;
+      if (to == nullptr) continue;
+      to->insert(to->end(), group.begin(), group.end());
+      group.clear();
+    }
+    std::vector<NodeId> order = firstHead.empty() ? head : firstHead;
+    order.insert(order.end(), group.begin(), group.end());
+    const std::vector<NodeId>& tail = lastFoot.empty() ? foot : lastFoot;
+    order.insert(order.end(), tail.begin(), tail.end());
+    return order;
+  }
+
+  /** How many columns a column specification sets: its letters, with what
+   *  is in braces after p, m, b, @, !, > and < left out, and *{n}{cols}
+   *  counted n times. */
+  static int columnCount(const std::string& spec, int depth = 0) {
+    int n = 0;
+    // The index of the `}` that closes the `{` at or after `from`.
+    const auto close = [&](std::size_t from) {
+      std::size_t j = from;
+      for (int open = 0; j < spec.size(); j++) {
+        if (spec[j] == '{') open++;
+        if (spec[j] == '}' && --open == 0) break;
+      }
+      return j;
+    };
+    for (std::size_t i = 0; i < spec.size(); i++) {
+      const char c = spec[i];
+      const bool braced = i + 1 < spec.size() && spec[i + 1] == '{';
+      if (c == '@' || c == '!' || c == '>' || c == '<') {
+        i = close(i + 1);
+      } else if (c == 'p' || c == 'm' || c == 'b' || c == 'X') {
+        n++;
+        if (braced) i = close(i + 1);
+      } else if (c == '*' && depth < 8) {
+        const std::size_t first = close(i + 1);
+        const std::size_t last = close(first + 1);
+        // *{n}{cols} with a group missing: nothing more to count.
+        if (first >= spec.size() || last >= spec.size()) break;
+        const int times = std::atoi(spec.substr(i + 2, first - i - 2).c_str());
+        const long long more = static_cast<long long>(std::min(std::max(times, 0), 1000)) *
+                               columnCount(spec.substr(first + 2, last - first - 2), depth + 1);
+        n = static_cast<int>(std::min<long long>(n + more, 1 << 14));
+        i = last;
+      } else if (c == 'l' || c == 'c' || c == 'r' || c == 'S' || c == 'Q') {
+        n++;
+        if (i + 1 < spec.size() && spec[i + 1] == '[') {
+          const std::size_t end = spec.find(']', i + 1);
+          i = end == std::string::npos ? spec.size() : end;
+        }
+      }
+    }
+    return n;
+  }
+
+  /** A longtable's first row, when it holds only its caption: set as a
+   *  line centred across the table, as LaTeX sets one above it. */
+  bool captionRow(NodeId env, NodeId row, ArrayFormula& arr) {
+    if (count(row) != 1) return false;
+    const NodeId list = child(child(row, 0), 0);
+    std::uint32_t i = 0;
+    while (i < count(list) && isSpace(node(child(list, i)))) i++;
+    if (i >= count(list)) return false;
+    const NodeId cap = child(list, i);
+    if (node(cap).kind != NodeKind::command || node(cap).flag || node(cap).text != "caption") {
+      return false;
+    }
+    // The environment's arguments are [position]{columns}: the last one
+    // that was given is the columns.
+    int columns = 1;
+    for (std::uint32_t a = 0; a < count(env); a++) {
+      const Node& arg = node(child(env, a));
+      if (arg.kind == NodeKind::argument && arg.flag && !arg.raw.empty()) {
+        columns = columnCount(arg.raw);
+      }
+    }
+    columns = std::min(std::max(columns, 1), 1 << 14);
+    arr.add(sptrOf<MulticolumnAtom>(columns, "c", commandAtom(cap, arr)));
+    if (columns > 1) arr.addCol(columns);
+    return true;
+  }
+
+  /** The rules of a tblr at one position (above row `at`), those that
+   *  meet joined: one row of the table draws one rule. */
+  static std::vector<TblrRule> rulesAt(const TblrSpec& spec, int at, int rows, int columns) {
+    std::vector<TblrRule> found;
+    for (TblrRule r : spec.horizontal) {
+      if (!r.at.matches(at, rows + 1)) continue;
+      if (r.from == 0) r.from = 1;
+      if (r.to == 0 || r.to > columns) r.to = columns;
+      found.push_back(r);
+    }
+    std::stable_sort(found.begin(), found.end(),
+                     [](const TblrRule& a, const TblrRule& b) { return a.from < b.from; });
+    std::vector<TblrRule> merged;
+    for (const TblrRule& r : found) {
+      if (!merged.empty() && r.from <= merged.back().to + 1) {
+        merged.back().to = std::max(merged.back().to, r.to);
+      } else {
+        merged.push_back(r);
+      }
+    }
+    return merged;
+  }
+
+  /** A tblr (tabularray's table, tinytable's) as an alignment: the rules
+   *  its spec puts between rows, and the spans, colours, fonts and
+   *  alignments it sets for cells. */
+  sptr<ArrayFormula> tblrAlignmentOf(NodeId env) {
+    auto arr = sptrOf<ArrayFormula>();
+    const bool text = node(env).flag;
+    const NodeId outerArg = count(env) > 0 ? child(env, 0) : kNoNode;
+    const NodeId innerArg = count(env) > 1 ? child(env, 1) : kNoNode;
+    TblrSpec spec = parseTblr(outerArg == kNoNode ? std::string() : rawOf(outerArg),
+                              innerArg == kNoNode ? std::string() : rawOf(innerArg));
+    std::vector<NodeId> rows;
+    for (std::uint32_t r = 0; r < count(env); r++) {
+      if (node(child(env, r)).kind == NodeKind::row) rows.push_back(child(env, r));
+    }
+    // The empty row after the last \\ is no row of the table.
+    while (!rows.empty() && isBlankRow(rows.back()) && node(rows.back()).text.empty()) {
+      rows.pop_back();
+    }
+    int columns = 0;
+    for (const NodeId row : rows) columns = std::max(columns, static_cast<int>(count(row)));
+    const int n = static_cast<int>(rows.size());
+
+    // A caption, as a longtable's: a line across the table, above it.
+    if (!spec.caption.empty() && columns > 0) {
+      auto caption = sptrOf<FontStyleAtom>(FontStyle::rm, false, fragment(spec.caption, false));
+      arr->add(sptrOf<MulticolumnAtom>(columns, "c", caption));
+      if (columns > 1) arr->addCol(columns);
+      arr->addRow();
+    }
+
+    const auto rule = [&](int at) {
+      for (const TblrRule& r : rulesAt(spec, at, n, columns)) {
+        auto line = sptrOf<HlineAtom>();
+        if (r.thickness.isValid()) line->setThickness(r.thickness.val, r.thickness.unit);
+        if (r.from > 1 || r.to < columns) line->setColumnRange(r.from - 1, r.to - 1);
+        arr->add(line);
+        arr->addRow();
+      }
+    };
+
+    bool noted = false;
+    for (int k = 0; k < n; k++) {
+      const NodeId row = rows[static_cast<std::size_t>(k)];
+      rule(k + 1);
+      const std::uint32_t cells = count(row);
+      for (std::uint32_t c = 0; c < cells;) {
+        if (c > 0) arr->addCol();
+        const NodeId list = child(child(row, c), 0);
+        if (text) {
+          textCell(list, *arr);
+        } else {
+          lowerList(list, *arr, 0);
+        }
+        const TblrSetting s = tblrCell(spec, k + 1, static_cast<int>(c) + 1, n, columns);
+        if (s.rowspan > 1 && !noted) {
+          noted = true;
+          _diags.warn(node(env).span, "tabularray: a row span (r=) is not supported: left out");
+        }
+        if (!s.font.empty()) {
+          arr->_root = sptrOf<FontStyleAtom>(FontContext::mainFontStyleOf(s.font), false, arr->_root,
+                                              true);
+        }
+        if (!s.background.empty()) {
+          arr->addCellSpecifier(sptrOf<CellColorAtom>(ColorAtom::getColor(s.background)));
+        }
+        if (!s.foreground.empty()) {
+          arr->addCellSpecifier(sptrOf<CellForegroundAtom>(ColorAtom::getColor(s.foreground)));
+        }
+        const int span = std::min(s.colspan, static_cast<int>(cells - c));
+        if (span > 1 || !s.halign.empty()) {
+          arr->_root = sptrOf<MulticolumnAtom>(std::max(span, 1), s.halign.empty() ? "l" : s.halign,
+                                               arr->_root);
+          if (span > 1) arr->addCol(span);
+        }
+        // What it spans was written as cells of its own, which are empty.
+        c += static_cast<std::uint32_t>(std::max(span, 1));
+      }
+      if (!node(row).raw.empty()) arr->addRowGap(Units::getDimen(node(row).raw));
+      arr->addRow();
+    }
+    rule(n + 1);
+    for (const std::string& key : spec.unsupported) {
+      _diags.warn(node(env).span, "tabularray: `" + key + "' is not supported: left out");
+    }
+    return arr;
+  }
+
+  /** A row with nothing in it: the one a final \\ starts. */
+  bool isBlankRow(NodeId row) const {
+    for (std::uint32_t c = 0; c < count(row); c++) {
+      const NodeId list = child(child(row, c), 0);
+      for (std::uint32_t i = 0; i < count(list); i++) {
+        if (!isSpace(node(child(list, i)))) return false;
+      }
+    }
+    return true;
+  }
+
+  // --- equation numbers, \tag, \label and \ref ------------------------------
+
+  /** `(text)` in the upright font, as LaTeX sets an equation's number. */
+  static sptr<Atom> numberOf(const std::string& text, bool parentheses) {
+    return sptrOf<FontStyleAtom>(FontStyle::rm, false,
+                                 literalText(parentheses ? "(" + text + ")" : text));
+  }
+
+  /** \tag{text} and \tag*{text}, of the row or display being lowered. */
+  void noteTag(NodeId id, bool star) {
+    const NodeId text = child(id, 0);
+    const auto body = argumentFormula(text, rawOf(text), false);
+    if (body == nullptr) return;
+    _note.tag = sptrOf<FontStyleAtom>(FontStyle::rm, false, body);
+    _note.tagSource = trimmed(rawOf(text));
+    _note.star = star;
+  }
+
+  /** A row, or a display, is done: its number or tag, and its labels. */
+  void finishRow(ArrayFormula& arr, int row, bool numbered) {
+    const RowNote n = std::move(_note);
+    _note = RowNote();
+    sptr<Atom> tag;
+    std::string text;
+    if (n.tag != nullptr) {
+      // \tag takes the parentheses itself, which \tag* leaves out.
+      tag = n.star ? n.tag : sptrOf<RowAtom>();
+      if (!n.star) {
+        auto* parts = static_cast<RowAtom*>(tag.get());
+        parts->add(numberOf("(", false));
+        parts->add(n.tag);
+        parts->add(numberOf(")", false));
+      }
+      text = n.tagSource;
+    } else if (numbered && !n.notag) {
+      text = std::to_string(++nums().equation);
+      tag = numberOf(text, true);
+    }
+    if (tag != nullptr) {
+      arr._rowTags[row] = tag;
+      nums().current = text;
+    }
+    for (const auto& key : n.labels) (*nums().labels)[key] = nums().current;
+  }
+
+  /** The content of a display, `$$...$$` or `\[...\]`: its list, with a
+   *  \tag it holds set at the right of it. */
+  sptr<Atom> displayBody(NodeId list) {
+    RowNote outer = std::move(_note);
+    _note = RowNote();
+    _inRow++;
+    const sptr<Atom> body = build(list);
+    _inRow--;
+    const bool tagged = _note.tag != nullptr;
+    auto arr = sptrOf<ArrayFormula>();
+    if (body != nullptr) arr->add(body);
+    finishRow(*arr, 0, false);
+    _note = std::move(outer);
+    if (!tagged) return body;
+    // One centred line, which already knows where its tag goes.
+    arr->checkDimensions();
+    return sptrOf<MultlineAtom>(false, arr, MultiLineType::gather);
+  }
+
+  /** \label: what it names is the number of the row or display it is in,
+   *  known when that ends; elsewhere, the last number set. */
+  void label(const std::string& key) {
+    if (_inRow > 0) {
+      _note.labels.push_back(key);
+    } else {
+      (*nums().labels)[key] = nums().current;
+    }
+  }
+
+  /** \ref and \eqref, drawn when the whole input has been read. */
+  sptr<Atom> reference(NodeId id, bool parentheses) {
+    const std::string key = trimmed(rawOf(child(id, 0)));
+    if (_numbering.outermost()) _refs.push_back({key, node(id).span, parentheses});
+    return sptrOf<RefAtom>(nums().labels, key, parentheses);
+  }
+
+  /** What the input leaves undefined, said once all of it is read: a
+   *  reference may come before its label. */
+  void reportReferences() {
+    for (const auto& ref : _refs) {
+      if (nums().labels->count(ref.key) > 0) continue;
+      // `?\?)` so that `??)` is not read as a trigraph.
+      _diags.warn(ref.at, "reference `" + ref.key + "' is undefined: drawn as " +
+                            (ref.parentheses ? "(?\?)" : "??"));
+    }
   }
 
   /** A command that works on the alignment it is in, not on the cell's
@@ -1785,7 +2650,8 @@ private:
     std::unique_ptr<Formula> text;
     const auto flush = [&] {
       if (text != nullptr && text->_root != nullptr) {
-        arr.add(sptrOf<FontStyleAtom>(FontStyle::rm, false, text->_root));
+        // Nested, so the font a column or a group around the table sets stays.
+        arr.add(sptrOf<FontStyleAtom>(FontStyle::rm, false, text->_root, true));
       }
       text.reset();
     };
@@ -1807,7 +2673,18 @@ private:
 
 void lowerInto(const Ast& ast, Formula& formula, Diagnostics& diagnostics, bool lines,
                bool paragraphs) {
-  Lowerer(ast, diagnostics).run(formula, lines, paragraphs);
+  Lowerer lowerer(ast, diagnostics);
+  lowerer.startNumbering();
+  lowerer.run(formula, lines, paragraphs);
+  lowerer.endNumbering();
+}
+
+void setStartNumbering(NumberingState start) {
+  pendingNumbering() = std::move(start);
+}
+
+const NumberingState& lastNumbering() {
+  return finalNumbering();
 }
 
 sptr<Atom> buildFragment(const std::string& latex, bool math) {

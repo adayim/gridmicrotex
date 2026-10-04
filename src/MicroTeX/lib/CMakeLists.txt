@@ -104,6 +104,7 @@ set(
     atom/font_family_atom.cpp
     atom/mark_atom.cpp
     atom/image_atom.cpp
+    atom/diagram_atom.cpp
     otf/otf_math_reader.cpp
     # compiles to no-ops without FriBidi (see MICROTEX_BIDI)
     utils/bidi.cpp
@@ -115,6 +116,9 @@ set(
     front/ast.cpp
     front/parser.cpp
     front/prelude.cpp
+    front/tblr.cpp
+    front/siunitx.cpp
+    front/mhchem.cpp
     front/lower.cpp
 
     microtex.cpp

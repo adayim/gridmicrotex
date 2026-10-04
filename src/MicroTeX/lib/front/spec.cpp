@@ -11,7 +11,7 @@ namespace {
 /**
  * Arguments in source order, one letter each:
  *   m math   t text   c current mode   r raw   d dimension   l delimiter
- *   u url
+ *   u url   v verb
  * An upper-case letter is an optional `[...]` argument of that kind.
  *
  * The kinds follow what each engine command does with its argument (see
@@ -32,6 +32,7 @@ std::vector<ArgSpec> parseArgs(const char* code) {
       case 'd': kind = ArgKind::dimen; break;
       case 'l': kind = ArgKind::delim; break;
       case 'u': kind = ArgKind::url; break;
+      case 'v': kind = ArgKind::verb; break;
       default: break;
     }
     args.push_back({kind, optional});
@@ -69,15 +70,22 @@ struct Table {
     // [llx,lly][urx,ury] spelling.
     add({"includegraphics"}, "RRu");
     // The directories later images are looked for in; the lowering keeps them.
-    add({"graphicspath"}, "r");
+    add({"graphicspath", "gmarraystretch"}, "r");
     add({"cfrac"}, "Rmm");
     add({"xleftarrow", "xrightarrow", "xleftrightarrow", "xRightarrow", "xLeftarrow",
          "xLeftrightarrow", "xhookleftarrow", "xhookrightarrow", "xmapsto",
          "xrightharpoondown", "xrightharpoonup", "xleftharpoondown", "xleftharpoonup",
-         "xrightleftharpoons", "xleftrightharpoons"},
+         "xrightleftharpoons", "xleftrightharpoons", "xtwoheadrightarrow", "xtwoheadleftarrow",
+         "xlongequal", "xtofrom"},
         "Cc");
     add({"sqrt"}, "Mm");
     add({"smash"}, "Rm");
+    add({"vcenter", "textcircled"}, "c");
+    add({"TextOrMath"}, "cc");
+    add({"overlinesegment", "underlinesegment", "angl", "phase", "overleftharpoon", "overrightharpoon",
+         "Overrightarrow"},
+        "m");
+    add({"mathchoice"}, "mmmm");
     add({"hdotsfor"}, "Rr");
     add({"stackbin", "stackrel"}, "Mmm");
     add({"rotatebox"}, "Rrm");
@@ -87,24 +95,47 @@ struct Table {
     add({"fatalIfCmdConflict", "breakEverywhere"}, "r");
     add({"makeatletter", "makeatother"}, "");
     // Their content is a cell's: text in a tabular met in text.
-    add({"multicolumn", "multirow"}, "rrc");
+    add({"multicolumn"}, "rrc");
+    // \multirow{rows}[bigstruts]{width}[vmove]{text}: the two options set
+    // where the text sits against its rows, which it is not set to.
+    add({"multirow"}, "rRrRc");
     // Rules end the row they are in, as they did in the old parser.
-    add({"hline", "thickhline"}, "", Shape::prefix, Bare::none, true);
+    add({"hline", "thickhline", "hdashline"}, "", Shape::prefix, Bare::none, true);
     add({"cline"}, "r", Shape::prefix, Bare::none, true);
     // booktabs' rule of a given thickness, and the space above and below.
     add({"specialrule"}, "ddd", Shape::prefix, Bare::none, true);
+    // booktabs' \addlinespace[len]: space between two rows, as a rule that
+    // draws nothing.
+    add({"addlinespace"}, "D", Shape::prefix, Bare::none, true);
+    // A longtable's markers: each ends the row it is in, as a rule does, and
+    // names the group of rows that ends there.
+    add({"endhead", "endfirsthead", "endfoot", "endlastfoot"}, "", Shape::prefix, Bare::none,
+        true);
     add({"rowcolor", "columncolor", "arrayrulecolor", "cellcolor"}, "r");
     add({"newcolumntype"}, "rr");
     add({"color"}, "r", Shape::groupDeclaration);
+    // fontspec's and unicode-math's: a font for a role -- body, \textsf,
+    // \texttt, math -- from here to the end of the group; \fontspec and
+    // NFSS's \fontfamily (with its \selectfont, which does nothing) set the
+    // font of the rest of the group likewise. As in LaTeX, a font lasts across
+    // a `\\`, which a markdown span with a <br> in it needs. The options are
+    // fontspec's, either side.
+    add({"setmainfont", "setsansfont", "setmonofont", "setmathfont", "fontspec"}, "RrR",
+        Shape::groupDeclaration);
+    add({"fontfamily"}, "r", Shape::groupDeclaration);
     add({"shoveright", "shoveleft"}, "m");
     add({"DeclareMathSizes"}, "rrrr");
     add({"magnification"}, "r");
-    add({"tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large",
+    add({"tiny", "sixptsize", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large",
          "LARGE", "huge", "Huge"},
         "", Shape::declaration);
     // relsize's: the size times a factor, to the end of the group
     // (\textscale{f}{text} is the prelude's).
     add({"relscale"}, "r", Shape::declaration);
+    // LaTeX's \fontsize{size}{baselineskip}, which \selectfont puts in
+    // force: the size, against the 10pt a grob is drawn at; the baseline
+    // skip is the line spacing's, which gp sets.
+    add({"fontsize"}, "rr", Shape::declaration);
     add({"big", "Big", "bigg", "Bigg", "bigl", "Bigl", "biggl", "Biggl", "bigr", "Bigr",
          "biggr", "Biggr"},
         "l");
@@ -127,7 +158,14 @@ struct Table {
     // Links: the look of one, as hyperref's colorlinks and the url package
     // set it (the lowering builds it). A URL reads its specials as text.
     add({"url"}, "u");
+    // Small capitals, as the lowering fakes them; \gmtheorem is the head of
+    // a theorem, which the expander's newtheorem writes.
+    add({"textsc"}, "t");
+    add({"scshape"}, "", Shape::declaration);
+    add({"gmtheorem"}, "rrrrr");
     add({"href"}, "uc");
+    // Its argument is its own delimited text (the parser reads it).
+    add({"verb"}, "v");
     // booktabs' \cmidrule, which the parser reads as \cline.
     add({"cmidrule"}, "r", Shape::prefix, Bare::none, true);
     add({"left", "middle", "right"}, "l", Shape::prefix, Bare::none, true);
@@ -149,9 +187,9 @@ struct Table {
     add({"mbox", "text", "textit", "textbf", "textsf", "texttt", "textrm", "textnormal"}, "t");
     // \intertext ends the row it is in, as a rule does.
     add({"intertext"}, "t", Shape::prefix, Bare::none, true);
-    add({"^", "'", "\"", "`", "=", ".", "~", "t", "u", "v", "r"}, "m");
-    add({"not", "hat", "widehat", "check", "tilde", "widetilde", "acute", "grave", "dot",
-         "ddot", "dddot", "ddddot", "breve", "bar", "vec", "mathring", "undertilde"},
+    add({"^", "'", "\"", "`", "=", ".", "~", "t", "u", "v", "r", "H"}, "m");
+    add({"not", "hat", "widehat", "widecheck", "check", "tilde", "widetilde", "acute", "grave", "dot",
+         "ddot", "dddot", "ddddot", "breve", "bar", "vec", "mathring", "undertilde", "utilde"},
         "m");
     // The first argument names an accent (`\underaccent{\dot}{x}`): a
     // command used without its argument, so it is kept as text.
@@ -175,7 +213,9 @@ struct Table {
     add({"cornersize"}, "r");
     add({"llap", "rlap", "clap", "mathllap", "mathrlap", "mathclap"}, "m");
     add({"nolimits", "limits", "normal"}, "", Shape::postfix);
-    add({"kern"}, "", Shape::prefix, Bare::dimen);
+    // TeX's skips, read as \kern is: the glue's stretch and shrink have
+    // nothing to act on in a grob, so a `plus` or `minus` part is not read.
+    add({"kern", "mkern", "hskip", "mskip"}, "", Shape::prefix, Bare::dimen);
     add({"char"}, "", Shape::prefix, Bare::number);
     add({"roman", "Roman"}, "r");
     add({"surd", "lmoustache", "rmoustache", "-", "nbsp", "joinrel", "underscore",
@@ -184,6 +224,8 @@ struct Table {
     add({"st"}, "c");
     add({"longdiv"}, "rr");
     add({"cancel", "bcancel", "xcancel", "sqrtsign"}, "m");
+    // cancel's \cancelto{value}{base}.
+    add({"cancelto"}, "mm");
     // ulem's strike-out and underline, which break with their text, and the
     // phantoms: text in text, math in math, as in LaTeX.
     add({"sout", "uline", "phantom", "hphantom", "vphantom"}, "c");
@@ -212,6 +254,13 @@ struct Table {
     // natbib's: \citep[post]{keys} or \citep[pre][post]{keys}.
     add({"citep", "citet", "citealp"}, "RRr", Shape::prefix, Bare::none, true);
     add({"footnote"}, "Rt", Shape::prefix, Bare::none, true);
+    // Equation numbers: the lowering numbers the displays of an input and
+    // keeps the labels, which a reference then names. The starred form of tag is
+    // the expander's gmtagstar.
+    add({"tag", "gmtagstar"}, "t");
+    add({"notag", "nonumber"}, "");
+    add({"label"}, "r");
+    add({"setcounter"}, "rr");
     add({"hspace", "vspace"}, "d");
     // --- our own (lib/atom/) ----------------------------------------------
     add({"gmfontfamily"}, "rt");
@@ -221,7 +270,7 @@ struct Table {
     add({"begin", "end"}, "r", Shape::prefix, Bare::none, true);
 
     // --- environments the engine builds (the @@env ones in macro_def.cpp) --
-    env({"matrix", "smallmatrix", "align", "flalign", "multline", "gather"}, "",
+    env({"matrix", "smallmatrix", "align", "flalign", "multline", "gather", "eqnarray"}, "",
         EnvBody::alignment);
     // [t|b|c]: LaTeX's vertical position, read and not used (a grob has no
     // baseline of lines around it to align to).
@@ -230,7 +279,18 @@ struct Table {
     env({"array", "alignedat"}, "Rr", EnvBody::alignment);
     // As array, but its cells are text, as LaTeX's are.
     env({"tabular"}, "Rr", EnvBody::alignment, true);
-    env({"itemize", "enumerate"}, "", EnvBody::raw, true);
+    // With a width: tabular* spreads its columns across it, tabularx's X
+    // columns share it; longtable is a table too long for a page, which a
+    // grob has not got.
+    env({"tabular*", "tabularx"}, "rr", EnvBody::alignment, true);
+    env({"longtable"}, "Rr", EnvBody::alignment, true);
+    // tabularray's tables, as tinytable writes them: [options]{spec}.
+    env({"tblr", "talltblr", "longtblr"}, "Rr", EnvBody::alignment, true);
+    env({"itemize", "enumerate", "description"}, "", EnvBody::raw, true);
+    env({"verbatim", "verbatim*"}, "", EnvBody::verbatim, true);
+    // Commutative diagrams: amscd's, and tikz-cd's, which a handler reads
+    // whole (its options and arrows are in the body).
+    env({"CD", "tikzcd"}, "", EnvBody::raw);
     // [position][height][inner position]{width}: a box of paragraphs.
     env({"minipage"}, "RDRd", EnvBody::text);
   }
@@ -265,7 +325,7 @@ bool isFloatEnvironment(const std::string& name) {
 }
 
 bool isBlockEnvironment(const std::string& name) {
-  return name == "abstract" || name == "thebibliography";
+  return name == "abstract" || name == "thebibliography" || name == "proof";
 }
 
 bool isCitation(const std::string& name) {
@@ -273,7 +333,9 @@ bool isCitation(const std::string& name) {
 }
 
 bool isRule(const std::string& name) {
-  return name == "hline" || name == "thickhline" || name == "cline" || name == "specialrule";
+  return name == "hline" || name == "thickhline" || name == "hdashline" || name == "cline" || name == "specialrule" ||
+         name == "addlinespace" || name == "endhead" || name == "endfirsthead" ||
+         name == "endfoot" || name == "endlastfoot";
 }
 
 bool isLineAlignment(const std::string& name) {
@@ -288,6 +350,12 @@ bool isDisplayEnvironment(const std::string& name) {
     "displaymath", "equation", "eqnarray"};
   const bool starred = name.size() > 1 && name.back() == '*';
   return display.count(starred ? name.substr(0, name.size() - 1) : name) > 0;
+}
+
+bool isNumberedEnvironment(const std::string& name) {
+  static const std::set<std::string> numbered = {"align",  "alignat",  "flalign",
+                                                  "gather", "multline", "eqnarray"};
+  return numbered.count(name) > 0;
 }
 
 const CommandSpec* findCommand(const std::string& name) {

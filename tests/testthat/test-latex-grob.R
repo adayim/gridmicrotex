@@ -127,6 +127,39 @@ test_that("an unknown command is set as its own name, not dropped, and warns", {
   expect_gt(g$bbox_w, 0)
 })
 
+test_that("max_width, hjust and vjust must be single valid values", {
+  for (bad in list(NaN, NA_real_, -1, c(1, 2), "a")) {
+    expect_error(latex_dims("x", max_width = bad), "single non-negative number")
+  }
+  expect_error(latex_grob("x", hjust = c(0, 1)), "hjust must be")
+  expect_error(latex_grob("x", vjust = NA_real_), "vjust must be")
+})
+
+test_that("a formula that draws nothing has a finite baseline", {
+  for (tex in c("", "\\phantom{}", "\\resizebox{0pt}{0pt}{x}", "\\end{x}")) {
+    expect_equal(as.numeric(suppressWarnings(latex_dims(tex))$baseline), 0,
+                 info = tex)
+  }
+})
+
+test_that("an absurdly tall delimiter is capped, not built piece by piece", {
+  elapsed <- system.time(
+    d <- latex_dims("\\left(\\rule{1pt}{1e8pt}\\right)")
+  )[["elapsed"]]
+  expect_lt(elapsed, 5)
+  expect_true(is.finite(as.numeric(d$height)))
+})
+
+test_that("latex_cache_limit() takes a whole number", {
+  old <- latex_cache_limit()
+  on.exit(latex_cache_limit(old), add = TRUE)
+  expect_error(latex_cache_limit(1.9), "non-negative integer")
+  expect_error(latex_cache_limit(c(1, 2)), "non-negative integer")
+  expect_error(latex_cache_limit(-1), "non-negative integer")
+  expect_error(latex_cache_limit(Inf), "non-negative integer")
+  expect_silent(latex_cache_limit(256))
+})
+
 # --- editGrob: re-parse on parse-affecting fields ---
 
 test_that("editGrob re-parses when tex changes", {
@@ -451,4 +484,32 @@ test_that("what a label defines is its own", {
   expect_identical(unique(r$color[r$type != "glyph"]), "#000000")
   invisible(latex_tree("\\breakEverywhere{true}x"))
   expect_identical(nrow(latex_tree("one run of words")$records), 1L)
+})
+
+test_that("latex_tree honours justify like latex_dims", {
+  tex <- paste(rep("alpha beta gamma", 6), collapse = " ")
+  d <- latex_dims(tex, max_width = 150, justify = TRUE)
+  tr <- latex_tree(tex, max_width = 150, justify = TRUE)
+  expect_equal(tr$bbox[["width"]],
+               grid::convertWidth(d$width, "bigpts", valueOnly = TRUE),
+               tolerance = 1e-6)
+  expect_gt(tr$bbox[["width"]],
+            latex_tree(tex, max_width = 150)$bbox[["width"]])
+})
+
+test_that("\\resizebox of an empty box is finite", {
+  d <- latex_dims("\\resizebox{20pt}{10pt}{\\phantom{}}")
+  expect_true(all(is.finite(vapply(d[c("width", "height", "baseline")],
+    grid::convertWidth, numeric(1), unitTo = "bigpts", valueOnly = TRUE))))
+  # A box with no width still scales to a height, and the reverse, exactly
+  # as one that has a little.
+  dim_of <- function(tex, f) {
+    as.numeric(latex_dims(tex, input_mode = "math")[[f]])
+  }
+  expect_equal(dim_of("\\resizebox{!}{20pt}{\\rule{0pt}{5pt}}", "height"),
+               dim_of("\\resizebox{!}{20pt}{\\rule{1pt}{5pt}}", "height"))
+  expect_gt(dim_of("\\resizebox{!}{20pt}{\\rule{0pt}{5pt}}", "height"),
+            dim_of("\\rule{1pt}{5pt}", "height") * 3)
+  expect_equal(dim_of("\\resizebox{20pt}{!}{\\rule{5pt}{0pt}}", "width"),
+               dim_of("\\resizebox{20pt}{!}{\\rule{5pt}{1pt}}", "width"))
 })

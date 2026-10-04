@@ -3,8 +3,9 @@
 - LaTeX is read by a new, faster parser that follows TeX's rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write `\LaTeX{} is`), and `_`, `^`, `#` and `&` outside math warn.
 - New `input_mode = "document"` renders a LaTeX document body, or a whole pasted paper, wrapped at `max_width` (see `vignette("documents")`). Markdown is now laid out the same way, so its paragraphs, styled spans and tables stay within their box.
 - New `latex_options(device_math = TRUE)` renders `$…$` math in base graphics labels.
+- New `load_font()` names a font file or an installed family, with its bold and italic files, and `available_fonts()` lists them. `latex_options()` takes `main_font`, `sans_font` and `mono_font`, the fonts of the body, `\textsf` and `\texttt`. `load_math_font()`, `available_math_fonts()` and `check_math_fonts()` are superseded by `load_font()` and `available_fonts()`; they still work.
+- Text in a font given to `load_font()` is measured and drawn from the font file, so it looks the same on every device, base `pdf()` included, where a font file never worked before. Other families are still the device's.
 - An image that cannot be drawn is now an error saying why, figures load about ten times faster, and many bugs are fixed.
-
 
 # gridmicrotex 0.1.1
 
@@ -25,7 +26,6 @@
 - New `"github"` style preset, shipped as a CSS file.
 - `<div class=>` and `<div style=>` style a chunk of markdown; `<span class=>` styles an inline run.
 - New `justify` and `line_break` arguments control paragraph line breaking.
-- New `\gmfontfamily{family}{content}` sets the font for one run of text.
 - `\includegraphics[width=,height=,scale=,keepaspectratio]{file}` draws PNG, JPEG and SVG images inline in a formula; it previously parsed and drew nothing. The extension may be omitted and `\graphicspath{}` is searched, as in LaTeX. An SVG is drawn as real vector, so it stays sharp at any output resolution. 
 - New `p{len}` column type gives `tabular` fixed-width, wrapping cells.
 - `\url{}` and `\href{}{}` render as styled text instead of literally.

@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "atom/atom_basic.h"
+#include "atom/atom_font.h"
 #include "atom/atom_row.h"
 #include "core/formula.h"
 #include "core/glue.h"
@@ -128,6 +129,9 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
   lpos.clear();
   _fillCols.clear();
   _lineAligns.clear();
+  _colStyles.clear();
+  _colFonts.clear();
+  _colSuffixes.clear();
   while (pos < len) {
     ch = opt[pos];
     switch (ch) {
@@ -151,6 +155,19 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
         }
         _vlines[lpos.size()] = sptrOf<VlineAtom>(nb);
       } break;
+      case ':': {
+        // A dashed line between columns.
+        auto dashed = sptrOf<VlineAtom>(1);
+        dashed->_dashed = true;
+        _vlines[lpos.size()] = dashed;
+      } break;
+      case '<': {
+        // What follows each cell of the column before it.
+        const SpecArgument a = specArgument(opt, pos + 1);
+        if (!lpos.empty()) _colSuffixes[static_cast<int>(lpos.size()) - 1] = specAtom(a);
+        pos = a.end - 1;
+      } break;
+      case '!':  // between columns, as @ is, but keeping the space there
       case '@': {
         const SpecArgument a = specArgument(opt, pos + 1);
         // Keep columns same with the matrix
@@ -190,6 +207,36 @@ void MatrixAtom::parsePositions(string opt, vector<Alignment>& lpos) {
           _lineAligns[col] = Alignment::right;
         } else if (a.text.find("\\raggedright") != string::npos) {
           _lineAligns[col] = Alignment::left;
+        }
+        // A font switch sets the column's cells in that font.
+        const auto has = [&](const string& name) {
+          for (size_t at = a.text.find(name); at != string::npos; at = a.text.find(name, at + 1)) {
+            const size_t next = at + name.size();
+            if (next >= a.text.size() || !isalpha(static_cast<unsigned char>(a.text[next]))) {
+              return true;
+            }
+          }
+          return false;
+        };
+        for (const auto& [name, style] : {pair<const char*, const char*>{"\\bfseries", "bf"},
+                                         {"\\bf", "bf"}, {"\\itshape", "it"}, {"\\it", "it"},
+                                         {"\\ttfamily", "tt"}, {"\\tt", "tt"},
+                                         {"\\sffamily", "sf"}, {"\\sf", "sf"},
+                                         {"\\rmfamily", "rm"}, {"\\rm", "rm"}}) {
+          if (has(name)) {
+            _colFonts[col] = FontContext::mainFontStyleOf(style);
+            break;
+          }
+        }
+        // "scriptscriptstyle" holds "scriptstyle": the longer name first.
+        if (a.text.find("\\displaystyle") != string::npos) {
+          _colStyles[col] = TexStyle::display;
+        } else if (a.text.find("\\textstyle") != string::npos) {
+          _colStyles[col] = TexStyle::text;
+        } else if (a.text.find("\\scriptscriptstyle") != string::npos) {
+          _colStyles[col] = TexStyle::scriptScript;
+        } else if (a.text.find("\\scriptstyle") != string::npos) {
+          _colStyles[col] = TexStyle::script;
         }
         pos = a.end - 1;
       } break;
@@ -280,6 +327,9 @@ vector<float> MatrixAtom::getColumnSep(Env& env, float width) {
   float h, w = env.textWidth();
   int i = 0;
 
+  // The numbers' room, at both sides to keep the display centred; a flalign
+  // is flush left, so only at its right.
+  if (w != POS_INF) w = max(w - (_matType == MatrixType::flAlign ? 1 : 2) * _tagReserve, 0.f);
   if (_matType == MatrixType::aligned || _matType == MatrixType::alignedAt) w = POS_INF;
 
   switch (_matType) {
@@ -515,6 +565,22 @@ MatrixAtom::MatrixAtom(bool isPartial, const sptr<ArrayFormula>& arr, MatrixType
   }
 }
 
+sptr<Box> MatrixAtom::cellBox(const sptr<Atom>& atom, int col, Env& env) const {
+  sptr<Atom> content = atom;
+  const auto font = _colFonts.find(col);
+  if (font != _colFonts.end()) content = sptrOf<FontStyleAtom>(font->second, false, content);
+  const auto suffix = _colSuffixes.find(col);
+  if (suffix != _colSuffixes.end()) {
+    auto row = sptrOf<RowAtom>();
+    row->add(content);
+    row->add(suffix->second);
+    content = row;
+  }
+  const auto style = _colStyles.find(col);
+  if (style == _colStyles.end()) return content->createBox(env);
+  return env.withStyle(style->second, [&](Env& styled) { return content->createBox(styled); });
+}
+
 void MatrixAtom::applyCell(WrapperBox& box, int i, int j) {
   // 1. apply column specifier
   const auto col = _columnSpecifiers.find(j);
@@ -584,7 +650,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
         // would be unbreakable, and the column would silently size to its
         // content instead of wrapping.
         MergeTextGuard guard(_colWidths.find(j) != _colWidths.end());
-        boxarr[i][j] = (atom == nullptr) ? _nullbox : atom->createBox(env);
+        boxarr[i][j] = (atom == nullptr) ? _nullbox : cellBox(atom, j, env);
       }
       if (atom != nullptr && atom->_type == AtomType::interText) {
         boxarr[i][j]->_type = AtomType::interText;
@@ -633,7 +699,15 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   // its column's share is made again at that width -- so a list or a table
   // inside it fits in turn -- with the word-level runs the breaker needs,
   // and broken to it as p{} is.
-  if (!_fillCols.empty() && env.textWidth() != POS_INF) {
+  // What the table is given to fill: its own width, which a width that is
+  // the measure leaves out where there is no measure -- the table is as wide
+  // as it is -- or else the measure.
+  float given = env.textWidth();
+  if (_tableWidth.isValid() &&
+      !(_tableWidth.unit == UnitType::tw && env.textWidth() == POS_INF)) {
+    given = Units::fsize(_tableWidth, env);
+  }
+  if (!_fillCols.empty() && given != POS_INF) {
     float used = 0;
     for (int j = 0; j < cols; j++) {
       if (std::find(_fillCols.begin(), _fillCols.end(), j) == _fillCols.end()) {
@@ -646,14 +720,16 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
       const auto it = _vlines.find(j);
       if (it != _vlines.end()) used += it->second->getWidth(env);
     }
-    float avail = env.textWidth() - used;
+    float avail = given - used;
     vector<int> wide;
     for (const int j : _fillCols) {
       if (j < cols) wide.push_back(j);
     }
     // Those that fit an equal share keep their width; the share of the
-    // rest grows by what they left, until none more fit.
-    for (bool fitted = true; fitted && !wide.empty();) {
+    // rest grows by what they left, until none more fit. In a tabularx, which
+    // has a width of its own, the X columns all take an equal share of it.
+    const bool fills = _tableWidth.isValid() && !_spread;
+    for (bool fitted = !fills; fitted && !wide.empty();) {
       fitted = false;
       const float share = avail / static_cast<float>(wide.size());
       for (auto it = wide.begin(); it != wide.end();) {
@@ -679,7 +755,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
           sptr<Box> cell;
           {
             MergeTextGuard guard(true);
-            cell = env.withTextWidth(xw, [&](Env& e) { return atom->createBox(e); });
+            cell = env.withTextWidth(xw, [&](Env& e) { return cellBox(atom, j, e); });
           }
           const auto [wasSplit, splitBox] = BoxSplitter::split(cell, xw, env.lineSpace());
           (void)wasSplit;
@@ -694,7 +770,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
           lineDepth[i] = max(boxarr[i][j]->_depth, lineDepth[i]);
         }
       }
-      for (const int j : wide) colWidth[j] = min(colWidth[j], xw);
+      for (const int j : wide) colWidth[j] = fills ? xw : min(colWidth[j], xw);
     }
   }
 
@@ -706,8 +782,40 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
 
   for (int j = 0; j < cols; j++) matW += colWidth[j];
 
+  // An equation's number or \tag, at the right of its row. The columns of
+  // an align are spaced across what the numbers leave, at both sides, so
+  // that the display stays centred on the page and clear of them.
+  vector<sptr<Box>> tags(rows);
+  float tagWidth = 0;
+  for (const auto& [row, tag] : _matrix->_rowTags) {
+    if (row < 0 || row >= rows || tag == nullptr) continue;
+    tags[row] = tag->createBox(env);
+    tagWidth = max(tagWidth, tags[row]->_width);
+  }
+  const float tagGap = tagWidth > 0 ? SpaceAtom(UnitType::em, 2.f, 0.f, 0.f).createBox(env)->_width : 0.f;
+  _tagReserve = tagWidth > 0 ? tagWidth + tagGap : 0.f;
+  const bool centred = _matType == MatrixType::align || _matType == MatrixType::alignAt;
+  const float leftShift = centred && env.textWidth() != POS_INF ? _tagReserve : 0.f;
+
   // The horizontal separator's width
-  const vector<float> Hsep = getColumnSep(env, matW);
+  vector<float> Hsep = getColumnSep(env, matW);
+  // tabular*'s \extracolsep{\fill}: what its width has left over goes
+  // between the columns.
+  if (_spread && given != POS_INF && cols > 1) {
+    float natural = matW;
+    for (const float s : Hsep) natural += s;
+    for (const auto& [col, vline] : _vlines) natural += vline->getWidth(env);
+    // Only between the columns of the table: an @{...} is no column of its
+    // text, and the gap beside it is not for stretching.
+    vector<int> gaps;
+    for (int j = 1; j < cols; j++) {
+      if (_position[j - 1] != Alignment::none && _position[j] != Alignment::none) gaps.push_back(j);
+    }
+    if (given > natural && !gaps.empty()) {
+      const float extra = (given - natural) / static_cast<float>(gaps.size());
+      for (const int j : gaps) Hsep[j] += extra;
+    }
+  }
 
   for (auto& i : multiCols) {
     auto* multi = (MulticolumnAtom*)i.get();
@@ -733,6 +841,10 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   }
 
   auto Vsep = _vsep_in.createBox(env);
+  // \arraystretch: each row's pitch grows by that much more of a baselineskip.
+  if (_matrix->_stretch != 1.f) {
+    Vsep->_height += (_matrix->_stretch - 1.f) * 1.2f * Units::fsize(UnitType::em, 1.f, env);
+  }
   // Recalculate the height of the row
   recalculateLine(rows, boxarr, multiRows, lineHeight, lineDepth, drt, Vsep->_height);
 
@@ -742,6 +854,10 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
 
   for (int i = 0; i < rows; i++) {
     auto hb = sptrOf<HBox>();
+    const auto first = boxarr[i][0]->_type;
+    if (leftShift > 0 && (first == AtomType::none || first == AtomType::multiColumn)) {
+      hb->add(sptrOf<StrutBox>(leftShift, 0.f, 0.f, 0.f));
+    }
     for (int j = 0; j < cols; j++) {
       switch (boxarr[i][j]->_type) {
         case AtomType::none:
@@ -835,6 +951,15 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
         default: {
         }
       }
+    }
+
+    // The number goes flush right at the measure, or after the row, past a
+    // gap, where there is none.
+    if (tags[i] != nullptr && (first == AtomType::none || first == AtomType::multiColumn)) {
+      const float measure = env.textWidth() == POS_INF ? 0.f : env.textWidth();
+      const float right = max(measure, leftShift + matW + tagGap + tagWidth);
+      hb->add(sptrOf<StrutBox>(right - leftShift - matW - tags[i]->_width, 0.f, 0.f, 0.f));
+      hb->add(tags[i]);
     }
 
     if (boxarr[i][0]->_type != AtomType::hline) {
@@ -969,14 +1094,15 @@ sptr<Box> VlineAtom::createBox(Env& env) {
 
   const auto drt = env.ruleThickness();
   auto rb = sptrOf<RuleBox>(_height, drt, _shift, MatrixAtom::LINE_COLOR, true);
+  if (_dashed) rb->setDash(Units::fsize(UnitType::em, 0.35f, env));
   auto sep = sptrOf<StrutBox>(2 * drt, 0.f, 0.f, 0.f);
-  auto hb = new HBox();
+  auto hb = sptrOf<HBox>();
   for (int i = 0; i < _n - 1; i++) {
     hb->add(rb);
     hb->add(sep);
   }
   if (_n > 0) hb->add(rb);
-  return sptr<Box>(hb);
+  return hb;
 }
 
 SpaceAtom MultlineAtom::_vsep_in(UnitType::ex, 0.f, 1.f, 0.f);
@@ -1004,7 +1130,21 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
     }
   };
 
-  vb->add(sptrOf<HBox>(atom->createBox(env), tw, alignment));
+  // A line of the measure's width, with the row's number or \tag flush at
+  // its right end.
+  const auto line = [&](size_t row, const sptr<Atom>& a, Alignment al) -> sptr<Box> {
+    auto box = sptrOf<HBox>(a->createBox(env), tw, al);
+    const auto tag = _column->_rowTags.find(static_cast<int>(row));
+    if (tag == _column->_rowTags.end() || tag->second == nullptr) return box;
+    auto number = tag->second->createBox(env);
+    auto both = sptrOf<HBox>();
+    both->add(box);
+    both->add(sptrOf<StrutBox>(-number->_width, 0.f, 0.f, 0.f));
+    both->add(number);
+    return both;
+  };
+
+  vb->add(line(0, atom, alignment));
   gapAfter(0);
   auto Vsep = _vsep_in.createBox(env);
   for (size_t i = 1; i < _column->rows() - 1; i++) {
@@ -1012,7 +1152,7 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
     alignment = Alignment::center;
     if (atom->_alignment != Alignment::none) alignment = atom->_alignment;
     vb->add(Vsep);
-    vb->add(sptrOf<HBox>(atom->createBox(env), tw, alignment));
+    vb->add(line(i, atom, alignment));
     gapAfter(i);
   }
 
@@ -1021,7 +1161,7 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
     alignment = _lineType == MultiLineType::gather ? Alignment::center : Alignment::right;
     if (atom->_alignment != Alignment::none) alignment = atom->_alignment;
     vb->add(Vsep);
-    vb->add(sptrOf<HBox>(atom->createBox(env), tw, alignment));
+    vb->add(line(_column->rows() - 1, atom, alignment));
   }
 
   float h = vb->_height + vb->_depth;

@@ -15,8 +15,9 @@
 #'   formula's baseline on `y`.
 #' @param rot Rotation in degrees, counter-clockwise.
 #' @param math_font Math font: `"lete"` (Lete Sans Math, the default),
-#'   `"stix"` (STIX Two Math), or one added with [load_math_font()]. See
-#'   [available_math_fonts()].
+#'   `"stix"` (STIX Two Math), or one added with [load_font()]. See
+#'   [available_fonts()]. A font that is not loaded, or has no math table, is
+#'   an error.
 #' @param max_width Width in big points (1/72 inch) at which lines wrap.
 #'   `0`, the default, does not wrap.
 #' @param tex_style Force a TeX style: `"display"`, `"text"`, `"script"`
@@ -320,8 +321,15 @@ grobMark <- function(grob, name) {
   bbright  = 1
 )
 
+.single_just <- function(x, arg) {
+  if (length(x) != 1L || !is.finite(x)) {
+    stop(arg, " must be a numeric or a single string.", call. = FALSE)
+  }
+  x
+}
+
 .resolve_hjust <- function(hjust) {
-  if (is.numeric(hjust)) return(hjust)
+  if (is.numeric(hjust)) return(.single_just(hjust, "hjust"))
   if (!is.character(hjust) || length(hjust) != 1L) {
     stop("hjust must be a numeric or a single string.", call. = FALSE)
   }
@@ -337,7 +345,7 @@ grobMark <- function(grob, name) {
 }
 
 .resolve_vjust <- function(vjust, bbox_bl_bp, bbox_h) {
-  if (is.numeric(vjust)) return(vjust)
+  if (is.numeric(vjust)) return(.single_just(vjust, "vjust"))
   if (!is.character(vjust) || length(vjust) != 1L) {
     stop("vjust must be a numeric or a single string.", call. = FALSE)
   }
@@ -371,7 +379,10 @@ grobMark <- function(grob, name) {
   .ensure_bundled_fonts_registered()
   .check_tex_style(tex_style)
   input_mode <- match.arg(input_mode, c("math", "mixed", "document"))
-  if (max_width < 0) stop("max_width must be non-negative.", call. = FALSE)
+  if (!is.numeric(max_width) || length(max_width) != 1L || is.na(max_width) ||
+      max_width < 0) {
+    stop("max_width must be a single non-negative number.", call. = FALSE)
+  }
 
   # Font size is needed before anything else now, because `em`/`ex` in an
   # \includegraphics option resolve against it.
@@ -412,36 +423,39 @@ grobMark <- function(grob, name) {
   # Only fontfamily matters for \text{} blocks: bold/italic runs come from
   # the LaTeX source (\textbf, \textit, ...) as per-record font_style, so a
   # gpar()-level fontface is not consulted.
+  # The body font: a family in `gp` wins over latex_options(main_font).
   text_gp <- grid::gpar()
-  if (!is.null(gp$fontfamily)) text_gp$fontfamily <- gp$fontfamily
+  family <- gp$fontfamily %||% .opt("main_font")
+  if (!is.null(family)) text_gp$fontfamily <- family
 
   main_font <- .resolve_text_font(text_gp$fontfamily %||% "sans")
 
-  measurer <- .make_text_measurer(text_gp)
+  roles <- .font_roles()
+  measurer <- .make_text_measurer(text_gp, roles)
   register_text_measurer(measurer)
   on.exit(clear_text_measurer(), add = TRUE)
 
   text_family <- text_gp$fontfamily %||% ""
 
-  layout <- .parse_latex_cached(
+  layout <- .bake_font_roles(.parse_latex_cached(
     tex = tex, text_size = fontsize, line_space = line_space,
     fg_color = fg_color, max_width = max_width, math_font = math_font,
     main_font = main_font, use_path = (render_mode == "path"),
     tex_style = tex_style, text_family = text_family, justify = justify,
     optimal_break = identical(line_break, "optimal"), input_mode = input_mode
-  )
+  ), roles)
   # Read off the layout rather than the parse, so a cached one says it too.
   .warn_diagnostics(attr(layout, "diagnostics"))
 
   path_layout <- NULL
   if (with_path_fallback && render_mode == "typeface") {
-    path_layout <- .parse_latex_cached(
+    path_layout <- .bake_font_roles(.parse_latex_cached(
       tex = tex, text_size = fontsize, line_space = line_space,
       fg_color = fg_color, max_width = max_width, math_font = math_font,
       main_font = main_font, use_path = TRUE, tex_style = tex_style,
       text_family = text_family, justify = justify,
       optimal_break = identical(line_break, "optimal"), input_mode = input_mode
-    )
+    ), roles)
   }
 
   list(
@@ -847,11 +861,13 @@ descentDetails.gridmicrotex_measure <- function(x) {
 #' @param text_gp A \code{\link[grid]{gpar}} object whose
 #'   \code{fontfamily} is used for measurement. The face comes from
 #'   MicroTeX's per-run \code{font_style}, not from \code{text_gp}.
+#' @param roles The fonts for \code{\textsf} and \code{\texttt}
+#'   (\code{.font_roles()}), or NULL for \code{"sans"} and \code{"mono"}.
 #' @return A function taking \code{(text, font_style)} that returns
 #'   \code{c(width_ratio, ascent_ratio, height_ratio)} where ratios
 #'   are relative to the font size.
 #' @noRd
-.make_text_measurer <- function(text_gp) {
+.make_text_measurer <- function(text_gp, roles = NULL) {
   ref_size <- 72  # reference size in points for measurement precision
 
   # Cache the R version check
@@ -875,7 +891,7 @@ descentDetails.gridmicrotex_measure <- function(x) {
     f <- fonts[[fkey]]
     if (!is.null(f)) return(f)
     gp <- grid::gpar(fontsize = ref_size, fontface = .resolve_text_face(style))
-    fam <- .resolve_text_family(style, text_gp$fontfamily, family)
+    fam <- .resolve_text_family(style, text_gp$fontfamily, family, roles)
     if (!is.null(fam)) {
       gp$fontfamily <- fam
     }
@@ -929,6 +945,12 @@ descentDetails.gridmicrotex_measure <- function(x) {
     c(max(ext[1, ]), max(ext[2, ]))
   }
 
+  .measure_registered_run <- function(text, font_style, font_family) {
+    fam <- .resolve_text_family(font_style, text_gp$fontfamily, font_family, roles)
+    face <- if (!is.null(fam)) .registered_face(fam, font_style)
+    if (is.null(face)) NULL else .measure_registered(text, face)
+  }
+
   measure <- function(text, font_style, font_family) {
     key <- paste0(as.integer(font_style), "\x1f", font_family, "\x1f", text)
     # The key becomes a variable name, which R caps at 10000 bytes, so a
@@ -947,6 +969,14 @@ descentDetails.gridmicrotex_measure <- function(x) {
       result <- c(0, 0.8, 1)
       if (cacheable) cache[[key]] <- result
       return(result)
+    }
+
+    # A font that was loaded is measured from its own file, shaped (R/font-glyph.R),
+    # so no device is asked and the answer is the same on every one.
+    registered <- .measure_registered_run(text, font_style, font_family)
+    if (!is.null(registered)) {
+      if (cacheable) cache[[key]] <- registered
+      return(registered)
     }
 
     # Ensure a graphics device is available for measurement. A parse opens

@@ -169,6 +169,12 @@ test_that("#pop!Context validates its push target", {
   expect_silent(register_highlighter("popbang2", ok))
 })
 
+test_that("a pattern PCRE cannot compile refuses the grammar at registration", {
+  f <- grammar_file('<RegExpr attribute="Keyword" String="(["/>
+                     <RegExpr attribute="Keyword" String="ok"/>')
+  expect_error(register_highlighter("badre", f), "invalid regular expression")
+})
+
 test_that("a leading ^ anchors only its own alternative", {
   f <- grammar_file('<RegExpr attribute="Keyword" String="^aaa|bbb"/>')
   register_highlighter("anch", f)
@@ -323,6 +329,10 @@ test_that("non-ASCII does not shift classes onto neighbouring characters", {
   at <- regexpr("#", line, fixed = TRUE)
   expect_true(all(cls[at:nchar(line)] == "co"))
   expect_true(all(is.na(cls[1:2])))
+
+  # The same line with no encoding mark, as readLines() returns it.
+  Encoding(line) <- "unknown"
+  expect_identical(hl(line, "r"), cls)
 })
 
 

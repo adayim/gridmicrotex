@@ -32,6 +32,9 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
   rx     <- layout_df$rx;     ry     <- layout_df$ry
   color  <- layout_df$color;  lwd    <- layout_df$lwd
 
+  # The glyphs of text in a loaded font, for the one glyphGrob of typeface mode.
+  text_glyphs <- list()
+
   # Pre-allocated parts slot. parts[i] holds the grob for layout row i
   # (NULL for empty/skipped rows and for glyph rows, which are batched
   # below). Reserve one extra slot at the end for the batched glyphGrob
@@ -126,7 +129,26 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
                                       text_gp$fontfamily,
                                       layout_df$font_family[i])
           if (!is.null(fam)) tgp$fontfamily <- fam
-          grid::textGrob(
+          # A font that was loaded is drawn from its own file (R/font-glyph.R),
+          # so it shows on every device; anything else is the device's.
+          face <- if (!is.null(fam)) .registered_face(fam, layout_df$font_style[i])
+          shaped <- if (!is.null(face) && .glyph_text_ok(txt)) .shape_run(txt, face)
+          fs <- layout_df$font_size[i]
+          if (!is.null(shaped) && is.finite(fs) && fs > 0) {
+            rot <- -layout_df$rotation[i]
+            if (render_mode == "typeface" && rot == 0) {
+              # With the math glyphs, in one glyphGrob.
+              text_glyphs[[length(text_glyphs) + 1L]] <- list(
+                ids = shaped$ids, x = x[i] + shaped$x * fs,
+                y = total_h - y[i] + shaped$y * fs, size = fs, col = color[i],
+                file = face$path, index = face$index)
+              NULL
+            } else {
+              # Outlines: where there are no glyphs to draw, and for a turn.
+              .glyph_path_grob(shaped, face, fs, x[i], total_h - y[i], rot,
+                               color[i], paste0("text.", i))
+            }
+          } else grid::textGrob(
             label = txt,
             x = grid::unit(x[i], "bigpts"),
             y = grid::unit(total_h - y[i], "bigpts"),
@@ -172,22 +194,41 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
   # path records and emits no "glyph" rows. ---
   if (render_mode == "typeface") {
     g <- which(type == "glyph")
+    ids <- integer()
+    x_g <- y_g <- sizes <- numeric()
+    cols <- files <- character()
     if (length(g) > 0L) {
       ff  <- layout_df$font_file[g]
       gid <- layout_df$glyph[g]
       keep <- !is.na(ff) & nzchar(ff) & !is.na(gid)
-      if (any(keep)) {
-        k <- g[keep]
-        parts[[n + 1L]] <- .build_glyph_grob(
-          ids        = layout_df$glyph[k],
-          x          = layout_df$x[k],
-          y          = total_h - layout_df$y[k],
-          sizes      = layout_df$font_size[k],
-          cols       = layout_df$color[k],
-          font_files = layout_df$font_file[k],
-          depth      = depth
-        )
-      }
+      k <- g[keep]
+      ids <- layout_df$glyph[k]
+      x_g <- layout_df$x[k]
+      y_g <- total_h - layout_df$y[k]
+      sizes <- layout_df$font_size[k]
+      cols <- layout_df$color[k]
+      files <- layout_df$font_file[k]
+    }
+    indices <- rep(0L, length(ids))
+    if (length(text_glyphs) > 0L) {
+      # One pass over the runs, not a growing vector per run.
+      per_glyph <- function(field) unlist(lapply(text_glyphs, `[[`, field),
+                                          use.names = FALSE)
+      per_run <- function(field) rep(per_glyph(field), times = m)
+      m <- vapply(text_glyphs, function(tg) length(tg$ids), integer(1))
+      ids <- c(ids, per_glyph("ids"))
+      x_g <- c(x_g, per_glyph("x"))
+      y_g <- c(y_g, per_glyph("y"))
+      sizes <- c(sizes, per_run("size"))
+      cols <- c(cols, per_run("col"))
+      files <- c(files, per_run("file"))
+      indices <- c(indices, per_run("index"))
+    }
+    if (length(ids) > 0L) {
+      parts[[n + 1L]] <- .build_glyph_grob(
+        ids = ids, x = x_g, y = y_g, sizes = sizes, cols = cols,
+        font_files = files, depth = depth, font_index = indices
+      )
     }
   }
 
@@ -350,7 +391,8 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 # its (indistinguishable) style bit. See src/MicroTeX/lib/atom/font_family_atom.h.
 .GM_DEFAULT_FAMILY <- "gridmicrotex.default"
 
-.resolve_text_family <- function(style, default = NULL, family = NULL) {
+.resolve_text_family <- function(style, default = NULL, family = NULL,
+                                 roles = NULL) {
   if (!is.null(family) && !is.na(family) && nzchar(family)) {
     # \textrm: back to the caller's font, overriding any enclosing
     # \textsf / \texttt rather than inheriting it.
@@ -358,9 +400,33 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
     return(family)
   }
   if (is.na(style)) return(default)
-  if (bitwAnd(style, 128L) != 0L) return("mono")
-  if (bitwAnd(style, 64L) != 0L) return("sans")
+  if (bitwAnd(style, 128L) != 0L) return(roles$mono %||% "mono")
+  if (bitwAnd(style, 64L) != 0L) return(roles$sans %||% "sans")
   default
+}
+
+# The fonts latex_options(sans_font =, mono_font =) name, as .resolve_text_family()
+# takes them. They are read when a label is parsed and written into its
+# layout (.bake_font_roles()), so measuring and drawing use the same ones
+# whatever the options say by the time it is drawn.
+.font_roles <- function() {
+  list(sans = .opt("sans_font"), mono = .opt("mono_font"))
+}
+
+# A record that names no family of its own but is \textsf or \texttt takes
+# the font of that role. Records with a family -- \gmfontfamily, CSS -- and
+# every other record are left alone.
+.bake_font_roles <- function(layout, roles) {
+  if (is.null(layout) || !NROW(layout) || is.null(layout$font_family)) {
+    return(layout)
+  }
+  open <- layout$type == "text" & !is.na(layout$font_style) &
+    (is.na(layout$font_family) | !nzchar(layout$font_family))
+  mono <- open & bitwAnd(layout$font_style, 128L) != 0L
+  sans <- open & !mono & bitwAnd(layout$font_style, 64L) != 0L
+  if (!is.null(roles$mono)) layout$font_family[mono] <- roles$mono
+  if (!is.null(roles$sans)) layout$font_family[sans] <- roles$sans
+  layout
 }
 
 # Cache of font file -> glyphFont objects
@@ -374,18 +440,19 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 #' @param font_file Absolute path to the OTF/TTF font file.
 #' @return A \code{glyphFont} object.
 #' @noRd
-.get_glyph_font <- function(font_file) {
-  cached <- .glyph_font_cache[[font_file]]
+.get_glyph_font <- function(font_file, index = 0L) {
+  key <- paste(font_file, index)
+  cached <- .glyph_font_cache[[key]]
   if (!is.null(cached)) return(cached)
 
   gf <- grDevices::glyphFont(
     file = font_file,
-    index = 0L,
+    index = as.integer(index),
     family = tools::file_path_sans_ext(basename(font_file)),
     weight = 400,
     style = "normal"
   )
-  .glyph_font_cache[[font_file]] <- gf
+  .glyph_font_cache[[key]] <- gf
   gf
 }
 
@@ -402,19 +469,24 @@ quad_bezier <- function(x0, y0, x1, y1, x2, y2, n = 12) {
 #' @param cols Character vector of colors.
 #' @param font_files Character vector of font file paths.
 #' @param depth Depth below the baseline in bigpts (default 0).
+#' @param font_index Which face of the file each glyph is in (0 for a file
+#'   of one face).
 #' @return A \code{grid::glyphGrob} or \code{NULL}.
 #' @noRd
-.build_glyph_grob <- function(ids, x, y, sizes, cols, font_files, depth = 0) {
+.build_glyph_grob <- function(ids, x, y, sizes, cols, font_files, depth = 0,
+                              font_index = rep(0L, length(ids))) {
   n <- length(ids)
   if (n == 0) return(NULL)
 
-  # Build font list from unique font files
-  unique_fonts <- unique(font_files)
-  font_list_args <- lapply(unique_fonts, .get_glyph_font)
+  # Build font list from the unique faces: a file, and which face in it.
+  face_key <- paste(font_files, font_index)
+  first <- !duplicated(face_key)
+  font_list_args <- Map(.get_glyph_font, font_files[first], font_index[first],
+                        USE.NAMES = FALSE)
   font_list <- do.call(grDevices::glyphFontList, font_list_args)
 
   # Map each glyph to its font index (1-based)
-  font_idx <- match(font_files, unique_fonts)
+  font_idx <- match(face_key, face_key[first])
 
   # Glyph positions are in bigpts within the formula's coordinate system.
   # Set anchors at origin so positions map 1:1 to viewport coordinates.

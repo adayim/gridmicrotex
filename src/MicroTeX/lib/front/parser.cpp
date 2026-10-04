@@ -13,6 +13,29 @@ bool isOther(const Token& t, char c) {
   return t.kind == TokKind::character && t.cat == Cat::other && t.cp == static_cast<unsigned char>(c);
 }
 
+/** Makes `chars` plain characters for as long as it lives. The catcodes go
+ *  back however the scope ends, a thrown error (a limit, or R's) included:
+ *  the lexer is shared, and would otherwise read the rest as verbatim. */
+class CatcodesAsOther {
+public:
+  CatcodesAsOther(Expander& in, const std::string& chars) : _in(in) {
+    for (const char c : chars) {
+      const c32 ch = static_cast<c32>(c);
+      _saved.emplace_back(ch, _in.catcode(ch));
+      _in.setCatcode(ch, Cat::other);
+    }
+  }
+  ~CatcodesAsOther() {
+    for (const auto& s : _saved) _in.setCatcode(s.first, s.second);
+  }
+  CatcodesAsOther(const CatcodesAsOther&) = delete;
+  CatcodesAsOther& operator=(const CatcodesAsOther&) = delete;
+
+private:
+  Expander& _in;
+  std::vector<std::pair<c32, Cat>> _saved;
+};
+
 // `b` is a `$` right after the `$` `a`, making `$$`: next to it in the
 // source, or in the same macro's expansion (which is where both are
 // placed). A definition between them -- `$\newcommand{..}{..}$`, which
@@ -48,6 +71,7 @@ char kindCode(ArgKind kind) {
     case ArgKind::dimen: return 'd';
     case ArgKind::delim: return 'l';
     case ArgKind::url: return 'u';
+    case ArgKind::verb: return 'v';
   }
   return '?';
 }
@@ -667,6 +691,9 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     if (name == "caption") {
       // A line of text, ended as the prelude used to end it, with a line
       // break. A document also starts it on a line of its own (lower.cpp).
+      // Its star (no number, and a table has none to give) is read and
+      // means nothing here.
+      if (isOther(peek().tok, '*')) next();
       std::vector<NodeId> args;
       for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, Mode::text, who));
       items.push_back(_ast.add(std::move(n), args));
@@ -687,11 +714,11 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
         // not have, \citealp drops the brackets.
         const std::string drawn = name == "citet" ? "(author?) [?]" : name == "citealp" ? "?" : "[?]";
         _diags.warn(at, "citation `" + key + "' is undefined: drawn as " + drawn);
-      } else {
-        // `?\?)` so that `??)` is not read as a trigraph.
-        _diags.warn(at, "reference `" + key + "' is undefined: drawn as " +
-                          (name == "eqref" ? "(?\?)" : "??"));
+      } else if (name == "pageref") {
+        _diags.warn(at, "reference `" + key + "' is undefined: drawn as ??");
       }
+      // \ref and \eqref name a label, which may come after them: the
+      // lowering, which sees them all, says which are undefined.
       return _ast.add(std::move(n), args);
     }
     if (name == "par") {
@@ -814,7 +841,11 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
     body.overArg = spec->shape == Shape::declaration;
     const Mode bodyMode = spec->body == ArgKind::math ? Mode::math : mode;
     const Scoped verbatim(_monospace, _monospace || name == "tt");
+    // Small capitals are made from the text, not from what it became.
+    const bool keepText = name == "scshape";
+    const std::size_t textFrom = keepText ? startRecording() : 0;
     const NodeId list = parseList(bodyMode, body, at);
+    if (keepText) n.raw = stopRecording(textFrom, 0);
     n.kind = NodeKind::declaration;
     args.push_back(list);
     return _ast.add(std::move(n), args);
@@ -825,7 +856,7 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
 
 NodeId Parser::parseArgument(const ArgSpec& spec, Mode mode, const std::string& who) {
   if (spec.kind == ArgKind::raw || spec.kind == ArgKind::dimen || spec.kind == ArgKind::url ||
-      spec.kind == ArgKind::delim) {
+      spec.kind == ArgKind::delim || spec.kind == ArgKind::verb) {
     return parseRawArgument(spec, who);
   }
   const Mode argMode = spec.kind == ArgKind::math   ? Mode::math
@@ -920,6 +951,7 @@ NodeId Parser::parseArgument(const ArgSpec& spec, Mode mode, const std::string& 
 }
 
 NodeId Parser::parseRawArgument(const ArgSpec& spec, const std::string& who) {
+  if (spec.kind == ArgKind::verb) return parseVerb();
   Node arg;
   arg.kind = NodeKind::argument;
   arg.mode = Mode::text;
@@ -956,17 +988,7 @@ NodeId Parser::parseRawArgument(const ArgSpec& spec, const std::string& who) {
   // A URL or file name reads its special characters as characters, a
   // backslash included, so nothing in it is a command to expand. The `{` is
   // read already; nothing after it has been lexed yet.
-  struct Saved {
-    c32 ch;
-    Cat cat;
-  };
-  std::vector<Saved> saved;
-  if (spec.kind == ArgKind::url) {
-    for (const char c : std::string("\\%#_^~&$")) {
-      saved.push_back({static_cast<c32>(c), _in.catcode(static_cast<c32>(c))});
-      _in.setCatcode(static_cast<c32>(c), Cat::other);
-    }
-  }
+  const CatcodesAsOther urlChars(_in, spec.kind == ArgKind::url ? "\\%#_^~&$" : "");
   const std::size_t mark = startRecording();
   int depth = 0;
   bool closed = false;
@@ -993,9 +1015,76 @@ NodeId Parser::parseRawArgument(const ArgSpec& spec, const std::string& who) {
     escaped = spec.kind == ArgKind::url && isOther(u.tok, '\\') && !escaped;
   }
   arg.raw = stopRecording(mark, closed ? 1 : 0);
-  for (const Saved& s : saved) _in.setCatcode(s.ch, s.cat);
   if (!closed) _diags.warn(k.span, "missing } inserted");
   return _ast.add(std::move(arg), {});
+}
+
+namespace {
+
+/** Every character TeX's `\verb` and verbatim read as itself: the specials,
+ *  spaces and line ends, so that nothing in the text is a command, a
+ *  comment, a space to collapse or a line end to join. */
+const std::string kVerbatimChars = "\\%#_^~&${} \t\r\n";
+
+}  // namespace
+
+NodeId Parser::parseVerb() {
+  Node arg;
+  arg.kind = NodeKind::argument;
+  arg.mode = Mode::text;
+  arg.flag = true;
+  arg.text = "v";
+  const CatcodesAsOther verbatim(_in, kVerbatimChars);
+  // The spaces after the control word are TeX's to skip, as for any control
+  // word; a `*` after them makes the spaces visible.
+  ExpandedToken d = next();
+  while (d.tok.kind == TokKind::character && d.text == " ") d = next();
+  arg.span = d.tok.span;
+  if (d.text == "*" && d.tok.kind == TokKind::character) {
+    arg.star = true;
+    d = next();
+  }
+  const bool noDelimiter = d.tok.kind == TokKind::end || d.text == "\n" || d.text == "\r";
+  if (noDelimiter) {
+    _diags.warn(arg.span, "\\verb needs a delimiter: an empty text is used");
+  } else {
+    const std::string delimiter = d.text;
+    while (true) {
+      ExpandedToken u = next();
+      if (u.tok.kind == TokKind::end || u.text == "\n" || u.text == "\r") {
+        _diags.warn(arg.span, "\\verb is not closed on its line: " + delimiter + " inserted");
+        break;
+      }
+      if (u.text == delimiter) break;
+      arg.raw += u.text;
+    }
+  }
+  return _ast.add(std::move(arg), {});
+}
+
+std::string Parser::readVerbatim(const std::string& name, const SourceSpan& at) {
+  const CatcodesAsOther verbatim(_in, kVerbatimChars);
+  const std::string closing = "\\end{" + name + "}";
+  std::string body;
+  bool closed = false;
+  while (true) {
+    ExpandedToken u = next();
+    if (u.tok.kind == TokKind::end) break;
+    // A line end is a line end whichever way the file writes it.
+    if (u.text == "\r") continue;
+    body += u.text;
+    if (body.size() >= closing.size() &&
+        body.compare(body.size() - closing.size(), closing.size(), closing) == 0) {
+      body.resize(body.size() - closing.size());
+      closed = true;
+      break;
+    }
+  }
+  if (!closed) _diags.warn(at, "missing \\end{" + name + "} inserted");
+  // The line end after \begin{verbatim} and the one before \end are not text.
+  if (!body.empty() && body.front() == '\n') body.erase(0, 1);
+  if (!body.empty() && body.back() == '\n') body.pop_back();
+  return body;
 }
 
 std::vector<ExpandedToken> Parser::collectBracketed(const std::string& who) {
@@ -1062,9 +1151,18 @@ NodeId Parser::parseBare(Bare bare, const std::string& who) {
     return _ast.add(std::move(arg), {});
   }
   // As the old parser read it: characters up to a space or a command.
+  bool inUnit = false;
   while (t.tok.kind == TokKind::character && !t.tok.isChar(Cat::beginGroup) &&
          !t.tok.isChar(Cat::endGroup) && !t.tok.isChar(Cat::mathShift) &&
          !t.tok.isChar(Cat::alignTab)) {
+    if (bare == Bare::dimen) {
+      // A sign, digits, a point, then the unit's letters: `\mkern8mu(a)` is 8mu and then (a).
+      const c32 c = t.tok.cp;
+      const bool letter = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+      const bool numeric = (c >= '0' && c <= '9') || c == '.' || c == ',' || c == '+' || c == '-';
+      if (inUnit ? !letter : !(letter || numeric)) break;
+      if (letter) inUnit = true;
+    }
     if (bare == Bare::number) {
       const c32 c = t.tok.cp;
       const bool ok = c == '\'' || c == '"' || (c >= '0' && c <= '9') ||
@@ -1176,10 +1274,13 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
   n.span = at;
   n.text = name;
   if (spec == nullptr && name.size() > 1 && name.back() == '*') {
-    // A starred environment is its plain form: amsmath's star turns off
-    // numbering, and nothing is numbered here.
+    // A starred environment is its plain form; amsmath's star turns off
+    // its numbering, which the lowering reads from the node.
     spec = findEnvironment(name.substr(0, name.size() - 1));
-    if (spec != nullptr) n.text = name.substr(0, name.size() - 1);
+    if (spec != nullptr) {
+      n.text = name.substr(0, name.size() - 1);
+      n.star = true;
+    }
   }
   if (spec == nullptr && mode == Mode::text) {
     // LaTeX's own recovery: after "Environment ... undefined" the body is
@@ -1216,6 +1317,10 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
     return _ast.add(std::move(n), kids);
   }
 
+  if (spec != nullptr && spec->body == EnvBody::verbatim) {
+    n.raw = readVerbatim(name, at);
+    return _ast.add(std::move(n), kids);
+  }
   const std::size_t mark = startRecording();
   if (spec != nullptr && spec->body == EnvBody::raw) {
     // Kept as text up to the \end that closes it. Every environment begun

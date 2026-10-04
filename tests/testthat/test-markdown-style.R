@@ -431,6 +431,8 @@ test_that("margin-bottom adds space below a block", {
   expect_equal(h("p { margin-bottom: 0 }"), h(NULL))
 })
 
+# --- display math blocks -------------------------------------------------
+
 test_that("visual: a styled markdown document", {
   skip_if_not_installed("vdiffr")
   skip_on_os("mac")
@@ -461,8 +463,6 @@ test_that("visual: a styled markdown document", {
     ))
   })
 })
-
-# --- display math blocks -------------------------------------------------
 
 test_that("a lone $$...$$ paragraph becomes a centred mathblock", {
   types <- function(md) vapply(.md_parse_blocks(md), function(b) b$type,
@@ -821,6 +821,32 @@ test_that("the padding/margin shorthand expands to the longhands", {
   # It reaches every route a declaration can arrive by.
   expect_equal(md_style(padding = "4px")[["padding-top"]], "4px")
   expect_equal(.md_parse_css("padding: 4px")[["padding-top"]], "4px")
+})
+
+test_that("!important is dropped and an over-long shorthand is ignored", {
+  expect_equal(.md_parse_css("color: red !important")[["color"]], "red")
+  expect_equal(.md_parse_css("color: red ! IMPORTANT")[["color"]], "red")
+  expect_equal(.md_resolve_color(.md_parse_css("color: red !important")$color),
+               .md_resolve_color("red"))
+  expect_null(.md_parse_css("padding: 1pt 2pt 3pt 4pt 5pt")[["padding-top"]])
+  expect_equal(.md_parse_css("padding: 1pt 2pt 3pt 4pt")[["padding-left"]], "4pt")
+})
+
+test_that("padding is never negative and nesting never uses up the column", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  box <- function(md, ...) {
+    g <- markdown_box_grob(md, ...)
+    grid::grid.draw(g)
+    as.numeric(grid::convertHeight(grid::grobHeight(g), "bigpts"))
+  }
+  expect_gte(box("x", style = "body { padding: -10pt }"), 0)
+  expect_gte(box("x", padding = grid::unit(-10, "pt")), 0)
+  # A quote in a box narrower than its own indent, and deep lists.
+  expect_no_error(box("> a", width = grid::unit(5, "bigpts")))
+  expect_no_error(box("- a\n  - b\n    - c", width = grid::unit(30, "bigpts")))
+  deep <- paste0(vapply(0:24, function(i) strrep("  ", i), ""), "- item",
+                 collapse = "\n")
+  expect_no_error(box(deep, width = grid::unit(300, "bigpts")))
 })
 
 test_that("background-color is accepted as a spelling of background", {

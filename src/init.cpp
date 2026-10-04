@@ -80,7 +80,7 @@ void register_image_resolver(SEXP fn) {
             Rcpp::Function resolve(g_image_resolve_fn);
             Rcpp::CharacterVector d(dirs.size());
             for (std::size_t i = 0; i < dirs.size(); i++) d[i] = Rcpp::String(dirs[i], CE_UTF8);
-            SEXP out = resolve(Rcpp::String(path, CE_UTF8), Rcpp::String(options, CE_UTF8), d);
+            Rcpp::RObject out = resolve(Rcpp::String(path, CE_UTF8), Rcpp::String(options, CE_UTF8), d);
             return Rcpp::as<std::string>(out);
         });
 }
@@ -90,6 +90,44 @@ void clear_image_resolver() {
     microtex::front::setImageResolver(nullptr);
     if (g_image_resolve_fn != nullptr) R_ReleaseObject(g_image_resolve_fn);
     g_image_resolve_fn = nullptr;
+}
+
+
+// --- font resolver R callback ---
+//
+// The front end asks the host what a font a document names -- \setmainfont,
+// \fontspec, \fontfamily, \setmathfont -- is called (front/hooks.h). R finds
+// or loads it and answers with the family name, or "" when there is none.
+// As with the image resolver, an R error crosses the engine as Rcpp's
+// LongjumpException and nothing on the way catches it.
+static SEXP g_font_resolve_fn = nullptr;
+
+// [[Rcpp::export]]
+void register_font_resolver(SEXP fn) {
+    if (g_font_resolve_fn != nullptr) R_ReleaseObject(g_font_resolve_fn);
+    g_font_resolve_fn = fn;
+    R_PreserveObject(g_font_resolve_fn);
+    microtex::front::setFontResolver(
+        [](const std::string& name,
+           const std::vector<std::pair<std::string, std::string>>& options,
+           const std::string& role) {
+            Rcpp::Function resolve(g_font_resolve_fn);
+            Rcpp::CharacterVector keys(options.size()), values(options.size());
+            for (std::size_t i = 0; i < options.size(); i++) {
+                keys[i] = Rcpp::String(options[i].first, CE_UTF8);
+                values[i] = Rcpp::String(options[i].second, CE_UTF8);
+            }
+            values.attr("names") = keys;
+            Rcpp::RObject out = resolve(Rcpp::String(name, CE_UTF8), values, Rcpp::String(role));
+            return Rcpp::as<std::string>(out);
+        });
+}
+
+// [[Rcpp::export]]
+void clear_font_resolver() {
+    microtex::front::setFontResolver(nullptr);
+    if (g_font_resolve_fn != nullptr) R_ReleaseObject(g_font_resolve_fn);
+    g_font_resolve_fn = nullptr;
 }
 
 

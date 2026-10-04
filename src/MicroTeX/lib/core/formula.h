@@ -34,6 +34,13 @@ public:
   // the root atom of the "atom tree" that represents the formula
   sptr<Atom> _root;
 
+  /** What the input says of its fonts as a whole: the math font a
+   *  \setmathfont named ("" for none), and the family indices (see
+   *  font_family_atom.h) of the body, sans and typewriter fonts its preamble
+   *  set. The render starts from them. */
+  std::string _mathFontName;
+  int _fontRoles[3] = {0, 0, 0};
+
   /** An empty Formula, for the front end (front/lower.h) to build into.
    *  Nothing here parses LaTeX any more: the front end does. */
   Formula() = default;
@@ -73,6 +80,12 @@ public:
   std::map<std::string, std::vector<sptr<CellSpecifier>>> _cellSpecifiers;
   /** `\\[len]`: extra space below a row, by row index. */
   std::map<int, Dimen> _rowGaps;
+  /** An equation's number or `\tag`, by row index: drawn at the right of the
+   *  row, at the right margin of the display. */
+  std::map<int, sptr<Atom>> _rowTags;
+  /** LaTeX's \arraystretch: the rows are this much further apart than their
+   *  content makes them. */
+  float _stretch = 1.f;
 
   ArrayFormula();
 

@@ -21,12 +21,7 @@ src/.*\.dll$
 
 ^src/Makevars$
 ^src/Makevars\.win$
-^debug_*
-^tools$
 ^\..+$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
 ^\.Rproj\.user$
-^\.positai$
-^\.claude$
-^CLAUDE\.md$
