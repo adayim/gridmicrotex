@@ -15,7 +15,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/adayim/gridmicrotex/blob/v0.2.0/DESCRIPTION)
 
 Dayim A (2026). *gridmicrotex: Native 'LaTeX' Math Rendering for Grid
 Graphics*. R package version 0.2.0,

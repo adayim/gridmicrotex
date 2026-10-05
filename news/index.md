@@ -2,6 +2,8 @@
 
 ## gridmicrotex 0.2.0
 
+CRAN release: 2026-10-04
+
 - LaTeX is read by a new, faster parser that follows TeX’s rules, so
   macros, environments and starred forms work as in LaTeX, and malformed
   input is drawn with a warning giving its line:col instead of failing.
