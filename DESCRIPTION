@@ -18,8 +18,8 @@ Description: Renders 'LaTeX' math equations as native R grid graphics objects
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-SystemRequirements: C++17, FreeType (>= 2.9), pkg-config, FriBidi
-    (optional)
+SystemRequirements: C++17, FreeType (>= 2.9), HarfBuzz, pkg-config,
+    FriBidi (optional)
 Depends:
     R (>= 4.2.0)
 LinkingTo:
@@ -31,6 +31,7 @@ Imports:
     grid,
     Rcpp,
     systemfonts (>= 1.2.0),
+    textshaping,
     tools,
     utils,
     xml2
@@ -46,7 +47,6 @@ Suggests:
     S7,
     svglite,
     testthat (>= 3.0.0),
-    textshaping,
     vdiffr
 VignetteBuilder: knitr
 Config/testthat/edition: 3

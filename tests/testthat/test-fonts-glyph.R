@@ -129,7 +129,10 @@ test_that("the shaping a run gets keeps its kerning, and a missing glyph is no s
   shaped <- gridmicrotex:::.shape_run("AV", face)
   alone <- gridmicrotex:::.shape_run("A", face)$advance +
     gridmicrotex:::.shape_run("V", face)$advance
-  expect_lt(shaped$advance, alone)
+  # STIX Two Math kerns AV by about -0.1 em, in its GPOS table only (no
+  # legacy "kern" table) -- a threshold far past floating-point noise, so
+  # this fails again if shaping goes back to reading just the old table.
+  expect_lt(shaped$advance, alone - 0.01)
   expect_null(gridmicrotex:::.shape_run("a中b", face))
   expect_null(gridmicrotex:::.measure_registered("a中b", face))
   m <- gridmicrotex:::.measure_registered("Ag", face)

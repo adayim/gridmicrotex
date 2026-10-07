@@ -17,10 +17,37 @@
 # the bidi work is untouched), and runs with a glyph the font lacks, which the
 # device may find in another font.
 
-# Shaping is done at this size and scaled: shape_string() rounds the offsets
+# Shaping is done through textshaping::shape_text(), not systemfonts::
+# shape_string(): the latter only reads a font's legacy "kern" table, which
+# most current fonts (New Computer Modern, the bundled Lete and STIX used as
+# text, most of Calibri) leave empty in favour of the OpenType GPOS table --
+# shape_string() answered no kerning at all for them. shape_text() is
+# HarfBuzz and reads GPOS, and forms ligatures the same way.
+#
+# shape_text() also does font *substitution*: given a character `face`'s own
+# file has no glyph for, it fills in a glyph from whatever font the system
+# would fall back to, instead of answering a "notdef" glyph the way
+# shape_string() does -- so a per-glyph font_path check (below) stands in for
+# the old index-0 check to find a run shape_text() quietly reached outside
+# `face`. Skipping that check would draw the substitute glyph ID's outline
+# from `face`'s own file (glyph_outline() is never told about the
+# substitution), which is a different, unrelated glyph.
+
+# Shaping is done at this size and scaled: shape_text() rounds the offsets
 # it returns to the size it is given, so at the size of the text they are
 # whole points.
 .shape_size <- 1000
+
+# Whether `path` (as shape_text() reports it) is the same file as
+# `registered` (as normalizePath() left it when the font was registered,
+# fonts.R:.resolve_font_spec()). Windows paths are case-insensitive and
+# shape_text() does not promise the same slash direction, so both sides are
+# normalized and compared case-insensitively; two distinct registered fonts
+# differing only by case on a case-sensitive filesystem is not a real case.
+.same_font_file <- function(path, registered) {
+  tolower(normalizePath(path, winslash = "/", mustWork = FALSE)) ==
+    tolower(registered)
+}
 
 # --- Which font a record is in -----------------------------------------------
 
@@ -82,16 +109,19 @@
     return(if (identical(hit, FALSE)) NULL else hit)
   }
   shaped <- tryCatch(
-    systemfonts::shape_string(text, path = face$path, index = face$index,
-                              size = .shape_size),
+    textshaping::shape_text(text, path = face$path, index = face$index,
+                            size = .shape_size),
     error = function(e) NULL
   )
   out <- NULL
   if (!is.null(shaped)) {
     s <- shaped$shape
-    if (nrow(s) && !anyNA(s$index) && all(s$index > 0L)) {
+    if (nrow(s) && !anyNA(s$index) && all(s$index > 0L) &&
+        all(s$font_index == face$index) &&
+        all(vapply(s$font_path, .same_font_file, logical(1), face$path))) {
+      baseline <- shaped$metrics$pen_y[[1L]]
       out <- list(ids = as.integer(s$index), x = s$x_offset / .shape_size,
-                  y = s$y_offset / .shape_size,
+                  y = (s$y_offset - baseline) / .shape_size,
                   advance = shaped$metrics$pen_x[[1L]] / .shape_size)
     }
   }
