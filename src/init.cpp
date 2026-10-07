@@ -379,14 +379,6 @@ bool microtex_set_default_math_font(std::string name) {
     return MicroTeX::setDefaultMathFont(name);
 }
 
-// Whether the package was built against FriBidi. Without it, text that
-// wraps keeps its logical (left-to-right) word order; everything else is
-// unaffected. Exposed so tests can skip the wrapped right-to-left case.
-// [[Rcpp::export]]
-bool microtex_bidi_available() {
-    return microtex::bidi_available();
-}
-
 // device_hook.cpp: restores every armed device and unregisters the
 // graphics system, whose callback lives in this DLL.
 void gm_base_unload();

@@ -83,8 +83,6 @@ test_that("an unwrapped right-to-left phrase comes out in the right order", {
 })
 
 test_that("a wrapped right-to-left paragraph is reordered per line", {
-  skip_if_not(microtex_bidi_available(),
-              "built without fribidi; wrapped RTL keeps logical order")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # Reading each line right to left gives the source order back.
   words <- c("مرحبا", "بك",
@@ -113,7 +111,6 @@ right_to_left <- function(tex, mw = 110, fn = latex_grob, ...) {
 }
 
 test_that("right-to-left text is ordered across font groups, not only within one", {
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # See RowAtom::collectBidiText.
   a <- c("مرحبا", "بك",
@@ -151,7 +148,6 @@ test_that("right-to-left text is ordered across font groups, not only within one
 })
 
 test_that("a left-to-right run inside right-to-left keeps its own direction", {
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   a1 <- "مرحبا"; a2 <- "بك"
   txt <- function(s) paste0("\\text{", s, "}")
@@ -173,7 +169,6 @@ test_that("a left-to-right run inside right-to-left keeps its own direction", {
 })
 
 test_that("a left-to-right group that breaks across lines stays in the flow", {
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # A broken piece of an all-Latin group takes its neighbour's level.
   u <- c("خۇش", "كەلدىڭىز",
@@ -199,7 +194,6 @@ test_that("a left-to-right group that breaks across lines stays in the flow", {
 })
 
 test_that("right-to-left markdown is ordered through its emphasis", {
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   a <- c("مرحبا", "بك",
          "في", "العالم")
@@ -214,7 +208,6 @@ test_that("right-to-left markdown is ordered through its emphasis", {
 })
 
 test_that("an explicit right-to-left mark counts as right-to-left", {
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # U+200F has no script of its own.
   rlm <- "‏"
@@ -234,7 +227,6 @@ test_that("an explicit right-to-left mark counts as right-to-left", {
 })
 
 test_that("a line ending at a drawn hyphen is still reordered", {
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   ar <- "مرحبا"
   first_line <- function(tex) {
@@ -277,7 +269,6 @@ test_that("wrapping still happens, and still respects the measure", {
 })
 
 test_that("right-to-left runs are ordered without a max_width", {
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
 
   heb <- "שלום עולם"

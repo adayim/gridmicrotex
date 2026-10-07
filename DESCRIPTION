@@ -19,7 +19,7 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 SystemRequirements: C++17, FreeType (>= 2.9), HarfBuzz, pkg-config,
-    FriBidi (optional)
+    FriBidi
 Depends:
     R (>= 4.2.0)
 LinkingTo:

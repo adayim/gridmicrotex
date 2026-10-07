@@ -92,8 +92,9 @@ MICROTEX_OBJECTS = $(MICROTEX_SOURCES:.cpp=.o)
 FT_CFLAGS = @FT_CFLAGS@
 FT_LIBS = @FT_LIBS@
 
-# FriBidi is optional. When configure.win cannot find it these are empty,
-# -DHAVE_FRIBIDI is absent, and the bidirectional reordering compiles out.
+# FriBidi is required (configure.win exits if pkg-config cannot find it),
+# so -DHAVE_FRIBIDI is always set here and the bidirectional reordering is
+# always compiled in.
 BIDI_CFLAGS = @BIDI_CFLAGS@
 BIDI_LIBS = @BIDI_LIBS@
 

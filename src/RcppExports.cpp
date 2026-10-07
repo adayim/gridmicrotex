@@ -201,16 +201,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// microtex_bidi_available
-bool microtex_bidi_available();
-RcppExport SEXP _gridmicrotex_microtex_bidi_available() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(microtex_bidi_available());
-    return rcpp_result_gen;
-END_RCPP
-}
 // microtex_release
 void microtex_release();
 RcppExport SEXP _gridmicrotex_microtex_release() {
@@ -319,7 +309,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_microtex_init_from_otf", (DL_FUNC) &_gridmicrotex_microtex_init_from_otf, 2},
     {"_gridmicrotex_microtex_math_font_names", (DL_FUNC) &_gridmicrotex_microtex_math_font_names, 0},
     {"_gridmicrotex_microtex_set_default_math_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_math_font, 1},
-    {"_gridmicrotex_microtex_bidi_available", (DL_FUNC) &_gridmicrotex_microtex_bidi_available, 0},
     {"_gridmicrotex_microtex_release", (DL_FUNC) &_gridmicrotex_microtex_release, 0},
     {"_gridmicrotex_microtex_is_inited", (DL_FUNC) &_gridmicrotex_microtex_is_inited, 0},
     {"_gridmicrotex_microtex_version", (DL_FUNC) &_gridmicrotex_microtex_version, 0},

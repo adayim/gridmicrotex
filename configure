@@ -18,23 +18,16 @@ fi
 FT_CFLAGS=$("${PKGCONFIG}" --cflags freetype2)
 FT_LIBS=$("${PKGCONFIG}" --libs freetype2)
 
-# FriBidi is optional, and its absence must never stop the install: it
-# only supplies the embedding levels used to order right-to-left text
-# that wraps. Without it that one case keeps its left-to-right order and
-# everything else is unaffected, so probe quietly and carry on.
-BIDI_CFLAGS=""
-BIDI_LIBS=""
-if [ -n "${GRIDMICROTEX_NO_FRIBIDI:-}" ]; then
-  echo "configure: GRIDMICROTEX_NO_FRIBIDI set; building without fribidi."
-elif "${PKGCONFIG}" --exists fribidi 2>/dev/null; then
-  BIDI_CFLAGS="$("${PKGCONFIG}" --cflags fribidi 2>/dev/null) -DHAVE_FRIBIDI"
-  BIDI_LIBS="$("${PKGCONFIG}" --libs fribidi 2>/dev/null)"
-  echo "configure: fribidi found; bidirectional reordering enabled."
-else
-  echo "configure: fribidi not found; right-to-left text that wraps will"
-  echo "  keep left-to-right word order. Everything else is unaffected."
-  echo "  Install libfribidi-dev / fribidi-devel / fribidi to enable it."
+if ! "${PKGCONFIG}" --exists fribidi 2>/dev/null; then
+  echo "configure: pkg-config cannot find fribidi." >&2
+  echo "  Install the FriBidi development package (libfribidi-dev on Debian/" >&2
+  echo "  Ubuntu, fribidi-devel on Fedora/RHEL, fribidi via Homebrew on macOS)" >&2
+  echo "  and ensure it is on PKG_CONFIG_PATH." >&2
+  exit 1
 fi
+
+BIDI_CFLAGS="$("${PKGCONFIG}" --cflags fribidi) -DHAVE_FRIBIDI"
+BIDI_LIBS=$("${PKGCONFIG}" --libs fribidi)
 
 sed -e "s|@FT_CFLAGS@|${FT_CFLAGS}|g" \
     -e "s|@FT_LIBS@|${FT_LIBS}|g" \

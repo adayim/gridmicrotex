@@ -77,10 +77,6 @@ microtex_set_default_math_font <- function(name) {
     .Call(`_gridmicrotex_microtex_set_default_math_font`, name)
 }
 
-microtex_bidi_available <- function() {
-    .Call(`_gridmicrotex_microtex_bidi_available`)
-}
-
 microtex_release <- function() {
     invisible(.Call(`_gridmicrotex_microtex_release`))
 }
