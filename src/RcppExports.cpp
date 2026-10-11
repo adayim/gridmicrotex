@@ -51,6 +51,57 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// tex_prelude_set_cpp
+void tex_prelude_set_cpp(std::string source);
+RcppExport SEXP _gridmicrotex_tex_prelude_set_cpp(SEXP sourceSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type source(sourceSEXP);
+    tex_prelude_set_cpp(source);
+    return R_NilValue;
+END_RCPP
+}
+// tex_package_register_cpp
+void tex_package_register_cpp(std::string name, std::string source);
+RcppExport SEXP _gridmicrotex_tex_package_register_cpp(SEXP nameSEXP, SEXP sourceSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type name(nameSEXP);
+    Rcpp::traits::input_parameter< std::string >::type source(sourceSEXP);
+    tex_package_register_cpp(name, source);
+    return R_NilValue;
+END_RCPP
+}
+// tex_package_names_cpp
+std::vector<std::string> tex_package_names_cpp();
+RcppExport SEXP _gridmicrotex_tex_package_names_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(tex_package_names_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
+// tex_package_generation_cpp
+double tex_package_generation_cpp();
+RcppExport SEXP _gridmicrotex_tex_package_generation_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(tex_package_generation_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
+// tex_prelude_problems_cpp
+std::vector<std::string> tex_prelude_problems_cpp();
+RcppExport SEXP _gridmicrotex_tex_prelude_problems_cpp() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(tex_prelude_problems_cpp());
+    return rcpp_result_gen;
+END_RCPP
+}
 // persistent_macro_set_cpp
 void persistent_macro_set_cpp(std::string name, std::string body);
 RcppExport SEXP _gridmicrotex_persistent_macro_set_cpp(SEXP nameSEXP, SEXP bodySEXP) {
@@ -294,6 +345,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_gm_base_teardown", (DL_FUNC) &_gridmicrotex_gm_base_teardown, 0},
     {"_gridmicrotex_gm_base_release_pending", (DL_FUNC) &_gridmicrotex_gm_base_release_pending, 0},
     {"_gridmicrotex_gm_base_armed_count", (DL_FUNC) &_gridmicrotex_gm_base_armed_count, 0},
+    {"_gridmicrotex_tex_prelude_set_cpp", (DL_FUNC) &_gridmicrotex_tex_prelude_set_cpp, 1},
+    {"_gridmicrotex_tex_package_register_cpp", (DL_FUNC) &_gridmicrotex_tex_package_register_cpp, 2},
+    {"_gridmicrotex_tex_package_names_cpp", (DL_FUNC) &_gridmicrotex_tex_package_names_cpp, 0},
+    {"_gridmicrotex_tex_package_generation_cpp", (DL_FUNC) &_gridmicrotex_tex_package_generation_cpp, 0},
+    {"_gridmicrotex_tex_prelude_problems_cpp", (DL_FUNC) &_gridmicrotex_tex_prelude_problems_cpp, 0},
     {"_gridmicrotex_persistent_macro_set_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_set_cpp, 2},
     {"_gridmicrotex_persistent_macro_remove_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_remove_cpp, 1},
     {"_gridmicrotex_persistent_macro_clear_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_clear_cpp, 0},

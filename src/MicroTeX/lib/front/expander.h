@@ -47,6 +47,10 @@ struct MacroDef {
    *  `\my@a` as one name, and is read so again wherever it is used, after
    *  \makeatother too. */
   bool atLetter = false;
+  /** The package whose file defined it: `LaTeX` for the format itself, empty
+   *  for what the input defines (and define_macro()). A name from a package
+   *  the input did not ask for is free for the input to define. */
+  std::string package;
 };
 
 struct ExpanderOptions {
@@ -73,9 +77,9 @@ struct ExpanderOptions {
    *  stop. */
   std::size_t maxExpansions = 100000;
   std::size_t maxExpandedBytes = std::size_t{1} << 20;
-  /** Expand the prelude: the commands and environments the engine defines
-   *  in LaTeX (\dfrac, pmatrix, ...; front/prelude.cpp). The old parser
-   *  expands those itself, so only the new one wants this. */
+  /** Start from the format and the packages every input starts with: the
+   *  commands and environments the engine defines in LaTeX (\dfrac,
+   *  pmatrix, ...), which the host registered (front/packages.h). */
   bool prelude = false;
   /** See the define_macro() macros (setPersistentMacro). */
   bool persistent = true;
@@ -147,12 +151,17 @@ private:
 
   friend std::vector<std::string> preludeCommandNames();
   friend std::vector<std::string> preludeEnvironmentNames();
+  friend std::vector<std::string> preludeProblems();
   friend std::vector<std::string> preludeTransparentEnvironmentNames();
 };
 
-/** The names the prelude defines, for checking it against the engine. */
+/** The names the format and the packages every input starts with define
+ *  (packages.h), for checking them against the engine. */
 std::vector<std::string> preludeCommandNames();
 std::vector<std::string> preludeEnvironmentNames();
+/** What went wrong reading them, one line each: a name defined twice, a
+ *  command the expander could not read. Empty when all is well. */
+std::vector<std::string> preludeProblems();
 /** Those of them that expand to nothing at either end (`document`, `table`,
  *  `figure`): they wrap content rather than make any of it math. */
 std::vector<std::string> preludeTransparentEnvironmentNames();

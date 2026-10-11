@@ -17,6 +17,26 @@ gm_base_armed_count <- function() {
     .Call(`_gridmicrotex_gm_base_armed_count`)
 }
 
+tex_prelude_set_cpp <- function(source) {
+    invisible(.Call(`_gridmicrotex_tex_prelude_set_cpp`, source))
+}
+
+tex_package_register_cpp <- function(name, source) {
+    invisible(.Call(`_gridmicrotex_tex_package_register_cpp`, name, source))
+}
+
+tex_package_names_cpp <- function() {
+    .Call(`_gridmicrotex_tex_package_names_cpp`)
+}
+
+tex_package_generation_cpp <- function() {
+    .Call(`_gridmicrotex_tex_package_generation_cpp`)
+}
+
+tex_prelude_problems_cpp <- function() {
+    .Call(`_gridmicrotex_tex_prelude_problems_cpp`)
+}
+
 persistent_macro_set_cpp <- function(name, body) {
     invisible(.Call(`_gridmicrotex_persistent_macro_set_cpp`, name, body))
 }

@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "front/prelude.h"
+#include "front/packages.h"
 #include "front/mhchem.h"
 #include "front/siunitx.h"
 #include "front/spec.h"
@@ -122,37 +122,50 @@ std::uint64_t& generation() {
   return value;
 }
 
-/** Macros and environments defined once and shared by every parse. */
+/** Macros and environments defined once and shared by every parse: what the
+ *  format and the packages every input starts with define. */
 struct Definitions {
   std::unordered_map<std::string, MacroDef> macros;
   std::unordered_map<std::string, MacroDef> envs;
-  /** The macros a document may define itself (preludeSoftSource()). */
-  std::unordered_set<std::string> soft;
+  /** The packages read to make them. */
+  std::unordered_set<std::string> loaded;
+  /** What went wrong reading them, one line each: a name defined twice, a
+   *  command the expander could not read. Empty when all is well. */
+  std::vector<std::string> problems;
 };
+
+/** The package a definition belongs to, for the format itself. */
+constexpr const char* kFormat = "LaTeX";
 
 }  // namespace
 
 struct Expander::Impl {
-  /** The prelude's definitions, made by expanding its LaTeX once. */
-  static const Definitions& prelude() {
-    static const Definitions defs = [] {
-      Diagnostics ignored;
+  /** The format and the packages it loads, made by expanding their LaTeX
+   *  once for each generation of the files (packages.h). */
+  static const Definitions& snapshot() {
+    static std::unique_ptr<Definitions> defs;
+    static std::uint64_t built = 0;
+    if (defs == nullptr || built != packageGeneration()) {
+      Diagnostics found;
       ExpanderOptions o;
       o.persistent = false;
-      Impl impl(std::string(preludeSource()), std::move(o), ignored);
+      // A bad definition is a problem to report, not an exception.
+      o.recover = true;
+      Impl impl(preludeText(), std::move(o), found);
+      impl.currentPackage = kFormat;
       impl.run();
-      Definitions defs{std::move(impl.macros), std::move(impl.envs), {}};
-      ExpanderOptions soft;
-      soft.persistent = false;
-      Impl more(std::string(preludeSoftSource()), std::move(soft), ignored);
-      more.run();
-      for (auto& kv : more.macros) {
-        defs.soft.insert(kv.first);
-        defs.macros.insert(std::move(kv));
+      auto fresh = std::make_unique<Definitions>();
+      fresh->macros = std::move(impl.macros);
+      fresh->envs = std::move(impl.envs);
+      fresh->loaded = std::move(impl.loaded);
+      for (const Diagnostic& d : found.items()) {
+        fresh->problems.push_back(std::to_string(d.span.line) + ":" + std::to_string(d.span.col) +
+                                  ": " + d.message);
       }
-      return defs;
-    }();
-    return defs;
+      defs = std::move(fresh);
+      built = packageGeneration();
+    }
+    return *defs;
   }
 
   ExpanderOptions opts;
@@ -166,6 +179,14 @@ struct Expander::Impl {
   std::string pendingLead;
   std::unordered_map<std::string, MacroDef> macros;
   std::unordered_map<std::string, MacroDef> envs;
+  /** The package whose file is being read, which the definitions it makes
+   *  belong to (MacroDef::package); empty for the input's own. */
+  std::string currentPackage;
+  /** The packages read into these tables, as against the shared ones. */
+  std::unordered_set<std::string> loaded;
+  /** The packages the input asked for (\usepackage, \RequirePackage), those
+   *  already loaded included: their names are no longer free to define. */
+  std::unordered_set<std::string> requested;
   std::size_t expansions = 0;
   std::size_t expandedBytes = 0;
   /** How deep readArg() is in commands given as arguments with their own. */
@@ -205,7 +226,7 @@ struct Expander::Impl {
         macros[name] = std::move(def);
       }
     }
-    if (opts.prelude) shared = &prelude();
+    if (opts.prelude) shared = &snapshot();
   }
 
   // --- reading -----------------------------------------------------------
@@ -721,9 +742,33 @@ struct Expander::Impl {
   /** Is `@` a letter now: is what is being defined written under \makeatletter? */
   bool atLetterNow() const { return cats.get('@') == Cat::letter; }
 
-  /** A name of the prelude's that a document is free to define itself. */
+  /** Make `name` mean `def` from here on. It belongs to the package being
+   *  read, if one is; local to the group it is made in unless `local` is
+   *  false (\gdef, \global). */
+  void store(const std::string& name, MacroDef def, bool environment = false, bool local = true) {
+    def.package = currentPackage;
+    if (local) defineLocally(name, environment);
+    (environment ? envs : macros)[name] = std::move(def);
+  }
+
+  /** Is a name that `package` defined free for the input to define? It is
+   *  when LaTeX would not have it either: the package is not the format
+   *  itself, and the input did not ask for it. */
+  bool freelyDefinable(const std::string& package) const {
+    return !package.empty() && package != kFormat && requested.count(package) == 0;
+  }
+
+  /** A name of a package that the input did not ask for: it may define the
+   *  name itself, with no complaint that it exists. */
   bool isSoft(const std::string& name) const {
-    return macros.count(name) == 0 && shared != nullptr && shared->soft.count(name) > 0;
+    const MacroDef* def = lookup(name);
+    return def != nullptr && freelyDefinable(def->package);
+  }
+
+  /** The same for an environment. */
+  bool isSoftEnv(const std::string& name) const {
+    const MacroDef* def = lookupEnv(name);
+    return def != nullptr && freelyDefinable(def->package);
   }
 
   bool isDefined(const std::string& name) const {
@@ -898,7 +943,7 @@ struct Expander::Impl {
       if (opts.recover) openEnvs.push_back({name, e.tok.span, depth});
       pushExpansion("{" + substitute(def->body, args, def->atLetter), e.tok.span, def->atLetter);
       ExpToken open = rawUntaped();
-      if (envs.find(name) == envs.end()) {  // the prelude's, not the input's
+      if (!def->package.empty()) {  // a package's or the format's, not the input's
         const bool transparent =
           (def->body.empty() && def->endBody.empty()) || isBlockEnvironment(name);
         open.tok.environment = !transparent             ? (isDisplayEnvironment(name) ? 3 : 1)
@@ -993,6 +1038,112 @@ struct Expander::Impl {
     }
   }
 
+  // --- packages -----------------------------------------------------------
+
+  /** The state a package's file is read in, which reading it leaves again.
+   *  It is a world of its own, as LaTeX reads a .sty: its definitions are
+   *  global and carry its name, `@` is a letter, and what it leaves in the
+   *  output is its own. */
+  struct PackageWorld {
+    Impl& s;
+    std::vector<Undo> undo;
+    int depth;
+    std::string package;
+    Cat at;
+    std::string out;
+    std::string carry;
+    bool lastControlWord;
+
+    PackageWorld(Impl& impl, const std::string& name)
+        : s(impl),
+          undo(std::move(impl.undoStack)),
+          depth(impl.depth),
+          package(impl.currentPackage),
+          at(impl.cats.get('@')),
+          out(std::move(impl.out)),
+          carry(std::move(impl.carry)),
+          lastControlWord(impl.lastControlWord) {
+      impl.undoStack.clear();
+      impl.depth = 0;
+      impl.currentPackage = name;
+      impl.cats.set('@', Cat::letter);
+      impl.out.clear();
+      impl.carry.clear();
+      impl.lastControlWord = false;
+    }
+
+    ~PackageWorld() {
+      s.undoStack = std::move(undo);
+      s.depth = depth;
+      s.currentPackage = package;
+      s.cats.set('@', at);
+      s.out = std::move(out);
+      s.carry = std::move(carry);
+      s.lastControlWord = lastControlWord;
+    }
+  };
+
+  /** \usepackage[options]{a,b} and \RequirePackage[options]{a,b}[date]: each
+   *  package we have is read, once; any other is ignored, as every
+   *  \usepackage always was. */
+  void usePackages(const ExpToken& e, bool require) {
+    const std::string who = "\\" + e.tok.text;
+    readOptional();  // the options: no package reads any yet
+    const std::string list = readArg(who, false);
+    if (require) readOptional();
+    std::size_t from = 0;
+    while (from <= list.size()) {
+      std::size_t comma = list.find(',', from);
+      if (comma == std::string::npos) comma = list.size();
+      const std::string name = trim(list.substr(from, comma - from));
+      if (!name.empty()) {
+        requested.insert(name);
+        loadPackage(name, e.tok.span);
+      }
+      from = comma + 1;
+    }
+  }
+
+  /** Read the package `name` into these tables, once: not again, and not at
+   *  all when the shared tables were made with it. */
+  void loadPackage(const std::string& name, const SourceSpan& at) {
+    if (loaded.count(name) != 0 || (shared != nullptr && shared->loaded.count(name) != 0)) return;
+    const std::string* source = packageSource(name);
+    if (source == nullptr) return;
+    loaded.insert(name);
+    runPackage(name, *source, at);
+  }
+
+  /** Expand a package's file for what it defines. A file leaves nothing
+   *  behind that is drawn; what it does is define. */
+  void runPackage(const std::string& name, const std::string& source, const SourceSpan& at) {
+    std::string leftover;
+    {
+      PackageWorld world(*this, name);
+      const std::size_t base = frames.size();
+      // No space after the end: it would be owed to the token that follows.
+      pushExpansion(source + "\n\\gmendpackage", at, true);
+      while (true) {
+        ExpToken t = nextExpanded();
+        if (t.tok.kind == TokKind::end) break;
+        if (frames.size() <= base) {
+          // The file ended inside something it began: the input is next.
+          unread(std::move(t));
+          diags.warn(at, "package " + name + " ends inside a group or a definition");
+          break;
+        }
+        if (t.tok.kind == TokKind::controlWord && t.tok.text == "gmendpackage") break;
+        // Its comments and spaces are no text.
+        emitText(t.text, t.tok.kind == TokKind::controlWord);
+      }
+      leftover = std::move(out);
+    }
+    leftover = trim(leftover);
+    if (!leftover.empty()) {
+      diags.warn(at, "package " + name + " left text behind: " + leftover.substr(0, 30));
+    }
+  }
+
   /** The end of the innermost environment left open, if any: true when
    *  there was one. */
   bool closeOpenEnvironment() {
@@ -1061,10 +1212,7 @@ struct Expander::Impl {
       if (!opts.recover) fail(kind, "Command " + name + " is no defined! Use newcommand instead!");
       diags.warn(e.tok.span, "\\renewcommand: \\" + name + " was not defined; defined now");
     }
-    if (!(kind == "providecommand" && exists)) {
-      defineLocally(name);
-      macros[name] = std::move(def);
-    }
+    if (!(kind == "providecommand" && exists)) store(name, std::move(def));
   }
 
   void declareOperator() {
@@ -1076,8 +1224,7 @@ struct Expander::Impl {
     }
     MacroDef def;
     def.body = literal("\\mathop{\\mathrm{" + text + "}}" + (star ? "\\limits" : "\\nolimits"));
-    defineLocally(name);
-    macros[name] = std::move(def);
+    store(name, std::move(def));
   }
 
   /** mathtools' \DeclarePairedDelimiter{\cmd}{left}{right}: `\cmd{x}` sets
@@ -1100,10 +1247,8 @@ struct Expander::Impl {
     MacroDef starred;
     starred.nparams = 1;
     starred.body = splitBody("\\left" + left + " #1\\right" + right, 1, who + "*", e.tok.span);
-    defineLocally(name);
-    macros[name] = std::move(plain);
-    defineLocally(name + "*");
-    macros[name + "*"] = std::move(starred);
+    store(name, std::move(plain));
+    store(name + "*", std::move(starred));
   }
 
   /** fontspec's \newfontfamily\cmd[options]{Name}[options] and \newfontface:
@@ -1120,8 +1265,7 @@ struct Expander::Impl {
     MacroDef def;
     def.body = literal("\\fontspec" + (before ? "[" + *before + "]" : std::string()) + "{" + font +
                        "}" + (after ? "[" + *after + "]" : std::string()));
-    defineLocally(name);
-    macros[name] = std::move(def);
+    store(name, std::move(def));
   }
 
   /** amsthm's \newtheorem{name}[shared]{Title}[within], and the starred one
@@ -1138,7 +1282,7 @@ struct Expander::Impl {
     const auto shared = readOptional();
     const std::string title = readArg("\\newtheorem", false);
     const auto within = readOptional();
-    if (lookupEnv(*name) != nullptr ||
+    if ((lookupEnv(*name) != nullptr && !isSoftEnv(*name)) ||
         (opts.isBuiltinEnvironment && opts.isBuiltinEnvironment(*name))) {
       fail("newtheorem", "Environment " + *name + " already defined!");
     }
@@ -1157,8 +1301,7 @@ struct Expander::Impl {
                               (theoremStyle == "plain" ? "\\itshape " : "");
     def.body = splitBody(begin, 1, "\\begin{" + *name + "}", e.tok.span);
     def.endBody = splitBody("\\par", 0, "\\end{" + *name + "}", e.tok.span);
-    defineLocally(*name, true);
-    envs[*name] = std::move(def);
+    store(*name, std::move(def), true);
   }
 
   /** \ce and \pu, a subset of mhchem (front/mhchem.h): the text is read and what
@@ -1313,8 +1456,7 @@ struct Expander::Impl {
     if (e.tok.text == "edef" || e.tok.text == "xdef") body = expandBody(body, e.tok.span);
     def.body = splitBody(body, def.nparams, "\\" + name, e.tok.span);
     // \gdef defines globally; \def, like everything else, in its group.
-    if (e.tok.text != "gdef" && e.tok.text != "xdef" && !global) defineLocally(name);
-    macros[name] = std::move(def);
+    store(name, std::move(def), false, e.tok.text != "gdef" && e.tok.text != "xdef" && !global);
   }
 
   void defineLet() {
@@ -1342,8 +1484,7 @@ struct Expander::Impl {
       def.atLetter = atLetterNow();
       def.body = literal(std::string(t.text));
     }
-    if (!global) defineLocally(name);
-    macros[name] = std::move(def);
+    store(name, std::move(def), false, !global);
   }
 
   /** \futurelet\cs\a\b: `\cs` means what `\b` does, and `\a\b` is read as if
@@ -1423,16 +1564,16 @@ struct Expander::Impl {
     def.body = splitBody(begin, def.nparams, "\\begin{" + *name + "}", e.tok.span);
     def.endBody = splitBody(end, 0, "\\end{" + *name + "}", e.tok.span);
 
-    const bool exists = lookupEnv(*name) != nullptr ||
-                        (opts.isBuiltinEnvironment && opts.isBuiltinEnvironment(*name));
-    if (kind == "newenvironment" && exists) {
+    const bool builtin = opts.isBuiltinEnvironment && opts.isBuiltinEnvironment(*name);
+    const bool exists = lookupEnv(*name) != nullptr || builtin;
+    // One a package gave us, which the input did not ask for, is free to define.
+    if (kind == "newenvironment" && (builtin || (exists && !isSoftEnv(*name)))) {
       fail(kind, "Command " + *name + "@env already exists! Use renewcommand instead!");
     }
     if (kind == "renewenvironment" && !exists) {
       fail(kind, "Environment " + *name + " is not defined! Use newenvironment instead!");
     }
-    defineLocally(*name, true);
-    envs[*name] = std::move(def);
+    store(*name, std::move(def), true);
   }
 
   /** Run the control word `e` if it is one of the expander's own commands --
@@ -1443,7 +1584,8 @@ struct Expander::Impl {
    *  which means what the name meant when \let ran. */
   std::optional<bool> primitive(const ExpToken& e, bool force) {
     const std::string& name = e.tok.text;
-    const auto unshadowed = [&] { return force || !macros.count(name); };
+    // A macro of the input's, or of a package, stands in place of the command.
+    const auto unshadowed = [&] { return force || lookup(name) == nullptr; };
     if (name == "newcommand" || name == "renewcommand" || name == "providecommand") {
       defineCommand(e, name);
       return true;
@@ -1524,6 +1666,16 @@ struct Expander::Impl {
     if ((name == "begin" || name == "end") && unshadowed()) {
       return environment(e, name == "begin");
     }
+    if ((name == "usepackage" || name == "RequirePackage") && unshadowed()) {
+      usePackages(e, name == "RequirePackage");
+      return true;
+    }
+    if ((name == "ProvidesPackage" || name == "NeedsTeXFormat") && unshadowed()) {
+      // Where a file says what it is; a grob has no use for it.
+      readArg("\\" + name, false);
+      readOptional();
+      return true;
+    }
     return std::nullopt;
   }
 
@@ -1552,6 +1704,9 @@ struct Expander::Impl {
       std::string msg = cleanMessage(x.what());
       const std::string who = "\\" + e.tok.text + ":";
       if (msg.compare(0, who.size(), who) != 0) msg = who + " " + msg;
+      if (!currentPackage.empty() && currentPackage != kFormat) {
+        msg = "package " + currentPackage + ": " + msg;
+      }
       diags.warn(e.tok.span, msg);
       return true;
     }
@@ -1634,19 +1789,23 @@ std::string Expander::expandToText() {
 
 std::vector<std::string> preludeCommandNames() {
   std::vector<std::string> names;
-  for (const auto& kv : Expander::Impl::prelude().macros) names.push_back(kv.first);
+  for (const auto& kv : Expander::Impl::snapshot().macros) names.push_back(kv.first);
   return names;
 }
 
 std::vector<std::string> preludeEnvironmentNames() {
   std::vector<std::string> names;
-  for (const auto& kv : Expander::Impl::prelude().envs) names.push_back(kv.first);
+  for (const auto& kv : Expander::Impl::snapshot().envs) names.push_back(kv.first);
   return names;
+}
+
+std::vector<std::string> preludeProblems() {
+  return Expander::Impl::snapshot().problems;
 }
 
 std::vector<std::string> preludeTransparentEnvironmentNames() {
   std::vector<std::string> names;
-  for (const auto& kv : Expander::Impl::prelude().envs) {
+  for (const auto& kv : Expander::Impl::snapshot().envs) {
     // The same test that marks the group transparent when one is expanded.
     if ((kv.second.body.empty() && kv.second.endBody.empty()) || isBlockEnvironment(kv.first)) {
       names.push_back(kv.first);

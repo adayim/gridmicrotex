@@ -5,6 +5,9 @@
   # Imports declaration alone isn't sufficient on all R versions.
   requireNamespace("systemfonts", quietly = TRUE)
 
+  # The LaTeX files the engine's own commands are written in.
+  .register_tex_files(pkgname)
+
   # Initialize MicroTeX with Lete Sans Math as the default font --- it pairs
   # naturally with R's sans-serif default for plot text. C++ reads its
   # metrics and OpenType MATH table from the OTF itself at load time.
