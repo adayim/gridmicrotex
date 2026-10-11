@@ -43,6 +43,10 @@ struct MacroDef {
    *  keeps `\let\oldfrac\frac \renewcommand{\frac}...{\oldfrac...}` from
    *  looping. */
   bool alias = false;
+  /** `@` was a letter when this was defined (\makeatletter): its body names
+   *  `\my@a` as one name, and is read so again wherever it is used, after
+   *  \makeatother too. */
+  bool atLetter = false;
 };
 
 struct ExpanderOptions {

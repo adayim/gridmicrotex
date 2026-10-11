@@ -71,3 +71,27 @@ test_that("\\limits on a predefined formula changes that use of it only", {
   invisible(size("\\displaystyle \\sin\\limits_{q} y"))
   expect_identical(size("\\displaystyle \\sin_{q} z"), before)
 })
+
+test_that("a parameter next to a control word is a token of its own, as in TeX", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # `\alpha#1` with #1 = b was read as the unknown command `\alphab`.
+  expect_identical(layout("\\newcommand{\\x}[1]{#1b}\\x{\\alpha}"), layout("\\alpha b"))
+  expect_identical(layout("\\newcommand{\\x}[1]{\\alpha#1}\\x{b}"), layout("\\alpha b"))
+  expect_identical(layout("\\newcommand{\\x}[1]{\\mathrm#1}\\x{ab}"), layout("\\mathrm ab"))
+})
+
+test_that("a name with @ made under \\makeatletter works after \\makeatother", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_identical(
+    layout("\\makeatletter\\newcommand{\\my@a}{A}\\newcommand{\\usea}{\\my@a}\\makeatother\\usea"),
+    layout("A"))
+  expect_identical(
+    layout("\\makeatletter\\def\\my@a{A}\\def\\usea{\\my@a}\\makeatother\\usea"),
+    layout("A"))
+})
+
+test_that("a \\let alias of \\def or \\newcommand defines, as the command does", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  expect_identical(layout("\\let\\mydef\\def\\mydef\\foo{F}\\foo"), layout("F"))
+  expect_identical(layout("\\let\\mynew\\newcommand\\mynew{\\foo}{F}\\foo"), layout("F"))
+})
