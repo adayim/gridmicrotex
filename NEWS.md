@@ -1,10 +1,10 @@
-# gridmicrotex (development version)
+# gridmicrotex 0.2.1
 
-- `\usepackage` and `\RequirePackage` now load packages. New `load_sty()` makes a `.sty` file of your own definitions one, and `latex_options(packages = )` loads packages before every label. A package is read as LaTeX reads one: `\newcommand`, `\def`, `\newif`, `\if` tests, `\csname`, package options and xparse's `\NewDocumentCommand` work, registers, boxes and `\catcode` do not.
-- New `physics` package, loaded with `\usepackage{physics}`: automatic brackets (`\qty`, `\abs`, `\eval`), vectors, derivatives (`\dv`, `\pdv`), bra-ket notation and matrices.
-- The commands the package defines itself, such as `\dfrac`, `pmatrix` and `\R`, are LaTeX files in `inst/tex`, one for each package they come from. A label can now define a name from a package it does not load, `\dfrac` without amsmath, as in LaTeX; one LaTeX itself has, such as `\ldots`, is reported as existing.
-- Bug fix: a macro parameter next to a control word was read as one name, so `\newcommand{\x}[1]{\alpha#1}` with `\x{b}` drew `\alphab` as an unknown command.
-- Bug fix: a name with `@` made between `\makeatletter` and `\makeatother` was read as `\my` after it.
+- `\usepackage` now loads packages. New `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
+- New `physics` package, loaded with `\usepackage{physics}`.
+- A name from a package a label does not load, such as `\dfrac` without amsmath, can be defined with `\newcommand`, as in LaTeX; one LaTeX itself has, such as `\ldots`, is reported as existing.
+- Bug fix: a macro parameter next to a control word was read as one name, so `\newcommand{\x}[1]{\alpha#1}` with `\x{b}` drew `\alphab`.
+- Bug fix: a name with `@` made under `\makeatletter` was read as `\my` after `\makeatother`.
 - Bug fix: `\let\mydef\def` made a command that did nothing.
 
 # gridmicrotex 0.2.0
