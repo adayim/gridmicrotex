@@ -4,10 +4,6 @@
 ^Rplots\.pdf$
 ^gridmicrotex\.Rproj$
 ^mytest/.*$
-^src/MicroTeX/lib/CMakeLists\.txt$
-^src/MicroTeX/lib/meson\.build$
-^src/MicroTeX/lib/microtexConfig\.cmake\.in$
-^src/MicroTeX/lib/microtexconfig\.h\.in$
 ^src/MicroTeX/lib/microtexapi\.h$
 ^src/MicroTeX/lib/wrapper/
 ^_pkgdown\.yml$
