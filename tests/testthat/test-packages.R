@@ -154,6 +154,25 @@ test_that("latex_options(packages =) rejects a name that is no package and chang
   expect_identical(latex_options()$packages, "amsmath")
 })
 
+test_that("a package written with conditionals, \\csname and options works as written", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  path <- sty_file(c(
+    "\\NeedsTeXFormat{LaTeX2e}",
+    "\\ProvidesPackage{condprobe}[2026/10/11 a probe]",
+    "\\newif\\ifcompact",
+    "\\DeclareOption{compact}{\\compacttrue}",
+    "\\ProcessOptions\\relax",
+    "\\newcommand{\\gap}{\\ifcompact\\,\\else\\quad\\fi}",
+    "\\@namedef{unit@m}{\\mathrm{m}}",
+    "\\newcommand{\\unit}[1]{\\@ifundefined{unit@#1}{\\mathrm{#1}}{\\@nameuse{unit@#1}}}"),
+    "condprobe.sty")
+  expect_silent(load_sty(path))
+  expect_identical(layout("\\usepackage{condprobe}a\\gap b"), layout("a\\quad b"))
+  expect_identical(layout("\\usepackage[compact]{condprobe}a\\gap b"), layout("a\\,b"))
+  expect_identical(layout("\\usepackage{condprobe}\\unit{m}"), layout("\\mathrm{m}"))
+  expect_identical(layout("\\usepackage{condprobe}\\unit{kg}"), layout("\\mathrm{kg}"))
+})
+
 test_that("a name a start package defines is no longer free to define", {
   path <- sty_file("\\newcommand{\\takenprobe}{T}", "takenprobe.sty")
   load_sty(path)

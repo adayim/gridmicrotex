@@ -59,6 +59,9 @@ struct ExpanderOptions {
   std::function<bool(const std::string&)> isBuiltinCommand;
   /** The same for environments. */
   std::function<bool(const std::string&)> isBuiltinEnvironment;
+  /** Is `name` a symbol or a predefined formula, which the parser knows
+   *  without its being a command? \ifdefined and \ifx ask. */
+  std::function<bool(const std::string&)> isKnownName;
   LexOptions lex;
   /** TeX stops runaway recursion with its capacity limits; these are ours.
    *  The bytes are all the expansions of one parse together, and reading

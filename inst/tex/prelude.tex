@@ -40,7 +40,6 @@
 \newcommand{\arraybackslash}{}
 \newcommand{\extracolsep}[1]{}
 \newcommand{\flushright}{}
-\newcommand{\relax}{}
 \newcommand{\smallskip}{\vspace{0.25em}}
 \newcommand{\medskip}{\vspace{0.5em}}
 \newcommand{\bigskip}{\vspace{1em}}
@@ -129,6 +128,17 @@
 \newcommand{\j}{ȷ}
 \newcommand{\S}{§}
 \newcommand{\P}{¶}
+
+% What package code is written with: LaTeX's kernel helpers, over the
+% expander's own \csname, \ifx, \expandafter and \relax.
+\newcommand{\@gobble}[1]{}
+\newcommand{\@gobbletwo}[2]{}
+\newcommand{\@firstofone}[1]{#1}
+\newcommand{\@empty}{}
+\newcommand{\protect}{}
+\newcommand{\@namedef}[1]{\expandafter\def\csname #1\endcsname}
+\newcommand{\@nameuse}[1]{\csname #1\endcsname}
+\newcommand{\@ifundefined}[1]{\expandafter\ifx\csname #1\endcsname\relax\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
 
 % The packages every input starts with. A name one of them defines is free for
 % an input to define, unless the input asks for the package.

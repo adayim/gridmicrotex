@@ -29,6 +29,9 @@ Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bo
   eo.isBuiltinEnvironment = [](const std::string& name) {
     return findEnvironment(name) != nullptr;
   };
+  eo.isKnownName = [](const std::string& name) {
+    return Symbol::get(name.c_str()) != nullptr || Formula::isPredefined(name);
+  };
   Expander expander(latex, std::move(eo), diagnostics);
   ParserOptions po;
   po.startMode = mode;

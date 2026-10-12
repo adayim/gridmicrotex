@@ -1085,6 +1085,7 @@ struct Expander::Impl {
     std::string out;
     std::string carry;
     bool lastControlWord;
+    std::vector<char> conds;
 
     PackageWorld(Impl& impl, const std::string& name)
         : s(impl),
@@ -1094,8 +1095,10 @@ struct Expander::Impl {
           at(impl.cats.get('@')),
           out(std::move(impl.out)),
           carry(std::move(impl.carry)),
-          lastControlWord(impl.lastControlWord) {
+          lastControlWord(impl.lastControlWord),
+          conds(std::move(impl.conds)) {
       impl.undoStack.clear();
+      impl.conds.clear();
       impl.depth = 0;
       impl.currentPackage = name;
       impl.cats.set('@', Cat::letter);
@@ -1112,6 +1115,7 @@ struct Expander::Impl {
       s.out = std::move(out);
       s.carry = std::move(carry);
       s.lastControlWord = lastControlWord;
+      s.conds = std::move(conds);
     }
   };
 
@@ -1120,9 +1124,10 @@ struct Expander::Impl {
    *  \usepackage always was. */
   void usePackages(const ExpToken& e, bool require) {
     const std::string who = "\\" + e.tok.text;
-    readOptional();  // the options: no package reads any yet
+    const std::optional<std::string> options = readOptional();
     const std::string list = readArg(who, false);
     if (require) readOptional();
+    const std::vector<std::string> given = options ? splitList(*options) : std::vector<std::string>();
     std::size_t from = 0;
     while (from <= list.size()) {
       std::size_t comma = list.find(',', from);
@@ -1130,7 +1135,7 @@ struct Expander::Impl {
       const std::string name = trim(list.substr(from, comma - from));
       if (!name.empty()) {
         requested.insert(name);
-        const std::string left = loadPackage(name, e.tok.span);
+        const std::string left = loadPackage(name, e.tok.span, given);
         if (currentPackage == kFormat && !trim(left).empty()) {
           // The format's own packages only define.
           diags.warn(e.tok.span, "package " + name + " left text behind: " + trim(left).substr(0, 30));
@@ -1147,24 +1152,35 @@ struct Expander::Impl {
   /** Read the package `name` into these tables, once: not again, and not at
    *  all when the shared tables were made with it. Returns what it left
    *  behind that is not a definition. */
-  std::string loadPackage(const std::string& name, const SourceSpan& at) {
+  std::string loadPackage(const std::string& name, const SourceSpan& at,
+                          const std::vector<std::string>& given = {}) {
     if (loaded.count(name) != 0 || (shared != nullptr && shared->loaded.count(name) != 0)) return {};
     const std::string* source = packageSource(name);
     if (source == nullptr) return {};
     loaded.insert(name);
-    return runPackage(name, *source, at);
+    return runPackage(name, *source, at, given);
   }
 
   /** Expand a package's file for what it defines, and return the text it
    *  leaves behind: the commands that are not definitions, which the parser
    *  reads. The problems it meets are reported as its own, at its lines. */
-  std::string runPackage(const std::string& name, const std::string& source, const SourceSpan& at) {
+  std::string runPackage(const std::string& name, const std::string& source, const SourceSpan& at,
+                         const std::vector<std::string>& given) {
     std::string leftover;
     bool endedInside = false;
     {
       const Diagnostics::Package report(diags, name, at);
       PackageWorld world(*this, name);
       const std::size_t base = frames.size();
+      // Its options, as \DeclareOption and \ProcessOptions see them; gone with it.
+      packageStack.emplace_back();
+      packageStack.back().name = name;
+      packageStack.back().given = given;
+      packageStack.back().frame = base;
+      struct Pop {
+        std::vector<PackageOptions>& stack;
+        ~Pop() { stack.pop_back(); }
+      } pop{packageStack};
       // No space after the end: it would be owed to the token that follows.
       pushExpansion(source + "\n\\gmendpackage", at, true, true);
       int braces = 0;
@@ -1189,6 +1205,8 @@ struct Expander::Impl {
         emitText(t.text, t.tok.kind == TokKind::controlWord);
       }
       leftover = std::move(out);
+      // What it asked to have run at the start of the document, run now.
+      leftover += packageStack.back().atBegin;
     }
     if (endedInside) diags.warn(at, "package " + name + " ends inside a group or a definition");
     return leftover;
@@ -1374,6 +1392,46 @@ struct Expander::Impl {
       if (n == x) return true;
     }
     return false;
+  }
+
+  /** Every command the expander runs itself (primitive() below). Keep it in
+   *  step: \ifx and \ifdefined take these names to mean something. */
+  static bool isPrimitiveName(const std::string& n) {
+    static const std::unordered_set<std::string> names = {
+      "newcommand", "renewcommand", "providecommand", "DeclareRobustCommand", "DeclareMathOperator",
+      "DeclarePairedDelimiter", "ce", "pu", "newtheorem", "newfontfamily", "newfontface",
+      "theoremstyle", "def", "gdef", "edef", "xdef", "@ifstar", "@ifnextchar", "global",
+      "expandafter", "noexpand", "futurelet", "let", "newenvironment", "renewenvironment",
+      "makeatletter", "makeatother", "begingroup", "endgroup", "begin", "end", "usepackage",
+      "RequirePackage", "ProvidesPackage", "NeedsTeXFormat", "relax", "iftrue", "iffalse", "ifx",
+      "ifdefined", "ifcsname", "ifnum", "unless", "else", "fi", "csname", "newif",
+      "DeclareOption", "ProcessOptions", "ExecuteOptions", "AtBeginDocument", "endinput",
+      "@ifpackageloaded"};
+    return names.count(n) != 0 || isSiunitx(n);
+  }
+
+  /** The conditionals: each reads a test and then one of two branches. */
+  static bool isCondPrimitive(const std::string& n) {
+    return n == "iftrue" || n == "iffalse" || n == "ifx" || n == "ifdefined" || n == "ifcsname" ||
+           n == "ifnum";
+  }
+
+  /** TeX's other conditionals, which this expander does not evaluate. They go
+   *  through to the parser as they are, with their \else and \fi --
+   *  kableExtra's \resizebox{\ifdim\width>\linewidth ...\else...\fi} is read
+   *  there -- and count only as nesting where a branch is skipped. */
+  static bool isForeignCond(const std::string& n) {
+    static const std::unordered_set<std::string> names = {
+      "if", "ifcat", "ifdim", "ifodd", "ifvmode", "ifhmode", "ifmmode", "ifinner", "ifvoid",
+      "ifhbox", "ifvbox", "ifeof", "ifcase"};
+    return names.count(n) != 0;
+  }
+
+  /** What \expandafter expands, besides macros: the commands TeX itself
+   *  expands rather than runs. */
+  static bool isExpandablePrimitive(const std::string& n) {
+    return isCondPrimitive(n) || n == "unless" || n == "else" || n == "fi" || n == "csname" ||
+           n == "@ifstar" || n == "@ifnextchar" || n == "@ifpackageloaded";
   }
 
   /** A subset of siunitx (front/siunitx.h): the command's arguments are
@@ -1571,10 +1629,328 @@ struct Expander::Impl {
         !macros.count("expandafter")) {
       expandAfter();
     } else if (second.tok.kind == TokKind::end || !second.tok.isControl() || second.tok.noexpand ||
-               !expandMacro(second)) {
+               !expandOnce(second)) {
       unread(std::move(second));
     }
     unread(std::move(first));
+  }
+
+  /** Expand the token `t` once, if TeX would: a macro, or one of the commands
+   *  that expand (a conditional, \csname, ...). */
+  bool expandOnce(const ExpToken& t) {
+    if (expandMacro(t)) return true;
+    if (t.tok.kind != TokKind::controlWord || !isExpandablePrimitive(t.tok.text) ||
+        lookup(t.tok.text) != nullptr) {
+      return false;
+    }
+    const auto done = primitive(t, false);
+    return done && *done;
+  }
+
+  // --- conditionals and \csname -------------------------------------------
+
+  /** The conditionals begun and not yet at their \fi: 't' while the branch
+   *  read is the true one, 'e' while it is the else one. */
+  std::vector<char> conds;
+
+  /** The primitive a name stands for, through \let copies of it; empty when
+   *  it is a macro or anything else. */
+  std::string primitiveOf(std::string name) const {
+    for (int i = 0; i < 32; i++) {
+      const MacroDef* def = lookup(name);
+      if (def == nullptr) return isPrimitiveName(name) ? name : std::string();
+      if (!def->alias) return {};
+      const std::string& target = def->body.front().text;
+      if (target.size() < 2 || target[0] != '\\') return {};
+      name = target.substr(1);
+    }
+    return {};
+  }
+
+  /** What a macro is, as one string: equal macros give equal strings. */
+  static std::string describe(const MacroDef& def) {
+    std::string s = std::to_string(def.nparams) + (def.hasOptional ? "[" + def.optionalDefault + "]" : "");
+    for (const auto& delimiter : def.delimiters) {
+      s += "|";
+      for (const Token& t : delimiter) s += t.text + "\x1f";
+    }
+    s += "=";
+    for (const BodyPiece& p : def.body) s += p.param == 0 ? "t" + p.text + "\x1e" : "p" + std::to_string(p.param) + "\x1e";
+    return s;
+  }
+
+  /** What the control sequence `name` means, as one string for \ifx: equal
+   *  meanings give equal strings. */
+  std::string meaningOf(const std::string& name, int depth = 0) const {
+    if (depth > 32) return "loop";
+    if (const MacroDef* def = lookup(name)) {
+      if (!def->alias) return "macro:" + describe(*def);
+      const std::string& target = def->body.front().text;
+      if (target.size() >= 2 && target[0] == '\\') return meaningOf(target.substr(1), depth + 1);
+      return "char:" + target;
+    }
+    if (isPrimitiveName(name)) return "primitive:" + name;
+    if ((opts.isBuiltinCommand && opts.isBuiltinCommand(name)) || findCommand(name) != nullptr ||
+        (opts.isKnownName && opts.isKnownName(name))) {
+      return "command:" + name;
+    }
+    return "undefined";
+  }
+
+  std::string meaningOf(const ExpToken& t) const {
+    if (t.tok.isControl()) return meaningOf(t.tok.text);
+    return t.tok.kind == TokKind::space ? "space" : "char:" + std::string(t.text);
+  }
+
+  /** \ifx: the next two tokens, not expanded, mean the same. */
+  bool ifx() {
+    const ExpToken a = raw();
+    const ExpToken b = raw();
+    return meaningOf(a) == meaningOf(b);
+  }
+
+  bool ifdefined() {
+    const ExpToken t = raw();
+    return !t.tok.isControl() || meaningOf(t.tok.text) != "undefined";
+  }
+
+  /** The name between \csname and \endcsname, read with expansion. */
+  std::string readCsname(const SourceSpan& at) {
+    std::string name;
+    while (true) {
+      ExpToken t = nextExpanded();
+      if (t.tok.kind == TokKind::end) {
+        diags.warn(at, "missing \\endcsname inserted");
+        unread(std::move(t));
+        return name;
+      }
+      if (t.tok.kind == TokKind::controlWord && t.tok.text == "endcsname") return name;
+      if (t.tok.isControl()) {
+        diags.warn(t.tok.span, "illegal token in \\csname: it is left out");
+        continue;
+      }
+      name += t.tok.kind == TokKind::space ? std::string(" ") : std::string(t.text);
+    }
+  }
+
+  /** The token for the control sequence `name`, which need not be one TeX
+   *  could write (`my-cmd`). */
+  ExpToken controlToken(const std::string& name, const SourceSpan& at) {
+    buffers.push_back("\\" + name);
+    ExpToken t;
+    const bool symbol = name.size() == 1 && cats.get(static_cast<unsigned char>(name[0])) != Cat::letter;
+    t.tok.kind = symbol ? TokKind::controlSymbol : TokKind::controlWord;
+    t.tok.text = name;
+    t.tok.span = at;
+    t.text = std::string_view(buffers.back());
+    return t;
+  }
+
+  /** \csname name\endcsname: the control sequence of that name. One that
+   *  means nothing is made to mean \relax, as in TeX. */
+  void csname(const ExpToken& e) {
+    const std::string name = readCsname(e.tok.span);
+    if (name.empty()) {
+      diags.warn(e.tok.span, "\\csname\\endcsname: the empty name is left out");
+      return;
+    }
+    if (meaningOf(name) == "undefined") {
+      MacroDef relax;
+      relax.alias = true;
+      relax.body = literal("\\relax");
+      store(name, std::move(relax));
+    }
+    unread(controlToken(name, e.tok.span));
+  }
+
+  bool ifcsname(const SourceSpan& at) { return meaningOf(readCsname(at)) != "undefined"; }
+
+  /** An integer as TeX reads one: signs, digits, and the one space after. */
+  long readNumber(const SourceSpan& at) {
+    const auto next = [&] {
+      ExpToken t = nextExpanded();
+      while (t.tok.kind == TokKind::space) t = nextExpanded();
+      return t;
+    };
+    ExpToken t = next();
+    bool negative = false;
+    while (isChar(t, '+') || isChar(t, '-')) {
+      if (isChar(t, '-')) negative = !negative;
+      t = next();
+    }
+    long value = 0;
+    bool any = false;
+    while (t.tok.kind == TokKind::character && t.tok.cp >= '0' && t.tok.cp <= '9') {
+      value = std::min<long>(value * 10 + static_cast<long>(t.tok.cp - '0'), 2147483647L);
+      any = true;
+      t = nextExpanded();
+    }
+    if (!any) diags.warn(at, "missing number, treated as zero");
+    if (t.tok.kind != TokKind::space) unread(std::move(t));
+    return negative ? -value : value;
+  }
+
+  bool ifnum(const SourceSpan& at) {
+    const long a = readNumber(at);
+    ExpToken r = nextExpanded();
+    while (r.tok.kind == TokKind::space) r = nextExpanded();
+    char relation = '=';
+    if (isChar(r, '<') || isChar(r, '=') || isChar(r, '>')) {
+      relation = static_cast<char>(r.tok.cp);
+    } else {
+      diags.warn(at, "missing = inserted for \\ifnum");
+      unread(std::move(r));
+    }
+    const long b = readNumber(at);
+    return relation == '<' ? a < b : relation == '>' ? a > b : a == b;
+  }
+
+  /** Skip what is not read of a conditional, up to the \fi that ends it --
+   *  or, with `stopAtElse`, the \else that begins its other branch --
+   *  passing the conditionals nested in it whole. True at an \else, false
+   *  at the \fi (or at the end of the input, which is a warning). */
+  bool skipBranch(const SourceSpan& at, bool stopAtElse) {
+    int nest = 0;
+    while (true) {
+      ExpToken t = raw();
+      if (t.tok.kind == TokKind::end) {
+        diags.warn(at, "missing \\fi: a conditional is still open at the end of the input");
+        unread(std::move(t));
+        return false;
+      }
+      if (t.tok.kind != TokKind::controlWord || t.tok.noexpand) continue;
+      const std::string p = primitiveOf(t.tok.text);
+      if (isCondPrimitive(p) || (p.empty() && isForeignCond(t.tok.text) && lookup(t.tok.text) == nullptr)) {
+        nest++;
+      } else if (p == "fi") {
+        if (nest == 0) return false;
+        nest--;
+      } else if (p == "else" && nest == 0 && stopAtElse) {
+        return true;
+      }
+    }
+  }
+
+  /** Begin the conditional `kind` (a primitive's name): read its test, then
+   *  the branch it picks. */
+  void conditional(const std::string& kind, bool negate, const SourceSpan& at) {
+    bool result = kind == "iftrue";
+    if (kind == "ifx") result = ifx();
+    if (kind == "ifdefined") result = ifdefined();
+    if (kind == "ifcsname") result = ifcsname(at);
+    if (kind == "ifnum") result = ifnum(at);
+    if (negate) result = !result;
+    if (result) {
+      conds.push_back('t');
+    } else if (skipBranch(at, true)) {
+      conds.push_back('e');
+    }
+  }
+
+  /** \else: the branch read ends, and the rest is skipped up to the \fi.
+   *  False when it is not ours -- no conditional open, or a foreign one --
+   *  and goes through to the parser. */
+  bool elseOfConditional(const SourceSpan& at) {
+    if (conds.empty() || conds.back() == 'f') return false;
+    if (conds.back() == 'e') {
+      diags.warn(at, "extra \\else");
+      return true;
+    }
+    skipBranch(at, false);
+    conds.pop_back();
+    return true;
+  }
+
+  bool endOfConditional() {
+    if (conds.empty()) return false;
+    const bool ours = conds.back() != 'f';
+    conds.pop_back();
+    return ours;
+  }
+
+  /** \newif\iffoo: `\iffoo`, which is false, and `\footrue` and `\foofalse`
+   *  to set it. */
+  void declareConditional() {
+    const ExpToken n = raw();
+    const std::string cs = n.tok.isControl() ? n.tok.text : std::string();
+    if (cs.size() < 3 || cs.compare(0, 2, "if") != 0) {
+      fail("newif", "\\newif: " + std::string(n.text) + " is not of the form \\ifname");
+    }
+    const std::string base = cs.substr(2);
+    const auto define = [&](const std::string& name, const std::string& body, bool alias) {
+      MacroDef def;
+      def.alias = alias;
+      def.atLetter = atLetterNow();
+      def.body = literal(body);
+      store(name, std::move(def));
+    };
+    define(cs, "\\iffalse", true);
+    define(base + "true", "\\let\\" + cs + "\\iftrue", false);
+    define(base + "false", "\\let\\" + cs + "\\iffalse", false);
+  }
+
+  // --- package options ----------------------------------------------------
+
+  /** What a package being read has declared (\DeclareOption), and the options
+   *  it was given. */
+  struct PackageOptions {
+    std::string name;
+    std::vector<std::string> given;
+    std::vector<std::pair<std::string, std::string>> declared;
+    std::string otherwise;
+    bool hasOtherwise = false;
+    /** What \AtBeginDocument asked for: done where the package ends. */
+    std::string atBegin;
+    /** Where the package's own text is, in `frames`. */
+    std::size_t frame = 0;
+  };
+  std::vector<PackageOptions> packageStack;
+
+  /** The code to run for the options `list`, as one text: each declared one
+   *  by its code, each other by the default's, with \CurrentOption set. */
+  void runOptions(const std::vector<std::string>& list, const SourceSpan& at) {
+    if (packageStack.empty()) return;
+    const PackageOptions& p = packageStack.back();
+    std::string all;
+    for (const std::string& option : list) {
+      const std::string* code = nullptr;
+      for (const auto& d : p.declared) {
+        if (d.first == option) code = &d.second;
+      }
+      if (code == nullptr && p.hasOtherwise) code = &p.otherwise;
+      if (code == nullptr) {
+        diags.warn(at, "unknown option '" + option + "' for package " + p.name);
+        continue;
+      }
+      all += "\\def\\CurrentOption{" + option + "}" + *code;
+    }
+    if (!all.empty()) pushExpansion(all, at, true);
+  }
+
+  static std::vector<std::string> splitList(const std::string& text) {
+    std::vector<std::string> out;
+    std::size_t from = 0;
+    while (from <= text.size()) {
+      std::size_t comma = text.find(',', from);
+      if (comma == std::string::npos) comma = text.size();
+      const std::string item = trim(text.substr(from, comma - from));
+      if (!item.empty()) out.push_back(item);
+      from = comma + 1;
+    }
+    return out;
+  }
+
+  /** \endinput in a package: the rest of its file is not read. */
+  void endPackageFile() {
+    if (packageStack.empty()) return;
+    Frame& f = frames[packageStack.back().frame];
+    buffers.push_back("\\gmendpackage");
+    LexOptions lo = opts.lex;
+    lo.startMidLine = true;
+    lo.atLetter = true;
+    f.buf = buffers.back();
+    f.lexer = std::make_unique<Lexer>(buffers.back(), lo, quiet, cats);
+    f.pushback.clear();
   }
 
   /** The text `body` expands to, as \edef makes a macro's: everything that expands
@@ -1636,7 +2012,8 @@ struct Expander::Impl {
     const std::string& name = e.tok.text;
     // A macro of the input's, or of a package, stands in place of the command.
     const auto unshadowed = [&] { return force || lookup(name) == nullptr; };
-    if (name == "newcommand" || name == "renewcommand" || name == "providecommand") {
+    if (name == "newcommand" || name == "renewcommand" || name == "providecommand" ||
+        name == "DeclareRobustCommand") {
       defineCommand(e, name);
       return true;
     }
@@ -1724,6 +2101,82 @@ struct Expander::Impl {
       // Where a file says what it is; a grob has no use for it.
       readArg("\\" + name, false);
       readOptional();
+      return true;
+    }
+    // The TeX a package file is written in.
+    if (name == "relax" && unshadowed()) return true;
+    if (isCondPrimitive(name) && unshadowed()) {
+      conditional(name, false, e.tok.span);
+      return true;
+    }
+    if (name == "unless" && unshadowed()) {
+      ExpToken t = raw();
+      const std::string kind = t.tok.kind == TokKind::controlWord ? primitiveOf(t.tok.text) : std::string();
+      if (!isCondPrimitive(kind)) {
+        unread(std::move(t));
+        fail("unless", "\\unless: not followed by a conditional");
+      }
+      conditional(kind, true, e.tok.span);
+      return true;
+    }
+    if (isForeignCond(name) && unshadowed()) {
+      conds.push_back('f');
+      return false;
+    }
+    if (name == "else" && unshadowed()) return elseOfConditional(e.tok.span);
+    if (name == "fi" && unshadowed()) return endOfConditional();
+    if (name == "csname" && unshadowed()) {
+      csname(e);
+      return true;
+    }
+    if (name == "newif" && unshadowed()) {
+      declareConditional();
+      return true;
+    }
+    if (name == "DeclareOption" && unshadowed()) {
+      const bool star = takeStar();
+      const std::string option = star ? std::string() : trim(readArg("\\DeclareOption", false));
+      const std::string code = readArg("\\DeclareOption", false);
+      if (packageStack.empty()) {
+        diags.warn(e.tok.span, "\\DeclareOption outside a package is left out");
+      } else if (star) {
+        packageStack.back().otherwise = code;
+        packageStack.back().hasOtherwise = true;
+      } else {
+        packageStack.back().declared.emplace_back(option, code);
+      }
+      return true;
+    }
+    if (name == "ProcessOptions" && unshadowed()) {
+      takeStar();
+      if (!packageStack.empty()) runOptions(packageStack.back().given, e.tok.span);
+      return true;
+    }
+    if (name == "ExecuteOptions" && unshadowed()) {
+      runOptions(splitList(readArg("\\ExecuteOptions", false)), e.tok.span);
+      return true;
+    }
+    if (name == "AtBeginDocument" && unshadowed()) {
+      const std::string code = readArg("\\AtBeginDocument", false);
+      // A grob has no beginning of the document: a package's code runs where
+      // the package ends, and the input's at once.
+      if (packageStack.empty()) {
+        pushExpansion(code, e.tok.span);
+      } else {
+        packageStack.back().atBegin += code;
+      }
+      return true;
+    }
+    if (name == "endinput" && unshadowed()) {
+      endPackageFile();
+      return true;
+    }
+    if (name == "@ifpackageloaded" && unshadowed()) {
+      const std::string who = "\\@ifpackageloaded";
+      const std::string package = trim(readArg(who, false));
+      const std::string yes = readArg(who, false), no = readArg(who, false);
+      const bool isLoaded = loaded.count(package) != 0 || (shared != nullptr && shared->loaded.count(package) != 0);
+      pushExpansion(isLoaded ? yes : no, e.tok.span);
       return true;
     }
     return std::nullopt;
