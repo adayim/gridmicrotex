@@ -2,16 +2,15 @@
 
 - `\usepackage` now loads packages. New `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
 - New `physics` and `commath` packages, loaded with `\usepackage{}`.
-- New `\slashed`, `\tensor`, `\indices` and `\nuclide`.
-- New `subequations` environment, which numbers its equations 1a, 1b, ..., and the `cases` package's `numcases` and `subnumcases`, cases with a number each.
-- New commands `\mathbbm`, `\nicefrac`, `\centernot`, `\mleft` and `\mright`, `\diff` and `\diffp`, `\larger` and `\smaller`, `\ohm` and `\textmu`.
+- New commands `\mathbbm`, `\nicefrac`, `\centernot`, `\mleft` and `\mright`, `\diff` and `\diffp`, `\larger` and `\smaller`, `\ohm` and `\textmu`, `\slashed`, `\tensor` and `\nuclide`.
+- New `subequations`, `numcases` and `subnumcases` environments.
 - A name from a package a label does not load, such as `\dfrac` without amsmath, can be defined with `\newcommand`, as in LaTeX; one LaTeX itself has, such as `\ldots`, is reported as existing.
 - Bug fix: a macro parameter next to a control word was read as one name, so `\newcommand{\x}[1]{\alpha#1}` with `\x{b}` drew `\alphab`.
 - Bug fix: a name with `@` made under `\makeatletter` was read as `\my` after `\makeatother`.
 - Bug fix: `\let\mydef\def` made a command that did nothing.
 - Bug fix: letters after a dimension's unit were read as part of it, so `\kern1emx` and `\mkern3muab` drew no `x` or `ab`.
-- Bug fix: the rows of `matrix`, `array`, `cases`, `align`, `gather`, `aligned`, `split`, `substack` and kin stood closer together than in LaTeX, an `align` row by 3pt.
-- Bug fix: the cells of `matrix`, `array` and `cases` were in display style inside a display, where LaTeX uses text style, so a `\frac` in a matrix was too large.
+- Bug fix: the rows of matrices, `cases`, `align`, `gather` and kin were closer together than in LaTeX.
+- Bug fix: a `\frac` in a `matrix`, `array` or `cases` was set in display style, too large.
 - Bug fix: `\vcenter` drew its content above the math axis.
 - Bug fix: a display holding only its number, such as `\[\tag{1}\]`, crashed when set at a width.
 
