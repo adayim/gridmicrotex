@@ -1,3 +1,12 @@
+# gridmicrotex (development version)
+
+- `\usepackage` and `\RequirePackage` now load packages. New `load_sty()` makes a `.sty` file of your own definitions one, and `latex_options(packages = )` loads packages before every label. A package is read as LaTeX reads one: `\newcommand`, `\def`, `\newif`, `\if` tests, `\csname`, package options and xparse's `\NewDocumentCommand` work, registers, boxes and `\catcode` do not.
+- New `physics` package, loaded with `\usepackage{physics}`: automatic brackets (`\qty`, `\abs`, `\eval`), vectors, derivatives (`\dv`, `\pdv`), bra-ket notation and matrices.
+- The commands the package defines itself, such as `\dfrac`, `pmatrix` and `\R`, are LaTeX files in `inst/tex`, one for each package they come from. A label can now define a name from a package it does not load, `\dfrac` without amsmath, as in LaTeX; one LaTeX itself has, such as `\ldots`, is reported as existing.
+- Bug fix: a macro parameter next to a control word was read as one name, so `\newcommand{\x}[1]{\alpha#1}` with `\x{b}` drew `\alphab` as an unknown command.
+- Bug fix: a name with `@` made between `\makeatletter` and `\makeatother` was read as `\my` after it.
+- Bug fix: `\let\mydef\def` made a command that did nothing.
+
 # gridmicrotex 0.2.0
 
 - LaTeX is read by a new, faster parser that follows TeX's rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write `\LaTeX{} is`), and `_`, `^`, `#` and `&` outside math warn.
