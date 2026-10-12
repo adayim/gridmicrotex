@@ -1,18 +1,9 @@
 # gridmicrotex 0.2.1
 
 - `\usepackage` now loads packages. New `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
-- New `physics` and `commath` packages, loaded with `\usepackage{}`.
-- New commands `\mathbbm`, `\nicefrac`, `\centernot`, `\mleft` and `\mright`, `\diff` and `\diffp`, `\larger` and `\smaller`, `\ohm` and `\textmu`, `\slashed`, `\tensor` and `\nuclide`.
-- New commands `\bgroup`, `\egroup`, `\textsl`, `\slshape` (drawn as italic) and `\MoveEqLeft`.
-- New `subequations`, `numcases` and `subnumcases` environments.
-- A name from a package a label does not load, such as `\dfrac` without amsmath, can be defined with `\newcommand`, as in LaTeX; one LaTeX itself has, such as `\ldots`, is reported as existing.
-- Bug fix: a macro parameter next to a control word was read as one name, so `\newcommand{\x}[1]{\alpha#1}` with `\x{b}` drew `\alphab`.
-- Bug fix: a name with `@` made under `\makeatletter` was read as `\my` after `\makeatother`.
-- Bug fix: `\let\mydef\def` made a command that did nothing.
-- Bug fix: letters after a dimension's unit were read as part of it, so `\kern1emx` and `\mkern3muab` drew no `x` or `ab`.
-- Bug fix: the rows of matrices, `cases`, `align`, `gather` and kin were closer together than in LaTeX.
-- Bug fix: a `\frac` in a `matrix`, `array` or `cases` was set in display style, too large.
-- Bug fix: `\vcenter` drew its content above the math axis.
+- A name from a package a label does not load can be defined with `\newcommand`, as in LaTeX.
+- Bug fix: macros and dimensions were read wrongly in a few cases, such as a parameter next to a control word and letters after a unit.
+- Bug fix: the rows of matrices, `cases`, `align` and kin were closer together than in LaTeX, and a `\frac` in a matrix was too large.
 - Bug fix: a display holding only its number, such as `\[\tag{1}\]`, crashed when set at a width.
 
 # gridmicrotex 0.2.0
