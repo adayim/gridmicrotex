@@ -36,6 +36,18 @@ test_that("an argument without braces is one token", {
   ))
 })
 
+test_that("a dimension ends after its two-letter unit, so what follows is text", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # `\kern1emx` drew no x: the reader took x for more of the unit.
+  expect_same_layout(c(
+    "a\\kern1emx"       = "a\\kern1em x",
+    "a\\mkern3muab"     = "a\\mkern3mu ab",
+    "a\\mkern-7mub"     = "a\\mkern-7mu b",
+    "a\\hskip1emb"      = "a\\hskip1em b",
+    "a\\kern1truemmb"   = "a\\kern1truemm b"
+  ))
+})
+
 test_that("an infix command takes its whole group", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   expect_same_layout(c(
