@@ -3,6 +3,7 @@
 - `\usepackage` now loads packages. New `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
 - New `physics` and `commath` packages, loaded with `\usepackage{}`.
 - New commands `\mathbbm`, `\nicefrac`, `\centernot`, `\mleft` and `\mright`, `\diff` and `\diffp`, `\larger` and `\smaller`, `\ohm` and `\textmu`, `\slashed`, `\tensor` and `\nuclide`.
+- New commands `\bgroup`, `\egroup`, `\textsl`, `\slshape` (drawn as italic) and `\MoveEqLeft`.
 - New `subequations`, `numcases` and `subnumcases` environments.
 - A name from a package a label does not load, such as `\dfrac` without amsmath, can be defined with `\newcommand`, as in LaTeX; one LaTeX itself has, such as `\ldots`, is reported as existing.
 - Bug fix: a macro parameter next to a control word was read as one name, so `\newcommand{\x}[1]{\alpha#1}` with `\x{b}` drew `\alphab`.
