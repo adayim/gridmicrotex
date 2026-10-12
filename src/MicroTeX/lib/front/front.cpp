@@ -17,9 +17,11 @@
 namespace microtex::front {
 
 Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bool lineBreaks,
-               bool paragraphs, std::uint32_t bodyStart, std::uint32_t bodyEnd, bool userMacros) {
+               bool paragraphs, std::uint32_t bodyStart, std::uint32_t bodyEnd, bool userMacros,
+               const std::vector<std::string>& packages) {
   ExpanderOptions eo;
   eo.prelude = true;
+  eo.packages = packages;
   eo.persistent = userMacros;
   eo.recover = true;
   eo.lex.blankLineIsPar = paragraphs;
@@ -47,6 +49,11 @@ namespace {
 Diagnostics& lastStore() {
   static Diagnostics last;
   return last;
+}
+
+std::vector<std::string>& startPackagesStore() {
+  static std::vector<std::string> packages;
+  return packages;
 }
 
 /** A byte range of the input: [first, second). */
@@ -127,8 +134,10 @@ void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
   // drawn, as LaTeX does, and what follows \end{document} is not read.
   // Package settings a grob cannot honour say nothing about it.
   const BodyRange body = prose ? documentBody(latex) : BodyRange{0, UINT32_MAX};
+  std::vector<std::string> packages;
+  packages.swap(startPackagesStore());
   const Ast ast = parseLatex(latex, prose ? Mode::text : Mode::math, diags, mixed, document,
-                             body.first, body.second);
+                             body.first, body.second, true, packages);
   // A capacity ran out: what was read is not what the input means.
   if (const Diagnostic* e = diags.firstError()) throw ex_parse(e->message);
   lowerInto(ast, formula, diags, prose, document);
@@ -137,6 +146,10 @@ void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
 
 const Diagnostics& lastDiagnostics() {
   return lastStore();
+}
+
+void setStartPackages(std::vector<std::string> packages) {
+  startPackagesStore() = std::move(packages);
 }
 
 namespace {

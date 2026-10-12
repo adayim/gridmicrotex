@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <deque>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -43,6 +44,9 @@ struct Frame {
    *  the reader: an expansion opened after a token was put back is read
    *  before it, as in TeX's input stack. */
   std::vector<ExpToken> pushback;
+  /** A package's file: its tokens keep the positions they have in it, which
+   *  Diagnostics::Package reports as the file's own. */
+  bool keepSpan = false;
 };
 
 bool sameToken(const Token& a, const Token& b) {
@@ -129,6 +133,9 @@ struct Definitions {
   std::unordered_map<std::string, MacroDef> envs;
   /** The packages read to make them. */
   std::unordered_set<std::string> loaded;
+  /** What the start packages left behind that is not a definition
+   *  (\definecolor, ...): every input reads it first. */
+  std::string startOutput;
   /** What went wrong reading them, one line each: a name defined twice, a
    *  command the expander could not read. Empty when all is well. */
   std::vector<std::string> problems;
@@ -140,32 +147,49 @@ constexpr const char* kFormat = "LaTeX";
 }  // namespace
 
 struct Expander::Impl {
-  /** The format and the packages it loads, made by expanding their LaTeX
-   *  once for each generation of the files (packages.h). */
-  static const Definitions& snapshot() {
-    static std::unique_ptr<Definitions> defs;
+  /** The format, the packages it loads, and then the packages `start` names
+   *  (latex_options(packages = )), made by expanding their LaTeX once for
+   *  each list and generation of the files (packages.h). */
+  static const Definitions& snapshot(const std::vector<std::string>& start = {}) {
+    static std::map<std::string, std::unique_ptr<Definitions>> made;
     static std::uint64_t built = 0;
-    if (defs == nullptr || built != packageGeneration()) {
-      Diagnostics found;
-      ExpanderOptions o;
-      o.persistent = false;
-      // A bad definition is a problem to report, not an exception.
-      o.recover = true;
-      Impl impl(preludeText(), std::move(o), found);
-      impl.currentPackage = kFormat;
-      impl.run();
-      auto fresh = std::make_unique<Definitions>();
-      fresh->macros = std::move(impl.macros);
-      fresh->envs = std::move(impl.envs);
-      fresh->loaded = std::move(impl.loaded);
-      for (const Diagnostic& d : found.items()) {
-        fresh->problems.push_back(std::to_string(d.span.line) + ":" + std::to_string(d.span.col) +
-                                  ": " + d.message);
-      }
-      defs = std::move(fresh);
+    // Only ever between parses: a parse holds on to the one it started from.
+    if (built != packageGeneration()) {
+      made.clear();
       built = packageGeneration();
     }
-    return *defs;
+    std::string key;
+    for (const std::string& name : start) key += name + "\n";
+    std::unique_ptr<Definitions>& slot = made[key];
+    if (slot == nullptr) slot = makeSnapshot(start);
+    return *slot;
+  }
+
+  static std::unique_ptr<Definitions> makeSnapshot(const std::vector<std::string>& start) {
+    Diagnostics found;
+    ExpanderOptions o;
+    o.persistent = false;
+    // A bad definition is a problem to report, not an exception.
+    o.recover = true;
+    Impl impl(preludeText(), std::move(o), found);
+    impl.currentPackage = kFormat;
+    impl.run();
+    auto fresh = std::make_unique<Definitions>();
+    // Each one the input does not have to ask for; what they leave behind,
+    // such as a \definecolor, is read first by every input.
+    for (const std::string& name : start) {
+      impl.requested.insert(name);
+      fresh->startOutput += impl.loadPackage(name, {});
+    }
+    fresh->startOutput = trim(fresh->startOutput);
+    fresh->macros = std::move(impl.macros);
+    fresh->envs = std::move(impl.envs);
+    fresh->loaded = std::move(impl.loaded);
+    for (const Diagnostic& d : found.items()) {
+      fresh->problems.push_back(std::to_string(d.span.line) + ":" + std::to_string(d.span.col) + ": " +
+                                d.message);
+    }
+    return fresh;
   }
 
   ExpanderOptions opts;
@@ -226,7 +250,12 @@ struct Expander::Impl {
         macros[name] = std::move(def);
       }
     }
-    if (opts.prelude) shared = &snapshot();
+    if (opts.prelude) {
+      shared = &snapshot(opts.packages);
+      // Asked for, in effect, by whoever set them: no longer free to define.
+      for (const std::string& name : opts.packages) requested.insert(name);
+      if (!shared->startOutput.empty()) pushExpansion(shared->startOutput, {}, true);
+    }
   }
 
   // --- reading -----------------------------------------------------------
@@ -271,7 +300,7 @@ struct Expander::Impl {
       e.lead.append(lead);
       e.text = f.buf.substr(t.span.offset, t.span.length);
       e.tok = std::move(t);
-      if (!f.root) e.tok.span = f.origin;
+      if (!f.root && !f.keepSpan) e.tok.span = f.origin;
       if (f.root && e.tok.kind != TokKind::end && e.tok.span.offset >= limit) {
         held = std::move(e);
         holding = true;
@@ -721,8 +750,10 @@ struct Expander::Impl {
 
   // --- expansion --------------------------------------------------------
 
-  /** `atLetter`: the text was written with `@` a letter (MacroDef::atLetter). */
-  void pushExpansion(std::string text, const SourceSpan& at, bool atLetter = false) {
+  /** `atLetter`: the text was written with `@` a letter (MacroDef::atLetter).
+   *  `keepSpan`: it is a package's file (Frame::keepSpan). */
+  void pushExpansion(std::string text, const SourceSpan& at, bool atLetter = false,
+                     bool keepSpan = false) {
     if (++expansions > opts.maxExpansions) {
       throw ExpansionLimit("Too many macro expansions: is a macro defined in terms of itself?");
     }
@@ -736,7 +767,8 @@ struct Expander::Impl {
     lo.atLetter = atLetter;
     // `at` is already an input position: a token read from an expansion
     // carries the origin of that expansion.
-    frames.push_back({buffers.back(), std::make_unique<Lexer>(buffers.back(), lo, quiet, cats), false, at, {}});
+    frames.push_back({buffers.back(), std::make_unique<Lexer>(buffers.back(), lo, quiet, cats), false, at, {},
+                      keepSpan});
   }
 
   /** Is `@` a letter now: is what is being defined written under \makeatletter? */
@@ -1098,50 +1130,68 @@ struct Expander::Impl {
       const std::string name = trim(list.substr(from, comma - from));
       if (!name.empty()) {
         requested.insert(name);
-        loadPackage(name, e.tok.span);
+        const std::string left = loadPackage(name, e.tok.span);
+        if (currentPackage == kFormat && !trim(left).empty()) {
+          // The format's own packages only define.
+          diags.warn(e.tok.span, "package " + name + " left text behind: " + trim(left).substr(0, 30));
+        } else if (!trim(left).empty()) {
+          // What a package does besides define, a \definecolor say, is done
+          // where it is asked for.
+          pushExpansion(left, e.tok.span, true);
+        }
       }
       from = comma + 1;
     }
   }
 
   /** Read the package `name` into these tables, once: not again, and not at
-   *  all when the shared tables were made with it. */
-  void loadPackage(const std::string& name, const SourceSpan& at) {
-    if (loaded.count(name) != 0 || (shared != nullptr && shared->loaded.count(name) != 0)) return;
+   *  all when the shared tables were made with it. Returns what it left
+   *  behind that is not a definition. */
+  std::string loadPackage(const std::string& name, const SourceSpan& at) {
+    if (loaded.count(name) != 0 || (shared != nullptr && shared->loaded.count(name) != 0)) return {};
     const std::string* source = packageSource(name);
-    if (source == nullptr) return;
+    if (source == nullptr) return {};
     loaded.insert(name);
-    runPackage(name, *source, at);
+    return runPackage(name, *source, at);
   }
 
-  /** Expand a package's file for what it defines. A file leaves nothing
-   *  behind that is drawn; what it does is define. */
-  void runPackage(const std::string& name, const std::string& source, const SourceSpan& at) {
+  /** Expand a package's file for what it defines, and return the text it
+   *  leaves behind: the commands that are not definitions, which the parser
+   *  reads. The problems it meets are reported as its own, at its lines. */
+  std::string runPackage(const std::string& name, const std::string& source, const SourceSpan& at) {
     std::string leftover;
+    bool endedInside = false;
     {
+      const Diagnostics::Package report(diags, name, at);
       PackageWorld world(*this, name);
       const std::size_t base = frames.size();
       // No space after the end: it would be owed to the token that follows.
-      pushExpansion(source + "\n\\gmendpackage", at, true);
+      pushExpansion(source + "\n\\gmendpackage", at, true, true);
+      int braces = 0;
       while (true) {
         ExpToken t = nextExpanded();
         if (t.tok.kind == TokKind::end) break;
         if (frames.size() <= base) {
           // The file ended inside something it began: the input is next.
           unread(std::move(t));
-          diags.warn(at, "package " + name + " ends inside a group or a definition");
+          endedInside = true;
           break;
         }
         if (t.tok.kind == TokKind::controlWord && t.tok.text == "gmendpackage") break;
-        // Its comments and spaces are no text.
+        if (t.tok.isChar(Cat::beginGroup)) braces++;
+        if (t.tok.isChar(Cat::endGroup)) braces--;
+        if (t.tok.kind == TokKind::space) {
+          // Between commands, a space or a line end is the file's layout; in
+          // an argument it is text, and one space is all it is.
+          if (braces > 0) emitText(" ", false);
+          continue;
+        }
         emitText(t.text, t.tok.kind == TokKind::controlWord);
       }
       leftover = std::move(out);
     }
-    leftover = trim(leftover);
-    if (!leftover.empty()) {
-      diags.warn(at, "package " + name + " left text behind: " + leftover.substr(0, 30));
-    }
+    if (endedInside) diags.warn(at, "package " + name + " ends inside a group or a definition");
+    return leftover;
   }
 
   /** The end of the innermost environment left open, if any: true when
@@ -1704,9 +1754,6 @@ struct Expander::Impl {
       std::string msg = cleanMessage(x.what());
       const std::string who = "\\" + e.tok.text + ":";
       if (msg.compare(0, who.size(), who) != 0) msg = who + " " + msg;
-      if (!currentPackage.empty() && currentPackage != kFormat) {
-        msg = "package " + currentPackage + ": " + msg;
-      }
       diags.warn(e.tok.span, msg);
       return true;
     }
@@ -1801,6 +1848,21 @@ std::vector<std::string> preludeEnvironmentNames() {
 
 std::vector<std::string> preludeProblems() {
   return Expander::Impl::snapshot().problems;
+}
+
+std::vector<std::string> checkPackage(const std::string& name) {
+  Diagnostics found;
+  ExpanderOptions opts;
+  opts.prelude = true;
+  opts.persistent = false;
+  opts.recover = true;
+  // A name the engine has already is as much a clash as one the format has.
+  opts.isBuiltinCommand = [](const std::string& n) { return findCommand(n) != nullptr; };
+  opts.isBuiltinEnvironment = [](const std::string& n) { return findEnvironment(n) != nullptr; };
+  Expander(" \\usepackage{" + name + "}", std::move(opts), found).expandToText();
+  std::vector<std::string> problems;
+  for (const Diagnostic& d : found.items()) problems.push_back(d.message);
+  return problems;
 }
 
 std::vector<std::string> preludeTransparentEnvironmentNames() {

@@ -128,7 +128,7 @@ latex_cache_info <- function() {
 .parse_cache_key <- function(tex, text_size, line_space, fg_color, max_width,
                              math_font, main_font, text_family, use_path,
                              tex_style, justify, optimal_break,
-                             device = "", input_mode = "math") {
+                             device = "", input_mode = "math", packages = NULL) {
   paste(
     tex, "|", text_size, "|", line_space, "|", fg_color, "|",
     max_width, "|", math_font, "|", main_font, "|", text_family, "|",
@@ -138,8 +138,9 @@ latex_cache_info <- function() {
     # define_macro() macros are expanded in C++, so a layout depends on them
     # without `tex` showing it.
     "|", persistent_macro_generation_cpp(),
-    # And the packages, whose files can change under a session (inst/tex).
-    "/", tex_package_generation_cpp(),
+    # And the packages: the files can change under a session, and the option
+    # names the ones every label starts from.
+    "/", tex_package_generation_cpp(), "/", paste(packages, collapse = ","),
     # So are the fonts: one loaded since changes what a name draws and
     # measures as, and the sans and mono roles change \textsf and \texttt.
     "|", .font_generation(), "/", .opt("sans_font"), "/", .opt("mono_font"),
@@ -197,6 +198,10 @@ latex_cache_info <- function() {
   # would have stopped.
   lenient <- !.image_state$strict ||
     (identical(input_mode, "document") && !isTRUE(.image_state$label))
+  # A package file edited since it was loaded is read again; the packages
+  # every label starts from are part of what it draws.
+  .sty_refresh()
+  packages <- .opt("packages")
   # Where it starts counting equations and what labels it knows: not in
   # `tex`, but in what it draws.
   ctx <- .numbering$ctx
@@ -210,7 +215,8 @@ latex_cache_info <- function() {
                           tex_style, justify, optimal_break,
                           device = .cache_device(),
                           input_mode = paste0(input_mode,
-                                              if (lenient) "+lenient", numbered))
+                                              if (lenient) "+lenient", numbered),
+                          packages = packages)
   hit <- .cache_get(key, valid = .images_current)
   if (!is.null(hit)) return(hit)
   # Measuring needs a device. With none open, one pdf(NULL) serves the
@@ -237,7 +243,8 @@ latex_cache_info <- function() {
     justify = justify, optimal_break = optimal_break, input_mode = input_mode,
     eq_start = eq_start,
     label_keys = if (length(labels)) names(labels),
-    label_values = if (length(labels)) unname(labels)
+    label_values = if (length(labels)) unname(labels),
+    packages = packages
   )
   layout <- if (lenient) .images_lenient(parse()) else parse()
   if (length(used$stamps)) attr(layout, "images") <- used$stamps

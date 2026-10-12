@@ -112,7 +112,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            std::string input_mode = "math",
                            int eq_start = 0,
                            Rcpp::Nullable<Rcpp::CharacterVector> label_keys = R_NilValue,
-                           Rcpp::Nullable<Rcpp::CharacterVector> label_values = R_NilValue) {
+                           Rcpp::Nullable<Rcpp::CharacterVector> label_values = R_NilValue,
+                           Rcpp::Nullable<Rcpp::CharacterVector> packages = R_NilValue) {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
@@ -156,6 +157,23 @@ Rcpp::List parse_latex_cpp(std::string tex,
             }
         }
         front::setStartNumbering(std::move(start));
+    }
+
+    // The packages latex_options(packages = ) starts this input from. Used
+    // once by the parse; one that fails before reading them must not leave
+    // them for the next.
+    struct PackagesGuard {
+        ~PackagesGuard() { front::setStartPackages({}); }
+    } packages_guard;
+    {
+        std::vector<std::string> start;
+        if (packages.isNotNull()) {
+            const Rcpp::CharacterVector names(packages);
+            for (R_xlen_t i = 0; i < names.size(); i++) {
+                start.push_back(Rcpp::as<std::string>(names[i]));
+            }
+        }
+        front::setStartPackages(std::move(start));
     }
 
     // Decode foreground color

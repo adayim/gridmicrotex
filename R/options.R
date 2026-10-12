@@ -15,7 +15,8 @@
   device_math   = NULL,
   main_font   = NULL,
   sans_font   = NULL,
-  mono_font   = NULL
+  mono_font   = NULL,
+  packages    = NULL
 )
 
 # Validate the `justify` argument. Kept here so latex_grob(),
@@ -68,9 +69,13 @@
 #'   file, which is loaded. `NULL` keeps the defaults: `gp$fontfamily` (or
 #'   `"sans"`) for the body, `"sans"` and `"mono"`. A `gp$fontfamily` in a
 #'   call wins over `main_font`.
+#' @param packages LaTeX packages to load before every label, as
+#'   `\usepackage` would, named or as `.sty` files (see [load_sty()]).
+#'   Without this, a label can load a package with `\usepackage{name}`.
+#'   `NULL` loads none.
 #' @return The previous settings, invisibly. With no arguments, the
 #'   current settings.
-#' @seealso [available_fonts()], [load_font()], [latex_grob()]
+#' @seealso [available_fonts()], [load_font()], [load_sty()], [latex_grob()]
 #' @export
 #'
 #' @examples
@@ -97,7 +102,7 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
                           justify = NULL, line_break = NULL,
                           markdown_style = NULL, device_math = NULL,
                           main_font = NULL, sans_font = NULL,
-                          mono_font = NULL) {
+                          mono_font = NULL, packages = NULL) {
   if (nargs() == 0L) {
     return(as.list(.latex_options$values))
   }
@@ -159,6 +164,10 @@ latex_options <- function(math_font = NULL, render_mode = NULL,
     }
     take("device_math", device_math)
   }
+  if (!missing(packages)) {
+    if (!is.null(packages)) packages <- .resolve_packages_option(packages)
+    take("packages", packages)
+  }
   for (role in c("main_font", "sans_font", "mono_font")) {
     if (eval(call("missing", as.name(role)))) next
     value <- get(role)
@@ -199,7 +208,8 @@ reset_latex_options <- function() {
     device_math   = NULL,
     main_font   = NULL,
     sans_font   = NULL,
-    mono_font   = NULL
+    mono_font   = NULL,
+    packages    = NULL
   )
   invisible(NULL)
 }

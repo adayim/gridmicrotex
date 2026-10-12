@@ -102,6 +102,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// tex_package_check_cpp
+std::vector<std::string> tex_package_check_cpp(std::string name);
+RcppExport SEXP _gridmicrotex_tex_package_check_cpp(SEXP nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type name(nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(tex_package_check_cpp(name));
+    return rcpp_result_gen;
+END_RCPP
+}
 // persistent_macro_set_cpp
 void persistent_macro_set_cpp(std::string name, std::string body);
 RcppExport SEXP _gridmicrotex_persistent_macro_set_cpp(SEXP nameSEXP, SEXP bodySEXP) {
@@ -315,8 +326,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // parse_latex_cpp
-Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style, bool justify, bool optimal_break, std::string input_mode, int eq_start, Rcpp::Nullable<Rcpp::CharacterVector> label_keys, Rcpp::Nullable<Rcpp::CharacterVector> label_values);
-RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP, SEXP justifySEXP, SEXP optimal_breakSEXP, SEXP input_modeSEXP, SEXP eq_startSEXP, SEXP label_keysSEXP, SEXP label_valuesSEXP) {
+Rcpp::List parse_latex_cpp(std::string tex, float text_size, float line_space, std::string fg_color, float max_width, std::string math_font, std::string main_font, bool use_path, std::string tex_style, bool justify, bool optimal_break, std::string input_mode, int eq_start, Rcpp::Nullable<Rcpp::CharacterVector> label_keys, Rcpp::Nullable<Rcpp::CharacterVector> label_values, Rcpp::Nullable<Rcpp::CharacterVector> packages);
+RcppExport SEXP _gridmicrotex_parse_latex_cpp(SEXP texSEXP, SEXP text_sizeSEXP, SEXP line_spaceSEXP, SEXP fg_colorSEXP, SEXP max_widthSEXP, SEXP math_fontSEXP, SEXP main_fontSEXP, SEXP use_pathSEXP, SEXP tex_styleSEXP, SEXP justifySEXP, SEXP optimal_breakSEXP, SEXP input_modeSEXP, SEXP eq_startSEXP, SEXP label_keysSEXP, SEXP label_valuesSEXP, SEXP packagesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -335,7 +346,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type eq_start(eq_startSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type label_keys(label_keysSEXP);
     Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type label_values(label_valuesSEXP);
-    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break, input_mode, eq_start, label_keys, label_values));
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type packages(packagesSEXP);
+    rcpp_result_gen = Rcpp::wrap(parse_latex_cpp(tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break, input_mode, eq_start, label_keys, label_values, packages));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -350,6 +362,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_tex_package_names_cpp", (DL_FUNC) &_gridmicrotex_tex_package_names_cpp, 0},
     {"_gridmicrotex_tex_package_generation_cpp", (DL_FUNC) &_gridmicrotex_tex_package_generation_cpp, 0},
     {"_gridmicrotex_tex_prelude_problems_cpp", (DL_FUNC) &_gridmicrotex_tex_prelude_problems_cpp, 0},
+    {"_gridmicrotex_tex_package_check_cpp", (DL_FUNC) &_gridmicrotex_tex_package_check_cpp, 1},
     {"_gridmicrotex_persistent_macro_set_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_set_cpp, 2},
     {"_gridmicrotex_persistent_macro_remove_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_remove_cpp, 1},
     {"_gridmicrotex_persistent_macro_clear_cpp", (DL_FUNC) &_gridmicrotex_persistent_macro_clear_cpp, 0},
@@ -371,7 +384,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gridmicrotex_microtex_set_default_main_font", (DL_FUNC) &_gridmicrotex_microtex_set_default_main_font, 1},
     {"_gridmicrotex_microtex_main_font_families", (DL_FUNC) &_gridmicrotex_microtex_main_font_families, 0},
     {"_gridmicrotex_microtex_add_font_from_otf", (DL_FUNC) &_gridmicrotex_microtex_add_font_from_otf, 2},
-    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 15},
+    {"_gridmicrotex_parse_latex_cpp", (DL_FUNC) &_gridmicrotex_parse_latex_cpp, 16},
     {NULL, NULL, 0}
 };
 

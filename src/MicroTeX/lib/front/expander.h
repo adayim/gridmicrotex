@@ -81,6 +81,11 @@ struct ExpanderOptions {
    *  commands and environments the engine defines in LaTeX (\dfrac,
    *  pmatrix, ...), which the host registered (front/packages.h). */
   bool prelude = false;
+  /** With `prelude`: packages to start from, after the format, as
+   *  latex_options(packages = ) names them. They are read once for all the
+   *  parses with the same list, and an input need not ask for them; what
+   *  they do besides define is read before the input. */
+  std::vector<std::string> packages;
   /** See the define_macro() macros (setPersistentMacro). */
   bool persistent = true;
   /** Report a bad definition or runaway recursion as a diagnostic and go
@@ -162,6 +167,11 @@ std::vector<std::string> preludeEnvironmentNames();
 /** What went wrong reading them, one line each: a name defined twice, a
  *  command the expander could not read. Empty when all is well. */
 std::vector<std::string> preludeProblems();
+
+/** Read the registered package `name` on top of the format, as an input that
+ *  asks for it would, and report what went wrong, one line each, as the
+ *  package's own: "package NAME line L:C: message". Empty when all is well. */
+std::vector<std::string> checkPackage(const std::string& name);
 /** Those of them that expand to nothing at either end (`document`, `table`,
  *  `figure`): they wrap content rather than make any of it math. */
 std::vector<std::string> preludeTransparentEnvironmentNames();

@@ -48,6 +48,13 @@ std::vector<std::string> tex_prelude_problems_cpp() {
   return preludeProblems();
 }
 
+// A registered package read on top of the format, as an input asking for it
+// would: what went wrong, as "package NAME line L:C: message".
+// [[Rcpp::export]]
+std::vector<std::string> tex_package_check_cpp(std::string name) {
+  return checkPackage(name);
+}
+
 // The macros made with define_macro(), which outlive a parse.
 // [[Rcpp::export]]
 void persistent_macro_set_cpp(std::string name, std::string body) {

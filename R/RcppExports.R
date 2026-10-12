@@ -37,6 +37,10 @@ tex_prelude_problems_cpp <- function() {
     .Call(`_gridmicrotex_tex_prelude_problems_cpp`)
 }
 
+tex_package_check_cpp <- function(name) {
+    .Call(`_gridmicrotex_tex_package_check_cpp`, name)
+}
+
 persistent_macro_set_cpp <- function(name, body) {
     invisible(.Call(`_gridmicrotex_persistent_macro_set_cpp`, name, body))
 }
@@ -121,7 +125,7 @@ microtex_add_font_from_otf <- function(otf_path, index = 0L) {
     .Call(`_gridmicrotex_microtex_add_font_from_otf`, otf_path, index)
 }
 
-parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "", justify = FALSE, optimal_break = FALSE, input_mode = "math", eq_start = 0L, label_keys = NULL, label_values = NULL) {
-    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break, input_mode, eq_start, label_keys, label_values)
+parse_latex_cpp <- function(tex, text_size = 20.0, line_space = 10.0, fg_color = "#000000", max_width = 0, math_font = "", main_font = "", use_path = TRUE, tex_style = "", justify = FALSE, optimal_break = FALSE, input_mode = "math", eq_start = 0L, label_keys = NULL, label_values = NULL, packages = NULL) {
+    .Call(`_gridmicrotex_parse_latex_cpp`, tex, text_size, line_space, fg_color, max_width, math_font, main_font, use_path, tex_style, justify, optimal_break, input_mode, eq_start, label_keys, label_values, packages)
 }
 
