@@ -29,6 +29,9 @@ struct ExpToken {
   /** The token's own source text. Points into a buffer the expander keeps
    *  alive until it is destroyed. */
   std::string_view text;
+  /** It was read from text written with `@` a letter (Frame::atLetter): what
+   *  a macro it names is given to read is so too, whoever wrote the macro. */
+  bool atLetter = false;
 };
 
 /** One source being read: the input itself, or one expansion. */
@@ -47,6 +50,8 @@ struct Frame {
   /** A package's file: its tokens keep the positions they have in it, which
    *  Diagnostics::Package reports as the file's own. */
   bool keepSpan = false;
+  /** Its lexer reads `@` as a letter in a name (LexOptions::atLetter). */
+  bool atLetter = false;
 };
 
 bool sameToken(const Token& a, const Token& b) {
@@ -301,6 +306,7 @@ struct Expander::Impl {
       e.text = f.buf.substr(t.span.offset, t.span.length);
       e.tok = std::move(t);
       if (!f.root && !f.keepSpan) e.tok.span = f.origin;
+      e.atLetter = f.atLetter;
       if (f.root && e.tok.kind != TokKind::end && e.tok.span.offset >= limit) {
         held = std::move(e);
         holding = true;
@@ -773,7 +779,7 @@ struct Expander::Impl {
     // `at` is already an input position: a token read from an expansion
     // carries the origin of that expansion.
     frames.push_back({buffers.back(), std::make_unique<Lexer>(buffers.back(), lo, quiet, cats), false, at, {},
-                      keepSpan});
+                      keepSpan, atLetter});
   }
 
   /** Is `@` a letter now: is what is being defined written under \makeatletter? */
@@ -875,8 +881,10 @@ struct Expander::Impl {
     if (def == nullptr) return false;
 
     const std::string who = "\\" + name;
+    // The macro's text, and what it was given, are read so wherever either was written.
+    const bool atLetterText = def->atLetter || e.atLetter;
     if (def->alias) {
-      ExpToken target = aliasToken(def->body.front().text, e.tok.span, def->atLetter);
+      ExpToken target = aliasToken(def->body.front().text, e.tok.span, atLetterText);
       // `\let\mydef\def` makes \mydef the command \def is: one of the
       // expander's own runs here, whatever the name means by now.
       if (target.tok.kind == TokKind::controlWord) {
@@ -892,7 +900,7 @@ struct Expander::Impl {
       abandoned = false;
       return true;
     }
-    pushExpansion(substitute(def->body, args, def->atLetter), e.tok.span, def->atLetter);
+    pushExpansion(substitute(def->body, args, atLetterText), e.tok.span, atLetterText);
     return true;
   }
 
@@ -910,6 +918,7 @@ struct Expander::Impl {
     t.text = std::string_view(buf).substr(t.tok.span.offset, t.tok.span.length);
     t.tok.span = at;
     t.tok.noexpand = true;
+    t.atLetter = atLetter;
     return t;
   }
 
@@ -978,7 +987,8 @@ struct Expander::Impl {
     if (begin) {
       std::vector<std::string> args = readArgs(*def, "\\begin{" + name + "}");
       if (opts.recover) openEnvs.push_back({name, e.tok.span, depth});
-      pushExpansion("{" + substitute(def->body, args, def->atLetter), e.tok.span, def->atLetter);
+      const bool atLetterText = def->atLetter || e.atLetter;
+      pushExpansion("{" + substitute(def->body, args, atLetterText), e.tok.span, atLetterText);
       ExpToken open = rawUntaped();
       if (!def->package.empty()) {  // a package's or the format's, not the input's
         const bool transparent =
@@ -1625,7 +1635,7 @@ struct Expander::Impl {
     ExpToken next = nextNonSpace();
     const bool match = star ? isChar(next, '*') : (next.tok.kind == test.tok.kind && next.text == test.text);
     if (!(match && star)) unread(std::move(next));
-    pushExpansion(match ? yes : no, e.tok.span);
+    pushExpansion(match ? yes : no, e.tok.span, e.atLetter);
   }
 
   /** \expandafter\a\b: `\b` is expanded once, then `\a` is read before what it made. */
@@ -2381,7 +2391,7 @@ struct Expander::Impl {
       // A grob has no beginning of the document: a package's code runs where
       // the package ends, and the input's at once.
       if (packageStack.empty()) {
-        pushExpansion(code, e.tok.span);
+        pushExpansion(code, e.tok.span, e.atLetter);
       } else {
         packageStack.back().atBegin += code;
       }
@@ -2408,7 +2418,7 @@ struct Expander::Impl {
       const std::string package = trim(readArg(who, false));
       const std::string yes = readArg(who, false), no = readArg(who, false);
       const bool isLoaded = loaded.count(package) != 0 || (shared != nullptr && shared->loaded.count(package) != 0);
-      pushExpansion(isLoaded ? yes : no, e.tok.span);
+      pushExpansion(isLoaded ? yes : no, e.tok.span, e.atLetter);
       return true;
     }
     return std::nullopt;
