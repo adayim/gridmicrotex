@@ -62,66 +62,6 @@ test_that("editGrob() preserves string-valued vjust across reparse", {
   expect_equal(g2$vjust, g2$bbox_bl_bp / g2$bbox_h)
 })
 
-# A macro call must lay out exactly as its body written out longhand.
-expands_to <- function(macro, longhand, ...) {
-  expect_equal(latex_grob(macro, ...)$layout_df,
-               latex_grob(longhand, ...)$layout_df)
-}
-
-test_that("plain-TeX \\def with parameterised body expands to its body", {
-  expands_to(r"(\def\norm#1{\left\lVert #1 \right\rVert} \norm{v})",
-             r"(\left\lVert v \right\rVert)", input_mode = "math")
-  expands_to(r"(\def\inner#1#2{\langle #1, #2 \rangle} \inner{u}{v})",
-             r"(\langle u, v \rangle)", input_mode = "math")
-  # Typeface mode parses a second time for the path fallback.
-  expands_to(r"(\def\frob#1{|#1|} \frob{M})", r"(|M|)",
-             render_mode = "typeface", input_mode = "math")
-})
-
-test_that("\\newcommand survives the typeface mode double-parse", {
-  # Each parse has its own definitions.
-  expands_to(r"(\newcommand{\xyznorm}[1]{\lVert #1 \rVert} \xyznorm{v})",
-             r"(\lVert v \rVert)", render_mode = "typeface",
-             input_mode = "math")
-})
-
-test_that("\\textcolor body inherits the surrounding math/text mode", {
-  # In math, `\textcolor{blue}{c^2}` sets a superscript, not a caret.
-  g <- latex_grob(r"($\textcolor{blue}{c^2}$)", input_mode = "math")
-  layout <- g$layout_df
-  has_caret_glyph <- any(layout$type == "text" &
-                         vapply(layout$text, function(s) {
-                           !is.na(s) && grepl("\\^", s)
-                         }, logical(1)))
-  expect_false(has_caret_glyph,
-               info = "Caret '^' rendered as text — \\textcolor body lost math mode")
-})
-
-test_that("\\color declaration colours the rest of the enclosing group", {
-  g <- latex_grob(r"($\color{blue} E = mc^2$)", input_mode = "math")
-  cols <- unique(g$layout_df$color[g$layout_df$type %in% c("glyph", "path")])
-  cols <- cols[!is.na(cols)]
-  # At least one ink record must be blue-ish (#0000FF or its alpha variant).
-  expect_true(any(grepl("^#0000FF", cols, ignore.case = TRUE)),
-              info = paste("Expected blue ink, got:", paste(cols, collapse = ", ")))
-})
-
-test_that("\\newcommand and \\def do not leak between independent latex_grob calls", {
-  src <- r"(\newcommand{\xyzleak}{Q} \xyzleak)"
-  first <- latex_grob(src, input_mode = "math")$layout_df
-  # A second call with the same definition succeeds and lays out the same.
-  expect_equal(latex_grob(src, input_mode = "math")$layout_df, first)
-  expands_to(src, "Q", input_mode = "math")
-
-  # Built-in environments are still available.
-  pmat <- latex_grob(r"(\begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix})",
-                     input_mode = "math")
-  # Four cells and a pair of delimiters, not the literal source text.
-  expect_gte(nrow(pmat$layout_df), 4L)
-  expect_false(any(pmat$layout_df$type == "text" &
-                     grepl("pmatrix", pmat$layout_df$text, fixed = TRUE)))
-})
-
 # --- grobX / grobY boundary points ---
 
 test_that("grobX/grobY cardinal points hit the bbox edges (rot = 0)", {

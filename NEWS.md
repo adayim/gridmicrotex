@@ -8,6 +8,8 @@
 - Bug fix: a name with `@` made under `\makeatletter` was read as `\my` after `\makeatother`.
 - Bug fix: `\let\mydef\def` made a command that did nothing.
 - Bug fix: letters after a dimension's unit were read as part of it, so `\kern1emx` and `\mkern3muab` drew no `x` or `ab`.
+- Bug fix: `\vcenter` drew its content above the math axis.
+- Bug fix: a display holding only its number, such as `\[\tag{1}\]`, crashed when set at a width.
 
 # gridmicrotex 0.2.0
 

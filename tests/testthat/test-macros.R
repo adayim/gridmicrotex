@@ -1,5 +1,6 @@
-# How the expander matches and scopes these macros is tested with the engine,
-# in the MicroTeX fork (test/test_expander.cpp); these check the R side.
+# How the expander matches and scopes macros, and what define_macro()'s do to
+# the engine's own formulas, is tested with the engine, in the MicroTeX fork
+# (test/test_expander.cpp, test_engine.cpp); these check the R side.
 
 layout <- function(tex) {
   t <- latex_tree(tex, input_mode = "math", render_mode = "path")
@@ -19,15 +20,6 @@ test_that("circular define_macro() macros are an error, not a hang", {
   define_macro("a", "\\b")
   define_macro("b", "\\a")
   expect_error(latex_dims("\\a", input_mode = "math"), "Too many macro expansions")
-})
-
-test_that("\\renewcommand overrides a define_macro() macro for one label only", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  on.exit(clear_macros(), add = TRUE)
-  define_macro("RR", "\\mathbb{R}")
-  expect_identical(layout("\\renewcommand{\\RR}{Q}\\RR"), layout("Q"))
-  expect_identical(layout("\\RR"), layout("\\mathbb{R}"))
-  expect_warning(latex_dims("\\newcommand{\\RR}{Q}", input_mode = "math"), "already exists")
 })
 
 test_that("redefining a define_macro() macro is not hidden by the layout cache", {
@@ -51,47 +43,4 @@ test_that("clear_macros() rejects a name that is not a single string", {
   expect_error(clear_macros(1))
   expect_error(clear_macros(c("RR", "SS")))
   expect_equal(names(list_macros()), "RR")
-})
-
-test_that("define_macro() does not reach the engine's own formulas, as in 0.1.1", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  on.exit(clear_macros(), add = TRUE)
-  # \sec was read with the macros defined at its first use and kept so for
-  # the session.
-  glyphs <- function(tex) latex_tree(tex, input_mode = "math", render_mode = "path")$records$glyph
-  plain <- glyphs("\\sec x")
-  define_macro("mathrm", "\\mathsf")
-  expect_identical(glyphs("\\sec x"), plain)
-})
-
-test_that("\\limits on a predefined formula changes that use of it only", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  size <- function(tex) latex_tree(tex, input_mode = "math")$bbox[c("height", "depth")]
-  before <- size("\\displaystyle \\sin_{q} x")
-  invisible(size("\\displaystyle \\sin\\limits_{q} y"))
-  expect_identical(size("\\displaystyle \\sin_{q} z"), before)
-})
-
-test_that("a parameter next to a control word is a token of its own, as in TeX", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # `\alpha#1` with #1 = b was read as the unknown command `\alphab`.
-  expect_identical(layout("\\newcommand{\\x}[1]{#1b}\\x{\\alpha}"), layout("\\alpha b"))
-  expect_identical(layout("\\newcommand{\\x}[1]{\\alpha#1}\\x{b}"), layout("\\alpha b"))
-  expect_identical(layout("\\newcommand{\\x}[1]{\\mathrm#1}\\x{ab}"), layout("\\mathrm ab"))
-})
-
-test_that("a name with @ made under \\makeatletter works after \\makeatother", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_identical(
-    layout("\\makeatletter\\newcommand{\\my@a}{A}\\newcommand{\\usea}{\\my@a}\\makeatother\\usea"),
-    layout("A"))
-  expect_identical(
-    layout("\\makeatletter\\def\\my@a{A}\\def\\usea{\\my@a}\\makeatother\\usea"),
-    layout("A"))
-})
-
-test_that("a \\let alias of \\def or \\newcommand defines, as the command does", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_identical(layout("\\let\\mydef\\def\\mydef\\foo{F}\\foo"), layout("F"))
-  expect_identical(layout("\\let\\mynew\\newcommand\\mynew{\\foo}{F}\\foo"), layout("F"))
 })

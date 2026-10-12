@@ -1,6 +1,7 @@
 # The front end has to carry a whole document, not just a label. These are
-# timings, so they are generous and never run on CRAN; the shape of the
-# curve is what matters, not the constant.
+# timings of the release build, so they are generous and never run on CRAN;
+# the shape of the curve is what matters, not the constant. The caps on
+# runaway input are tested with the engine (MicroTeX fork, test/test_text.cpp).
 
 skip_on_cran()
 
@@ -44,38 +45,3 @@ test_that("four times the document costs far less than four times the time", {
   expect_lt(large / small, 5)
 })
 
-test_that("a book-length body is within the expansion caps", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # 10,000 expansions was too tight: this reached it at about 16,000.
-  para <- paste(rep("We found \\emph{clear} evidence for the effect here.", 8),
-                collapse = " ")
-  tex <- paste(rep(para, 2000), collapse = "\n\n")
-  expect_gt(nchar(tex), 800 * 1024)
-  expect_silent(suppressWarnings(latex_dims(tex, input_mode = "document", max_width = 500)))
-})
-
-test_that("a macro defined in terms of itself is still stopped, and quickly", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # The count cap is the net for a recursion that expands to nothing, so
-  # raising it must not make this one slow.
-  for (tex in c("\\def\\a{\\a}\\a", "\\def\\c{\\c\\c}\\c")) {
-    t0 <- Sys.time()
-    expect_error(latex_dims(tex, input_mode = "document"), "Too many macro expansions",
-                 label = tex)
-    expect_lt(as.numeric(Sys.time() - t0, units = "secs"), 5)
-  }
-})
-
-test_that("a runaway inside an optional argument is stopped as quickly", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Each expansion opens a \sqrt[ that is never closed; after the error
-  # nothing is read again.
-  for (tex in c("\\newcommand{\\a}{x\\sqrt[\\a}\\a",
-                "\\newcommand{\\a}[1]{#1#1\\sqrt[\\a{#1}}\\a{xy}",
-                "\\def\\a{\\sqrt[\\a\\a}\\a")) {
-    t0 <- Sys.time()
-    expect_error(latex_dims(tex, input_mode = "math"), "macro defined in terms of itself",
-                 label = tex)
-    expect_lt(as.numeric(Sys.time() - t0, units = "secs"), 5)
-  }
-})
