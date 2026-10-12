@@ -173,6 +173,24 @@ test_that("a package written with conditionals, \\csname and options works as wr
   expect_identical(layout("\\usepackage{condprobe}\\unit{kg}"), layout("\\mathrm{kg}"))
 })
 
+test_that("a package written with \\NewDocumentCommand reads its arguments as the spec says", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  path <- sty_file(c(
+    "\\NewDocumentCommand{\\pair}{O{x} m}{\\left(#1, #2\\right)}",
+    "\\NewDocumentCommand{\\flag}{s m}{\\IfBooleanTF{#1}{\\mathbf{#2}}{#2}}",
+    "\\NewDocumentCommand{\\opt}{o m}{\\IfNoValueTF{#1}{#2}{#2_{#1}}}",
+    "\\NewDocumentEnvironment{boxed}{O{b}}{[#1:}{]}"),
+    "xparseprobe.sty")
+  expect_silent(load_sty(path))
+  expect_identical(layout("\\usepackage{xparseprobe}\\pair{y}"), layout("\\left(x, y\\right)"))
+  expect_identical(layout("\\usepackage{xparseprobe}\\pair[a]{y}"), layout("\\left(a, y\\right)"))
+  expect_identical(layout("\\usepackage{xparseprobe}\\flag*{z}"), layout("\\mathbf{z}"))
+  expect_identical(layout("\\usepackage{xparseprobe}\\flag{z}"), layout("z"))
+  expect_identical(layout("\\usepackage{xparseprobe}\\opt[1]{a}"), layout("a_{1}"))
+  expect_identical(layout("\\usepackage{xparseprobe}\\opt{a}"), layout("a"))
+  expect_identical(layout("\\usepackage{xparseprobe}\\begin{boxed}x\\end{boxed}"), layout("{[b:x]}"))
+})
+
 test_that("a name a start package defines is no longer free to define", {
   path <- sty_file("\\newcommand{\\takenprobe}{T}", "takenprobe.sty")
   load_sty(path)

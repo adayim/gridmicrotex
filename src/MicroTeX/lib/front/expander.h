@@ -22,6 +22,17 @@ struct BodyPiece {
   int param = 0;
 };
 
+/** One argument of a \NewDocumentCommand, and how it is read. */
+struct XArg {
+  /** xparse's letters: m o O s t r R d D g G. */
+  char type = 'm';
+  /** t's token; the opening and closing delimiters of r, R, d and D. */
+  Token open;
+  Token close;
+  /** What O, R, D and G give when the argument is not there. */
+  std::string deflt;
+};
+
 /**
  * A user macro or environment. The replacement text is split into pieces
  * when it is defined, so an expansion substitutes every `#n` in one pass
@@ -35,6 +46,9 @@ struct MacroDef {
   /** \def's parameter text: delimiters[0] must follow the name, and
    *  delimiters[i] ends parameter i. Empty means undelimited. */
   std::vector<std::vector<Token>> delimiters;
+  /** \NewDocumentCommand's arguments, one for each parameter; empty for a
+   *  macro made any other way. */
+  std::vector<XArg> xargs;
   std::vector<BodyPiece> body;
   /** For an environment, the code at \end. */
   std::vector<BodyPiece> endBody;

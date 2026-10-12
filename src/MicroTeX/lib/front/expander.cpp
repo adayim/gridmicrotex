@@ -414,7 +414,7 @@ struct Expander::Impl {
       if (const auto o = readOptional()) s += "[" + *o + "]";
     };
     if (const MacroDef* def = lookup(name)) {
-      if (def->alias || !def->delimiters.empty()) return;
+      if (def->alias || !def->delimiters.empty() || !def->xargs.empty()) return;
       int i = 0;
       if (def->hasOptional && def->nparams > 0) option(), i = 1;
       for (; i < def->nparams; i++) group("\\" + name);
@@ -622,6 +622,11 @@ struct Expander::Impl {
   // --- arguments of a use ---------------------------------------------------
 
   std::vector<std::string> readArgs(const MacroDef& def, const std::string& who) {
+    if (!def.xargs.empty()) {
+      std::vector<std::string> given;
+      for (const XArg& a : def.xargs) given.push_back(readXArg(a, who));
+      return given;
+    }
     std::vector<std::string> args(static_cast<std::size_t>(def.nparams));
     if (!def.delimiters.empty()) return readDelimitedArgs(def, who);
     int i = 0;
@@ -1406,7 +1411,9 @@ struct Expander::Impl {
       "RequirePackage", "ProvidesPackage", "NeedsTeXFormat", "relax", "iftrue", "iffalse", "ifx",
       "ifdefined", "ifcsname", "ifnum", "unless", "else", "fi", "csname", "newif",
       "DeclareOption", "ProcessOptions", "ExecuteOptions", "AtBeginDocument", "endinput",
-      "@ifpackageloaded"};
+      "@ifpackageloaded", "NewDocumentCommand", "RenewDocumentCommand", "ProvideDocumentCommand",
+      "DeclareDocumentCommand", "NewDocumentEnvironment", "RenewDocumentEnvironment",
+      "ProvideDocumentEnvironment", "DeclareDocumentEnvironment"};
     return names.count(n) != 0 || isSiunitx(n);
   }
 
@@ -1674,6 +1681,7 @@ struct Expander::Impl {
       s += "|";
       for (const Token& t : delimiter) s += t.text + "\x1f";
     }
+    for (const XArg& a : def.xargs) s += "<" + std::string(1, a.type) + a.open.text + a.close.text + a.deflt;
     s += "=";
     for (const BodyPiece& p : def.body) s += p.param == 0 ? "t" + p.text + "\x1e" : "p" + std::to_string(p.param) + "\x1e";
     return s;
@@ -1887,6 +1895,218 @@ struct Expander::Impl {
     define(cs, "\\iffalse", true);
     define(base + "true", "\\let\\" + cs + "\\iftrue", false);
     define(base + "false", "\\let\\" + cs + "\\iffalse", false);
+  }
+
+  // --- xparse's commands ---------------------------------------------------
+
+  /** The text up to `close` at brace depth 0, after the opening delimiter
+   *  has been read. */
+  std::string readUpTo(const Token& close, const SourceSpan& at, const std::string& who) {
+    std::string s;
+    int depth = 0;
+    while (true) {
+      ExpToken t = raw();
+      if (t.tok.kind == TokKind::end) {
+        diags.warn(at, "runaway argument: " + who + " is missing its closing delimiter");
+        unread(std::move(t));
+        return s;
+      }
+      if (depth == 0 && sameToken(t.tok, close)) return s;
+      if (t.tok.isChar(Cat::beginGroup)) depth++;
+      if (t.tok.isChar(Cat::endGroup)) depth--;
+      s += t.lead;
+      s.append(t.text);
+    }
+  }
+
+  /** One argument of a command made by \NewDocumentCommand: an optional one
+   *  not there is \NoValue (or its default), a star or token that is there
+   *  \BooleanTrue, and one that is not \BooleanFalse. */
+  std::string readXArg(const XArg& a, const std::string& who) {
+    switch (a.type) {
+      case 'o':
+      case 'O': {
+        const std::optional<std::string> o = readOptional();
+        return o ? *o : a.type == 'o' ? std::string("\\NoValue") : a.deflt;
+      }
+      case 's':
+      case 't': {
+        ExpToken t = nextNonSpace();
+        const bool there = a.type == 's' ? isChar(t, '*') : sameToken(t.tok, a.open);
+        if (!there) unread(std::move(t));
+        return there ? "\\BooleanTrue" : "\\BooleanFalse";
+      }
+      case 'g':
+      case 'G': {
+        ExpToken t = nextNonSpace();
+        if (t.tok.isChar(Cat::beginGroup)) return readGroupContent(t);
+        unread(std::move(t));
+        return a.type == 'g' ? std::string("\\NoValue") : a.deflt;
+      }
+      case 'r':
+      case 'R':
+      case 'd':
+      case 'D': {
+        const bool required = a.type == 'r' || a.type == 'R';
+        ExpToken t = nextNonSpace();
+        if (sameToken(t.tok, a.open)) return readUpTo(a.close, t.tok.span, who);
+        if (required) diags.warn(t.tok.span, who + ": missing required argument, which starts with its opening delimiter");
+        unread(std::move(t));
+        return a.type == 'd' || a.type == 'r' ? std::string("\\NoValue") : a.deflt;
+      }
+      default:
+        return readArg(who);
+    }
+  }
+
+  /** The arguments a \NewDocumentCommand spec names: m o O s t r R d D g G,
+   *  with + and ! read and ignored. `problem` says why, when it cannot be
+   *  read. */
+  std::vector<XArg> parseSpec(const std::string& spec, std::string& problem) {
+    std::vector<XArg> out;
+    LexOptions lo = opts.lex;
+    lo.startMidLine = true;
+    Lexer lx(spec, lo, quiet, cats);
+    const std::string_view src(spec);
+    const auto next = [&] {
+      Token t = lx.next();
+      while (t.kind == TokKind::space) t = lx.next();
+      return t;
+    };
+    // A braced default, the text between the braces.
+    const auto group = [&]() -> std::string {
+      if (!next().isChar(Cat::beginGroup)) {
+        problem = "a default must be given in braces";
+        return {};
+      }
+      std::string text;
+      int depth = 1;
+      while (true) {
+        const Token t = lx.next();
+        if (t.kind == TokKind::end) {
+          problem = "a default is missing its closing brace";
+          return text;
+        }
+        if (t.isChar(Cat::beginGroup)) depth++;
+        if (t.isChar(Cat::endGroup) && --depth == 0) return text;
+        text.append(src.substr(t.leadStart, t.span.offset + t.span.length - t.leadStart));
+      }
+    };
+    while (problem.empty()) {
+      const Token t = next();
+      if (t.kind == TokKind::end) break;
+      if (t.kind != TokKind::character || t.cp >= 128) {
+        problem = "there is no argument type '" + std::string(src.substr(t.span.offset, t.span.length)) + "'";
+        break;
+      }
+      XArg a;
+      a.type = static_cast<char>(t.cp);
+      switch (a.type) {
+        case '+':
+        case '!':
+          continue;
+        case 'm':
+        case 'o':
+        case 's':
+        case 'g':
+          break;
+        case 'O':
+        case 'G':
+          a.deflt = group();
+          break;
+        case 't':
+          a.open = next();
+          break;
+        case 'r':
+        case 'd':
+          a.open = next();
+          a.close = next();
+          break;
+        case 'R':
+        case 'D':
+          a.open = next();
+          a.close = next();
+          a.deflt = group();
+          break;
+        case 'e':
+        case 'E':
+        case 'b':
+        case 'u':
+        case 'l':
+        case 'v':
+          problem = std::string("the argument type ") + a.type + " is not supported";
+          break;
+        default:
+          problem = std::string("unknown argument type '") + a.type + "'";
+      }
+      const bool bare = (a.type == 't' || a.type == 'r' || a.type == 'R' || a.type == 'd' || a.type == 'D') &&
+                        (a.open.kind == TokKind::end || (a.type != 't' && a.close.kind == TokKind::end));
+      if (bare && problem.empty()) problem = std::string("the argument type ") + a.type + " is missing its delimiters";
+      if (problem.empty()) out.push_back(std::move(a));
+    }
+    if (problem.empty() && out.size() > 9) problem = "a command can have nine arguments at most";
+    return out;
+  }
+
+  /** \NewDocumentCommand{\cmd}{spec}{body}, and its Renew, Provide and
+   *  Declare forms, which follow \newcommand's, \renewcommand's,
+   *  \providecommand's rules and replace without complaint. */
+  void defineDocumentCommand(const ExpToken& e) {
+    const std::string kind = e.tok.text;
+    std::string name;
+    try {
+      name = readCsName(kind);
+    } catch (const ex_parse& x) {
+      failDefinition(kind, cleanMessage(x.what()), 2);
+    }
+    const std::string spec = readArg("\\" + kind, false);
+    const std::string body = readArg("\\" + kind, false);
+    std::string problem;
+    std::vector<XArg> xargs = parseSpec(spec, problem);
+    if (!problem.empty()) fail(kind, "\\" + name + ": " + problem);
+    const bool exists = isDefined(name);
+    if (kind == "NewDocumentCommand" && exists) {
+      fail(kind, "Command " + name + " already exists! Use \\RenewDocumentCommand instead!");
+    }
+    if (kind == "RenewDocumentCommand" && !exists && !isSoft(name) && !isSiunitx(name)) {
+      if (!opts.recover) fail(kind, "Command " + name + " is not defined! Use \\NewDocumentCommand instead!");
+      diags.warn(e.tok.span, "\\" + kind + ": \\" + name + " was not defined; defined now");
+    }
+    MacroDef def;
+    def.atLetter = atLetterNow();
+    def.nparams = static_cast<int>(xargs.size());
+    def.xargs = std::move(xargs);
+    def.body = splitBody(body, def.nparams, "\\" + name, e.tok.span);
+    if (!(kind == "ProvideDocumentCommand" && exists)) store(name, std::move(def));
+  }
+
+  /** \NewDocumentEnvironment{name}{spec}{begin}{end} and its kin. The end
+   *  code does not see the arguments. */
+  void defineDocumentEnvironment(const ExpToken& e) {
+    const std::string kind = e.tok.text;
+    const auto name = readGroupText();
+    if (!name || name->empty()) failDefinition(kind, "\\" + kind + ": missing the environment name", 3);
+    const std::string spec = readArg("\\" + kind, false);
+    const std::string begin = readArg("\\" + kind, false);
+    const std::string end = readArg("\\" + kind, false);
+    std::string problem;
+    std::vector<XArg> xargs = parseSpec(spec, problem);
+    if (!problem.empty()) fail(kind, "{" + *name + "}: " + problem);
+    const bool builtin = opts.isBuiltinEnvironment && opts.isBuiltinEnvironment(*name);
+    const bool exists = lookupEnv(*name) != nullptr || builtin;
+    if (kind == "NewDocumentEnvironment" && (builtin || (exists && !isSoftEnv(*name)))) {
+      fail(kind, "Environment " + *name + " already exists! Use \\RenewDocumentEnvironment instead!");
+    }
+    if (kind == "RenewDocumentEnvironment" && !exists) {
+      fail(kind, "Environment " + *name + " is not defined! Use \\NewDocumentEnvironment instead!");
+    }
+    MacroDef def;
+    def.atLetter = atLetterNow();
+    def.nparams = static_cast<int>(xargs.size());
+    def.xargs = std::move(xargs);
+    def.body = splitBody(begin, def.nparams, "\\begin{" + *name + "}", e.tok.span);
+    def.endBody = splitBody(end, 0, "\\end{" + *name + "}", e.tok.span);
+    if (!(kind == "ProvideDocumentEnvironment" && exists)) store(*name, std::move(def), true);
   }
 
   // --- package options ----------------------------------------------------
@@ -2169,6 +2389,18 @@ struct Expander::Impl {
     }
     if (name == "endinput" && unshadowed()) {
       endPackageFile();
+      return true;
+    }
+    if ((name == "NewDocumentCommand" || name == "RenewDocumentCommand" ||
+         name == "ProvideDocumentCommand" || name == "DeclareDocumentCommand") &&
+        unshadowed()) {
+      defineDocumentCommand(e);
+      return true;
+    }
+    if ((name == "NewDocumentEnvironment" || name == "RenewDocumentEnvironment" ||
+         name == "ProvideDocumentEnvironment" || name == "DeclareDocumentEnvironment") &&
+        unshadowed()) {
+      defineDocumentEnvironment(e);
       return true;
     }
     if (name == "@ifpackageloaded" && unshadowed()) {
