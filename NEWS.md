@@ -1,7 +1,9 @@
 # gridmicrotex 0.2.1
 
 - `\usepackage` now loads packages. New `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
-- New `physics` package, loaded with `\usepackage{physics}`.
+- New `physics` and `commath` packages, loaded with `\usepackage{}`.
+- New `\slashed`, `\tensor`, `\indices` and `\nuclide`.
+- New `subequations` environment, which numbers its equations 1a, 1b, ..., and the `cases` package's `numcases` and `subnumcases`, cases with a number each.
 - New commands `\mathbbm`, `\nicefrac`, `\centernot`, `\mleft` and `\mright`, `\diff` and `\diffp`, `\larger` and `\smaller`, `\ohm` and `\textmu`.
 - A name from a package a label does not load, such as `\dfrac` without amsmath, can be defined with `\newcommand`, as in LaTeX; one LaTeX itself has, such as `\ldots`, is reported as existing.
 - Bug fix: a macro parameter next to a control word was read as one name, so `\newcommand{\x}[1]{\alpha#1}` with `\x{b}` drew `\alphab`.
