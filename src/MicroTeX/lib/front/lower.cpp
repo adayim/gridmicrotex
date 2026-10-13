@@ -124,6 +124,11 @@ std::string trimmed(std::string s) {
 struct Numbering {
   /** The equation counter. */
   int equation = 0;
+  /** Inside `subequations`, the equation counter stays at the number the
+   *  environment took, and each numbered row after it is that number and a
+   *  letter: 3a, 3b. */
+  bool sub = false;
+  int subIndex = 0;
   /** A theorem counter, and the section it was last stepped in: it starts
    *  again from 1 in the next. */
   struct Counter {
@@ -295,6 +300,8 @@ private:
   RowNote _note;
   /** What `gmarraystretch` said for the array that comes next. */
   float _stretch = 1.f;
+  /** What `gmrows` said for it. */
+  std::string _rows;
   /** How many alignment rows or displays are being lowered: a \label in
    *  one names its number, which is known when it ends. */
   int _inRow = 0;
@@ -578,6 +585,14 @@ private:
       label(trimmed(rawOf(child(id, 0))));
       return nullptr;
     }
+    if (name == "gmsubeqbegin") {
+      beginSubequations();
+      return nullptr;
+    }
+    if (name == "gmsubeqend") {
+      nums().sub = false;
+      return nullptr;
+    }
     if (name == "setcounter") {
       if (trimmed(rawOf(child(id, 0))) == "equation") {
         nums().equation = std::atoi(trimmed(rawOf(child(id, 1))).c_str());
@@ -650,6 +665,10 @@ private:
     if (name == "gmarraystretch") {
       _stretch = static_cast<float>(std::atof(rawOf(child(id, 0)).c_str()));
       if (!(_stretch > 0.f)) _stretch = 1.f;
+      return nullptr;
+    }
+    if (name == "gmrows") {
+      _rows = trimmed(rawOf(child(id, 0)));
       return nullptr;
     }
     if (name == "graphicspath") {
@@ -2253,6 +2272,8 @@ private:
     auto arr = sptrOf<ArrayFormula>();
     arr->_stretch = _stretch;
     _stretch = 1.f;
+    arr->_rows = std::move(_rows);
+    _rows.clear();
     if (env == kNoNode || node(env).kind != NodeKind::environment) return arr;
     if (isTblrEnvironment(node(env).text)) return tblrAlignmentOf(env);
     const bool text = node(env).flag;
@@ -2261,6 +2282,11 @@ private:
     const bool family = isNumberedEnvironment(node(env).text);
     const bool automatic = family && !node(env).star;
     const bool once = family && node(env).text == "multline";
+    // The cases package's: a case and its explanation, which is text; the
+    // sub form numbers its rows 3a, 3b, ... as subequations does.
+    const bool cases = node(env).text == "numcases" || node(env).text == "subnumcases";
+    const bool lettered = node(env).text == "subnumcases" && !nums().sub;
+    if (lettered) beginSubequations();
     // What the row of an enclosing display was told is set aside: this
     // alignment's rows are told their own.
     RowNote outer = std::move(_note);
@@ -2282,7 +2308,7 @@ private:
       }
       for (std::uint32_t c = 0; c < count(row); c++) {
         if (c > 0) arr->addCol();
-        if (text) {
+        if (text || (cases && c > 0)) {
           textCell(child(child(row, c), 0), *arr);
         } else {
           lowerList(child(child(row, c), 0), *arr, 0);
@@ -2302,6 +2328,7 @@ private:
       }
     }
     if (family && once && lastRow >= 0) finishRow(*arr, lastRow, automatic);
+    if (lettered) nums().sub = false;
     _inRow--;
     RowNote inner = std::move(_note);
     _note = std::move(outer);
@@ -2557,6 +2584,25 @@ private:
     _note.star = star;
   }
 
+  /** The number of the next numbered row: the next of the equation counter,
+   *  or in `subequations` its number with the next letter. */
+  std::string nextNumber() {
+    if (!nums().sub) return std::to_string(++nums().equation);
+    std::string letters;
+    for (int n = ++nums().subIndex; n > 0; n = (n - 1) / 26) {
+      letters.insert(letters.begin(), static_cast<char>('a' + (n - 1) % 26));
+    }
+    return std::to_string(nums().equation) + letters;
+  }
+
+  /** `subequations` begins: it takes a number of the equation counter, which
+   *  a \label right after it names, and the rows in it are lettered. */
+  void beginSubequations() {
+    nums().sub = true;
+    nums().subIndex = 0;
+    nums().current = std::to_string(++nums().equation);
+  }
+
   /** A row, or a display, is done: its number or tag, and its labels. */
   void finishRow(ArrayFormula& arr, int row, bool numbered) {
     const RowNote n = std::move(_note);
@@ -2574,7 +2620,7 @@ private:
       }
       text = n.tagSource;
     } else if (numbered && !n.notag) {
-      text = std::to_string(++nums().equation);
+      text = nextNumber();
       tag = numberOf(text, true);
     }
     if (tag != nullptr) {
@@ -2594,7 +2640,8 @@ private:
     _inRow--;
     const bool tagged = _note.tag != nullptr;
     auto arr = sptrOf<ArrayFormula>();
-    if (body != nullptr) arr->add(body);
+    // `\[\tag{1}\]`: a display with nothing in it still has its number.
+    if (body != nullptr || tagged) arr->add(body != nullptr ? body : sptrOf<EmptyAtom>());
     finishRow(*arr, 0, false);
     _note = std::move(outer);
     if (!tagged) return body;

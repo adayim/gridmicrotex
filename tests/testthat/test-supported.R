@@ -1,9 +1,8 @@
 # inst/supported/examples.tsv is the list of what the package draws, which
-# build.R sets as a document: so each row is a claim, and checked here. An
-# "ok" row is drawn with no warning, and LaTeX sets it too (the .tex compiles
-# with pdflatex); "nolatex" is drawn with no warning and has no LaTeX
-# equivalent; a "no" row is one the package does not draw, and still warns of
-# it -- when one is supported, its row moves up.
+# build.R sets as a document. That each row is drawn as it says (an "ok" row
+# with no warning and a "no" row with one) is tested with the engine, in the
+# MicroTeX fork (test/test_supported.cpp); these check the list and the
+# document built from it.
 
 examples <- function() {
   path <- system.file("supported/examples.tsv", package = "gridmicrotex")
@@ -12,34 +11,6 @@ examples <- function() {
                     encoding = "UTF-8")
 }
 
-warnings_of <- function(tex) {
-  out <- character(0)
-  withCallingHandlers(
-    latex_tree(tex, input_mode = "math"),
-    warning = function(x) {
-      out <<- c(out, conditionMessage(x))
-      invokeRestart("muffleWarning")
-    })
-  out
-}
-
-test_that("every example listed as supported is drawn with no warning", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  ex <- examples()
-  ok <- ex[ex$kind %in% c("ok", "nolatex"), ]
-  expect_gt(nrow(ok), 900L)
-  bad <- vapply(ok$source, function(s) length(warnings_of(s)) > 0L, NA)
-  expect_identical(ok$source[bad], character(0))
-})
-
-test_that("an example listed as not supported still warns", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  ex <- examples()
-  no <- ex[ex$kind == "no", ]
-  # None is listed now: every function of KaTeX's two lists is drawn.
-  drawn <- vapply(no$source, function(s) length(warnings_of(s)) == 0L, NA)
-  expect_identical(no$source[drawn], character(0))
-})
 
 test_that("the sections are KaTeX's, and have rows", {
   ex <- examples()

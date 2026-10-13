@@ -17,22 +17,17 @@ if [ -z "${FT_LIBS}" ]; then
   exit 1
 fi
 
-# FriBidi is optional, and its absence must never stop the install: it
-# only supplies the embedding levels used to order right-to-left text
-# that wraps. Without it that one case keeps its left-to-right order and
-# everything else is unaffected, so probe quietly and carry on.
-BIDI_CFLAGS=""
-BIDI_LIBS=""
-if [ -n "${GRIDMICROTEX_NO_FRIBIDI:-}" ]; then
-  echo "configure.win: GRIDMICROTEX_NO_FRIBIDI set; building without fribidi."
-elif "${PKGCONFIG}" --exists fribidi 2>/dev/null; then
-  BIDI_CFLAGS="$("${PKGCONFIG}" --cflags fribidi 2>/dev/null) -DHAVE_FRIBIDI"
-  BIDI_LIBS="$("${PKGCONFIG}" --libs fribidi 2>/dev/null)"
-  echo "configure.win: fribidi found; bidirectional reordering enabled."
-else
-  echo "configure.win: fribidi not found; right-to-left text that wraps"
-  echo "  will keep left-to-right word order. Everything else is unaffected."
+BIDI_CFLAGS=$("${PKGCONFIG}" --cflags fribidi 2>/dev/null || true)
+BIDI_LIBS=$("${PKGCONFIG}" --libs fribidi 2>/dev/null || true)
+
+if [ -z "${BIDI_LIBS}" ]; then
+  echo "configure.win: pkg-config could not resolve fribidi." >&2
+  echo "  Ensure Rtools45 (or later) is installed; it ships pkg-config +" >&2
+  echo "  a fribidi.pc under x86_64-w64-mingw32.static.posix." >&2
+  exit 1
 fi
+
+BIDI_CFLAGS="${BIDI_CFLAGS} -DHAVE_FRIBIDI"
 
 sed -e "s|@FT_CFLAGS@|${FT_CFLAGS}|g" \
     -e "s|@FT_LIBS@|${FT_LIBS}|g" \

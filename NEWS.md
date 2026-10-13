@@ -1,3 +1,11 @@
+# gridmicrotex 0.2.1
+
+- `\usepackage` now loads packages. New `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
+- A name from a package a label does not load can be defined with `\newcommand`, as in LaTeX.
+- Bug fix: macros and dimensions were read wrongly in a few cases, such as a parameter next to a control word and letters after a unit.
+- Bug fix: the rows of matrices, `cases`, `align` and kin were closer together than in LaTeX, and a `\frac` in a matrix was too large.
+- Bug fix: a display holding only its number, such as `\[\tag{1}\]`, crashed when set at a width.
+
 # gridmicrotex 0.2.0
 
 - LaTeX is read by a new, faster parser that follows TeX's rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write `\LaTeX{} is`), and `_`, `^`, `#` and `&` outside math warn.

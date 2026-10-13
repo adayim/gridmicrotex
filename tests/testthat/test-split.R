@@ -1,157 +1,13 @@
-# Line breaking in the vendored MicroTeX splitter.
-
-long_text <- paste0("\\text{", paste(rep("longword", 12), collapse = " "), "}")
-short_text <- "\\text{short}"
-
-dims <- function(tex, max_width = 0) {
-  d <- latex_dims(tex, max_width = max_width)
-  list(w = as.numeric(d$width), h = as.numeric(d$height), split = d$is_split)
-}
-
-test_that("content separated by \\\\ honours max_width", {
-  for (tex in c(paste0(short_text, "\\\\", long_text),
-                paste0(long_text, "\\\\", long_text))) {
-    wide <- dims(tex)
-    narrow <- dims(tex, 200)
-    expect_true(narrow$split)
-    expect_lt(narrow$w, wide$w)
-    expect_lte(narrow$w, 200)
-    # Wrapping trades width for height.
-    expect_gt(narrow$h, wide$h)
-  }
-})
-
-test_that("a decoration whose only content is another still wraps", {
-  words <- paste(rep("one two three four", 4), collapse = " ")
-  wrapped <- function(tex) {
-    dims(tex, 100)$w <= 110
-  }
-  inner <- c("\\uline{", "\\bgcolor{yellow}{", "\\textcolor{red}{")
-  for (outer in c("{\\large ", "\\uline{", "\\textscale{1.5}{")) {
-    for (i in inner) {
-      tex <- paste0(outer, i, words, "}}")
-      expect_true(wrapped(tex), info = tex)
-    }
-  }
-  # One that fits is untouched.
-  expect_false(dims("{\\large \\uline{a b}}", 100)$split)
-})
-
-test_that("a single flowing paragraph still wraps as it always did", {
-  wide <- dims(long_text)
-  narrow <- dims(long_text, 200)
-  expect_true(narrow$split)
-  expect_lte(narrow$w, 200)
-})
-
-test_that("content that already fits is returned untouched", {
-  for (tex in c(short_text,
-                "\\frac{a}{b}",
-                "\\begin{matrix}a&b\\\\c&d\\end{matrix}",
-                "\\begin{cases}a&b\\\\c&d\\end{cases}",
-                "\\begin{pmatrix}1\\\\2\\end{pmatrix}")) {
-    a <- dims(tex)
-    b <- dims(tex, 200)
-    expect_equal(b$w, a$w, tolerance = 1e-6)
-    expect_equal(b$h, a$h, tolerance = 1e-6)
-    expect_false(b$split)
-  }
-})
-
-test_that("vertical centring on the math axis survives a rebuilt VBox", {
-  # MatrixAtom sets the VBox height/depth to centre it on the math axis.
-  for (tex in c("\\begin{matrix}a&b\\\\c&d\\end{matrix}",
-                "\\begin{cases}x\\\\y\\end{cases}",
-                "\\begin{pmatrix}1\\\\2\\end{pmatrix}")) {
-    plain <- latex_dims(tex)
-    limited <- latex_dims(tex, max_width = 200)
-    expect_equal(limited$baseline, plain$baseline, tolerance = 1e-6)
-    expect_equal(as.numeric(limited$depth), as.numeric(plain$depth),
-                 tolerance = 1e-6)
-  }
-})
-
-test_that("splitting a wrapped paragraph keeps the text on the page", {
-  # Every drawn record sits inside the reported bounding box.
-  g <- latex_grob(paste0(short_text, "\\\\", long_text), max_width = 200)
-  expect_true(g$is_split)
-  expect_lte(max(g$layout_df$x, na.rm = TRUE), g$bbox_w + 1)
-  expect_gte(min(g$layout_df$x, na.rm = TRUE), -1)
-})
-
-# --- justification -----------------------------------------------------
-#
-# Interword spaces carry TeX's half-space stretch, used only when
-# justify = TRUE.
+# Line breaking -- wrapping, justification, optimal breaking -- is tested with
+# the engine, in the MicroTeX fork (test/test_split.cpp). These check the R
+# side: the arguments and options, the cache, and that a parse leaves no
+# setting behind for the next.
 
 just_para <- paste0(
   "\\text{",
   paste(rep("The quick brown fox jumps over the lazy dog.", 4), collapse = " "),
   "}"
 )
-
-# Right edge of each rendered line. A text record holds a whole word and
-# carries no width, so measure its text.
-.rec_width <- function(txt, size) {
-  grid::pushViewport(grid::viewport(gp = grid::gpar(fontsize = size)))
-  on.exit(grid::popViewport())
-  grid::convertWidth(grid::stringWidth(txt), "bigpts", valueOnly = TRUE)
-}
-
-line_edges <- function(g) {
-  df <- g$layout_df
-  ys <- sort(unique(round(df$y, 1)))
-  vapply(ys, function(yy) {
-    d <- df[abs(round(df$y, 1) - yy) < 0.01, , drop = FALSE]
-    w <- vapply(seq_len(nrow(d)), function(i) {
-      if (!is.na(d$width[i])) return(d$width[i])
-      if (!identical(d$type[i], "text") || is.na(d$text[i])) return(0)
-      .rec_width(d$text[i], d$font_size[i])
-    }, numeric(1))
-    max(d$x + w)
-  }, numeric(1))
-}
-
-test_that("justified text fills the measure exactly", {
-  for (w in c(200, 300, 400)) {
-    d <- latex_dims(just_para, max_width = w, justify = TRUE)
-    expect_equal(as.numeric(d$width), w, tolerance = 1e-6)
-  }
-})
-
-test_that("justification evens the lines out", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  g_just <- latex_grob(just_para, max_width = 300, justify = TRUE)
-  g_rag  <- latex_grob(just_para, max_width = 300, justify = FALSE)
-  # Drop the last line: it is deliberately left ragged.
-  e_just <- head(line_edges(g_just), -1)
-  e_rag  <- head(line_edges(g_rag), -1)
-  expect_gt(length(e_just), 2)
-  # Justified lines end at nearly the same place; ragged ones do not.
-  expect_lt(diff(range(e_just)), 0.25 * diff(range(e_rag)))
-})
-
-test_that("the last line stays ragged", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  g <- latex_grob(just_para, max_width = 300, justify = TRUE)
-  e <- line_edges(g)
-  expect_lt(e[length(e)], min(head(e, -1)) - 10)
-})
-
-test_that("justification does not change how tall the text is", {
-  for (w in c(200, 300)) {
-    r <- latex_dims(just_para, max_width = w, justify = FALSE)
-    j <- latex_dims(just_para, max_width = w, justify = TRUE)
-    expect_equal(as.numeric(j$height), as.numeric(r$height), tolerance = 1e-6)
-    expect_equal(j$is_split, r$is_split)
-  }
-})
-
-test_that("justify does nothing without max_width", {
-  a <- latex_dims(just_para, justify = FALSE)
-  b <- latex_dims(just_para, justify = TRUE)
-  expect_equal(as.numeric(b$width), as.numeric(a$width), tolerance = 1e-6)
-})
 
 test_that("the justify flag does not leak into later parses", {
   # It is a global on the splitter.
@@ -183,93 +39,12 @@ test_that("justify is validated and settable as an option", {
   expect_null(latex_options()$justify)
 })
 
-test_that("a line of one long word is left alone", {
-  solid <- paste0("\\text{", strrep("x", 80), "}")
-  plain <- as.numeric(latex_dims(solid, max_width = 100)$width)
-  just  <- as.numeric(latex_dims(solid, max_width = 100, justify = TRUE)$width)
-  # No space to stretch: it overruns rather than being padded.
-  expect_equal(just, plain)
-  expect_gt(just, 100)
-})
-
-# --- optimal (total-fit) line breaking ---------------------------------
-
-opt_para <- paste0(
-  "\\text{",
-  paste(rep("The quick brown fox jumps over the lazy dog.", 4), collapse = " "),
-  "}"
-)
-
-opt_edges <- function(g) {
-  df <- g$layout_df
-  ys <- sort(unique(round(df$y, 1)))
-  vapply(ys, function(yy) {
-    s <- abs(round(df$y, 1) - yy) < 0.01
-    max(df$x[s] + ifelse(is.na(df$width[s]), 0, df$width[s]))
-  }, numeric(1))
-}
-
-test_that("greedy remains the default and is untouched", {
-  for (w in c(200, 260, 300)) {
-    a <- latex_dims(opt_para, max_width = w)
-    b <- latex_dims(opt_para, max_width = w, line_break = "greedy")
-    expect_equal(as.numeric(a$width), as.numeric(b$width), tolerance = 1e-6)
-    expect_equal(as.numeric(a$height), as.numeric(b$height), tolerance = 1e-6)
-  }
-})
-
-test_that("optimal never overflows more than greedy does", {
-  for (w in seq(140, 360, by = 20)) {
-    g <- as.numeric(latex_dims(opt_para, max_width = w,
-                               line_break = "greedy")$width)
-    o <- as.numeric(latex_dims(opt_para, max_width = w,
-                               line_break = "optimal")$width)
-    expect_lte(o, max(g, w) + 0.51)
-  }
-})
-
-test_that("optimal does not make the paragraph taller", {
-  for (w in c(180, 220, 260, 300, 340)) {
-    g <- as.numeric(latex_dims(opt_para, max_width = w,
-                               line_break = "greedy")$height)
-    o <- as.numeric(latex_dims(opt_para, max_width = w,
-                               line_break = "optimal")$height)
-    expect_lte(o, g + 0.51)
-  }
-})
-
-test_that("optimal is at least as even as greedy", {
-  spread <- function(g) {
-    e <- head(opt_edges(g), -1)   # last line is deliberately short
-    if (length(e) < 2) return(0)
-    stats::sd(e)
-  }
-  for (w in c(220, 260, 300, 340)) {
-    sg <- spread(latex_grob(opt_para, max_width = w, line_break = "greedy"))
-    so <- spread(latex_grob(opt_para, max_width = w, line_break = "optimal"))
-    expect_lte(so, sg + 1e-6)
-  }
-})
-
-test_that("optimal measurably improves at least one width", {
-  g <- latex_grob(opt_para, max_width = 300, line_break = "greedy")
-  o <- latex_grob(opt_para, max_width = 300, line_break = "optimal")
-  expect_lt(stats::sd(head(opt_edges(o), -1)),
-            stats::sd(head(opt_edges(g), -1)))
-})
-
-test_that("optimal composes with justify", {
-  g <- latex_grob(opt_para, max_width = 300,
-                  line_break = "optimal", justify = TRUE)
-  expect_equal(g$bbox_w, 300, tolerance = 1e-6)
-})
-
 test_that("line_break is validated, settable and does not leak", {
   expect_error(latex_dims("x", line_break = "nope"))
 
-  before <- as.numeric(latex_dims(opt_para, max_width = 300)$width)
-  invisible(latex_dims(opt_para, max_width = 300, line_break = "optimal"))
-  expect_equal(as.numeric(latex_dims(opt_para, max_width = 300)$width),
+  before <- as.numeric(latex_dims(just_para, max_width = 300)$width)
+  invisible(latex_dims(just_para, max_width = 300, line_break = "optimal"))
+  expect_equal(as.numeric(latex_dims(just_para, max_width = 300)$width),
                before, tolerance = 1e-6)
 
   latex_options(line_break = "optimal")
@@ -280,34 +55,8 @@ test_that("line_break is validated, settable and does not leak", {
 
 test_that("greedy and optimal layouts are cached separately", {
   latex_cache_clear()
-  a <- latex_dims(opt_para, max_width = 300, line_break = "greedy")
-  b <- latex_dims(opt_para, max_width = 300, line_break = "optimal")
+  a <- latex_dims(just_para, max_width = 300, line_break = "greedy")
+  b <- latex_dims(just_para, max_width = 300, line_break = "optimal")
   expect_false(identical(a$is_split, NA))
   expect_equal(latex_cache_info()$size, 2L)
-})
-
-test_that("content with nothing to break is unaffected", {
-  solid <- paste0("\\text{", strrep("x", 60), "}")
-  expect_equal(
-    as.numeric(latex_dims(solid, max_width = 100, line_break = "optimal")$width),
-    as.numeric(latex_dims(solid, max_width = 100, line_break = "greedy")$width),
-    tolerance = 1e-6
-  )
-})
-
-test_that("a gather or multline with an empty line lays out at a width", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  glyphs <- function(tex) {
-    sum(latex_tree(tex, input_mode = "math", max_width = 300)$records$type == "glyph")
-  }
-  expect_equal(glyphs("\\begin{gather} \\\\ b \\end{gather}"), 1)
-  expect_equal(glyphs("\\begin{multline} a \\\\ \\\\ b \\end{multline}"), 2)
-})
-
-test_that("a line does not break inside a sub- or superscript", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  r <- latex_tree("aaa $x_{\\text{p q}}$zzzzzzzz", max_width = 110, render_mode = "path")$records
-  r <- r[r$type == "text", ]
-  expect_equal(r$y[r$text == "p"], r$y[r$text == "q"])
-  expect_lt(r$y[r$text == "aaa"], r$y[r$text == "zzzzzzzz"])
 })

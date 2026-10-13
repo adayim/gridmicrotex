@@ -68,6 +68,7 @@ reference:
       - define_macro
       - clear_macros
       - list_macros
+      - load_sty
       - latex_cache_info
       - latex_cache_limit
       - latex_cache_clear

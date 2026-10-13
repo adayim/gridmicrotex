@@ -16,7 +16,8 @@ latex_options(
   device_math = NULL,
   main_font = NULL,
   sans_font = NULL,
-  mono_font = NULL
+  mono_font = NULL,
+  packages = NULL
 )
 
 reset_latex_options()
@@ -58,6 +59,11 @@ name of a font given to \code{\link[=load_font]{load_font()}}, an installed fami
 file, which is loaded. \code{NULL} keeps the defaults: \code{gp$fontfamily} (or
 \code{"sans"}) for the body, \code{"sans"} and \code{"mono"}. A \code{gp$fontfamily} in a
 call wins over \code{main_font}.}
+
+\item{packages}{LaTeX packages to load before every label, as
+\verb{\\usepackage} would, named or as \code{.sty} files (see \code{\link[=load_sty]{load_sty()}}).
+Without this, a label can load a package with \verb{\\usepackage\{name\}}.
+\code{NULL} loads none.}
 }
 \value{
 The previous settings, invisibly. With no arguments, the
@@ -97,5 +103,5 @@ if (!identical(Sys.getenv("IN_PKGDOWN"), "true"))
 }
 }
 \seealso{
-\code{\link[=available_fonts]{available_fonts()}}, \code{\link[=load_font]{load_font()}}, \code{\link[=latex_grob]{latex_grob()}}
+\code{\link[=available_fonts]{available_fonts()}}, \code{\link[=load_font]{load_font()}}, \code{\link[=load_sty]{load_sty()}}, \code{\link[=latex_grob]{latex_grob()}}
 }

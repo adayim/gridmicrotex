@@ -11,9 +11,49 @@
 #include <vector>
 
 #include "front/expander.h"
+#include "front/packages.h"
 #include "front/spec.h"
 
 using namespace microtex::front;
+
+// The LaTeX files the engine's own commands are written in (inst/tex): the
+// format and the packages. The engine reads no file; .onLoad hands over
+// their text.
+// [[Rcpp::export]]
+void tex_prelude_set_cpp(std::string source) {
+  setPrelude(std::move(source));
+}
+
+// [[Rcpp::export]]
+void tex_package_register_cpp(std::string name, std::string source) {
+  registerPackage(name, std::move(source));
+}
+
+// [[Rcpp::export]]
+std::vector<std::string> tex_package_names_cpp() {
+  return packageNames();
+}
+
+// Changes whenever the format or a package does; part of the layout cache key.
+// [[Rcpp::export]]
+double tex_package_generation_cpp() {
+  return static_cast<double>(packageGeneration());
+}
+
+// What went wrong reading the format and the packages every input starts
+// with: a name defined twice, a command that could not be read. Empty when
+// all is well, which the tests insist on.
+// [[Rcpp::export]]
+std::vector<std::string> tex_prelude_problems_cpp() {
+  return preludeProblems();
+}
+
+// A registered package read on top of the format, as an input asking for it
+// would: what went wrong, as "package NAME line L:C: message".
+// [[Rcpp::export]]
+std::vector<std::string> tex_package_check_cpp(std::string name) {
+  return checkPackage(name);
+}
 
 // The macros made with define_macro(), which outlive a parse.
 // [[Rcpp::export]]

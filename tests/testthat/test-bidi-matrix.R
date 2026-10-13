@@ -94,8 +94,6 @@ VOCAB <- list(
 
 test_that("ordering matches an independent shaper, across scripts and structures", {
   skip_on_cran()
-  skip_if_not_installed("textshaping")
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
 
   checked <- 0L
@@ -170,8 +168,6 @@ test_that("every layout is well formed, whatever the direction", {
 
 test_that("a group holding both directions still lays out every word", {
   skip_on_cran()
-  skip_if_not_installed("textshaping")
-  skip_if_not(microtex_bidi_available(), "built without fribidi")
   pdf(NULL); on.exit(dev.off(), add = TRUE)
 
   # A group is one child of its line with one level, so a group whose

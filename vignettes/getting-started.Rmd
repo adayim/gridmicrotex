@@ -325,9 +325,11 @@ upViewport(2)
 Any font R can use works for text, including CJK and right-to-left
 scripts:
 
-```{r cjk, fig.height=1, fig.width=5, out.width="55%", dev = "ragg_png", dev.args = list(), purl = FALSE}
+```{r cjk, fig.height=1.4, fig.width=5, out.width="55%", dev = "ragg_png", dev.args = list(), purl = FALSE}
 grid.newpage()
-grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)",
+grid.latex(r"(如果 $x > 0$ 则 $y = x^2$)", y = unit(0.7, "npc"),
+           gp = gpar(fontfamily = "sans"))
+grid.latex(r"($E = mc^2$ معادلة أينشتاين)", y = unit(0.3, "npc"),
            gp = gpar(fontfamily = "sans"))
 ```
 
@@ -547,5 +549,6 @@ it, and its LaTeX file, wherever you ask.
 
 - Pages: `\pageref` draws `??` and `\cite` draws `[?]`.
 - Automatic hyphenation, and TikZ beyond `tikz-cd` diagrams.
-- `\usepackage` loads nothing; every supported command is built in.
+- `\usepackage` loads only the packages that come with gridmicrotex and files
+  you give to `load_sty()`; a package from a TeX installation is not read.
 - A formula between two right-to-left words is not reordered.
