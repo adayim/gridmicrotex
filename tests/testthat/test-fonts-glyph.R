@@ -63,6 +63,45 @@ test_that("a label measures the same on every device", {
   expect_gt(on_pdf, 0)
 })
 
+test_that("a font file is the same file whatever the slash or case of its path", {
+  expect_true(gridmicrotex:::.same_font_file("C:/Fonts/Probe.ttf", "C:/Fonts/Probe.ttf"))
+  expect_true(gridmicrotex:::.same_font_file("C:/FONTS/probe.TTF", "c:/fonts/Probe.ttf"))
+  expect_false(gridmicrotex:::.same_font_file("C:/Fonts/Probe.ttf", "C:/Fonts/Other.ttf"))
+  # A backslash separates directories only on Windows, where systemfonts
+  # reports installed fonts with them.
+  skip_if_not(.Platform$OS.type == "windows", "a backslash is not a separator here")
+  expect_true(gridmicrotex:::.same_font_file("C:/Fonts/Probe.ttf", "C:\\Fonts\\Probe.ttf"))
+  expect_true(gridmicrotex:::.same_font_file("C:\\Fonts\\Probe.ttf", "C:/Fonts/Probe.ttf"))
+})
+
+test_that("an installed family that was loaded is measured the same on every device", {
+  skip_if_no_glyphs()
+  file <- systemfonts::match_fonts("sans")$path
+  skip_if(!nzchar(file) || !file.exists(file), "no installed font to load")
+  family <- systemfonts::font_info(path = file)$family[1L]
+  skip_if(is.null(tryCatch(load_font(family), error = function(e) NULL)),
+          "this machine's sans family cannot be loaded")
+  # By shaping its own file, not by asking the device: a path of the wrong
+  # form (backslashes, as Windows reports installed fonts) made the shaping
+  # look like another font's and left the label to the device.
+  face <- gridmicrotex:::.registered_face(family, 0L)
+  expect_false(is.null(gridmicrotex:::.measure_registered("Hello world", face)))
+  width <- function() {
+    latex_cache_clear()
+    grid::convertWidth(
+      latex_dims("\\text{Hello world} AV fi",
+                 gp = grid::gpar(fontfamily = family, fontsize = 20))$width,
+      "bigpts", valueOnly = TRUE)
+  }
+  pdf(NULL)
+  on_pdf <- width()
+  dev.off()
+  cairo_png()
+  on_cairo <- width()
+  dev.off()
+  expect_equal(on_pdf, on_cairo)
+})
+
 test_that("glyphs and outlines put the text in the same place", {
   skip_if_no_glyphs()
   skip_if_not_installed("png")

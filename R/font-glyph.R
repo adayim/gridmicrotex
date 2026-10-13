@@ -39,14 +39,15 @@
 .shape_size <- 1000
 
 # Whether `path` (as shape_text() reports it) is the same file as
-# `registered` (as normalizePath() left it when the font was registered,
-# fonts.R:.resolve_font_spec()). Windows paths are case-insensitive and
+# `registered` (as the registry holds it: a file given to load_font() is
+# normalized, but an installed family's paths are as systemfonts reports them,
+# with backslashes on Windows). Windows paths are case-insensitive and
 # shape_text() does not promise the same slash direction, so both sides are
 # normalized and compared case-insensitively; two distinct registered fonts
 # differing only by case on a case-sensitive filesystem is not a real case.
 .same_font_file <- function(path, registered) {
-  tolower(normalizePath(path, winslash = "/", mustWork = FALSE)) ==
-    tolower(registered)
+  norm <- function(p) tolower(normalizePath(p, winslash = "/", mustWork = FALSE))
+  norm(path) == norm(registered)
 }
 
 # --- Which font a record is in -----------------------------------------------
@@ -118,7 +119,7 @@
     s <- shaped$shape
     if (nrow(s) && !anyNA(s$index) && all(s$index > 0L) &&
         all(s$font_index == face$index) &&
-        all(vapply(s$font_path, .same_font_file, logical(1), face$path))) {
+        all(vapply(unique(s$font_path), .same_font_file, logical(1), face$path))) {
       baseline <- shaped$metrics$pen_y[[1L]]
       out <- list(ids = as.integer(s$index), x = s$x_offset / .shape_size,
                   y = (s$y_offset - baseline) / .shape_size,
