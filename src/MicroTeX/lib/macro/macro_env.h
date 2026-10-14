@@ -567,11 +567,19 @@ inline std::vector<std::string> listParts(const std::string& item) {
 // width). A list nested after an item's text goes on rows of its own,
 // level with that text, as LaTeX sets it; one that opens the item shares
 // the item's first line, as in LaTeX too.
+//
+// `columns` is the column spec when it is not the usual one; `noteLabels` sets
+// an item's own label as a superscript, as threeparttable's notes are; and
+// `declarations` (a `\small` that opens the list's body) is put before the
+// text of every item.
 inline sptr<Atom> listBuild(
   CommandArgs& args,
   const std::vector<std::string>& items,
   const std::function<std::string(int)>& marker,
-  bool description = false
+  bool description = false,
+  const char* columns = nullptr,
+  bool noteLabels = false,
+  const std::string& declarations = std::string()
 ) {
   if (items.empty()) return nullptr;
   std::string s;
@@ -588,6 +596,9 @@ inline sptr<Atom> listBuild(
     std::string mark;
     if (description) {
       mark = label.empty() ? "" : "\\textbf{" + label + "}";
+    } else if (noteLabels && !label.empty()) {
+      // threeparttable's \tnote in a label box of 0.5em.
+      mark = "\\rlap{\\textsuperscript{" + label + "}}\\hspace{0.5em}";
     } else if (!label.empty()) {
       mark = args.isMathMode() ? "\\text{" + label + "}" : label;
     } else {
@@ -603,15 +614,44 @@ inline sptr<Atom> listBuild(
       const std::string content = args.isMathMode() ? part
                                   : nested         ? "\\text{" + part + "}"
                                                    : listTextItem(part);
-      row(first ? mark : "", content);
+      row(first ? mark : "", declarations.empty() ? content : declarations + " " + content);
       first = false;
     }
     if (first) row(mark, "");  // an empty item still has its marker
   }
   const auto arr = args.alignmentOfText(s);
   arr->checkDimensions();
-  const char* columns = description ? "l@{\\quad}X" : "r@{\\quad}X";
+  if (columns == nullptr) columns = description ? "l@{\\quad}X" : "r@{\\quad}X";
   return sptrOf<MatrixAtom>(args.isPartial(), arr, columns, false);
+}
+
+// threeparttable's tablenotes: a list whose item labels are superscripts in a
+// box of 0.5em, \leftmargin 1.5em and \labelsep 0.2em, so the label starts 0.8em
+// in and the text 1.5em (pdflatex: 141 and 148 against a left edge of 133, in
+// points, though the package sets \leftskip \tabcolsep: the list ignores it).
+// `[para]` runs the notes on in one
+// paragraph; a `\small` before the first item sets all of them.
+inline cmdmacro(tablenotesATATenv) {
+  std::string body = args.text(1);
+  const std::string options = listPeelOptional(body);
+  // What stands before the first \item: declarations, which LaTeX lets stand there.
+  const auto firstItem = body.find("\\item");
+  const std::string declarations =
+    listTrim(firstItem == std::string::npos ? body : body.substr(0, firstItem));
+  const auto items = listSplitItems(body);
+  if (options.find("para") != std::string::npos) {
+    std::string runOn = declarations;
+    for (size_t i = 0; i < items.size(); i++) {
+      std::string item = items[i];
+      const std::string label = listPeelOptional(item);
+      if (i > 0) runOn += "\\quad ";
+      if (!label.empty()) runOn += "\\textsuperscript{" + label + "}\\,";
+      runOn += listTrim(item);
+    }
+    return args.formulaOf(runOn, false);
+  }
+  return listBuild(args, items, [](int) { return std::string("\\hspace{0.5em}"); }, false,
+                   "@{\\hspace{0.8em}}l@{\\hspace{0.2em}}X", true, declarations);
 }
 
 inline cmdmacro(itemizeATATenv) {

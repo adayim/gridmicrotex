@@ -894,6 +894,8 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
 
   auto vb = sptrOf<VBox>();
   float totalHeight = 0;
+  float firstBaseline = 0, lastBaseline = 0;
+  bool seenRow = false;
 
   for (int i = 0; i < rows; i++) {
     auto hb = sptrOf<HBox>();
@@ -1009,12 +1011,26 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
       hb->_height = lineHeight[i] + padTop[i];
       hb->_depth = lineDepth[i] + padBot[i];
     }
+    // Where the baseline of the first and of the last row stand, from the top.
+    if (boxarr[i][0]->_type != AtomType::hline) {
+      const float at = vb->_height + vb->_depth + hb->_height;
+      if (!seenRow) firstBaseline = at;
+      lastBaseline = at;
+      seenRow = true;
+    }
     vb->add(hb);
   }
 
   totalHeight = vb->_height + vb->_depth;
 
   const auto axis = env.axisHeight();
+  if (_matrix->_vpos != 'c' && seenRow) {
+    // tabular[t] and [b]: the baseline of the first row or of the last.
+    const float baseline = _matrix->_vpos == 't' ? firstBaseline : lastBaseline;
+    vb->_height = baseline;
+    vb->_depth = totalHeight - baseline;
+    return vb;
+  }
   vb->_height = totalHeight / 2 + axis;
   vb->_depth = totalHeight / 2 - axis;
 

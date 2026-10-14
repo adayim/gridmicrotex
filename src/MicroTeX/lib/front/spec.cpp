@@ -302,7 +302,7 @@ struct Table {
     env({"longtable"}, "Rr", EnvBody::alignment, true);
     // tabularray's tables, as tinytable writes them: [options]{spec}.
     env({"tblr", "talltblr", "longtblr"}, "Rr", EnvBody::alignment, true);
-    env({"itemize", "enumerate", "description"}, "", EnvBody::raw, true);
+    env({"itemize", "enumerate", "description", "tablenotes"}, "", EnvBody::raw, true);
     env({"verbatim", "verbatim*"}, "", EnvBody::verbatim, true);
     // Commutative diagrams: amscd's, and tikz-cd's, which a handler reads
     // whole (its options and arrows are in the body).

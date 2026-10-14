@@ -2046,7 +2046,7 @@ private:
   bool isList(NodeId id) const {
     const Node& x = node(id);
     return x.kind == NodeKind::environment &&
-           (x.text == "itemize" || x.text == "enumerate" || x.text == "description" ||
+           (x.text == "itemize" || x.text == "enumerate" || x.text == "description" || x.text == "tablenotes" ||
             x.text == "verbatim" || x.text == "verbatim*");
   }
 
@@ -2422,6 +2422,9 @@ private:
       if (spec != nullptr && i < spec->args.size() && spec->args[i].optional) continue;
       if (k < args.size()) args[k++] = rawOf(c);
     }
+    // siunitx's S columns are set as right-aligned ones, their numbers padded
+    // to line up (alignmentOf()).
+    if (isTextTable(x.text) && k > 1 && k <= args.size()) args[k - 1] = plainColumns(args[k - 1], nullptr);
     // The old template put the body between spaces.
     if (k < args.size()) args[k] = " " + stripComments(x.raw) + " ";
     Node at = x;
@@ -2452,6 +2455,11 @@ private:
     _rows.clear();
     if (env == kNoNode || node(env).kind != NodeKind::environment) return arr;
     if (isTblrEnvironment(node(env).text)) return tblrAlignmentOf(env);
+    // tabular[t], array[b]: LaTeX's vertical position, the first optional argument.
+    if ((node(env).text == "tabular" || node(env).text == "array") && count(env) > 0) {
+      const std::string where = trimmed(rawOf(child(env, 0)));
+      if (!where.empty() && (where[0] == 't' || where[0] == 'b')) arr->_vpos = where[0];
+    }
     const bool text = node(env).flag;
     // The rows of align, gather, ... are numbered, unless the environment is
     // starred; a multline has one number, on its last line.
@@ -2476,6 +2484,30 @@ private:
     // A longtable's head and foot rows are set once: first and last.
     const bool longtable = node(env).text == "longtable";
     if (longtable) rows = longtableOrder(rows);
+    // siunitx's S columns: a number's digits after the marker are padded, with
+    // phantoms, to the most any cell of the column has, so that the markers
+    // line up in a column set flush right.
+    std::vector<int> sColumns;
+    std::map<int, int> sDecimals;
+    std::map<int, char> sMark;
+    if (text && isTextTable(node(env).text)) {
+      for (std::uint32_t a = 0; a < count(env); a++) {
+        const Node& arg = node(child(env, a));
+        if (arg.kind == NodeKind::argument && arg.flag && !arg.raw.empty()) {
+          sColumns.clear();
+          plainColumns(arg.raw, &sColumns);
+        }
+      }
+      for (const NodeId row : rows) {
+        for (std::uint32_t c = 0; c < count(row); c++) {
+          if (std::find(sColumns.begin(), sColumns.end(), static_cast<int>(c)) == sColumns.end()) continue;
+          const SNumber n = sNumber(cellText(child(row, c)));
+          if (!n.numeric) continue;
+          sDecimals[static_cast<int>(c)] = std::max(sDecimals[static_cast<int>(c)], n.decimals);
+          if (n.marker) sMark[static_cast<int>(c)] = n.mark;
+        }
+      }
+    }
     for (std::size_t k = 0; k < rows.size(); k++) {
       const NodeId row = rows[k];
       if (longtable && k == 0 && captionRow(env, row, *arr)) {
@@ -2486,6 +2518,14 @@ private:
         if (c > 0) arr->addCol();
         if (text || (cases && c > 0)) {
           textCell(child(child(row, c), 0), *arr);
+          const auto padded = sDecimals.find(static_cast<int>(c));
+          if (padded != sDecimals.end() && padded->second > 0) {
+            const SNumber n = sNumber(cellText(child(row, c)));
+            std::string pad;
+            if (n.numeric && !n.marker) pad += "\\phantom{" + std::string(1, sMark.count(static_cast<int>(c)) > 0 ? sMark[static_cast<int>(c)] : '.') + "}";
+            for (int d = n.decimals; n.numeric && d < padded->second; d++) pad += "\\phantom{0}";
+            if (!pad.empty()) arr->add(fragment(pad, false));
+          }
         } else {
           lowerList(child(child(row, c), 0), *arr, 0);
         }
@@ -2549,6 +2589,98 @@ private:
     const std::vector<NodeId>& tail = lastFoot.empty() ? foot : lastFoot;
     order.insert(order.end(), tail.begin(), tail.end());
     return order;
+  }
+
+  /** The characters of a table cell, less the spaces at its ends; anything
+   *  else in it (a command, a group, a space inside) is a backslash, so that
+   *  what reads the text as a number does not take it for one. */
+  std::string cellText(NodeId cell) const {
+    const NodeId list = child(cell, 0);
+    std::uint32_t from = 0, to = count(list);
+    while (from < to && isSpace(node(child(list, from)))) from++;
+    while (to > from && isSpace(node(child(list, to - 1)))) to--;
+    std::string out;
+    for (std::uint32_t i = from; i < to; i++) {
+      const Node& x = node(child(list, i));
+      if (x.kind == NodeKind::character && x.cp < 128) {
+        out += static_cast<char>(x.cp);
+      } else {
+        out += '\\';
+      }
+    }
+    return out;
+  }
+
+  static bool isTextTable(const std::string& name) {
+    return name == "tabular" || name == "tabular*" || name == "tabularx" || name == "longtable";
+  }
+
+  /** A column specification with siunitx's `S` and `S[options]` written as `r`,
+   *  and, in `sColumns`, the indices of the columns that were S. The letters
+   *  of what is in braces or brackets are not columns. A repeated group
+   *  (`*{3}{S}`) is left as it is. */
+  static std::string plainColumns(const std::string& spec, std::vector<int>* sColumns) {
+    if (spec.find('S') == std::string::npos || spec.find('*') != std::string::npos) return spec;
+    std::string out;
+    int column = 0;
+    // The index just past the group opened at `i` by `open`, which closes with `close`.
+    const auto past = [&](std::size_t i, char open, char close) {
+      int depth = 0;
+      for (; i < spec.size(); i++) {
+        if (spec[i] == open) depth++;
+        if (spec[i] == close && --depth == 0) return i + 1;
+      }
+      return spec.size();
+    };
+    for (std::size_t i = 0; i < spec.size();) {
+      const char c = spec[i];
+      std::size_t end = i + 1;
+      if (c == 'S') {
+        if (sColumns != nullptr) sColumns->push_back(column);
+        column++;
+        out += 'r';
+        if (end < spec.size() && spec[end] == '[') end = past(end, '[', ']');
+        i = end;
+        continue;
+      }
+      if (c == 'p' || c == 'm' || c == 'b') {
+        column++;
+        if (end < spec.size() && spec[end] == '{') end = past(end, '{', '}');
+      } else if (c == '@' || c == '!' || c == '>' || c == '<') {
+        if (end < spec.size() && spec[end] == '{') end = past(end, '{', '}');
+      } else if (c == 'l' || c == 'c' || c == 'r' || c == 'X' || c == 'Q') {
+        column++;
+        if (end < spec.size() && spec[end] == '[') end = past(end, '[', ']');
+      }
+      out.append(spec, i, end - i);
+      i = end;
+    }
+    return out;
+  }
+
+  /** A cell of an S column as siunitx reads a number: a sign, digits, and a
+   *  decimal marker with digits after it. */
+  struct SNumber {
+    bool numeric = false;
+    bool marker = false;
+    char mark = '.';
+    int decimals = 0;
+  };
+
+  static SNumber sNumber(const std::string& raw) {
+    const std::string s = trimmed(raw);
+    SNumber n;
+    std::size_t i = 0, digits = 0;
+    if (i < s.size() && (s[i] == '+' || s[i] == '-')) i++;
+    while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i])) != 0) i++, digits++;
+    if (i < s.size() && (s[i] == '.' || s[i] == ',')) {
+      n.marker = true;
+      n.mark = s[i++];
+      while (i < s.size() && std::isdigit(static_cast<unsigned char>(s[i])) != 0) i++, n.decimals++;
+      digits += static_cast<std::size_t>(n.decimals);
+    }
+    n.numeric = digits > 0 && i == s.size();
+    return n;
   }
 
   /** How many columns a column specification sets: its letters, with what

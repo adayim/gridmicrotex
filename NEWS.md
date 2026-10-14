@@ -8,6 +8,7 @@
 - Bug fix: a colour such as `red!50` was drawn black, so `\rowcolor{gray!10}` painted a row black. Colours are now mixed as in xcolor, and a colour that is not defined warns instead of drawing black. New `\colorlet`.
 - `\parbox`, `\setlength`, `\addtolength`, `\newlength` and counters (`\newcounter`, `\setcounter`, `\stepcounter`, `\arabic`, ...) now work. `\parindent`, `\parskip`, `\tabcolsep` and `\arraycolsep` can be set.
 - Bug fix: text tables had 1em between their columns and at their edges, 2pt less than LaTeX's `\tabcolsep`; they are now padded as LaTeX pads them.
+- Bug fix: a `tablenotes` list (threeparttable, kableExtra's footnotes) drew `\item` as a red name; `\makecell[tl]` and siunitx `S` columns made the whole table fail. Notes are now a list of superscript labels, `\makecell` takes its `[vh]` letters, and an `S` column lines up its decimal markers.
 - `\cite` draws the number of its `\bibitem` (or its `[label]`) instead of `[?]`, before or after the `thebibliography`, and `\bibitem[label]` is marked with its label.
 
 # gridmicrotex 0.2.0

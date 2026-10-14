@@ -99,6 +99,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_itemizeATATenv, "itemize@@env"),
   mac(1, macro_enumerateATATenv, "enumerate@@env"),
   mac(1, macro_descriptionATATenv, "description@@env"),
+  mac(1, macro_tablenotesATATenv, "tablenotes@@env"),
   mac(1, macro_tikzcdATATenv, "tikzcd@@env"),
   mac(1, macro_CDATATenv, "CD@@env"),
   mac(3, macro_multicolumn, "multicolumn"),
