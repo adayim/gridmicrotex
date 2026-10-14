@@ -1370,6 +1370,8 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
       }
       // The body is everything before this \end.
       n.raw = stopRecording(mark, used);
+      // A picture starts from the styles set before it.
+      if (name == "tikzpicture" && !_in.tikzStyles().empty()) n.raw = _in.tikzStyles() + n.raw;
       return _ast.add(std::move(n), kids);
     }
   }

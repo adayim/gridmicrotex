@@ -165,6 +165,9 @@ public:
   /** Change a catcode from the next token on, for every source being read
    *  (the parser reads a URL with `%` as a character this way). */
   void setCatcode(c32 ch, Cat cat);
+
+  /** The `\tikzset` and `\tikzstyle` read so far, as statements: what a tikzpicture begins with. */
+  const std::string& tikzStyles() const;
   Cat catcode(c32 ch) const;
 
 private:

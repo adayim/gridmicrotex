@@ -231,6 +231,12 @@ struct Expander::Impl {
   std::unordered_map<std::string, std::string> theoremWithin;
   // Set after runaway expansion in recover mode: the input ends there.
   bool halted = false;
+  // Between `\foreach` and the `in` after it: the names it loops over are its own, even where the
+  // format has a macro of that name (`\i`, `\j`), as pgf takes them.
+  bool inForeach = false;
+  std::unordered_set<std::string> foreachNames;  // the names some \foreach loops over, read as written from then on
+  // `\tikzset` and `\tikzstyle` so far, as the statements the pictures after them begin with.
+  std::string tikzStyles;
   // Where the input ends for now (Expander::endInputAt()), and the first
   // token past that, read and held back until the end moves on.
   std::uint32_t limit = UINT32_MAX;
@@ -1387,6 +1393,20 @@ struct Expander::Impl {
     store(*name, std::move(def), true);
   }
 
+  /** `\tikzset{keys}` and `\tikzstyle{name} = [keys]`: kept as text, for the tikzpictures after it,
+   *  which read them first (Expander::tikzStyles()); nothing is drawn. */
+  void tikzStyleCommand(const ExpToken& e) {
+    if (e.tok.text == "tikzset") {
+      tikzStyles += "\\tikzset{" + readArg("\\tikzset") + "}";
+      return;
+    }
+    const std::string name = readArg("\\tikzstyle");
+    ExpToken t = nextNonSpace();
+    if (!isChar(t, '=')) unread(std::move(t));
+    const auto keys = readOptional();
+    tikzStyles += "\\tikzset{" + trim(name) + "/.style={" + (keys ? *keys : std::string()) + "}}";
+  }
+
   /** \ce and \pu, a subset of mhchem (front/mhchem.h): the text is read and what
    *  it makes is read in its place. */
   void chemCommand(const ExpToken& e) {
@@ -1415,6 +1435,7 @@ struct Expander::Impl {
     static const std::unordered_set<std::string> names = {
       "newcommand", "renewcommand", "providecommand", "DeclareRobustCommand", "DeclareMathOperator",
       "DeclarePairedDelimiter", "ce", "pu", "newtheorem", "newfontfamily", "newfontface",
+      "tikzset", "tikzstyle",
       "theoremstyle", "def", "gdef", "edef", "xdef", "@ifstar", "@ifnextchar", "global",
       "expandafter", "noexpand", "futurelet", "let", "newenvironment", "renewenvironment",
       "makeatletter", "makeatother", "begingroup", "endgroup", "begin", "end", "usepackage",
@@ -2267,6 +2288,10 @@ struct Expander::Impl {
       declareTheorem(e);
       return true;
     }
+    if ((name == "tikzset" || name == "tikzstyle") && unshadowed()) {
+      tikzStyleCommand(e);
+      return true;
+    }
     if ((name == "newfontfamily" || name == "newfontface") && unshadowed()) {
       declareFontFamily();
       return true;
@@ -2476,6 +2501,18 @@ struct Expander::Impl {
     while (true) {
       ExpToken e = raw();
       endGlobalAt(e);
+      if (inForeach && e.tok.kind != TokKind::end) {
+        if (e.tok.isControl()) {
+          foreachNames.insert(e.tok.text);
+        } else if (e.tok.isChar(Cat::letter)) {
+          inForeach = false;
+        }
+      } else if (e.tok.isCs("foreach")) {
+        inForeach = true;
+      }
+      if (!foreachNames.empty() && e.tok.isControl() && foreachNames.count(e.tok.text) != 0) {
+        e.tok.noexpand = true;
+      }
       if (e.tok.kind != TokKind::end && e.tok.isControl() && !e.tok.noexpand && consume(e)) {
         carry += e.lead;
         continue;
@@ -2574,6 +2611,10 @@ std::vector<std::string> preludeTransparentEnvironmentNames() {
 ExpandedToken Expander::next() {
   ExpToken e = _impl->nextExpanded();
   return {std::move(e.tok), std::move(e.lead), std::string(e.text)};
+}
+
+const std::string& Expander::tikzStyles() const {
+  return _impl->tikzStyles;
 }
 
 void Expander::endInputAt(std::uint32_t offset) {

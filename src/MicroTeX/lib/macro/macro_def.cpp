@@ -4,6 +4,7 @@
 #include "macro/macro_colors.h"
 #include "macro/macro_delims.h"
 #include "macro/macro_diagram.h"
+#include "macro/macro_tikz.h"
 #include "macro/macro_env.h"
 #include "macro/macro_fonts.h"
 #include "macro/macro_frac.h"
@@ -101,6 +102,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(1, macro_descriptionATATenv, "description@@env"),
   mac(1, macro_tablenotesATATenv, "tablenotes@@env"),
   mac(1, macro_tikzcdATATenv, "tikzcd@@env"),
+  mac(1, macro_tikzpictureATATenv, "tikzpicture@@env"),
   mac(1, macro_CDATATenv, "CD@@env"),
   mac(3, macro_multicolumn, "multicolumn"),
   mac(0, macro_hline, "hline"),

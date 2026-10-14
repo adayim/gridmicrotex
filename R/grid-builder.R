@@ -48,6 +48,11 @@ build_latex_children <- function(layout_df, total_h, depth = 0,
         if (is.null(path_data)) NULL
         else build_path_grob(path_data, color[i], i, total_h)
       },
+      "stroke_path" = {
+        path_data <- layout_df$path[[i]]
+        if (is.null(path_data)) NULL
+        else build_stroke_grob(path_data, color[i], lwd[i] * lwd_scale, i, total_h)
+      },
       "line" = if (abs(y[i] - y2[i]) < 0.001) {
         # Horizontal rule (fraction bars, \hline, vertical borders) →
         # filled rect; keeps dimensions in bigpts and avoids lwd issues.
@@ -330,6 +335,91 @@ build_path_grob <- function(path_data, col, idx, total_h) {
     rule = "evenodd",
     gp = grid::gpar(fill = col, col = NA),
     name = paste0("path.", idx)
+  )
+}
+
+#' Convert stroked path segments to a grid polyline
+#'
+#' As [build_path_grob()] flattens a filled path, but a subpath that was not
+#' closed stays open, and what is drawn is its outline: the colour and width,
+#' with the cap and join the record carries (the engine's `Cap` and `Join`:
+#' butt, round, square; bevel, miter, round).
+#'
+#' @param path_data List with `cmd`, `coords`, `cap` and `join` elements.
+#' @param col Line colour.
+#' @param lwd Line width, in grid's units (1/96 inch).
+#' @param idx Index for naming.
+#' @param total_h Total height for y-axis flipping.
+#' @return A [grid::polylineGrob()] or `NULL`.
+#' @noRd
+build_stroke_grob <- function(path_data, col, lwd, idx, total_h) {
+  cmds <- path_data$cmd
+  coords <- path_data$coords
+  if (length(cmds) == 0) return(NULL)
+
+  all_x <- numeric(0)
+  all_y <- numeric(0)
+  all_id <- integer(0)
+  current_id <- 1L
+  sub_x <- numeric(0)
+  sub_y <- numeric(0)
+
+  flush_subpath <- function(close = FALSE) {
+    if (close && length(sub_x) > 1) {
+      sub_x <<- c(sub_x, sub_x[1])
+      sub_y <<- c(sub_y, sub_y[1])
+    }
+    if (length(sub_x) > 1) {
+      all_x <<- c(all_x, sub_x)
+      all_y <<- c(all_y, sub_y)
+      all_id <<- c(all_id, rep(current_id, length(sub_x)))
+      current_id <<- current_id + 1L
+    }
+    sub_x <<- numeric(0)
+    sub_y <<- numeric(0)
+  }
+
+  for (j in seq_along(cmds)) {
+    cr <- coords[j, ]
+    switch(cmds[j],
+      "M" = {
+        flush_subpath()
+        sub_x <- cr[1]
+        sub_y <- total_h - cr[2]
+      },
+      "L" = {
+        sub_x <- c(sub_x, cr[1])
+        sub_y <- c(sub_y, total_h - cr[2])
+      },
+      "C" = {
+        if (length(sub_x) == 0) next
+        pts <- cubic_bezier(sub_x[length(sub_x)], sub_y[length(sub_y)],
+                            cr[1], total_h - cr[2], cr[3], total_h - cr[4],
+                            cr[5], total_h - cr[6])
+        sub_x <- c(sub_x, pts$x[-1])
+        sub_y <- c(sub_y, pts$y[-1])
+      },
+      "Q" = {
+        if (length(sub_x) == 0) next
+        pts <- quad_bezier(sub_x[length(sub_x)], sub_y[length(sub_y)],
+                           cr[1], total_h - cr[2], cr[3], total_h - cr[4])
+        sub_x <- c(sub_x, pts$x[-1])
+        sub_y <- c(sub_y, pts$y[-1])
+      },
+      "Z" = flush_subpath(close = TRUE)
+    )
+  }
+  flush_subpath()
+  if (length(all_x) == 0) return(NULL)
+
+  cap <- c("butt", "round", "square")[(path_data$cap %||% 0L) + 1L]
+  join <- c("bevel", "mitre", "round")[(path_data$join %||% 1L) + 1L]
+  grid::polylineGrob(
+    x = grid::unit(all_x, "bigpts"),
+    y = grid::unit(all_y, "bigpts"),
+    id = all_id,
+    gp = grid::gpar(col = col, fill = NA, lwd = lwd, lineend = cap, linejoin = join),
+    name = paste0("stroke.", idx)
   )
 }
 

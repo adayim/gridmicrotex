@@ -123,7 +123,7 @@ void quad(const Frame &f, double x0, double y0, double x1, double y1,
 
 // ------------------------------------------------------------ records
 
-void emit_path(const Frame &f, SEXP rec, rcolor col,
+void emit_path(const Frame &f, SEXP rec, rcolor col, bool stroke, double lwd_bp,
                const pGEcontext gc, pDevDesc dd) {
     if (rec == R_NilValue || TYPEOF(rec) != VECSXP) return;
     SEXP cmds   = df_col(rec, "cmd");
@@ -147,9 +147,10 @@ void emit_path(const Frame &f, SEXP rec, rcolor col,
     double lastx = 0.0, lasty = 0.0;
     bool   have_last = false;
 
+    // A fill needs a polygon; a stroke is a line of two points or more.
     auto flush = [&]() {
         size_t n = xs.size() - sub_start;
-        if (n >= 3) nper.push_back((int) n);
+        if (n >= (stroke ? 2u : 3u)) nper.push_back((int) n);
         else { xs.resize(sub_start); ys.resize(sub_start); }
         sub_start = xs.size();
     };
@@ -188,12 +189,38 @@ void emit_path(const Frame &f, SEXP rec, rcolor col,
                 push(bx, by);
             }
         }
-        else if (cm[0] == 'Z') { flush(); have_last = false; }
+        else if (cm[0] == 'Z') {
+            // A closed stroke ends where it began.
+            if (stroke && xs.size() > sub_start) {
+                xs.push_back(xs[sub_start]);
+                ys.push_back(ys[sub_start]);
+            }
+            flush();
+            have_last = false;
+        }
     }
     flush();
     if (nper.empty()) return;
 
     R_GE_gcontext g; base_gc(&g, gc);
+    if (stroke) {
+        // The record's own cap and join (the engine's Cap and Join enums),
+        // as R/grid-builder.R's build_stroke_grob() sets them.
+        SEXP cap = df_col(rec, "cap"), join = df_col(rec, "join");
+        const int c = cap == R_NilValue ? 0 : Rf_asInteger(cap);
+        const int j = join == R_NilValue ? 1 : Rf_asInteger(join);
+        g.lend  = c == 1 ? GE_ROUND_CAP : c == 2 ? GE_SQUARE_CAP : GE_BUTT_CAP;
+        g.ljoin = j == 0 ? GE_BEVEL_JOIN : j == 2 ? GE_ROUND_JOIN : GE_MITRE_JOIN;
+        g.fill  = R_TRANWHITE;
+        g.col   = col;
+        g.lwd   = lwd_bp * 96.0 / 72.0;   // R/grid-builder.R:24
+        size_t at = 0;
+        for (int n : nper) {
+            if (dd->polyline) dd->polyline(n, xs.data() + at, ys.data() + at, &g, dd);
+            at += (size_t) n;
+        }
+        return;
+    }
     g.fill = col;
     g.col  = R_TRANWHITE;
     // Glyph outlines have counters (o, a, 8, A). evenodd + one subpath
@@ -262,7 +289,12 @@ void gm_emit_layout(const GmSavedDev *sv, SEXP layout,
         if (std::strcmp(ty, "path") == 0) {
             SEXP rec = (c_path != R_NilValue && TYPEOF(c_path) == VECSXP)
                        ? VECTOR_ELT(c_path, i) : R_NilValue;
-            emit_path(f, rec, col, gc, dd);
+            emit_path(f, rec, col, false, 0.0, gc, dd);
+
+        } else if (std::strcmp(ty, "stroke_path") == 0) {
+            SEXP rec = (c_path != R_NilValue && TYPEOF(c_path) == VECSXP)
+                       ? VECTOR_ELT(c_path, i) : R_NilValue;
+            emit_path(f, rec, col, true, gm_num_at(c_lwd, i, 1.0), gc, dd);
 
         } else if (std::strcmp(ty, "line") == 0) {
             double x0 = gm_num_at(c_x, i),  y0 = gm_num_at(c_y, i);
