@@ -266,6 +266,8 @@ struct Table {
     add({"label"}, "r");
     // thebibliography's \bibitem{key}{label}, which the prelude writes.
     add({"gmbibitem"}, "rr");
+    add({"newlength"}, "r");
+    add({"setlength", "addtolength"}, "rr");
     add({"setcounter", "addtocounter", "gmnewcounter"}, "rr");
     add({"stepcounter", "gmcurrentlabel", "value", "arabic", "roman", "Roman", "alph", "Alph", "fnsymbol"}, "r");
     // amsmath's subequations, which the prelude writes with these two.

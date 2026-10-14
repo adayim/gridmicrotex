@@ -13,7 +13,6 @@
 #include <string>
 #include <vector>
 
-#include "utils/counter_format.h"
 #include "atom/atom.h"
 #include "atom/atom_basic.h"
 #include "atom/atom_char.h"
@@ -35,6 +34,7 @@
 #include "env/units.h"
 #include "front/front.h"
 #include "front/hooks.h"
+#include "front/lengths.h"
 #include "front/spec.h"
 #include "front/tblr.h"
 #include "graphic/graphic.h"
@@ -42,6 +42,7 @@
 #include "macro/macro_args.h"
 #include "macro/macro_styles.h"
 #include "unimath/uni_font.h"
+#include "utils/counter_format.h"
 #include "utils/exceptions.h"
 #include "utils/string_utils.h"
 #include "utils/utf.h"
@@ -165,9 +166,30 @@ struct Numbering {
     std::string form;
   };
   std::vector<Citation> cites;
+  /** \parindent, \tabcolsep and the lengths the input makes. */
+  Lengths lengths;
 };
 
 Numbering* numbering = nullptr;
+
+/** What Units::getDimen() asks for a length named in a dimension. */
+bool resolveLength(const std::string& name, Dimen& out) {
+  return numbering != nullptr && numbering->lengths.get(name, out);
+}
+
+/** Lengths set inside a group are what they were once it ends. */
+class LengthScope {
+public:
+  LengthScope() : _mark(numbering != nullptr ? numbering->lengths.mark() : 0) {}
+  ~LengthScope() {
+    if (numbering != nullptr) numbering->lengths.release(_mark);
+  }
+  LengthScope(const LengthScope&) = delete;
+  LengthScope& operator=(const LengthScope&) = delete;
+
+private:
+  std::size_t _mark;
+};
 
 /** Where the next input starts counting (setStartNumbering()), and where the
  *  last one ended (lastNumbering()). */
@@ -184,7 +206,10 @@ NumberingState& finalNumbering() {
 class NumberingScope {
 public:
   NumberingScope() : _outer(numbering) {
-    if (_outer == nullptr) numbering = &_own;
+    if (_outer == nullptr) {
+      numbering = &_own;
+      Units::setLengthResolver(&resolveLength);
+    }
   }
   ~NumberingScope() { numbering = _outer; }
   NumberingScope(const NumberingScope&) = delete;
@@ -466,6 +491,7 @@ private:
         spaces(x, f);
         return;
       case NodeKind::group: {
+        LengthScope scope;
         auto atom = groupAtom(build(child(id, 0)), f);
         if (atom != nullptr) atom->_type = AtomType::ordinary;
         f.add(atom);
@@ -490,6 +516,7 @@ private:
         return;
       }
       case NodeKind::environment: {
+        LengthScope scope;
         auto atom = groupAtom(environment(id), f);
         if (atom != nullptr) atom->_type = AtomType::ordinary;
         f.add(atom);
@@ -683,6 +710,39 @@ private:
       int* v = counterOf(id, trimmed(rawOf(child(id, 0))));
       int n = 0;
       if (v != nullptr && counterNumber(id, rawOf(child(id, 1)), n)) *v = name == "setcounter" ? n : *v + n;
+      return nullptr;
+    }
+    if (name == "newlength") {
+      const std::string key = lengthName(id, 0, false);
+      if (!key.empty()) nums().lengths.define(key);
+      return nullptr;
+    }
+    if (name == "setlength" || name == "addtolength") {
+      const std::string key = lengthName(id, 0, true);
+      if (key.empty()) return nullptr;
+      const std::string given = trimmed(rawOf(child(id, 1)));
+      std::string text = given;
+      // TeX's glue: the natural length, less `plus` and `minus`.
+      for (const char* word : {" plus", " minus"}) {
+        const auto cut = text.find(word);
+        if (cut != std::string::npos) text.erase(cut);
+      }
+      Dimen v = Units::getDimen(text);
+      if (!v.isValid() || !isLengthText(text)) {
+        _diags.warn(node(id).span, "`" + given + "' is not a length");
+        return nullptr;
+      }
+      if (name == "addtolength") {
+        Dimen now;
+        nums().lengths.get(key, now);
+        if (now.val != 0.f && now.unit != v.unit) {
+          _diags.warn(node(id).span, "cannot add " + given + " to " + describe(now) +
+                                       ": a length is one unit; \\setlength it instead");
+          return nullptr;
+        }
+        v.val += now.val;
+      }
+      nums().lengths.set(key, v);
       return nullptr;
     }
     if (name == "stepcounter") {
@@ -2065,6 +2125,7 @@ private:
    *  flushleft or flushright, their lines aligned so, with \topsep's 8pt.
    *  A \centering in any of them lasts to its end. */
   void blockLines(Label& l, NodeId id, Alignment align, const char* skip) {
+    LengthScope scope;  // an environment is a group
     lineBreak(l);
     if (l.drawn) l.gap = skip;
     l.indentNext = false;
@@ -2147,6 +2208,9 @@ private:
   void blockGroup(Label& l, NodeId id) {
     const Node& x = node(id);
     const bool declaration = x.kind == NodeKind::declaration;
+    // A group ends what a length was set to in it; a declaration is not one.
+    std::unique_ptr<LengthScope> scope;
+    if (!declaration) scope = std::make_unique<LengthScope>();
     // What came before is set without the declaration.
     beforeProse(l);
     endProse(l);
@@ -2199,6 +2263,7 @@ private:
         blockLines(l, id, align, x.aux == 4 ? "1.2em" : "0.8em");
       } else if (isTransparentGroup(id)) {
         // \centering lasts to the end of the group it is in.
+        LengthScope scope;
         const Alignment was = l.align;
         feedLines(l, child(id, 0));
         l.align = was;
@@ -2772,6 +2837,49 @@ private:
     } else {
       (*nums().labels)[key] = nums().current;
     }
+  }
+
+  /** The name of the length an argument names, `\tabcolsep` as `tabcolsep`.
+   *  For \setlength and \addtolength the length has to be defined, or this
+   *  warns and answers empty; \newlength's is a new name. */
+  std::string lengthName(NodeId id, std::uint32_t arg, bool mustExist) {
+    std::string name = trimmed(rawOf(child(id, arg)));
+    if (!name.empty() && name[0] == '\\') name.erase(0, 1);
+    if (name.empty() || (mustExist && !nums().lengths.known(name))) {
+      _diags.warn(node(id).span, "length `\\" + name + "' is not defined: \\newlength makes one");
+      return std::string();
+    }
+    return name;
+  }
+
+  /** Whether `s` is a length: a number and a unit, or a number of a length
+   *  that is defined (`2\tabcolsep`, `\textwidth`). Units::getDimen() reads
+   *  any word as a unit, in pixels, so it cannot say. */
+  bool isLengthText(const std::string& s) {
+    static const std::set<std::string> units = {"em", "ex", "pt", "bp", "pc", "cm", "mm", "in",
+                                                "sp", "dd", "cc", "mu", "px"};
+    std::size_t i = 0;
+    if (i < s.size() && (s[i] == '+' || s[i] == '-')) i++;
+    while (i < s.size() && (std::isdigit(static_cast<unsigned char>(s[i])) != 0 || s[i] == '.')) i++;
+    std::string rest = trimmed(s.substr(i));
+    if (rest.empty()) return false;
+    if (rest[0] == '\\') {
+      const std::string name = trimmed(rest.substr(1));
+      return name == "textwidth" || name == "linewidth" || name == "columnwidth" ||
+             nums().lengths.known(name);
+    }
+    for (char& c : rest) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return units.count(rest) > 0;
+  }
+
+  /** `1.5em`, for a message. */
+  static std::string describe(const Dimen& d) {
+    std::ostringstream out;
+    out << d.val;
+    static const char* names[] = {"em", "ex", "px", "bp", "pc", "mu", "cm", "mm", "in", "sp", "pt", "dd", "cc", "tt", "tw"};
+    const int unit = static_cast<int>(d.unit);
+    if (unit >= 0 && unit < 15) out << names[unit];
+    return out.str();
   }
 
   bool counterIsKnown(const std::string& key) {
