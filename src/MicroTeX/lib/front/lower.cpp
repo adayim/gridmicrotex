@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "utils/counter_format.h"
 #include "atom/atom.h"
 #include "atom/atom_basic.h"
 #include "atom/atom_char.h"
@@ -130,11 +131,14 @@ struct Numbering {
    *  letter: 3a, 3b. */
   bool sub = false;
   int subIndex = 0;
-  /** A theorem counter, and the section it was last stepped in: it starts
-   *  again from 1 in the next. */
+  /** A counter: a theorem's, with the section it was last stepped in (it
+   *  starts again from 1 in the next), or one \newcounter made, with the
+   *  counter it is `parent` of (\newcounter{c}[parent]), which sets it to
+   *  zero when it steps. */
   struct Counter {
     int value = 0;
     std::string where;
+    std::string parent;
   };
   std::map<std::string, Counter> counters;
   /** What a \label names now, as \@currentlabel: the number of the last
@@ -664,11 +668,45 @@ private:
       (*nums().bibitems)[trimmed(rawOf(child(id, 0)))] = label;
       return nullptr;
     }
-    if (name == "setcounter") {
-      if (trimmed(rawOf(child(id, 0))) == "equation") {
-        nums().equation = std::atoi(trimmed(rawOf(child(id, 1))).c_str());
+    if (name == "gmnewcounter") {
+      const std::string key = trimmed(rawOf(child(id, 0)));
+      if (counterIsKnown(key)) {
+        _diags.warn(node(id).span, "counter `" + key + "' is already defined");
+        return nullptr;
       }
+      Numbering::Counter c;
+      c.parent = trimmed(rawOf(child(id, 1)));
+      nums().counters[key] = c;
       return nullptr;
+    }
+    if (name == "setcounter" || name == "addtocounter") {
+      int* v = counterOf(id, trimmed(rawOf(child(id, 0))));
+      int n = 0;
+      if (v != nullptr && counterNumber(id, rawOf(child(id, 1)), n)) *v = name == "setcounter" ? n : *v + n;
+      return nullptr;
+    }
+    if (name == "stepcounter") {
+      const std::string key = trimmed(rawOf(child(id, 0)));
+      if (counterOf(id, key) != nullptr) stepCounter(key);
+      return nullptr;
+    }
+    // \refstepcounter{c} in the prelude is \stepcounter{c}\gmcurrentlabel{\thec}.
+    if (name == "gmcurrentlabel") {
+      nums().current = withCounterValues(id, rawOf(child(id, 0)));
+      return nullptr;
+    }
+    if (name == "value") {
+      const int* v = counterOf(id, trimmed(rawOf(child(id, 0))));
+      return v == nullptr ? nullptr : literalText(std::to_string(*v));
+    }
+    if (isCounterStyle(name)) {
+      // `\roman{12}` has always been the number itself, not a counter's.
+      const std::string given = trimmed(rawOf(child(id, 0)));
+      if (!given.empty() && given.find_first_not_of("0123456789") == std::string::npos) {
+        return literalText(formatCounter(name, std::atoi(given.c_str())));
+      }
+      const int* v = counterOf(id, given);
+      return v == nullptr ? nullptr : literalText(formatCounter(name, *v));
     }
     if (name == "ref" || name == "eqref") return reference(id, name == "eqref");
     // What LaTeX draws for a reference it cannot resolve: a bold ??. A grob
@@ -2734,6 +2772,96 @@ private:
     } else {
       (*nums().labels)[key] = nums().current;
     }
+  }
+
+  bool counterIsKnown(const std::string& key) {
+    return key == "equation" || key == "section" || key == "subsection" || key == "subsubsection" ||
+           nums().counters.count(key) > 0;
+  }
+
+  /** Whether `name` is one of the commands that write a counter. */
+  static bool isCounterStyle(const std::string& name) {
+    static const std::set<std::string> styles = {"arabic", "roman", "Roman", "alph", "Alph", "fnsymbol"};
+    return styles.count(name) > 0;
+  }
+
+  /** The value of the counter `name`: the ones LaTeX has that the engine
+   *  keeps itself, and the ones \newcounter and \newtheorem made. Null, with
+   *  a warning, for none. */
+  int* counterOf(NodeId at, const std::string& name) {
+    if (name == "equation") return &nums().equation;
+    if (name == "section") return &_section[0];
+    if (name == "subsection") return &_section[1];
+    if (name == "subsubsection") return &_section[2];
+    const auto it = nums().counters.find(name);
+    if (it != nums().counters.end()) return &it->second.value;
+    _diags.warn(node(at).span, "no counter `" + name + "': \\newcounter makes one");
+    return nullptr;
+  }
+
+  /** A counter's number: an integer, or \value{other}. */
+  bool counterNumber(NodeId at, const std::string& raw, int& out) {
+    const std::string s = trimmed(raw);
+    if (s.rfind("\\value{", 0) == 0 && s.back() == '}') {
+      const int* other = counterOf(at, trimmed(s.substr(7, s.size() - 8)));
+      if (other == nullptr) return false;
+      out = *other;
+      return true;
+    }
+    char* end = nullptr;
+    const long v = std::strtol(s.c_str(), &end, 10);
+    if (s.empty() || *end != '\0') {
+      _diags.warn(node(at).span, "`" + s + "' is not a number for a counter");
+      return false;
+    }
+    out = static_cast<int>(v);
+    return true;
+  }
+
+  /** \stepcounter: one more, and every counter made `within` it starts again. */
+  void stepCounter(const std::string& name) {
+    if (name == "equation") {
+      nums().equation++;
+    } else if (name == "section" || name == "subsection" || name == "subsubsection") {
+      _section[name == "section" ? 0 : name == "subsection" ? 1 : 2]++;
+    } else {
+      nums().counters[name].value++;
+    }
+    resetCountersWithin(name);
+  }
+
+  void resetCountersWithin(const std::string& parent) {
+    for (auto& entry : nums().counters) {
+      if (entry.second.parent != parent) continue;
+      entry.second.value = 0;
+      resetCountersWithin(entry.first);
+    }
+  }
+
+  /** LaTeX source with the numbers its counters have now: `\arabic{c}` and the
+   *  other styles replaced by their text, so a \label made from \thec keeps the
+   *  number the counter had then. */
+  std::string withCounterValues(NodeId at, const std::string& source) {
+    static const char* styles[] = {"arabic", "roman", "Roman", "alph", "Alph", "fnsymbol"};
+    std::string out;
+    for (std::size_t i = 0; i < source.size();) {
+      bool replaced = false;
+      if (source[i] == '\\') {
+        for (const char* style : styles) {
+          const std::string head = std::string("\\") + style + "{";
+          if (source.compare(i, head.size(), head) != 0) continue;
+          const std::size_t close = source.find('}', i + head.size());
+          if (close == std::string::npos) break;
+          const int* v = counterOf(at, trimmed(source.substr(i + head.size(), close - i - head.size())));
+          if (v != nullptr) out += formatCounter(style, *v);
+          i = close + 1;
+          replaced = true;
+          break;
+        }
+      }
+      if (!replaced) out += source[i++];
+    }
+    return out;
   }
 
   /** The colour `spec` names, or TRANSPARENT -- no colour, so the colour

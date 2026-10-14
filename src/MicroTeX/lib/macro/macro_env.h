@@ -15,6 +15,7 @@
 #include "macro/macro.h"
 #include "macro/macro_colors.h"
 #include "macro/macro_decl.h"
+#include "utils/counter_format.h"
 #include "utils/exceptions.h"
 #include "utils/string_utils.h"
 
@@ -445,35 +446,6 @@ inline std::vector<std::string> listSplitItems(const std::string& body) {
   }
   if (started) items.push_back(cur);
   return items;
-}
-
-inline std::string listRoman(int n) {
-  static const int v[] = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
-  static const char* s[] =
-    {"m", "cm", "d", "cd", "c", "xc", "l", "xl", "x", "ix", "v", "iv", "i"};
-  std::string r;
-  for (int k = 0; k < 13 && n > 0; k++) {
-    while (n >= v[k]) {
-      r += s[k];
-      n -= v[k];
-    }
-  }
-  return r;
-}
-
-inline std::string listAlph(int n) {
-  std::string r;
-  while (n > 0) {
-    n--;
-    r = (char)('a' + n % 26) + r;
-    n /= 26;
-  }
-  return r;
-}
-
-inline std::string listToUpper(std::string s) {
-  for (char& c : s) c = (char)std::toupper((unsigned char)c);
-  return s;
 }
 
 // Build the enumerate marker for item index `n` (1-based) from a label
