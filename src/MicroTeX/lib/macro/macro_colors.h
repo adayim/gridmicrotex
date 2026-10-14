@@ -45,7 +45,7 @@ inline cmdmacro(colorbox) {
   auto body = args.formula(2, args.isMathMode());
   // A colour that is not defined paints nothing, and \colorbox has no frame to leave.
   if (isTransparent(c)) return body;
-  return sptrOf<FBoxAtom>(body, c, c);
+  return sptrOf<FBoxAtom>(body, c, c, false);
 }
 
 inline cmdmacro(fcolorbox) {
