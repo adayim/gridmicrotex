@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -144,6 +145,22 @@ struct Numbering {
    *  read: one may come before its label. */
   std::shared_ptr<std::map<std::string, std::string>> labels =
     std::make_shared<std::map<std::string, std::string>>();
+  /** thebibliography's items: key -> what \cite draws for it, its label or
+   *  its number. Shared, as `labels` is, with the citations, which draw only
+   *  when the whole input has been read. */
+  std::shared_ptr<std::map<std::string, std::string>> bibitems =
+    std::make_shared<std::map<std::string, std::string>>();
+  /** The unlabelled items so far, which number them. */
+  int bibcount = 0;
+  /** The citations of the whole input, checked once it is read. A table cell
+   *  or a list item is lowered by a Lowerer of its own, so they are kept here
+   *  and not in the Lowerer. */
+  struct Citation {
+    std::vector<std::string> keys;
+    SourceSpan at;
+    std::string form;
+  };
+  std::vector<Citation> cites;
 };
 
 Numbering* numbering = nullptr;
@@ -233,6 +250,51 @@ private:
   std::shared_ptr<std::map<std::string, std::string>> _labels;
   std::string _key;
   bool _parentheses;
+};
+
+/** \cite and natbib's kin: each key's \bibitem label, looked up when the atom
+ *  is built into a box -- the bibliography is usually after the citation --
+ *  and a bold ? where there is none. */
+class CitationAtom : public Atom {
+public:
+  CitationAtom(std::shared_ptr<std::map<std::string, std::string>> items, std::vector<std::string> keys,
+               std::string form, sptr<Atom> pre, sptr<Atom> post)
+      : _items(std::move(items)),
+        _keys(std::move(keys)),
+        _form(std::move(form)),
+        _pre(std::move(pre)),
+        _post(std::move(post)) {}
+
+  sptr<Box> createBox(Env& env) override {
+    const auto text = [](const std::string& s) { return sptrOf<TextAtom>(s, false); };
+    auto row = sptrOf<RowAtom>();
+    // natbib: \citet names the author it does not have, \citealp has no brackets.
+    if (_form == "citet") row->add(text("(author?) "));
+    const bool brackets = _form != "citealp";
+    if (brackets) row->add(text("["));
+    if (_pre != nullptr) {
+      row->add(_pre);
+      row->add(text(" "));
+    }
+    for (std::size_t i = 0; i < _keys.size(); i++) {
+      if (i > 0) row->add(text(", "));
+      const auto it = _items->find(_keys[i]);
+      sptr<Atom> label = it == _items->end() ? nullptr : buildFragment(it->second, false);
+      row->add(label != nullptr ? label : sptrOf<FontStyleAtom>(FontStyle::bf, false, text("?")));
+    }
+    if (_post != nullptr) {
+      row->add(text(", "));
+      row->add(_post);
+    }
+    if (brackets) row->add(text("]"));
+    return row->createBox(env);
+  }
+
+private:
+  std::shared_ptr<std::map<std::string, std::string>> _items;
+  std::vector<std::string> _keys;
+  std::string _form;
+  sptr<Atom> _pre, _post;
 };
 
 class Lowerer {
@@ -593,6 +655,15 @@ private:
       nums().sub = false;
       return nullptr;
     }
+    // thebibliography's \bibitem, which the prelude writes as an \item and
+    // this: the key's label, or the next number when it has none (LaTeX's
+    // \@lbibitem does not step the counter), which \cite draws.
+    if (name == "gmbibitem") {
+      std::string label = trimmed(rawOf(child(id, 1)));
+      if (label.empty()) label = std::to_string(++nums().bibcount);
+      (*nums().bibitems)[trimmed(rawOf(child(id, 0)))] = label;
+      return nullptr;
+    }
     if (name == "setcounter") {
       if (trimmed(rawOf(child(id, 0))) == "equation") {
         nums().equation = std::atoi(trimmed(rawOf(child(id, 1))).c_str());
@@ -607,36 +678,26 @@ private:
     };
     if (name == "pageref") return bold("??");
     if (isCitation(name)) {
-      // What LaTeX draws for citations it cannot resolve: a bold ? for each
-      // key, then the note, in brackets -- `\cite[p.~3]{a,b}` is [?, ?, p. 3].
-      // natbib's take a note before as well, `\citep[see][p.~3]{a}`, or one
-      // after alone; \citet names the author it does not have, and
-      // \citealp has no brackets.
+      // `\cite[p.~3]{a,b}`: the label of each key's \bibitem, then the note,
+      // in brackets. natbib's take a note before as well,
+      // `\citep[see][p.~3]{a}`, or one after alone; \citet names the author
+      // it does not have, and \citealp has no brackets. A key no \bibitem
+      // names is what LaTeX draws for one it cannot resolve, a bold ?
+      // (CitationAtom), and said once the whole input is read.
       const std::string keys = rawOf(child(id, count(id) - 1));
       std::string pre, post = rawOf(child(id, 0));
       if (name != "cite" && node(child(id, 1)).flag) {
         pre = post;
         post = rawOf(child(id, 1));
       }
-      auto row = sptrOf<RowAtom>();
-      if (name == "citet") row->add(literalText("(author?) "));
-      const bool brackets = name != "citealp";
-      if (brackets) row->add(literalText("["));
-      if (!pre.empty()) {
-        row->add(fragment(pre, false));
-        row->add(literalText(" "));
-      }
-      const auto n = std::count(keys.begin(), keys.end(), ',') + 1;
-      for (std::ptrdiff_t i = 0; i < n; i++) {
-        if (i > 0) row->add(literalText(", "));
-        row->add(bold("?"));
-      }
-      if (!post.empty()) {
-        row->add(literalText(", "));
-        row->add(fragment(post, false));
-      }
-      if (brackets) row->add(literalText("]"));
-      return row;
+      std::vector<std::string> list;
+      std::stringstream in(keys);
+      for (std::string k; std::getline(in, k, ',');) list.push_back(trimmed(k));
+      if (list.empty()) list.emplace_back();
+      nums().cites.push_back({list, node(id).span, name});
+      return sptrOf<CitationAtom>(nums().bibitems, std::move(list), name,
+                                  pre.empty() ? nullptr : fragment(pre, false),
+                                  post.empty() ? nullptr : fragment(post, false));
     }
     // No page to put the note on, so its text is set where it was written.
     // Its optional number has no note to number.
@@ -682,7 +743,9 @@ private:
     }
     // At the top of a cell, \color colours the cell rather than what follows.
     if (name == "color" && f.isArrayMode()) {
-      return sptrOf<CellForegroundAtom>(ColorAtom::getColor(stripComments(rawOf(child(id, 0)))));
+      const color c = colourOf(id, stripComments(rawOf(child(id, 0))));
+      if (isTransparent(c)) return nullptr;
+      return sptrOf<CellForegroundAtom>(c);
     }
     // A longtable's marker ends its row, and draws nothing.
     if (isLongtableMarker(name)) return nullptr;
@@ -1057,6 +1120,7 @@ private:
     // the old parser only (definitions, \over and kin, ...).
     if (cm == nullptr) return unknownAtom(name);
     TreeArgs a(*this, node(id).mode == Mode::math, std::move(args), std::move(nodes), &f);
+    a.reportAt(node(id).span, "\\" + name);
     try {
       return cm->call(a);
     } catch (const std::exception& e) {
@@ -1254,7 +1318,7 @@ private:
         return sized(a == nullptr ? sptrOf<EmptyAtom>() : a, sizeFactor(name));
       }
       if (name == "color") {
-        const color c = ColorAtom::getColor(rawOf(child(id, 0)));
+        const color c = colourOf(id, rawOf(child(id, 0)));
         return sptrOf<ColorAtom>(body(), TRANSPARENT, c);
       }
       if (name == "fontsize") {
@@ -2509,6 +2573,16 @@ private:
     };
 
     bool noted = false;
+    // A colour is applied to every cell it covers: said once per name.
+    std::set<std::string> badColours;
+    const auto tblrColour = [&](const std::string& spec) {
+      color c = TRANSPARENT;
+      if (ColorAtom::parseColor(spec, c)) return c;
+      if (badColours.insert(spec).second) {
+        _diags.warn(node(env).span, "undefined colour `" + trimmed(spec) + "': the colour is not changed");
+      }
+      return static_cast<color>(TRANSPARENT);
+    };
     for (int k = 0; k < n; k++) {
       const NodeId row = rows[static_cast<std::size_t>(k)];
       rule(k + 1);
@@ -2531,10 +2605,12 @@ private:
                                               true);
         }
         if (!s.background.empty()) {
-          arr->addCellSpecifier(sptrOf<CellColorAtom>(ColorAtom::getColor(s.background)));
+          const color bg = tblrColour(s.background);
+          if (!isTransparent(bg)) arr->addCellSpecifier(sptrOf<CellColorAtom>(bg));
         }
         if (!s.foreground.empty()) {
-          arr->addCellSpecifier(sptrOf<CellForegroundAtom>(ColorAtom::getColor(s.foreground)));
+          const color fg = tblrColour(s.foreground);
+          if (!isTransparent(fg)) arr->addCellSpecifier(sptrOf<CellForegroundAtom>(fg));
         }
         const int span = std::min(s.colspan, static_cast<int>(cells - c));
         if (span > 1 || !s.halign.empty()) {
@@ -2660,6 +2736,16 @@ private:
     }
   }
 
+  /** The colour `spec` names, or TRANSPARENT -- no colour, so the colour
+   *  around stays -- with a warning at `id`: xcolor stops with "Undefined
+   *  color", and we recover. */
+  color colourOf(NodeId id, const std::string& spec) {
+    color c = TRANSPARENT;
+    if (ColorAtom::parseColor(spec, c)) return c;
+    _diags.warn(node(id).span, "undefined colour `" + trimmed(spec) + "': the colour is not changed");
+    return TRANSPARENT;
+  }
+
   /** \ref and \eqref, drawn when the whole input has been read. */
   sptr<Atom> reference(NodeId id, bool parentheses) {
     const std::string key = trimmed(rawOf(child(id, 0)));
@@ -2675,6 +2761,14 @@ private:
       // `?\?)` so that `??)` is not read as a trigraph.
       _diags.warn(ref.at, "reference `" + ref.key + "' is undefined: drawn as " +
                             (ref.parentheses ? "(?\?)" : "??"));
+    }
+    for (const auto& c : nums().cites) {
+      const std::string drawn = c.form == "citet" ? "(author?) [?]" : c.form == "citealp" ? "?" : "[?]";
+      for (const auto& key : c.keys) {
+        // No key at all is a missing argument, which the parser has said.
+        if (key.empty() || nums().bibitems->count(key) > 0) continue;
+        _diags.warn(c.at, "citation `" + key + "' is undefined: drawn as " + drawn);
+      }
     }
   }
 

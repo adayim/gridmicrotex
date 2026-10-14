@@ -259,6 +259,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   // endregion
   // region colors
   mac(3, macro_definecolor, "definecolor"),
+  mac(2, macro_colorlet, "colorlet"),
   mac(2, macro_fgcolor, "fgcolor"),
   mac(2, macro_bgcolor, "bgcolor"),
   mac(2, macro_textcolor, "textcolor"),

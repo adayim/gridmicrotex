@@ -184,6 +184,9 @@ private:
   static std::map<std::string, color> _colors;
   static const color _default;
 
+  /** One colour, no mixing: what parseColor() reads between the `!`s. */
+  static bool lookup(std::string name, color& out);
+
   color _background, _color;
   // RowAtom for which the color settings apply
   sptr<RowAtom> _elements;
@@ -217,6 +220,13 @@ public:
    * or a predefined color name. Return black if not found.
    */
   static color getColor(std::string name);
+
+  /** An xcolor expression -- `red`, `red!50`, `red!30!blue`, `blue!20!black!60`,
+   *  `-red` -- or one of the engine's own forms (`#RRGGBB`, `#AARRGGBB`, six or
+   *  eight hex digits, `r,g,b`, `c,m,y,k`, a gray from 0 to 1). False, and `out`
+   *  untouched, when a name in it is not defined or a percentage is not a
+   *  number. */
+  static bool parseColor(std::string spec, color& out);
 
   /** Whether `name` is a colour that is defined: one of the names, not a guess. */
   static bool hasName(std::string name);

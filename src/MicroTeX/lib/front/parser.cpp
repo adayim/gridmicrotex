@@ -709,16 +709,11 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
         // No argument at all: parseArgument() has said so.
       } else if (name == "footnote") {
         _diags.warn(at, "\\footnote has no page to put a note on: its text is drawn here");
-      } else if (isCitation(name)) {
-        // What natbib draws for its own: \citet names an author it does
-        // not have, \citealp drops the brackets.
-        const std::string drawn = name == "citet" ? "(author?) [?]" : name == "citealp" ? "?" : "[?]";
-        _diags.warn(at, "citation `" + key + "' is undefined: drawn as " + drawn);
       } else if (name == "pageref") {
         _diags.warn(at, "reference `" + key + "' is undefined: drawn as ??");
       }
-      // \ref and \eqref name a label, which may come after them: the
-      // lowering, which sees them all, says which are undefined.
+      // \ref, \eqref and \cite name a label or a \bibitem, which may come
+      // after them: the lowering, which sees them all, says which are undefined.
       return _ast.add(std::move(n), args);
     }
     if (name == "par") {

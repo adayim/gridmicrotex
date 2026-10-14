@@ -202,8 +202,10 @@ is read as LaTeX reads one, with `\newcommand`, `\def`, `\newenvironment`,
 ## Limitations
 
 - A package from a TeX installation is not read.
-- `\pageref` draws `??` and `\cite` draws `[?]`, with a warning, and so
-  does a `\ref` to a label that is not there.
+- `\pageref` draws `??`, with a warning. `\cite` draws the number of its
+  `\bibitem`, so a `thebibliography` in the same text is cited; a key none
+  names draws `[?]`, with a warning, and so does a `\ref` to a label that is
+  not there.
 - A footnote's text is set where it is written.
 - Tables and figures are placed where they are written.
 - `\maketitle` draws nothing.

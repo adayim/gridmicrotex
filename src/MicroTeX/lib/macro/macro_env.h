@@ -13,6 +13,7 @@
 #include "env/units.h"
 #include "front/tblr.h"
 #include "macro/macro.h"
+#include "macro/macro_colors.h"
 #include "macro/macro_decl.h"
 #include "utils/exceptions.h"
 #include "utils/string_utils.h"
@@ -336,8 +337,8 @@ inline cmdmacro(multirow) {
 inline cmdmacro(cellcolor) {
   ArrayFormula* arr = args.alignmentHere();
   if (arr == nullptr) throw ex_parse("Command \\cellcolor must used in array environment!");
-  color c = ColorAtom::getColor(args.text(1));
-  arr->addCellSpecifier(sptrOf<CellColorAtom>(c));
+  color c = colourArg(args, args.text(1));
+  if (!isTransparent(c)) arr->addCellSpecifier(sptrOf<CellColorAtom>(c));
   return nullptr;
 }
 
@@ -347,21 +348,21 @@ inline cmdmacro(newcolumntype) {
 }
 
 inline cmdmacro(arrayrulecolor) {
-  color c = ColorAtom::getColor(args.text(1));
-  MatrixAtom::LINE_COLOR = c;
+  color c = colourArg(args, args.text(1));
+  if (!isTransparent(c)) MatrixAtom::LINE_COLOR = c;
   return nullptr;
 }
 
 inline cmdmacro(columnbg) {
-  color c = ColorAtom::getColor(args.text(1));
-  return sptrOf<CellColorAtom>(c);
+  color c = colourArg(args, args.text(1));
+  return isTransparent(c) ? nullptr : sptrOf<CellColorAtom>(c);
 }
 
 inline cmdmacro(rowcolor) {
   ArrayFormula* arr = args.alignmentHere();
   if (arr == nullptr) throw ex_parse("Command \\rowcolor must used in array environment!");
-  color c = ColorAtom::getColor(args.text(1));
-  arr->addRowSpecifier(sptrOf<CellColorAtom>(c));
+  color c = colourArg(args, args.text(1));
+  if (!isTransparent(c)) arr->addRowSpecifier(sptrOf<CellColorAtom>(c));
   return nullptr;
 }
 

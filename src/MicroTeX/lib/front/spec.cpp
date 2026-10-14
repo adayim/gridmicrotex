@@ -206,6 +206,7 @@ struct Table {
     add({"everymath"}, "r");
     add({"dnomstyle", "numstyle", "substyle", "supstyle"}, "m");
     add({"definecolor"}, "rrr");
+    add({"colorlet"}, "rr");
     add({"fgcolor", "bgcolor", "textcolor", "colorbox"}, "rc");
     add({"fcolorbox"}, "rrc");
     add({",", ":", ";", "thinspace", "medspace", "thickspace", "!", "negthinspace",
@@ -263,6 +264,8 @@ struct Table {
     add({"tag", "gmtagstar"}, "t");
     add({"notag", "nonumber"}, "");
     add({"label"}, "r");
+    // thebibliography's \bibitem{key}{label}, which the prelude writes.
+    add({"gmbibitem"}, "rr");
     add({"setcounter"}, "rr");
     // amsmath's subequations, which the prelude writes with these two.
     add({"gmsubeqbegin", "gmsubeqend"}, "");

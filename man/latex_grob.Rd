@@ -132,9 +132,10 @@ an error.
 LaTeX from a document can be pasted as it is: the output of
 \code{knitr::kable()} or \code{xtable}, a \code{table} float, or a paper's body with
 \code{input_mode = "document"}. The preamble, \verb{\\maketitle} and \verb{\\label} draw
-nothing, and \verb{\\caption} is drawn where it is written. \verb{\\ref} and
-\verb{\\pageref} draw \verb{??}, \verb{\\eqref} draws \verb{(??)} and \verb{\\cite} draws \verb{[?]},
-with a warning. A footnote is set where it is written, and equations
+nothing, and \verb{\\caption} is drawn where it is written. \verb{\\pageref} draws
+\verb{??}. \verb{\\cite} draws the number of its \verb{\\bibitem}; a \verb{\\ref}, \verb{\\eqref} or
+\verb{\\cite} that names nothing in the text draws \verb{??}, \verb{(??)} or \verb{[?]}, with
+a warning. A footnote is set where it is written, and equations
 are not numbered.
 
 Not supported: \verb{\\tag}, \verb{\verb}, \verb{\\textsc}, switches such as \verb{\\bfseries}

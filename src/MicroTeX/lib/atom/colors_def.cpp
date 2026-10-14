@@ -1,3 +1,6 @@
+#include <cmath>
+#include <vector>
+
 #include "atom_basic.h"
 #include "utils/string_utils.h"
 
@@ -15,6 +18,7 @@ static const map<string, microtex::color> builtinColors{
   {"green",   green  },
   {"blue",    blue   },
   {"cyan",    cyan   },
+  {"aqua",    cyan   },  // CSS's name for it, which KaTeX's examples use
   {"magenta", magenta},
   {"yellow",  yellow },
   c("greenyellow", 0.15f, 0.f, 0.69f, 0.f),
@@ -91,28 +95,47 @@ bool ColorAtom::hasName(std::string name) {
   return _colors.find(name) != _colors.end() || _colors.find(toLower(name)) != _colors.end();
 }
 
-color ColorAtom::getColor(std::string name) {
-  if (name.empty()) return _default;
-  trim(name);
+namespace {
 
-  // #AARRGGBB formatted color
-  if (name[0] == '#') return decodeColor(name);
-  if (name.find(',') == string::npos) {
+bool isHex(const std::string& s) {
+  return !s.empty() && s.find_first_not_of("0123456789abcdefABCDEF") == string::npos;
+}
+
+bool isNumber(const std::string& s) {
+  return !s.empty() && s.find_first_not_of("0123456789.") == string::npos;
+}
+
+}  // namespace
+
+bool ColorAtom::lookup(std::string name, color& out) {
+  trim(name);
+  if (name.empty()) return false;
+  if (name[0] == '#') {
+    if ((name.size() != 7 && name.size() != 9) || !isHex(name.substr(1))) return false;
+    out = decodeColor(name);
+    return true;
+  }
+  if (name.find(',') == string::npos && name.find(';') == string::npos) {
     // find from predefined colors; a name is case-sensitive, as LaTeX's
     // are, and the predefined ones are lower case
     auto it = _colors.find(name);
     if (it == _colors.end()) it = _colors.find(toLower(name));
-    if (it != _colors.end()) return it->second;
+    if (it != _colors.end()) {
+      out = it->second;
+      return true;
+    }
     // AARRGGBB formatted color
-    if (name.find('.') == string::npos) return decodeColor("#" + name);
+    if ((name.size() == 6 || name.size() == 8) && isHex(name)) {
+      out = decodeColor("#" + name);
+      return true;
+    }
     // gray color
+    if (!isNumber(name)) return false;
     float x = 0.f;
     valueOf(name, x);
-    if (x != 0.f) {
-      float g = min(1.f, max(x, 0.f));
-      return rgb(g, g, g);
-    }
-    return _default;
+    const float g = min(1.f, max(x, 0.f));
+    out = rgb(g, g, g);
+    return true;
   }
 
   auto en = string::npos;
@@ -129,7 +152,10 @@ color ColorAtom::getColor(std::string name) {
     valueOf(trim(G), g);
     valueOf(trim(B), b);
 
-    if (r == 0.f && g == 0.f && b == 0.f) return _default;
+    if (r == 0.f && g == 0.f && b == 0.f) {
+      out = _default;
+      return true;
+    }
 
     // clang-format off
     if (r == (int) r && g == (int) g && b == (int) b &&
@@ -139,12 +165,14 @@ color ColorAtom::getColor(std::string name) {
       int ir = (int)min(255.f, max(0.f, r));
       int ig = (int)min(255.f, max(0.f, g));
       int ib = (int)min(255.f, max(0.f, b));
-      return rgb(ir, ig, ib);
+      out = rgb(ir, ig, ib);
+      return true;
     }
     r = min(1.f, max(0.f, r));
     g = min(1.f, max(0.f, g));
     b = min(1.f, max(0.f, b));
-    return rgb(r, g, b);
+    out = rgb(r, g, b);
+    return true;
   } else if (n == 4) {
     // CMYK model
     float c = 0.f, m = 0.f, y = 0.f, k = 0.f;
@@ -157,15 +185,71 @@ color ColorAtom::getColor(std::string name) {
     valueOf(trim(Y), y);
     valueOf(trim(K), k);
 
-    if (c == 0.f && m == 0.f && y == 0.f && k == 0.f) return _default;
+    if (c == 0.f && m == 0.f && y == 0.f && k == 0.f) {
+      out = _default;
+      return true;
+    }
 
     c = min(1.f, max(0.f, c));
     m = min(1.f, max(0.f, m));
     y = min(1.f, max(0.f, y));
     k = min(1.f, max(0.f, k));
 
-    return cmyk(c, m, y, k);
+    out = cmyk(c, m, y, k);
+    return true;
   }
 
-  return _default;
+  return false;
+}
+
+bool ColorAtom::parseColor(std::string spec, color& out) {
+  trim(spec);
+  // xcolor's prefix: each `-` takes the complement.
+  bool complement = false;
+  size_t i = 0;
+  while (i < spec.size() && spec[i] == '-') {
+    complement = !complement;
+    i++;
+  }
+  // name!pct!name!pct!...: each step mixes pct of what came before with the
+  // next colour, white when the expression ends on a percentage.
+  std::vector<std::string> parts;
+  for (size_t from = i;;) {
+    const size_t bang = spec.find('!', from);
+    parts.push_back(spec.substr(from, bang == string::npos ? string::npos : bang - from));
+    if (bang == string::npos) break;
+    from = bang + 1;
+  }
+  color first = 0;
+  if (!lookup(parts[0], first)) return false;
+  if (parts.size() == 1 && !complement) {
+    out = first;  // a single colour keeps its alpha
+    return true;
+  }
+  float r = color_r(first), g = color_g(first), b = color_b(first);
+  for (size_t k = 1; k < parts.size(); k += 2) {
+    std::string pct = parts[k];
+    trim(pct);
+    if (!isNumber(pct)) return false;
+    float p = 0.f;
+    valueOf(pct, p);
+    p = min(100.f, max(0.f, p)) / 100.f;
+    color next = white;
+    if (k + 1 < parts.size() && !lookup(parts[k + 1], next)) return false;
+    r = p * r + (1.f - p) * static_cast<float>(color_r(next));
+    g = p * g + (1.f - p) * static_cast<float>(color_g(next));
+    b = p * b + (1.f - p) * static_cast<float>(color_b(next));
+  }
+  if (complement) {
+    r = 255.f - r;
+    g = 255.f - g;
+    b = 255.f - b;
+  }
+  out = rgb(static_cast<int>(std::lround(r)), static_cast<int>(std::lround(g)), static_cast<int>(std::lround(b)));
+  return true;
+}
+
+color ColorAtom::getColor(std::string name) {
+  color c = _default;
+  return parseColor(std::move(name), c) ? c : _default;
 }

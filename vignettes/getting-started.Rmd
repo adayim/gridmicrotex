@@ -547,7 +547,7 @@ it, and its LaTeX file, wherever you ask.
 
 ## Not supported
 
-- Pages: `\pageref` draws `??` and `\cite` draws `[?]`.
+- Pages: `\pageref` draws `??`.
 - Automatic hyphenation, and TikZ beyond `tikz-cd` diagrams.
 - `\usepackage` loads only the packages that come with gridmicrotex and files
   you give to `load_sty()`; a package from a TeX installation is not read.
