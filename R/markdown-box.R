@@ -353,10 +353,10 @@
   spec <- paste0(prefix, "X")
   if (fixed && avail > 0 && ncol > 0) {
     # Each column costs its width plus the inter-column separation, which
-    # defaults to 1em. Subtract that share or the table overshoots the
-    # measure it was asked to fit into.
+    # defaults to 2 \tabcolsep, 1.2em. Subtract that share or the table
+    # overshoots the measure it was asked to fit into.
     gap_est <- .md_css_length(r_td[["padding-left"]], base, base,
-                              horizontal = TRUE) %||% base
+                              horizontal = TRUE) %||% (1.2 * base)
     per <- max(avail / ncol - gap_est, base)
     spec <- paste0(prefix, sprintf("p{%.2fpt}", per))
   }

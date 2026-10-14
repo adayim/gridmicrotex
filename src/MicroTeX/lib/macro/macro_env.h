@@ -42,11 +42,20 @@ inline cmdmacro(eqnarrayATATenv) {
   return table;
 }
 
+/** A table's column gap is 2\tabcolsep in text and 2\arraycolsep in math, as in LaTeX. */
+inline void setColumnSepOf(MatrixAtom& table, CommandArgs& args) {
+  Dimen half = Units::getDimen(args.isMathMode() ? "\\arraycolsep" : "\\tabcolsep");
+  if (!half.isValid()) return;
+  half.val *= 2.f;
+  table.setColumnSep(half);
+}
+
 // tabular*{width}{columns} and tabularx{width}{columns}.
 inline sptr<Atom> widthTable(CommandArgs& args, bool spread) {
   const auto arr = args.alignment(3);
   arr->checkDimensions();
   auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(2), true);
+  setColumnSepOf(*table, args);
   table->setTableWidth(Units::getDimen(args.text(1)), spread);
   return table;
 }
@@ -64,7 +73,9 @@ inline cmdmacro(tabularxATATenv) {
 inline cmdmacro(longtableATATenv) {
   const auto arr = args.alignment(2);
   arr->checkDimensions();
-  return sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
+  auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
+  setColumnSepOf(*table, args);
+  return table;
 }
 
 // tabularray's tblr[options]{spec}: a tabular, of the columns its spec gives.
@@ -72,13 +83,16 @@ inline cmdmacro(tblrATATenv) {
   const auto arr = args.alignment(2);
   arr->checkDimensions();
   const auto spec = front::parseTblr("", args.text(1));
-  return sptrOf<MatrixAtom>(args.isPartial(), arr, front::tblrColumns(spec, arr->cols()), true);
+  auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, front::tblrColumns(spec, arr->cols()), true);
+  setColumnSepOf(*table, args);  // tabularray's colsep is 6pt too
+  return table;
 }
 
 inline cmdmacro(arrayATATenv) {
   const auto arr = args.alignment(2);
   arr->checkDimensions();
   auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
+  setColumnSepOf(*table, args);
   // tabular is this handler too: a table of text keeps the engine's rows.
   if (arr->_rows == "jot") {
     table->setRowSpacing(RowSpacing::jot);

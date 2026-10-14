@@ -759,14 +759,17 @@ private:
       const int* v = counterOf(id, trimmed(rawOf(child(id, 0))));
       return v == nullptr ? nullptr : literalText(std::to_string(*v));
     }
+    // A counter's name or, for `\roman{12}`, which has always been the number
+    // itself, a number; anything else (enumitem's `\roman*`) is not for this.
     if (isCounterStyle(name)) {
-      // `\roman{12}` has always been the number itself, not a counter's.
       const std::string given = trimmed(rawOf(child(id, 0)));
-      if (!given.empty() && given.find_first_not_of("0123456789") == std::string::npos) {
-        return literalText(formatCounter(name, std::atoi(given.c_str())));
+      const bool number = !given.empty() && given.find_first_not_of("0123456789") == std::string::npos;
+      const bool word = !given.empty() && std::isalpha(static_cast<unsigned char>(given[0])) != 0;
+      if (number) return literalText(formatCounter(name, std::atoi(given.c_str())));
+      if (word) {
+        const int* v = counterOf(id, given);
+        return v == nullptr ? nullptr : literalText(formatCounter(name, *v));
       }
-      const int* v = counterOf(id, given);
-      return v == nullptr ? nullptr : literalText(formatCounter(name, *v));
     }
     if (name == "ref" || name == "eqref") return reference(id, name == "eqref");
     // What LaTeX draws for a reference it cannot resolve: a bold ??. A grob
@@ -1853,7 +1856,9 @@ private:
    *  size a grob is drawn at. There is no \parskip: LaTeX separates
    *  paragraphs by this indent, not by space between them. */
   static sptr<Atom> parIndent() {
-    return sptrOf<SpaceAtom>(UnitType::em, 1.5f, 0.f, 0.f);
+    const Dimen d = Units::getDimen("\\parindent");
+    if (!d.isValid() || d.val == 0.f) return nullptr;
+    return sptrOf<SpaceAtom>(d.unit, d.val, 0.f, 0.f);
   }
 
   // --- headings --------------------------------------------------------------
@@ -1924,7 +1929,9 @@ private:
     if (!l.indentNext) return;
     l.indentNext = false;
     // \centering and \raggedleft set \parindent to 0, as LaTeX's do.
-    if (l.align == Alignment::left && l.indents) l.line->add(parIndent());
+    if (l.align == Alignment::left && l.indents) {
+      if (const auto indent = parIndent()) l.line->add(indent);
+    }
   }
 
   /** The current line is done: centred or put to the right, if it was set
@@ -2006,6 +2013,8 @@ private:
     if (brk != kNoNode && node(brk).aux == 1) {
       l.indentNext = !l.afterHeading;
       l.afterHeading = false;
+      // \parskip, when the input made it more than the nothing article has.
+      if (l.drawn && l.gap.empty() && !Units::getDimen("\\parskip").isEmpty()) l.gap = "\\parskip";
     }
     l.afterBreak = true;
   }

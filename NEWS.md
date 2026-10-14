@@ -6,6 +6,8 @@
 - Bug fix: the rows of matrices, `cases`, `align` and kin were closer together than in LaTeX, and a `\frac` in a matrix was too large.
 - Bug fix: a display holding only its number, such as `\[\tag{1}\]`, crashed when set at a width.
 - Bug fix: a colour such as `red!50` was drawn black, so `\rowcolor{gray!10}` painted a row black. Colours are now mixed as in xcolor, and a colour that is not defined warns instead of drawing black. New `\colorlet`.
+- `\parbox`, `\setlength`, `\addtolength`, `\newlength` and counters (`\newcounter`, `\setcounter`, `\stepcounter`, `\arabic`, ...) now work. `\parindent`, `\parskip`, `\tabcolsep` and `\arraycolsep` can be set.
+- Bug fix: text tables had 1em between their columns and at their edges, 2pt less than LaTeX's `\tabcolsep`; they are now padded as LaTeX pads them.
 - `\cite` draws the number of its `\bibitem` (or its `[label]`) instead of `[?]`, before or after the `thebibliography`, and `\bibitem[label]` is marked with its label.
 
 # gridmicrotex 0.2.0

@@ -335,7 +335,7 @@ vector<float> MatrixAtom::getColumnSep(Env& env, float width) {
   switch (_matType) {
     case MatrixType::array: {
       // Array: (hsep_col/2 or 0) elem hsep_col elem hsep_col ... hsep_col elem (hsep_col/2 or 0)
-      Hsep = _hsep.createBox(env);
+      Hsep = (_colSep.isValid() ? SpaceAtom(_colSep.unit, _colSep.val, 0.f, 0.f) : _hsep).createBox(env);
       for (int i = 0; i < cols; i++) {
         if (_position[i] == Alignment::none) {
           arr[i] = arr[i + 1] = 0;
