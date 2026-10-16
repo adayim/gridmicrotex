@@ -152,6 +152,10 @@ struct Numbering {
    *  read: one may come before its label. */
   std::shared_ptr<std::map<std::string, std::string>> labels =
     std::make_shared<std::map<std::string, std::string>>();
+  /** What `\subref` draws for a label: the letter of its subfigure or subtable, "" where it is neither. */
+  std::shared_ptr<std::map<std::string, std::string>> sublabels =
+    std::make_shared<std::map<std::string, std::string>>();
+  std::string subCurrent;
   /** thebibliography's items: key -> what \cite draws for it, its label or
    *  its number. Shared, as `labels` is, with the citations, which draw only
    *  when the whole input has been read. */
@@ -251,6 +255,26 @@ public:
 private:
   FontDefaults* _outer;
   FontDefaults _own;
+};
+
+/** A float's caption with `\abovecaptionskip` over it: TeX puts the glue in the vertical list, so no baselineskip
+ *  follows it and the distance from the line above is its depth, the skip and the caption's height. The box takes the
+ *  skip as height, less the line skip the stacking adds when the two are too close for the baselineskip. */
+class SkipAboveAtom : public Atom {
+public:
+  /** `ems` of the text around: LaTeX's 10pt and 6pt are 1em and 0.6em of its 10pt class, and a grob's size varies. */
+  SkipAboveAtom(sptr<Atom> base, float ems) : _base(std::move(base)), _ems(ems) {}
+
+  sptr<Box> createBox(Env& env) override {
+    sptr<Box> box = _base->createBox(env);
+    const float skip = _ems * env.em() - env.baselineSkip() / 12.f;
+    if (skip > 0.f) box->_height += skip;
+    return box;
+  }
+
+private:
+  sptr<Atom> _base;
+  float _ems;
 };
 
 /** \ref and \eqref: the text of the label they name, looked up when the
@@ -381,6 +405,11 @@ private:
   bool _inPreamble = false;
   /** The document of the whole input is being lowered, so a \footnote has a note to leave for its foot. */
   bool _pageNotes = false;
+  /** The float being lowered, `figure` or `table`, and the sub-float in it, `subfigure` or `subtable` (the prelude's
+   *  environments say so with \gmfloat and \gmsubfloat): what a \caption numbers, and by which counter. */
+  std::string _floatKind, _subKind;
+  /** A document's caption is a line of its own, which is what \abovecaptionskip is a skip above; in a label it shares one. */
+  bool _captionOwnLine = false;
 
   /** What an alignment's row, or a display, says about its own number:
    *  \notag, \tag, and the labels written in it. */
@@ -823,7 +852,37 @@ private:
     // break that ends its line after it.
     if (name == "caption") {
       const NodeId text = child(id, count(id) - 1);
-      return sptrOf<FontStyleAtom>(FontStyle::rm, false, argumentFormula(text, rawOf(text), false));
+      const sptr<Atom> body = argumentFormula(text, rawOf(text), false);
+      const std::string label = node(id).star ? std::string() : captionLabel();
+      sptr<Atom> line = body;
+      if (!label.empty()) {
+        // "Figure 1: text", "Table 1: text", or in a sub-float "(a) text", as LaTeX and subcaption set them.
+        auto row = sptrOf<RowAtom>();
+        row->add(fragment(label, false));
+        row->add(body);
+        line = row;
+      }
+      if (_floatKind.empty() || !_captionOwnLine) return sptrOf<FontStyleAtom>(FontStyle::rm, false, line);
+      // In a float: \abovecaptionskip (10pt, 1em of LaTeX's 10pt) above it, as \@makecaption sets one; a subcaption
+      // is \small with 6pt (subcaption.sty).
+      const bool sub = !_subKind.empty();
+      if (sub) line = sized(line, 0.9f);
+      return sptrOf<SkipAboveAtom>(sptrOf<FontStyleAtom>(FontStyle::rm, false, line), sub ? 0.6f : 1.f);
+    }
+    if (name == "gmfloat") {
+      _floatKind = trimmed(rawOf(child(id, 0)));
+      _subKind.clear();
+      if (!_floatKind.empty()) nums().counters["sub" + _floatKind].value = 0;
+      return nullptr;
+    }
+    if (name == "gmsubfloat") {
+      _subKind = trimmed(rawOf(child(id, 0)));
+      return nullptr;
+    }
+    if (name == "subref") {
+      const std::string key = trimmed(rawOf(child(id, 0)));
+      if (_numbering.outermost()) _refs.push_back({key, node(id).span, false});
+      return sptrOf<RefAtom>(nums().sublabels, key, false);
     }
     if (name == "url" || name == "href") return link(id, f);
     if (name == "textsc") {
@@ -2348,7 +2407,9 @@ private:
         lineBreak(l);
         l.indentNext = false;
         beforeProse(l);
+        _captionOwnLine = true;
         lowerItem(id, prose(l));
+        _captionOwnLine = false;
       } else if (l.document && x.kind == NodeKind::command && !x.flag && x.text == "paragraph") {
         // \paragraph starts a paragraph of its own, flush left with LaTeX's
         // 3.25ex above it, and runs into it.
@@ -2371,6 +2432,10 @@ private:
                                              : Alignment::left;
           if (!l.broken) l.lineAlign = l.align;
         }
+      } else if (x.kind == NodeKind::command && !x.flag && (x.text == "gmfloat" || x.text == "gmsubfloat")) {
+        // What a float is: state of the lowering, not text, so the spaces round it stay as they were.
+        Formula state;
+        lowerItem(id, state);
       } else if (x.kind == NodeKind::command && !x.flag && isHeadingLine(x.text)) {
         headingLine(l, id);
       } else if (isSpace(x)) {
@@ -3037,7 +3102,25 @@ private:
       _note.labels.push_back(key);
     } else {
       (*nums().labels)[key] = nums().current;
+      (*nums().sublabels)[key] = nums().subCurrent;
     }
+  }
+
+  /** What a \caption in a float starts with, and the number a \label after it names: "Figure 1: " (the counter steps
+   *  here, as \refstepcounter does in \caption), or in a subfigure "(a) ", whose label is the figure's number, which the
+   *  main caption will take, and the letter. Nothing outside a float. */
+  std::string captionLabel() {
+    if (_floatKind.empty()) return std::string();
+    if (!_subKind.empty()) {
+      const std::string letter = formatCounter("alph", ++nums().counters[_subKind].value);
+      nums().current = std::to_string(nums().counters[_floatKind].value + 1) + letter;
+      nums().subCurrent = letter;
+      return "(" + letter + ")~";
+    }
+    const int n = ++nums().counters[_floatKind].value;
+    nums().current = std::to_string(n);
+    nums().subCurrent.clear();
+    return std::string(_floatKind == "table" ? "Table" : "Figure") + "~" + std::to_string(n) + ": ";
   }
 
   /** The name of the length an argument names, `\tabcolsep` as `tabcolsep`.

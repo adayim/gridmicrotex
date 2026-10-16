@@ -253,7 +253,9 @@ struct Table {
     // cite, no counter to refer to and no page to put a note on. Each is
     // read so that it warns and draws what LaTeX draws when it cannot
     // resolve one, instead of coming out red as an unknown command.
-    add({"ref", "pageref", "eqref"}, "r", Shape::prefix, Bare::none, true);
+    add({"ref", "pageref", "eqref", "subref"}, "r", Shape::prefix, Bare::none, true);
+    // The floats say what a \caption numbers: the prelude's figure, table, subfigure and subtable.
+    add({"gmfloat", "gmsubfloat"}, "r");
     add({"cite"}, "Rr", Shape::prefix, Bare::none, true);
     // natbib's: \citep[post]{keys} or \citep[pre][post]{keys}.
     add({"citep", "citet", "citealp"}, "RRr", Shape::prefix, Bare::none, true);
@@ -344,7 +346,7 @@ bool isFloatEnvironment(const std::string& name) {
 
 bool isBlockEnvironment(const std::string& name) {
   return name == "abstract" || name == "thebibliography" || name == "proof" ||
-         name == "subequations";
+         name == "subequations" || isFloatEnvironment(name);
 }
 
 bool isCitation(const std::string& name) {
