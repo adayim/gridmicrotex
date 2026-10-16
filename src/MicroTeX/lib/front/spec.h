@@ -134,6 +134,9 @@ bool isVerbatimEnvironment(const std::string& name);
  *  headings and paragraphs in it as its own. */
 bool isBlockEnvironment(const std::string& name);
 
+/** cleveref's \cref, \Cref, \crefrange, \Crefrange and hyperref's \autoref: references that name a kind. */
+bool isCrossReference(const std::string& name);
+
 /** \cite, and natbib's \citep, \citet and \citealp. */
 bool isCitation(const std::string& name);
 

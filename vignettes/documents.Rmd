@@ -140,7 +140,8 @@ As in LaTeX:
   `equation`, `align`, `gather` and `multline` are centred on their own
   line. The last four are numbered at the right margin, a row each
   (`multline`: one), unless starred or marked `\notag`; `\tag{x}` sets a
-  number, and `\label` with `\ref` or `\eqref` refer to it. `subequations`
+  number, and `\label` with `\ref`, `\eqref`, `\cref` or `\autoref` refer to it
+  (`\cref` names what it refers to: "eq. (1)", "fig. 2", "section 3"). `subequations`
   numbers its equations 1a, 1b, ..., and `numcases{left side}` is a
   brace of cases with a number each.
 - **Lists and tables.** `itemize`, `enumerate`, `description` and

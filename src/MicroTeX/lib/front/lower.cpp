@@ -148,6 +148,18 @@ struct Numbering {
   /** What a \label names now, as \@currentlabel: the number of the last
    *  equation or heading. */
   std::string current;
+  /** What kind of thing `current` numbers, for \cref and \autoref: equation, figure, table, section, subsection,
+   *  subsubsection, paragraph, `thm:` and the environment's title, or "" for a number of no kind. */
+  std::string currentKind;
+  /** label -> the kind of what it names. Shared with the references, as `labels` is. */
+  std::shared_ptr<std::map<std::string, std::string>> kinds =
+    std::make_shared<std::map<std::string, std::string>>();
+  /** \cref, \Cref, \autoref and the range forms of the whole input, checked once it is read. */
+  struct CrossRef {
+    std::vector<std::string> keys;
+    SourceSpan at;
+  };
+  std::vector<CrossRef> crossrefs;
   /** label -> the text a reference to it draws, as LaTeX source. Shared
    *  with the references, which draw only when the whole input has been
    *  read: one may come before its label. */
@@ -306,6 +318,192 @@ private:
   std::shared_ptr<std::map<std::string, std::string>> _labels;
   std::string _key;
   bool _parentheses;
+};
+
+/** \cref, \Cref, \autoref and \crefrange: the kind of each label named and its number, as cleveref and hyperref set
+ *  them -- "eq. (1)", "Figure 2", "eqs. (1) to (3) and (5)", "eq. (1), fig. 1, and table 2" -- looked up when the atom
+ *  is built into a box, the labels being known by then, and a bold ?? for one that is not. Read against pdflatex's
+ *  output (scratchpad/col/rc.tex, c.tex): the names are cleveref's defaults in English (abbreviated by \cref, full
+ *  and capitalised by \Cref), the labels of one kind are joined by "," and "and" and a run of three or more
+ *  consecutive numbers is "a to c", and groups of different kinds are joined by "and", or "," and ", and". */
+class CrossRefAtom : public Atom {
+public:
+  enum class Form { cref, Cref, autoref };
+
+  CrossRefAtom(std::shared_ptr<std::map<std::string, std::string>> labels,
+               std::shared_ptr<std::map<std::string, std::string>> kinds, std::vector<std::string> keys, Form form,
+               bool range)
+      : _labels(std::move(labels)), _kinds(std::move(kinds)), _keys(std::move(keys)), _form(form), _range(range) {}
+
+  sptr<Box> createBox(Env& env) override {
+    sptr<Atom> text = buildFragment(compose(), false);
+    if (text == nullptr) text = sptrOf<EmptyAtom>();
+    return text->createBox(env);
+  }
+
+private:
+  struct Item {
+    std::string key, kind, number;
+    bool defined = false;
+  };
+
+  /** How a kind is named: cleveref's abbreviations for \cref, its full names capitalised for \Cref, hyperref's for
+   *  \autoref. A theorem's is its title (`thm:Title`). */
+  struct Names {
+    std::string one, many;
+    bool parentheses = false;
+  };
+
+  static std::string lower(std::string s) {
+    for (char& c : s) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    return s;
+  }
+
+  Names namesOf(const std::string& kind) const {
+    struct Row {
+      const char *abbr, *abbrMany, *full, *fullMany, *autoName;
+      bool parentheses;
+    };
+    static const std::map<std::string, Row> table = {
+      {"equation", {"eq.", "eqs.", "Equation", "Equations", "Equation", true}},
+      {"figure", {"fig.", "figs.", "Figure", "Figures", "Figure", false}},
+      {"table", {"table", "tables", "Table", "Tables", "Table", false}},
+      {"section", {"section", "sections", "Section", "Sections", "section", false}},
+      {"subsection", {"section", "sections", "Section", "Sections", "subsection", false}},
+      {"subsubsection", {"section", "sections", "Section", "Sections", "subsubsection", false}},
+      {"paragraph", {"paragraph", "paragraphs", "Paragraph", "Paragraphs", "paragraph", false}},
+      {"subparagraph", {"paragraph", "paragraphs", "Paragraph", "Paragraphs", "subparagraph", false}}};
+    Names n;
+    const auto it = table.find(kind);
+    if (it != table.end()) {
+      const Row& r = it->second;
+      n.parentheses = r.parentheses && _form != Form::autoref;  // hyperref prints "Equation 1", cleveref "equation (1)"
+      if (_form == Form::cref) {
+        n.one = r.abbr;
+        n.many = r.abbrMany;
+      } else if (_form == Form::Cref) {
+        n.one = r.full;
+        n.many = r.fullMany;
+      } else {
+        n.one = n.many = r.autoName;
+      }
+    } else if (kind.compare(0, 4, "thm:") == 0) {
+      // \newtheorem{lem}{Lemma}: "lemma 1" and "lemmas 1 and 2"; \Cref and \autoref keep the title as it is.
+      const std::string title = kind.substr(4);
+      n.one = _form == Form::cref ? lower(title) : title;
+      n.many = n.one + "s";
+    }
+    return n;
+  }
+
+  /** The digits at the end of a number and what stands before them: `2.3` is `2.` and 3. */
+  static bool split(const std::string& number, std::string& prefix, long& last) {
+    std::size_t i = number.size();
+    while (i > 0 && std::isdigit(static_cast<unsigned char>(number[i - 1])) != 0) i--;
+    if (i == number.size() || number.size() - i > 9) return false;
+    prefix = number.substr(0, i);
+    last = std::stol(number.substr(i));
+    return true;
+  }
+
+  static bool follows(const Item& a, const Item& b) {
+    std::string pa, pb;
+    long la = 0, lb = 0;
+    return split(a.number, pa, la) && split(b.number, pb, lb) && pa == pb && lb == la + 1;
+  }
+
+  /** Numbers in the order they are numbered: by their parts, numerically where both are numbers. */
+  static bool before(const Item& a, const Item& b) {
+    std::size_t i = 0, j = 0;
+    while (i < a.number.size() && j < b.number.size()) {
+      if (std::isdigit(static_cast<unsigned char>(a.number[i])) != 0 &&
+          std::isdigit(static_cast<unsigned char>(b.number[j])) != 0) {
+        std::size_t ie = i, je = j;
+        while (ie < a.number.size() && std::isdigit(static_cast<unsigned char>(a.number[ie])) != 0) ie++;
+        while (je < b.number.size() && std::isdigit(static_cast<unsigned char>(b.number[je])) != 0) je++;
+        const long x = std::atol(a.number.substr(i, ie - i).c_str()), y = std::atol(b.number.substr(j, je - j).c_str());
+        if (x != y) return x < y;
+        i = ie;
+        j = je;
+      } else {
+        if (a.number[i] != b.number[j]) return a.number[i] < b.number[j];
+        i++;
+        j++;
+      }
+    }
+    return a.number.size() < b.number.size();
+  }
+
+  static std::string join(const std::vector<std::string>& parts, const std::string& last) {
+    std::string out;
+    for (std::size_t i = 0; i < parts.size(); i++) {
+      if (i > 0) out += i + 1 == parts.size() ? last : ", ";
+      out += parts[i];
+    }
+    return out;
+  }
+
+  std::string compose() const {
+    std::vector<Item> items;
+    for (const std::string& key : _keys) {
+      Item it;
+      it.key = key;
+      const auto n = _labels->find(key);
+      const auto k = _kinds->find(key);
+      it.defined = n != _labels->end();
+      if (it.defined) it.number = n->second;
+      if (k != _kinds->end()) it.kind = k->second;
+      items.push_back(std::move(it));
+    }
+    // \crefrange{a}{b}: "eqs. (1) to (5)", the name of the first.
+    if (_range && items.size() == 2 && items[0].defined && items[1].defined &&
+        namesOf(items[0].kind).one == namesOf(items[1].kind).one) {
+      const Names names = namesOf(items[0].kind);
+      const auto shown = [&](const Item& i) { return names.parentheses ? "(" + i.number + ")" : i.number; };
+      std::string out = names.many.empty() ? "" : names.many + "~";
+      return out + shown(items[0]) + " to " + shown(items[1]);
+    }
+    // Groups: consecutive labels of one kind.
+    std::vector<std::string> groups;
+    for (std::size_t from = 0; from < items.size();) {
+      std::size_t to = from + 1;
+      // One group while the name is the same: cleveref calls a subsection "section" too, so they are "sections 1 and 1.1".
+      while (to < items.size() && items[from].defined && items[to].defined &&
+             namesOf(items[to].kind).one == namesOf(items[from].kind).one) {
+        to++;
+      }
+      std::vector<Item> group(items.begin() + static_cast<std::ptrdiff_t>(from),
+                              items.begin() + static_cast<std::ptrdiff_t>(to));
+      from = to;
+      if (!group[0].defined) {
+        groups.push_back("\\textbf{??}");
+        continue;
+      }
+      std::sort(group.begin(), group.end(), before);
+      const Names names = namesOf(group[0].kind);
+      const auto shown = [&](const Item& i) { return names.parentheses ? "(" + i.number + ")" : i.number; };
+      // Three or more in a row are "a to c".
+      std::vector<std::string> parts;
+      for (std::size_t i = 0; i < group.size();) {
+        std::size_t j = i;
+        while (j + 1 < group.size() && follows(group[j], group[j + 1])) j++;
+        if (j - i >= 2) {
+          parts.push_back(shown(group[i]) + " to " + shown(group[j]));
+        } else {
+          for (std::size_t k = i; k <= j; k++) parts.push_back(shown(group[k]));
+        }
+        i = j + 1;
+      }
+      const std::string name = group.size() > 1 ? names.many : names.one;
+      groups.push_back((name.empty() ? "" : name + "~") + join(parts, " and "));
+    }
+    return join(groups, groups.size() <= 2 ? " and " : ", and ");
+  }
+
+  std::shared_ptr<std::map<std::string, std::string>> _labels, _kinds;
+  std::vector<std::string> _keys;
+  Form _form;
+  bool _range;
 };
 
 /** \cite and natbib's kin: each key's \bibitem label, looked up when the atom
@@ -787,6 +985,7 @@ private:
     // \refstepcounter{c} in the prelude is \stepcounter{c}\gmcurrentlabel{\thec}.
     if (name == "gmcurrentlabel") {
       nums().current = withCounterValues(id, rawOf(child(id, 0)));
+      nums().currentKind.clear();
       return nullptr;
     }
     if (name == "value") {
@@ -812,6 +1011,26 @@ private:
       return sptrOf<FontStyleAtom>(FontStyle::bf, false, literalText(s));
     };
     if (name == "pageref") return bold("??");
+    if (isCrossReference(name)) {
+      // \cref{a,b}, \autoref{a}, \crefrange{a}{b}: the kind of each label and its number, drawn once the whole input
+      // is read; a key no \label names is ?? and said then.
+      const bool range = name == "crefrange" || name == "Crefrange";
+      std::vector<std::string> keys;
+      if (range) {
+        keys = {trimmed(rawOf(child(id, 0))), trimmed(rawOf(child(id, 1)))};
+      } else if (name == "autoref") {
+        keys = {trimmed(rawOf(child(id, 0)))};
+      } else {
+        std::stringstream in(rawOf(child(id, 0)));
+        for (std::string k; std::getline(in, k, ',');) keys.push_back(trimmed(k));
+        if (keys.empty()) keys.emplace_back();
+      }
+      nums().crossrefs.push_back({keys, node(id).span});
+      const auto form = name == "autoref"                          ? CrossRefAtom::Form::autoref
+                        : (name == "Cref" || name == "Crefrange") ? CrossRefAtom::Form::Cref
+                                                                   : CrossRefAtom::Form::cref;
+      return sptrOf<CrossRefAtom>(nums().labels, nums().kinds, std::move(keys), form, range);
+    }
     if (isCitation(name)) {
       // `\cite[p.~3]{a,b}`: the label of each key's \bibitem, then the note,
       // in brackets. natbib's take a note before as well,
@@ -1082,6 +1301,7 @@ private:
       c.where = where;
       number = (where.empty() ? "" : where + ".") + std::to_string(++c.value);
       nums().current = number;
+      nums().currentKind = "thm:" + title;
     }
     const std::string name = title + (number.empty() ? "" : "\\ " + number);
     const bool italic = style == "remark";
@@ -1988,7 +2208,11 @@ private:
     const Node& x = node(id);
     const int level = headingLevel(x.text);
     const std::string number = headingNumber(level, x.star);
-    if (!number.empty()) nums().current = number;
+    if (!number.empty()) {
+      nums().current = number;
+      static const char* kinds[] = {"section", "subsection", "subsubsection", "paragraph", "subparagraph"};
+      nums().currentKind = kinds[std::min(std::max(level, 0), 4)];
+    }
     // The number and the quad after it, and the title: the last argument
     // (the first is the short one). Each is made once -- the title's
     // warnings are said once -- and shared by both settings below.
@@ -3203,6 +3427,7 @@ private:
     nums().sub = true;
     nums().subIndex = 0;
     nums().current = std::to_string(++nums().equation);
+    nums().currentKind = "equation";
   }
 
   /** A row, or a display, is done: its number or tag, and its labels. */
@@ -3228,8 +3453,12 @@ private:
     if (tag != nullptr) {
       arr._rowTags[row] = tag;
       nums().current = text;
+      nums().currentKind = "equation";
     }
-    for (const auto& key : n.labels) (*nums().labels)[key] = nums().current;
+    for (const auto& key : n.labels) {
+      (*nums().labels)[key] = nums().current;
+      (*nums().kinds)[key] = nums().currentKind;
+    }
   }
 
   /** The content of a display, `$$...$$` or `\[...\]`: its list, with a
@@ -3260,6 +3489,7 @@ private:
     } else {
       (*nums().labels)[key] = nums().current;
       (*nums().sublabels)[key] = nums().subCurrent;
+      (*nums().kinds)[key] = nums().currentKind;
     }
   }
 
@@ -3271,11 +3501,13 @@ private:
     if (!_subKind.empty()) {
       const std::string letter = formatCounter("alph", ++nums().counters[_subKind].value);
       nums().current = std::to_string(nums().counters[_floatKind].value + 1) + letter;
+      nums().currentKind = _floatKind;
       nums().subCurrent = letter;
       return "(" + letter + ")~";
     }
     const int n = ++nums().counters[_floatKind].value;
     nums().current = std::to_string(n);
+    nums().currentKind = _floatKind;
     nums().subCurrent.clear();
     return std::string(_floatKind == "table" ? "Table" : "Figure") + "~" + std::to_string(n) + ": ";
   }
@@ -3438,6 +3670,12 @@ private:
       // `?\?)` so that `??)` is not read as a trigraph.
       _diags.warn(ref.at, "reference `" + ref.key + "' is undefined: drawn as " +
                             (ref.parentheses ? "(?\?)" : "??"));
+    }
+    for (const auto& c : nums().crossrefs) {
+      for (const auto& key : c.keys) {
+        if (key.empty() || nums().labels->count(key) > 0) continue;
+        _diags.warn(c.at, "reference `" + key + "' is undefined: drawn as ??");
+      }
     }
     for (const auto& c : nums().cites) {
       const std::string drawn = c.form == "citet" ? "(author?) [?]" : c.form == "citealp" ? "?" : "[?]";

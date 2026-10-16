@@ -260,6 +260,9 @@ struct Table {
     // read so that it warns and draws what LaTeX draws when it cannot
     // resolve one, instead of coming out red as an unknown command.
     add({"ref", "pageref", "eqref", "subref"}, "r", Shape::prefix, Bare::none, true);
+    // cleveref's and hyperref's references, which name the kind of what they refer to.
+    add({"cref", "Cref", "autoref"}, "r", Shape::prefix, Bare::none, true);
+    add({"crefrange", "Crefrange"}, "rr", Shape::prefix, Bare::none, true);
     // The floats say what a \caption numbers: the prelude's figure, table, subfigure and subtable.
     add({"gmfloat", "gmsubfloat"}, "r");
     // multicol's \columnbreak: where the columns of a multicols are cut.
@@ -367,6 +370,10 @@ bool isVerbatimEnvironment(const std::string& name) {
 bool isBlockEnvironment(const std::string& name) {
   return name == "abstract" || name == "thebibliography" || name == "proof" ||
          name == "subequations" || isFloatEnvironment(name);
+}
+
+bool isCrossReference(const std::string& name) {
+  return name == "cref" || name == "Cref" || name == "autoref" || name == "crefrange" || name == "Crefrange";
 }
 
 bool isCitation(const std::string& name) {

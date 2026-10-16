@@ -701,7 +701,7 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
       items.push_back(_ast.add(std::move(n), args));
       return lineBreak(at, mode);
     }
-    if (name == "ref" || name == "pageref" || name == "eqref" || isCitation(name)) {
+    if (name == "ref" || name == "pageref" || name == "eqref" || isCitation(name) || isCrossReference(name)) {
       std::vector<NodeId> args;
       for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
       const Node& last = _ast.node(args.back());
