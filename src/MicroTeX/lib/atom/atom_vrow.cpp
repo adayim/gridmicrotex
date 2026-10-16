@@ -1,10 +1,13 @@
 #include "atom/atom_vrow.h"
 
+#include <algorithm>
+
 #include "atom/atom_row.h"
 #include "box/box_group.h"
 #include "box/box_single.h"
 #include "core/split.h"
 #include "env/env.h"
+#include "graphic/graphic.h"
 
 using namespace microtex;
 using namespace std;
@@ -60,6 +63,23 @@ const VBox* rowsOf(const sptr<Box>& box) {
       if (child->_height + child->_depth <= 0.f) continue;
       if (found != nullptr) return nullptr;
       found = rowsOf(child);
+      if (found == nullptr) return nullptr;
+    }
+    return found;
+  }
+  return nullptr;
+}
+
+/** The columns of a multicols that `box` is, or wraps alone (a line holds nothing else). */
+const ColumnsBox* columnsOf(const sptr<Box>& box) {
+  if (const auto* c = dynamic_cast<const ColumnsBox*>(box.get())) return c;
+  if (const auto* d = dynamic_cast<const DecorBox*>(box.get())) return columnsOf(d->_base);
+  if (const auto* h = dynamic_cast<const HBox*>(box.get())) {
+    const ColumnsBox* found = nullptr;
+    for (const auto& child : h->_children) {
+      if (child->_height + child->_depth <= 0.f) continue;
+      if (found != nullptr) return nullptr;
+      found = columnsOf(child);
       if (found == nullptr) return nullptr;
     }
     return found;
@@ -160,6 +180,8 @@ sptr<Box> VRowAtom::createBox(Env& env) {
         if (const auto* d = dynamic_cast<DisplayAtom*>(_elements[i + 1].get()); d != nullptr && d->fullWidth()) {
           if (const VBox* rows = rowsOf(boxes[i + 1])) height = rows->_children.front()->_height;
         }
+        // Columns of lines are measured from their last line's depth too.
+        if (const ColumnsBox* c = columnsOf(boxes[i])) depth = c->_lastDepth;
         vb->add(sptrOf<StrutBox>(0.f, env.interline(depth, height), 0.f, 0.f));
       }
       float skip = 0.f;
@@ -274,6 +296,242 @@ sptr<Box> MinipageAtom::createBox(Env& env) {
   vb->_depth = total - baseline;
   if (!measured) return vb;
   return sptrOf<HBox>(vb, width, Alignment::left);
+}
+
+namespace {
+
+/** The frame, the fills and the two boxes of a tcolorbox, drawn from its top-left corner. */
+class TcolorboxBox : public Box {
+public:
+  TcolorboxBox(const TcolorboxStyle& style, const sptr<Box>& title, const sptr<Box>& body, float width, float rule,
+               float arc, float titleBand, float titleTop, float bodyTop, float height, float left)
+      : _style(style), _title(title), _body(body), _rule(rule), _arc(arc), _band(titleBand), _titleTop(titleTop),
+        _bodyTop(bodyTop), _left(left) {
+    _width = width;
+    _height = height;
+    _depth = 0.f;
+  }
+
+  void draw(Graphics2D& g2, float x, float y) override {
+    const color was = g2.getColor();
+    const float top = y - _height;
+    const float outer = _arc > 0.f ? _rule + _arc : 0.f;
+    const auto round = [&](color c, float rx, float ry, float rw, float rh, float r) {
+      g2.setColor(c);
+      if (r > 0.f) {
+        g2.fillRoundRect(rx, ry, rw, rh, r, r);
+      } else {
+        g2.fillRect(rx, ry, rw, rh);
+      }
+    };
+    // The frame: its colour over the whole box, the fills over what is inside it.
+    if (_rule > 0.f) round(_style.frame, x, top, _width, _height, outer);
+    const float ix = x + _rule, iw = _width - 2 * _rule, iy = top + _rule, ih = _height - 2 * _rule;
+    float by = iy, bh = ih;
+    if (_title != nullptr) {
+      by = iy + _band + _rule;
+      bh = ih - _band - _rule;
+      if (!isTransparent(_style.backTitle)) {
+        // Rounded at the top only: the lower corners are drawn over by the rule and the body.
+        const float extra = std::min(2 * _arc, _rule + bh);
+        round(_style.backTitle, ix, iy, iw, _band + extra, _arc);
+        g2.setColor(_style.frame);
+        g2.fillRect(ix, iy + _band, iw, _rule);
+      }
+    }
+    round(_style.back, ix, by, iw, bh, _arc);
+    if (_arc > 0.f && _title != nullptr) {
+      // The body is square where it meets the title.
+      g2.setColor(_style.back);
+      g2.fillRect(ix, by, iw, std::min(_arc, bh));
+    }
+    g2.setColor(was);
+    if (_title != nullptr) _title->draw(g2, x + _left, iy + _titleTop + _title->_height);
+    _body->draw(g2, x + _left, by + _bodyTop + _body->_height);
+  }
+
+  int lastFontId() override { return _body->lastFontId(); }
+
+  std::vector<sptr<Box>> descendants() const override {
+    return _title != nullptr ? std::vector<sptr<Box>>{_title, _body} : std::vector<sptr<Box>>{_body};
+  }
+
+  bool isSingle() const override { return false; }
+
+  boxname(TcolorboxBox);
+
+private:
+  TcolorboxStyle _style;
+  sptr<Box> _title, _body;
+  // The frame's rule and inner arc, the title's band, and from the inside's top (title) or the body region's top
+  // (body) to the box drawn there; `_left` is where both start from the left edge.
+  float _rule, _arc, _band, _titleTop, _bodyTop, _left;
+};
+
+}  // namespace
+
+sptr<Box> TcolorboxAtom::createBox(Env& env) {
+  const float em = env.em();
+  const TcolorboxStyle& s = _style;
+  const float rule = s.rule * em, arc = s.sharp ? 0.f : s.arc * em, left = s.left * em, right = s.right * em;
+  const float top = s.top * em, bottom = s.bottom * em, sep = s.boxsep * em;
+  const float lead = rule + left + sep;
+  const float sides = lead + rule + right + sep;
+  const float measure = env.textWidth();
+  const auto setBox = [&](const sptr<Atom>& atom, float width) {
+    sptr<Box> box;
+    {
+      // The breaker needs word-level runs, as in a minipage.
+      const MergeTextGuard guard(true);
+      box = env.withTextWidth(width, [&](Env& e) { return atom->createBox(e); });
+    }
+    if (width != POS_INF) box = BoxSplitter::split(box, width, env.baselineSkip()).second;
+    return box;
+  };
+  const float inner = measure == POS_INF ? POS_INF : std::max(measure - sides, 0.f);
+  sptr<Box> body = setBox(_body, inner);
+  sptr<Box> title = _title != nullptr ? setBox(_title, inner) : nullptr;
+  const float width = measure == POS_INF
+                        ? sides + std::max(body->_width, title != nullptr ? title->_width : 0.f)
+                        : measure;
+  // From the top of the inside: the title's band, and the body's room.
+  const float band = title != nullptr ? title->_height + title->_depth + 2 * sep : 0.f;
+  const float bodyRoom = top + sep + body->_height + body->_depth + sep + bottom;
+  const float height = 2 * rule + (title != nullptr ? band + rule : 0.f) + bodyRoom;
+  return sptrOf<TcolorboxBox>(s, title, body, width, rule, arc, band, sep, top + sep, height, lead);
+}
+
+namespace {
+
+class ColumnBreakBox : public Box {
+public:
+  void draw(Graphics2D&, float, float) override {}
+  boxname(ColumnBreakBox);
+};
+
+bool hasColumnBreak(const sptr<Box>& box) {
+  if (dynamic_cast<const ColumnBreakBox*>(box.get()) != nullptr) return true;
+  for (const auto& child : box->descendants()) {
+    if (hasColumnBreak(child)) return true;
+  }
+  return false;
+}
+
+/** The lines and gaps of a column, one below the other: the rows of a body and the lines of its paragraphs. */
+void columnLeaves(const sptr<Box>& box, std::vector<sptr<Box>>& out) {
+  const auto v = std::dynamic_pointer_cast<VBox>(box);
+  if (v != nullptr && (v->_lines || v->_rows) && !v->_children.empty()) {
+    for (const auto& child : v->_children) columnLeaves(child, out);
+  } else {
+    out.push_back(box);
+  }
+}
+
+}  // namespace
+
+sptr<Box> ColumnBreakAtom::createBox(Env&) {
+  return sptrOf<ColumnBreakBox>();
+}
+
+sptr<Box> MulticolsAtom::createBox(Env& env) {
+  const float measure = env.textWidth();
+  const auto setBox = [&](const sptr<Atom>& atom, float width) {
+    sptr<Box> box;
+    {
+      // The breaker needs word-level runs, as in a minipage.
+      const MergeTextGuard guard(true);
+      box = env.withTextWidth(width, [&](Env& e) { return atom->createBox(e); });
+    }
+    if (width != POS_INF) box = BoxSplitter::split(box, width, env.baselineSkip()).second;
+    return box;
+  };
+  const float sep = Units::fsize(_sep, env);
+  const int n = std::max(_count, 1);
+  const float colWidth = measure == POS_INF ? POS_INF : (measure - (n - 1) * sep) / n;
+  if (measure == POS_INF || n < 2 || colWidth <= 0.f) return setBox(_body, measure);
+
+  std::vector<sptr<Box>> leaves;
+  columnLeaves(setBox(_body, colWidth), leaves);
+  // Columns of at most `limit` high, filled from the top, a break after a line that holds a \columnbreak. Glue at the
+  // top of a column is dropped, as TeX drops it where a page breaks, and at the bottom it takes no room.
+  using Column = std::vector<sptr<Box>>;
+  const auto fill = [&](float limit) {
+    std::vector<Column> cols(1);
+    float used = 0.f, pending = 0.f;
+    for (const auto& leaf : leaves) {
+      const float h = leaf->_height + leaf->_depth;
+      if (leaf->isSpace() || (leaf->_width == 0.f && h == 0.f && !hasColumnBreak(leaf))) {
+        if (!cols.back().empty()) {
+          cols.back().push_back(leaf);
+          pending += h;
+        }
+        continue;
+      }
+      if (!cols.back().empty() && used + pending + h > limit + 1e-3f) {
+        while (!cols.back().empty() && cols.back().back()->isSpace()) cols.back().pop_back();
+        cols.emplace_back();
+        used = pending = 0.f;
+      }
+      cols.back().push_back(leaf);
+      used += pending + h;
+      pending = 0.f;
+      if (hasColumnBreak(leaf)) {
+        cols.emplace_back();
+        used = pending = 0.f;
+      }
+    }
+    while (cols.size() > 1 && cols.back().empty()) cols.pop_back();
+    while (!cols.back().empty() && cols.back().back()->isSpace()) cols.back().pop_back();
+    return cols;
+  };
+  float total = 0.f, tallest = 0.f;
+  for (const auto& leaf : leaves) {
+    total += leaf->_height + leaf->_depth;
+    tallest = std::max(tallest, leaf->_height + leaf->_depth);
+  }
+  // The least height the lines fit `n` columns in.
+  float low = tallest, high = std::max(total, tallest);
+  for (int i = 0; i < 40 && high - low > 0.01f; i++) {
+    const float mid = (low + high) / 2;
+    if (static_cast<int>(fill(mid).size()) <= n) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  // A quarter of a line over: lines differ by their own height and depth (a digit's, a descender's), where TeX's
+  // columns are made of lines that take the same space each, so a column is not a line short for 11 units of depth.
+  const std::vector<Column> cols = fill(high + 0.25f * env.baselineSkip());
+  auto row = sptrOf<HBox>();
+  // The last line of the tallest column ends the columns.
+  float lastDepth = 0.f, tallestColumn = -1.f;
+  for (const auto& column : cols) {
+    float sum = 0.f;
+    for (const auto& leaf : column) sum += leaf->_height + leaf->_depth;
+    if (sum > tallestColumn && !column.empty()) {
+      tallestColumn = sum;
+      lastDepth = column.back()->_depth;
+    }
+  }
+  for (int i = 0; i < n; i++) {
+    if (i > 0) row->add(sptrOf<StrutBox>(sep, 0.f, 0.f, 0.f));
+    auto column = sptrOf<VBox>();
+    if (i < static_cast<int>(cols.size())) {
+      for (const auto& leaf : cols[static_cast<std::size_t>(i)]) column->add(leaf);
+    }
+    row->add(column->_children.empty() ? sptr<Box>(sptrOf<StrutBox>(colWidth, 0.f, 0.f, 0.f))
+                                       : sptr<Box>(sptrOf<HBox>(column, colWidth, Alignment::left)));
+  }
+  auto whole = sptrOf<ColumnsBox>();
+  whole->_lastDepth = lastDepth;
+  if (_header != nullptr) {
+    const sptr<Box> header = setBox(_header, measure);
+    whole->add(header);
+    // \multicolsep, and the baselineskip glue TeX adds after it as after any skip.
+    whole->add(sptrOf<StrutBox>(0.f, env.interline(header->_depth, row->_height) + 1.2f * env.em(), 0.f, 0.f));
+  }
+  whole->add(row);
+  return whole;
 }
 
 sptr<Box> HangingAtom::createBox(Env& env) {

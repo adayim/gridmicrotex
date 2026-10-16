@@ -256,6 +256,8 @@ struct Table {
     add({"ref", "pageref", "eqref", "subref"}, "r", Shape::prefix, Bare::none, true);
     // The floats say what a \caption numbers: the prelude's figure, table, subfigure and subtable.
     add({"gmfloat", "gmsubfloat"}, "r");
+    // multicol's \columnbreak: where the columns of a multicols are cut.
+    add({"columnbreak"}, "");
     add({"cite"}, "Rr", Shape::prefix, Bare::none, true);
     // natbib's: \citep[post]{keys} or \citep[pre][post]{keys}.
     add({"citep", "citet", "citealp"}, "RRr", Shape::prefix, Bare::none, true);
@@ -313,6 +315,10 @@ struct Table {
     env({"CD", "tikzcd", "tikzpicture"}, "", EnvBody::raw);
     // [position][height][inner position]{width}: a box of paragraphs.
     env({"minipage"}, "RDRd", EnvBody::text);
+    // [keys]: tcolorbox's framed box of paragraphs, with the keys that change how it is drawn.
+    env({"tcolorbox"}, "R", EnvBody::text);
+    // {columns}[header]: multicol's balanced columns.
+    env({"multicols"}, "rR", EnvBody::text);
   }
 };
 

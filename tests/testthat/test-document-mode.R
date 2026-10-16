@@ -15,6 +15,18 @@ test_that("a minipage's body is paragraphs, so markdown does not take it for mat
   expect_false("minipage" %in% .math_envs())
 })
 
+test_that("multicols fills its columns four, four and two in a real font, as multicol does", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # Lines of different depth (a j, a y) are not the same height, so a column that is a few units short must not
+  # take a line fewer: pdflatex sets ten lines in three columns as 4, 4 and 2.
+  words <- c("ant", "bee", "cat", "dog", "elk", "fox", "gnu", "hen", "jay", "pig")
+  t <- latex_tree(paste0("\\begin{multicols}{3}", paste(words, collapse = "\\par "), "\\end{multicols}"),
+                  input_mode = "document", max_width = 345)
+  r <- t$records[t$records$type == "text", ]
+  col <- match(round(r$x[match(words, r$text)]), sort(unique(round(r$x))))
+  expect_equal(col, c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3))
+})
+
 test_that("a document's text width follows the grob's gpar fontsize", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # A paragraph's indent is 1.5em of the size the label is set in.

@@ -869,6 +869,7 @@ private:
       if (sub) line = sized(line, 0.9f);
       return sptrOf<SkipAboveAtom>(sptrOf<FontStyleAtom>(FontStyle::rm, false, line), sub ? 0.6f : 1.f);
     }
+    if (name == "columnbreak") return sptrOf<ColumnBreakAtom>();
     if (name == "gmfloat") {
       _floatKind = trimmed(rawOf(child(id, 0)));
       _subKind.clear();
@@ -2119,12 +2120,12 @@ private:
     return x.kind == NodeKind::group && (x.aux == 2 || (x.aux >= 4 && x.aux <= 7));
   }
 
-  /** A list or verbatim text, which a document sets apart from its text. */
+  /** A list, verbatim text or tcolorbox, which a document sets apart from its text. */
   bool isList(NodeId id) const {
     const Node& x = node(id);
     return x.kind == NodeKind::environment &&
            (x.text == "itemize" || x.text == "enumerate" || x.text == "description" || x.text == "tablenotes" ||
-            x.text == "verbatim" || x.text == "verbatim*");
+            x.text == "verbatim" || x.text == "verbatim*" || x.text == "tcolorbox" || x.text == "multicols");
   }
 
   /** A space a break takes with it: not `~`, which TeX never drops. */
@@ -2210,12 +2211,12 @@ private:
    *  \belowdisplayskip (1em at a 10pt font); or a list, with \topsep's
    *  8pt. It interrupts a paragraph without ending it, so what follows
    *  goes on unindented, as in TeX. */
-  void blockLine(Label& l, NodeId id, bool display, const char* skip) {
+  void blockLine(Label& l, NodeId id, bool display, const char* skip, const char* above = nullptr) {
     lineBreak(l);
     // The text before it, if any, is ended by now.
     const bool interrupts = l.textBefore;
     // A display is set off by TeX's display skips, which VRowAtom chooses once it knows the width of the line before.
-    if (l.drawn && !display) l.gap = skip;
+    if (l.drawn && !display) l.gap = above != nullptr ? above : skip;
     l.indentNext = false;
     beforeLine(l);
     Formula g;
@@ -2401,7 +2402,13 @@ private:
       } else if (l.document && isDisplay(id)) {
         blockLine(l, id, true, "1em");
       } else if (l.document && isList(id)) {
-        blockLine(l, id, false, "0.8em");
+        // A list is set off by \topsep's 8pt, a tcolorbox by 0.5\baselineskip, multicols by \multicolsep (12pt), which
+        // with a header is below it only: pdflatex puts none between the text before and the header.
+        if (x.text == "multicols") {
+          blockLine(l, id, false, "1.2em", child(id, 1) != kNoNode && !trimmed(rawOf(child(id, 1))).empty() ? "0em" : nullptr);
+        } else {
+          blockLine(l, id, false, x.text == "tcolorbox" ? "0.6em" : "0.8em");
+        }
       } else if (l.document && x.kind == NodeKind::command && !x.flag && x.text == "caption") {
         // On a line of its own, unindented; the parser ended its line.
         lineBreak(l);
@@ -2526,11 +2533,111 @@ private:
     return sptrOf<MinipageAtom>(subDocument(child(id, count(id) - 1)), width, p, height, inner);
   }
 
+  /** A tcolorbox length in em of the text around, as 0.2845em is a millimetre at LaTeX's 10pt; false when `value` is
+   *  not a length. */
+  bool tcolorboxLength(const std::string& value, float& em) {
+    const Dimen d = Units::getDimen(value);
+    if (!d.isValid()) return false;
+    switch (d.unit) {
+      case UnitType::em: em = d.val; return true;
+      case UnitType::mm: em = d.val * 0.284528f; return true;
+      case UnitType::cm: em = d.val * 2.84528f; return true;
+      case UnitType::pt: em = d.val * 0.1f; return true;
+      case UnitType::point: em = d.val * 0.100375f; return true;
+      case UnitType::in: em = d.val * 7.227f; return true;
+      case UnitType::pica: em = d.val * 1.2f; return true;
+      default: return false;
+    }
+  }
+
+  /** \begin{tcolorbox}[keys]: tcolorbox's default box -- a frame of `boxrule`, rounded by `arc`, `colback` inside,
+   *  padded by `boxsep` and `left`, `right`, `top`, `bottom` -- with the keys that change how it is drawn
+   *  (`title`, the colours, the lengths); another key warns and is ignored. */
+  sptr<Atom> tcolorbox(NodeId id) {
+    TcolorboxStyle style;
+    std::string title, fonttitle;
+    std::vector<std::string> keys{""};
+    int depth = 0;
+    for (const char c : rawOf(child(id, 0))) {
+      if (c == '{') depth++;
+      if (c == '}') depth--;
+      if (c == ',' && depth == 0) {
+        keys.emplace_back();
+      } else {
+        keys.back() += c;
+      }
+    }
+    for (const std::string& item : keys) {
+      const std::size_t eq = item.find('=');
+      const std::string key = trimmed(item.substr(0, eq));
+      std::string value = eq == std::string::npos ? std::string() : trimmed(item.substr(eq + 1));
+      if (value.size() >= 2 && value.front() == '{' && value.back() == '}') value = value.substr(1, value.size() - 2);
+      if (key.empty()) continue;
+      const auto colour = [&](color& into) {
+        const color c = colourOf(id, value);
+        if (!isTransparent(c)) into = c;
+      };
+      const auto length = [&](float& into) {
+        float em = 0.f;
+        if (!tcolorboxLength(value, em) || em < 0.f) {
+          _diags.warn(node(id).span, "tcolorbox: `" + key + "=" + value + "' is not a length of zero or more: ignored");
+        } else {
+          into = em;
+        }
+      };
+      if (key == "title") title = value;
+      else if (key == "fonttitle") fonttitle = value;
+      else if (key == "colback") colour(style.back);
+      else if (key == "colframe") colour(style.frame);
+      else if (key == "colbacktitle") colour(style.backTitle);
+      else if (key == "coltitle") colour(style.titleText);
+      else if (key == "boxrule") length(style.rule);
+      else if (key == "arc") length(style.arc);
+      else if (key == "boxsep") length(style.boxsep);
+      else if (key == "left") length(style.left);
+      else if (key == "right") length(style.right);
+      else if (key == "top") length(style.top);
+      else if (key == "bottom") length(style.bottom);
+      else if (key == "sharp corners") style.sharp = true;
+      else _diags.warn(node(id).span, "tcolorbox: the key `" + key + "' is not drawn: ignored");
+    }
+    sptr<Atom> head;
+    if (!title.empty()) {
+      head = fragment(fonttitle.empty() ? title : "{" + fonttitle + " " + title + "}", false);
+      head = sptrOf<ColorAtom>(head, TRANSPARENT, style.titleText);
+    }
+    sptr<Atom> body = subDocument(child(id, count(id) - 1));
+    if (body == nullptr) body = sptrOf<EmptyAtom>();
+    return sptrOf<TcolorboxAtom>(body, head, style);
+  }
+
+  /** \begin{multicols}{n}[header]: the body in `n` balanced columns, a column of `\columnsep` between. */
+  sptr<Atom> multicols(NodeId id) {
+    const std::string columns = trimmed(rawOf(child(id, 0)));
+    int n = 0;
+    try {
+      n = std::stoi(columns);
+    } catch (const std::exception&) {
+    }
+    if (n < 1) {
+      _diags.warn(node(id).span, "multicols: `" + columns + "' is not a number of columns: one is used");
+      n = 1;
+    }
+    const std::string head = trimmed(rawOf(child(id, 1)));
+    Dimen sep = Units::getDimen("\\columnsep");
+    if (!sep.isValid()) sep = {1.f, UnitType::em};
+    sptr<Atom> body = subDocument(child(id, count(id) - 1));
+    if (body == nullptr) body = sptrOf<EmptyAtom>();
+    return sptrOf<MulticolsAtom>(body, head.empty() ? nullptr : fragment(head, false), n, sep);
+  }
+
   /** Built by the engine's environment handler from its source text, as
    *  the old parser's `\name@@env{...}{body}` did. */
   sptr<Atom> environment(NodeId id) {
     const Node& x = node(id);
     if (x.text == "minipage") return minipage(id);
+    if (x.text == "multicols") return multicols(id);
+    if (x.text == "tcolorbox") return tcolorbox(id);
     if (x.text == "verbatim" || x.text == "verbatim*") return verbatimBlock(x);
     const EnvSpec* spec = findEnvironment(x.text);
     const std::string macName = (spec != nullptr ? x.text : std::string("matrix")) + "@@env";
