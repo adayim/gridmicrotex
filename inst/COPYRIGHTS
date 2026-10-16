@@ -4,10 +4,13 @@ package root, and copies of the font licenses accompany the fonts in
 inst/fonts/.
 
 -------------------------------------------------------------------------------
-MicroTeX C++ library  (src/MicroTeX/)
+MicroTeX C++ library, adayim fork 0.1.0  (src/MicroTeX/)
 -------------------------------------------------------------------------------
-Copyright (c) 2020 Nano Michael.
-Upstream: https://github.com/NanoMichael/MicroTeX
+Copyright (c) 2020 Nano Michael and the MicroTeX contributors.
+Modifications copyright (c) 2026 Alim Dayim.
+Fork:     https://github.com/adayim/MicroTeX (tag v0.1.0)
+Forked from https://github.com/NanoMichael/MicroTeX, branch openmath,
+          commit 086f4eb (2024-08-05).
 License:  MIT License.
 
 -------------------------------------------------------------------------------

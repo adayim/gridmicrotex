@@ -12,7 +12,7 @@ download](https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex)](https://c
 <!-- badges: end -->
 
 LaTeX math and markdown for R graphics: grid, base plots and ggplot2. No
-LaTeX installation needed. Built on the
+LaTeX installation needed. Built on a fork of the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
 
 Everything on [KaTeX’s list of supported
@@ -134,6 +134,18 @@ use [ragg](https://CRAN.R-project.org/package=ragg),
 - [ggplot2](https://adayim.github.io/gridmicrotex/articles/ggplot2-integration.html)
 - [Markdown](https://adayim.github.io/gridmicrotex/articles/markdown.html)
 - [Documents](https://adayim.github.io/gridmicrotex/articles/documents.html)
+
+## Credits
+
+The layout engine is the [adayim
+fork](https://github.com/adayim/MicroTeX) of MicroTeX (version 0.1.0),
+forked from Nano Michael’s
+[MicroTeX](https://github.com/NanoMichael/MicroTeX) (`openmath` branch,
+commit 086f4eb). The layout engine, the symbol tables and the graphics
+interface are the work of Nano Michael and the MicroTeX contributors;
+the fork adds a new LaTeX front end, packages as LaTeX files, TikZ,
+document layout and fonts read from OpenType files. Lete Sans Math and
+STIX Two Math are bundled; see `inst/COPYRIGHTS`.
 
 ## Disclaimer
 

@@ -11,12 +11,13 @@ Contents:
   3. STIX Two Math font                    - SIL Open Font License v1.1
 
 ===============================================================================
-1. MicroTeX C++ library  (src/MicroTeX/)
+1. MicroTeX C++ library, adayim fork  (src/MicroTeX/)
 ===============================================================================
 
 The MIT License (MIT)
 
-Copyright (c) 2020 Nano Michael
+Copyright (c) 2020 Nano Michael and the MicroTeX contributors
+Modifications copyright (c) 2026 Alim Dayim
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

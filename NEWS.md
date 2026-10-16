@@ -1,10 +1,9 @@
 # gridmicrotex 0.2.1
 
-- `\usepackage` now loads the commands of the usual packages (amsmath, physics, ...), `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
-- New: `tikzpicture` draws paths, nodes, arrows, shapes, labels, `calc`, `fit`, trees, `matrix of nodes` and braces, in grid grobs and on devices. The rest of TikZ is not drawn yet.
-- New in documents: `\footnote` as a mark and a note after the body, captions numbered "Figure 1:" and "Table 1:" with lettered `subfigure`s, `tcolorbox`, `multicols`, `\parbox`, lengths and counters, and `\cite` that draws the number of its `\bibitem`.
+- The bundled MicroTeX is now the [adayim fork](https://github.com/adayim/MicroTeX), version 0.1.0 (forked from [NanoMichael/MicroTeX](https://github.com/NanoMichael/MicroTeX)), and LaTeX coverage is much broader: `tikzpicture` (paths, nodes, arrows, shapes, labels, `calc`, `fit`, trees, `matrix of nodes`, braces), `\footnote`, numbered captions with lettered `subfigure`s, `tcolorbox`, `multicols`, `\parbox`, lengths and counters, `\usepackage`, xcolor mixes such as `red!50`, and `\cite` that draws the number of its `\bibitem`.
+- New `load_sty()` makes a `.sty` file of your own a package, and `latex_options(packages = )` loads packages before every label.
 - Lines, displays and the rows of matrices, `align` and kin are now spaced as LaTeX spaces them, so documents and multi-line labels are taller by up to 10%; text tables, `\fbox` and `\colorbox` are padded by `\tabcolsep` and `\fboxsep`.
-- Bug fix: a colour such as `red!50` was drawn black, so `\rowcolor{gray!10}` painted a row black; colours are mixed as in xcolor and an undefined one warns. Also fixed: `tablenotes`, `\makecell[tl]` and siunitx `S` columns failing, macros and dimensions read wrongly in a few cases, and a crash on `\[\tag{1}\]` at a width.
+- Bug fix: a colour such as `red!50` was drawn black, so `\rowcolor{gray!10}` painted a row black; an undefined colour now warns. Also fixed: `tablenotes`, `\makecell[tl]` and siunitx `S` columns failing, macros and dimensions read wrongly in a few cases, and a crash on `\[\tag{1}\]` at a width.
 
 # gridmicrotex 0.2.0
 
