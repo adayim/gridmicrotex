@@ -248,7 +248,8 @@ in as it is.
   their code as typed, in the typewriter face, with none of their colours, line
   numbers or frames; markdown highlights code if that is what you want.
 - Algorithms (`algorithm`, `algorithmic`) are not drawn.
-- `\maketitle` draws nothing.
+- `\maketitle` sets the title, authors and date, centred and on no page of its own;
+  `\date` is today's date when none is given, as in LaTeX.
 
 For a complicated document, with packages from a TeX installation, pages,
 floats that move, or all of TikZ, use the

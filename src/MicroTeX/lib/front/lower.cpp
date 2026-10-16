@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <functional>
 #include <map>
 #include <memory>
@@ -870,6 +871,20 @@ private:
       return sptrOf<SkipAboveAtom>(sptrOf<FontStyleAtom>(FontStyle::rm, false, line), sub ? 0.6f : 1.f);
     }
     if (name == "columnbreak") return sptrOf<ColumnBreakAtom>();
+    if (name == "today") {
+      static const char* months[] = {"January", "February", "March",     "April",   "May",      "June",
+                                     "July",    "August",   "September", "October", "November", "December"};
+      const std::time_t now = std::time(nullptr);
+      std::tm local{};
+#ifdef _WIN32
+      localtime_s(&local, &now);
+#else
+      localtime_r(&now, &local);
+#endif
+      // One run of text, as \text{} sets it, not a glyph a digit.
+      return literalText(std::string(months[local.tm_mon % 12]) + " " + std::to_string(local.tm_mday) + ", " +
+                         std::to_string(local.tm_year + 1900));
+    }
     if (name == "gmfloat") {
       _floatKind = trimmed(rawOf(child(id, 0)));
       _subKind.clear();
@@ -1902,6 +1917,9 @@ private:
     bool broken = false;
     /** The `[len]` of that break: space below the line it ends. */
     std::string gap;
+    /** What `\vspace` has asked for since: TeX's glue between this line and the next, added to the baselineskip glue.
+     *  It lands before the next line that starts, wherever in its paragraph the command stood (vadjust). */
+    Dimen skip;
     /** Nothing placed since a line break: a space here goes with it. */
     bool afterBreak = false;
     /** Anything drawn at all: a break before that is none. */
@@ -2037,9 +2055,35 @@ private:
       l.rows->add(l.top->_root);
       l.line = l.rows.get();
     }
-    if (!l.gap.empty()) l.rows->addRowGap(Units::getDimen(l.gap));
+    Dimen gap = l.gap.empty() ? Dimen() : Units::getDimen(l.gap);
+    if (l.skip.isValid()) {
+      gap = gap.isValid() ? addSkips(gap, l.skip) : l.skip;
+      l.skip = Dimen();
+    }
+    if (gap.isValid()) l.rows->addRowGap(gap);
     l.gap.clear();
     l.rows->addRow();
+  }
+
+  /** Two skips added: in one unit when they have it, else in points when both are lengths of the page; two skips of
+   *  different kinds (an `em` and a `pt`) cannot be added here, and the later one stands. */
+  static Dimen addSkips(const Dimen& a, const Dimen& b) {
+    if (a.unit == b.unit) return {a.val + b.val, a.unit};
+    const auto points = [](UnitType u) {
+      switch (u) {
+        case UnitType::pt: return 1.0;
+        case UnitType::point: return 72.27 / 72.0;
+        case UnitType::pica: return 12.0;
+        case UnitType::cm: return 72.27 / 2.54;
+        case UnitType::mm: return 72.27 / 25.4;
+        case UnitType::in: return 72.27;
+        default: return 0.0;
+      }
+    };
+    if (points(a.unit) > 0 && points(b.unit) > 0) {
+      return {static_cast<float>(a.val * points(a.unit) + b.val * points(b.unit)), UnitType::pt};
+    }
+    return b;
   }
 
   /** The prose so far, as one \text{} on its line. */
@@ -2426,6 +2470,11 @@ private:
         l.indentNext = false;
         beforeProse(l);
         lowerItem(id, prose(l));
+      } else if (l.document && l.drawn && x.kind == NodeKind::command && !x.flag && x.text == "vspace") {
+        // Glue between this line and the next, as TeX adds it: on top of the baselineskip glue, not instead of it.
+        // Before anything is drawn (the top of a page, which TeX would drop) it stays what it was, a height.
+        const Dimen d = Units::getDimen(rawOf(child(id, 0)));
+        if (d.isValid()) l.skip = l.skip.isValid() ? addSkips(l.skip, d) : d;
       } else if (isBreakNode(x)) {
         lineBreak(l, id);
       } else if (x.kind == NodeKind::command && !x.flag && x.text == "noindent") {

@@ -166,6 +166,8 @@ struct Table {
     add({"textsc"}, "t");
     add({"scshape"}, "", Shape::declaration);
     add({"gmtheorem"}, "rrrrr");
+    // The date, as LaTeX prints it (`May 16, 2026`), which \date's default is.
+    add({"today"}, "");
     add({"href"}, "uc");
     // Its argument is its own delimited text (the parser reads it).
     add({"verb"}, "v");
