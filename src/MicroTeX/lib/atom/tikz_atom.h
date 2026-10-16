@@ -152,6 +152,12 @@ struct Style {
   std::string edgePath;                          // `edge from parent path`: a path naming the parent and the child nodes
   std::string parentAnchor, childAnchor;        // `parent anchor`, `child anchor`
   std::optional<int> layer;                      // `on background layer`: -1 is drawn before 0, the main one
+  // Decorations: `decorate` with `decoration={brace, amplitude=, aspect=, mirror, raise=}`.
+  bool decorate = false;
+  std::string decoration;
+  std::optional<Dimen> amplitude, raise;
+  std::optional<float> braceAspect;
+  bool mirror = false;
   std::vector<std::pair<bool, std::string>> labelSpecs;
   std::optional<Dimen> labelDistance, pinDistance;
   std::string pinEdge;                           // `pin edge={...}`
@@ -191,6 +197,7 @@ struct Node {
   int alongOp = -1;                              // then: the operation it sits on
   std::vector<Label> labels;
   std::vector<Child> children;                   // `child {...}`: placed round it when it is
+  std::size_t ownFrom = static_cast<std::size_t>(-1);  // the steps of the style's transform from here are the node's own shifts
 };
 
 /** A child of a node in a tree: its node (which has children of its own), the scope it grows in, and its place in the

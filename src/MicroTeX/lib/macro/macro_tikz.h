@@ -540,6 +540,10 @@ private:
       st.shortenEnd = Dimen{1.f, UnitType::pt};
     } else if ((node || key == "label distance" || key == "pin distance" || key == "pin edge" || key == "every label" || key == "every pin") && applyNodeOption(st, key, value, hasValue, c)) {
       // read
+    } else if (key == "decorate") {
+      st.decorate = !hasValue || value != "false";
+    } else if (key == "decoration" && hasValue) {
+      decorationOf(st, value);
     } else if (key == "level distance" && hasValue) {
       st.levelDistance = dimen(value);
     } else if (key == "sibling distance" && hasValue) {
@@ -900,6 +904,34 @@ private:
       out->terms.push_back(std::move(term));
     }
     return out;
+  }
+
+  /** `decoration={brace, amplitude=10pt, aspect=0.5, mirror, raise=4pt}`: the brace is drawn; any other name is said. */
+  void decorationOf(Style& st, const std::string& value) {
+    for (const std::string& part : splitTop(value, ',')) {
+      const std::string item = trim(part);
+      const std::size_t eq = item.find('=');
+      const std::string key = trim(item.substr(0, eq)), v = eq == std::string::npos ? "" : trim(item.substr(eq + 1));
+      if (item.empty()) continue;
+      if (eq == std::string::npos && key != "mirror") {
+        if (key == "brace") {
+          st.decoration = key;
+        } else {
+          warn("tikz: the decoration " + key + " is not drawn: the path is drawn as it stands");
+        }
+      } else if (key == "amplitude") {
+        st.amplitude = dimen(v);
+      } else if (key == "raise") {
+        st.raise = dimen(v);
+      } else if (key == "aspect") {
+        double a = 0.5;
+        if (number(v, a)) st.braceAspect = static_cast<float>(a);
+      } else if (key == "mirror") {
+        st.mirror = eq == std::string::npos || v != "false";
+      } else {
+        warn("tikz: decoration option " + key + " is not supported: left out");
+      }
+    }
   }
 
   // --- trees ------------------------------------------------------------------------------------
@@ -1520,6 +1552,7 @@ private:
       }
     }
     n.style.labelSpecs.clear();
+    n.ownFrom = scope.transform.size();
     n.name = matrix.name + "-" + r + "-" + c;
     empty = text.empty() && !matrix.style.emptyNodes;
     if (matrix.style.matrixKind == 2 && !text.empty()) text = "$" + text + "$";
@@ -1580,6 +1613,7 @@ private:
     Node n;
     n.style = pathStyle;
     n.style.labelSpecs.clear();  // the node's label= was read once already, as an option of its path
+    n.ownFrom = standalone ? static_cast<std::size_t>(-1) : pathStyle.transform.size();
     // A node is not a path: what is drawn, filled or pointed is its own.
     if (!standalone || true) {
       n.style.draw = Paint();

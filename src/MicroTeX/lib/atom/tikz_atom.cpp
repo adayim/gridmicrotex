@@ -230,6 +230,7 @@ private:
   void applyTips(const Style& st, std::vector<Sub>& subs, double lw, std::vector<Prim>& out);
 
   static void rounded(const std::vector<Sub>& in, double r, std::vector<Sub>& out);
+  void braces(std::vector<Sub>& subs, const Style& st);
   static std::vector<P> flatten(const Sub& s, int steps = 16);
   static void shortenEnd(Sub& s, double d);
   static void shortenStart(Sub& s, double d);
@@ -463,6 +464,57 @@ void Layout::arcSegments(Sub& sub, P centre, double rx, double ry, double a0, do
     g.to = map(p3);
     sub.segs.push_back(g);
   }
+}
+
+/** pgflibrarydecorations.pathreplacing's `brace`, for a path that is one straight line: from one end to the other,
+ *  a bump of `amplitude` (2.5pt) above the line, a point at `aspect` (0.5) of the way, the bumps half the amplitude
+ *  high where they meet the line; `mirror` puts it on the other side and `raise` moves it away. The curves are the
+ *  decoration's own, in its frame (x along the path, y to its left). */
+void Layout::braces(std::vector<Sub>& subs, const Style& st) {
+  if (subs.size() != 1 || subs[0].segs.size() != 1 || subs[0].segs[0].cubic || subs[0].closed) {
+    return;  // the reader said so, once
+  }
+  const Sub in = subs[0];
+  const P p0 = in.start, p1 = in.segs[0].to;
+  const double distance = length(p1 - p0);
+  if (distance < 1e-9) return;
+  const double amp = len(st.amplitude, 2.5 * _pt), aspect = st.braceAspect.value_or(0.5f), raise = len(st.raise, 0.0);
+  const double sign = st.mirror ? -1.0 : 1.0;
+  // pgf's own bump widths: the first up to half the aspect of the path, the second likewise.
+  double yc = aspect * distance;
+  yc = 2 * amp > yc ? 0.5 * yc : amp;
+  double xc = aspect * distance - distance;
+  xc = -2 * amp < xc ? -0.5 * xc : amp;
+  const P u = unit(p1 - p0), n = left(u);
+  const auto at = [&](double x, double y) { return p0 + u * x + n * (sign * (y + raise)); };
+  Sub out;
+  out.start = at(0, 0);
+  const auto curve = [&](double x1, double y1, double x2, double y2, double x3, double y3) {
+    Seg g;
+    g.cubic = true;
+    g.c1 = at(x1, y1);
+    g.c2 = at(x2, y2);
+    g.to = at(x3, y3);
+    out.segs.push_back(g);
+    see(g.c1);
+    see(g.c2);
+    see(g.to);
+  };
+  const auto line = [&](double x, double y) {
+    Seg g;
+    g.to = at(x, y);
+    out.segs.push_back(g);
+    see(g.to);
+  };
+  const double mid = aspect * distance;
+  curve(.15 * yc, .3 * amp, .5 * yc, .5 * amp, yc, .5 * amp);
+  line(mid - yc, .5 * amp);
+  curve(mid - .5 * yc, .5 * amp, mid - .15 * yc, .7 * amp, mid, amp);
+  curve(mid + .15 * xc, .7 * amp, mid + .5 * xc, .5 * amp, mid + xc, .5 * amp);
+  line(distance - xc, .5 * amp);
+  curve(distance - .5 * xc, .5 * amp, distance - .15 * xc, .3 * amp, distance, 0);
+  see(out.start);
+  subs = {out};
 }
 
 // pgf's rounded corners: at each corner between two lines the path leaves the first `r` before it and
@@ -1078,6 +1130,13 @@ void Layout::layoutNode(const Node& n, const Style& st, P at, bool atGiven, cons
   } else if (!fit && !atGiven && !n.hasAt) {
     target = at;
   }
+  // The node's own `shift`, `xshift` and `yshift` (those the path round it does not already carry) move where it is put.
+  for (std::size_t k = n.ownFrom; k < st.transform.size(); k++) {
+    const XStep& s = st.transform[k];
+    if (s.kind == XStep::Kind::shift) target = target + P{len(s.dx), len(s.dy)};
+    if (s.kind == XStep::Kind::xshift) target = target + P{len(s.dx), 0.0};
+    if (s.kind == XStep::Kind::yshift) target = target + P{0.0, len(s.dx)};
+  }
   // `auto` and `swap`: the node stands on the left of the way the path goes (or the right), clear of it.
   if (anchor.empty() && seg != nullptr && seg->valid && (st.autoSide || st.swap) && !g.point) {
     P dir = seg->direction(t);
@@ -1355,7 +1414,7 @@ void Layout::layoutItem(const PathItem& item) {
   }
   if (item.isNode) {
     const Node& n = item.nodes.front();
-    P at{0, 0};
+    P at = matrixOf(st).apply(P{0, 0});  // the origin, shifted as the path says
     bool given = false;
     Where w;
     if (n.hasAt) {
@@ -1641,6 +1700,7 @@ void Layout::layoutItem(const PathItem& item) {
     } else {
       drawn = subs;
     }
+    if (st.decorate && st.decoration == "brace") braces(drawn, st);
     if (stroke) applyTips(st, drawn, lw, extra);
     prim.subs = std::move(drawn);
     _prims.push_back(std::move(prim));
