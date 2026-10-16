@@ -137,6 +137,12 @@ struct Style {
   std::optional<float> rotate;                   // a node's own rotation
   // `label=` and `pin=` as written (pin: true), read into a Node's labels; the distances they use.
   std::vector<Coord> fit;                        // `fit=(a)(b)`: the points a node is put round
+  // `matrix of nodes`: how the cells are set, and what the matrix says of them.
+  int matrixKind = 0;                            // 1 `matrix of nodes`, 2 `matrix of math nodes`
+  std::optional<Dimen> rowSep, columnSep;
+  bool rowBetweenOrigins = false, columnBetweenOrigins = false;
+  std::string nodesStyle, cellsStyle;            // `nodes=`, `cells=`
+  bool emptyNodes = false;                       // `nodes in empty cells`
   // Trees (`child`): where a child is put, and how its edge runs.
   std::optional<Dimen> levelDistance, siblingDistance;
   std::optional<float> growAngle;                // `grow=`, degrees; down (-90) when not said
@@ -196,12 +202,28 @@ struct Child {
   bool missing = false;
 };
 
+/** One cell of a matrix of nodes: the node, and its place in the grid (from 1). */
+struct MatrixCell {
+  Node node;
+  int row = 0, col = 0;
+  bool empty = false;                            // nothing in it: it takes no room
+};
+
+/** A `\matrix`: its own node, and its cells. */
+struct NodeMatrix {
+  Node node;
+  std::vector<MatrixCell> cells;
+  int rows = 0, cols = 0;
+  std::vector<Dimen> rowSkip;                    // `\\[2pt]`: more room after a row (index from 1)
+};
+
 struct PathItem {
   Style style;
   std::vector<PathOp> ops;
   std::vector<Node> nodes;
   bool isNode = false;                           // a \node or \coordinate: one node, no path
   bool clip = false;
+  std::shared_ptr<NodeMatrix> grid;              // a \matrix: one node and its cells, no path
 };
 
 }  // namespace tikz

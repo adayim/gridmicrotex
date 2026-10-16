@@ -217,6 +217,7 @@ private:
   P borderToward(const Geom& g, P target) const;
 
   void layoutItem(const PathItem& item);
+  void layoutNodeMatrix(const NodeMatrix& gm, const Style& st);
   void layoutNode(const Node& n, const Style& st, P at, bool atGiven, const SegInfo* seg, double t);
   void placeLabel(const Style& ownerStyle, const Geom& owner, const Label& lb);
   void placeChildren(const Node& parent, const Geom& g);
@@ -1260,10 +1261,98 @@ void Layout::connect(const PathItem& item, const PathOp& op, const Where& from, 
   see(e);
 }
 
+// --- a matrix of nodes --------------------------------------------------------------------------
+
+namespace {
+
+/** A box of a given size that draws nothing: the matrix, to the node that holds it. */
+class FixedAtom : public Atom {
+public:
+  FixedAtom(float width, float height, float depth) : _w(width), _h(height), _d(depth) {}
+  sptr<Box> createBox(Env&) override { return sptrOf<StrutBox>(_w, _h, _d, 0.f); }
+
+private:
+  float _w, _h, _d;
+};
+
+}  // namespace
+
+/** pgfmodulematrix: the cells' origins stand on one vertical line in a column and one horizontal line in a row; a
+ *  column is as wide as its cells reach to either side of the line, a row as high as they reach above it and low below;
+ *  `column sep` and `row sep` go between the cells' borders (between their origins, if asked). The matrix is a node
+ *  whose text is that box, and each cell a node of its own, anchored at `base` where it does not say otherwise. */
+void Layout::layoutNodeMatrix(const NodeMatrix& gm, const Style& st) {
+  (void)st;
+  const int rows = gm.rows, cols = gm.cols;
+  if (rows == 0 || cols == 0) return;
+  std::vector<double> left(static_cast<std::size_t>(cols) + 1, 0.0), right = left, above(static_cast<std::size_t>(rows) + 1, 0.0),
+                      below = above;
+  const auto anchorName = [](const Node& n) { return n.style.anchor.empty() ? std::string("base") : n.style.anchor; };
+  for (const MatrixCell& cell : gm.cells) {
+    if (cell.empty) continue;
+    sptr<Box> box;
+    P textAt;
+    const Geom g = makeGeom(cell.node, cell.node.style, box, textAt, nullptr);
+    const P a = anchorOf(g, anchorName(cell.node));
+    // A cell is as big as its node without the outer separation (pdfTeX: tools/tikz-ref x1, x2).
+    const double w = g.point ? 0.0 : g.hw, h = g.point ? 0.0 : g.hh;
+    const auto c = static_cast<std::size_t>(cell.col), r = static_cast<std::size_t>(cell.row);
+    left[c] = std::max(left[c], a.x + w);
+    right[c] = std::max(right[c], w - a.x);
+    below[r] = std::max(below[r], a.y + h);
+    above[r] = std::max(above[r], h - a.y);
+  }
+  const Style& ms = gm.node.style;
+  const double colSep = len(ms.columnSep, 0.0), rowSep = len(ms.rowSep, 0.0);
+  std::vector<double> x(static_cast<std::size_t>(cols) + 1, 0.0), y(static_cast<std::size_t>(rows) + 1, 0.0);
+  x[1] = left[1];
+  for (int c = 2; c <= cols; c++) {
+    const auto k = static_cast<std::size_t>(c);
+    x[k] = ms.columnBetweenOrigins ? x[k - 1] + colSep : x[k - 1] + right[k - 1] + colSep + left[k];
+  }
+  y[1] = -above[1];
+  for (int r = 2; r <= rows; r++) {
+    const auto k = static_cast<std::size_t>(r);
+    const double skip = k - 1 < gm.rowSkip.size() ? len(gm.rowSkip[k - 1]) : 0.0;
+    y[k] = ms.rowBetweenOrigins ? y[k - 1] - rowSep - skip : y[k - 1] - below[k - 1] - rowSep - skip - above[k];
+  }
+  const double width = x[static_cast<std::size_t>(cols)] + right[static_cast<std::size_t>(cols)];
+  const double height = -(y[static_cast<std::size_t>(rows)] - below[static_cast<std::size_t>(rows)]);
+  // The matrix as a node round a box of that size, placed as any node is.
+  Node mn = gm.node;
+  if (mn.name.empty()) mn.name = "\x01matrix";
+  mn.content = sptrOf<FixedAtom>(static_cast<float>(width), static_cast<float>(height), 0.f);
+  P at{0, 0};
+  bool given = false;
+  if (mn.hasAt) {
+    Where w;
+    given = resolve(mn.at, mn.style, P{0, 0}, w);
+    if (given) at = w.p;
+  }
+  layoutNode(mn, mn.style, at, given, nullptr, 0.5);
+  const auto it = _nodes.find(mn.name);
+  if (it == _nodes.end()) return;
+  const P origin{it->second.c.x - 0.5 * width, it->second.c.y + 0.5 * height};
+  for (const MatrixCell& cell : gm.cells) {
+    if (cell.empty) continue;
+    Node cn = cell.node;
+    cn.hasAt = false;
+    Style cs = cn.style;
+    if (cs.anchor.empty()) cs.anchor = "base";
+    cn.style = cs;
+    const P where{origin.x + x[static_cast<std::size_t>(cell.col)], origin.y + y[static_cast<std::size_t>(cell.row)]};
+    layoutNode(cn, cs, where, true, nullptr, 0.5);
+  }
+}
+
 // --- a path -------------------------------------------------------------------------------------
 
 void Layout::layoutItem(const PathItem& item) {
   const Style& st = item.style;
+  if (item.grid != nullptr) {
+    layoutNodeMatrix(*item.grid, st);
+    return;
+  }
   if (item.isNode) {
     const Node& n = item.nodes.front();
     P at{0, 0};

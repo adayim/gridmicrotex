@@ -589,6 +589,43 @@ private:
       }
       return true;
     }
+    if (key == "matrix of nodes" || key == "matrix of math nodes") {
+      st.matrixKind = key == "matrix of nodes" ? 1 : 2;
+      return true;
+    }
+    if ((key == "row sep" || key == "column sep") && hasValue) {
+      // `1cm`, or `{1cm, between origins}`: a length, and how it is measured.
+      const bool row = key == "row sep";
+      for (const std::string& part : splitTop(value, ',')) {
+        const std::string p = trim(part);
+        if (p == "between origins" || p == "between borders") {
+          (row ? st.rowBetweenOrigins : st.columnBetweenOrigins) = p == "between origins";
+        } else if (!p.empty()) {
+          (row ? st.rowSep : st.columnSep) = dimen(p);
+        }
+      }
+      return true;
+    }
+    if (key == "nodes" && hasValue) {
+      st.nodesStyle = value;
+      return true;
+    }
+    if (key == "cells" && hasValue) {
+      st.cellsStyle = value;
+      return true;
+    }
+    if (key == "nodes in empty cells") {
+      st.emptyNodes = !hasValue || value != "false";
+      return true;
+    }
+    if (key == "matrix anchor" && hasValue) {
+      st.anchor = trim(value);
+      return true;
+    }
+    if (key == "left delimiter" || key == "right delimiter" || key == "above delimiter" || key == "below delimiter") {
+      warn("tikz: " + key + " is not drawn: left out");
+      return true;
+    }
     if (key == "fit" && hasValue) {
       // `fit=(a)(b)`: the points, one after the other.
       st.fit.clear();
@@ -1150,7 +1187,7 @@ private:
       }
       i++;
       const std::string cmd = word(text, i);
-      if (cmd == "draw" || cmd == "path" || cmd == "fill" || cmd == "filldraw" || cmd == "node" || cmd == "coordinate" ||
+      if (cmd == "draw" || cmd == "path" || cmd == "fill" || cmd == "filldraw" || cmd == "node" || cmd == "coordinate" || cmd == "matrix" ||
           cmd == "clip" || cmd == "shade" || cmd == "shadedraw" || cmd == "useasboundingbox") {
         const std::size_t end = statementEnd(text, i);
         statement(cmd, text.substr(i, end - i), scope);
@@ -1337,7 +1374,164 @@ private:
 
   // --- a path -----------------------------------------------------------------------------------
 
+  /** `\matrix (name) [options] at (point) { cell & cell \\ ... };` as a matrix of nodes (`matrix of nodes`, `matrix of
+   *  math nodes`): each cell is a node named `name-row-column`, the styles of `every cell`, `column n`, `row n`, `row r
+   *  column c` and the cell's own `|[options]|` applied in pgf's order. */
+  void matrixStatement(const std::string& text, const Style& scope) {
+    PathItem item;
+    item.style = scope;
+    auto grid = std::make_shared<NodeMatrix>();
+    Node& mn = grid->node;
+    mn.style = scope;
+    mn.style.draw = Paint();
+    mn.style.fill = Paint();
+    mn.style.shape = "rectangle";
+    applyStyleNamed(mn.style, "every matrix");
+    std::size_t i = 0;
+    std::string body;
+    for (;;) {
+      skipSpace(text, i);
+      if (i >= text.size()) break;
+      if (text[i] == '[') {
+        std::size_t at = i;
+        applyOptions(mn.style, groupAt(text, at), true, 0);
+        i = at;
+      } else if (text[i] == '(') {
+        std::size_t at = i;
+        mn.name = trim(parenAt(text, at));
+        i = at;
+      } else if (text.compare(i, 2, "at") == 0 && i + 2 < text.size() && (text[i + 2] == ' ' || text[i + 2] == '(')) {
+        i += 2;
+        skipSpace(text, i);
+        std::size_t at = i;
+        if (i < text.size() && text[i] == '(') {
+          mn.at = coord(parenAt(text, at));
+          mn.hasAt = true;
+        }
+        i = at;
+      } else if (text[i] == '{') {
+        std::size_t at = i;
+        body = groupAt(text, at);
+        i = at;
+        break;
+      } else {
+        break;
+      }
+    }
+    if (mn.style.matrixKind == 0) {
+      warn("tikz: only `matrix of nodes` and `matrix of math nodes` are drawn: a matrix of paths is left out");
+      return;
+    }
+    if (mn.name.empty()) mn.name = "tikz@matrix" + std::to_string(++_treeNames);
+    // Rows end at `\\`, cells at `&`, outside every group.
+    std::vector<std::string> rowTexts;
+    std::vector<Dimen> skips{Dimen()};
+    {
+      std::string cur;
+      int depth = 0;
+      for (std::size_t k = 0; k < body.size(); k++) {
+        const char c = body[k];
+        if (c == '{' || c == '[') depth++;
+        if (c == '}' || c == ']') depth--;
+        if (depth == 0 && c == '\\' && k + 1 < body.size() && body[k + 1] == '\\') {
+          k++;
+          Dimen skip;
+          std::size_t j = k + 1;
+          while (j < body.size() && std::isspace(static_cast<unsigned char>(body[j])) != 0) j++;
+          if (j < body.size() && body[j] == '[') {
+            std::size_t at = j;
+            skip = dimen(groupAt(body, at));
+            k = at - 1;
+          }
+          rowTexts.push_back(cur);
+          skips.push_back(skip);
+          cur.clear();
+          continue;
+        }
+        if (c == '\\' && k + 1 < body.size()) {
+          cur += c;
+          cur += body[++k];
+          continue;
+        }
+        cur += c;
+      }
+      if (!trim(cur).empty()) rowTexts.push_back(cur);
+    }
+    int cols = 0;
+    for (std::size_t r = 0; r < rowTexts.size(); r++) {
+      const std::vector<std::string> cells = splitTop(rowTexts[r], '&');
+      cols = std::max(cols, static_cast<int>(cells.size()));
+      for (std::size_t c = 0; c < cells.size(); c++) {
+        MatrixCell cell;
+        cell.row = static_cast<int>(r) + 1;
+        cell.col = static_cast<int>(c) + 1;
+        cell.node = matrixCell(mn, cell.row, cell.col, cells[c], scope, cell.empty);
+        grid->cells.push_back(std::move(cell));
+      }
+    }
+    grid->rows = static_cast<int>(rowTexts.size());
+    grid->cols = cols;
+    grid->rowSkip = skips;
+    item.grid = std::move(grid);
+    _pic.paths.push_back(std::move(item));
+  }
+
+  /** One cell: the styles in the order of `matrix/inner style order`, then its own options. */
+  Node matrixCell(const Node& matrix, int row, int col, const std::string& source, const Style& scope, bool& empty) {
+    Node n;
+    n.style = scope;
+    n.style.draw = Paint();
+    n.style.fill = Paint();
+    n.style.tipStart.reset();
+    n.style.tipEnd.reset();
+    n.style.rounded.reset();
+    n.style.shape = "rectangle";
+    // The colour and the font of the matrix are the cells'.
+    n.style.current = matrix.style.current;
+    n.style.textColor = matrix.style.textColor;
+    n.style.font = matrix.style.font;
+    n.style.matrixKind = 0;
+    n.style.nodesStyle.clear();
+    applyStyleNamed(n.style, "every node");
+    applyOptions(n.style, matrix.style.nodesStyle, true, 0);
+    const std::string r = std::to_string(row), c = std::to_string(col);
+    // `nodes={...}` in a cell's scope is for the node it makes: applied where it is read.
+    const auto step = [&](const std::string& name) {
+      applyStyleNamed(n.style, name);
+      if (!n.style.nodesStyle.empty()) {
+        const std::string inner = n.style.nodesStyle;
+        n.style.nodesStyle.clear();
+        applyOptions(n.style, inner, true, 0);
+      }
+    };
+    step("every cell");
+    applyOptions(n.style, matrix.style.cellsStyle, true, 0);
+    step("column " + c);
+    step(col % 2 == 1 ? "every odd column" : "every even column");
+    step("row " + r);
+    step(row % 2 == 1 ? "every odd row" : "every even row");
+    step("row " + r + " column " + c);
+    std::string text = trim(source);
+    if (text.size() >= 2 && text[0] == '|' && text[1] == '[') {
+      const std::size_t close = text.find("]|");
+      if (close != std::string::npos) {
+        applyOptions(n.style, text.substr(2, close - 2), true, 0);
+        text = trim(text.substr(close + 2));
+      }
+    }
+    n.style.labelSpecs.clear();
+    n.name = matrix.name + "-" + r + "-" + c;
+    empty = text.empty() && !matrix.style.emptyNodes;
+    if (matrix.style.matrixKind == 2 && !text.empty()) text = "$" + text + "$";
+    n.content = text.empty() ? nullptr : contentOf(text, n.style);
+    return n;
+  }
+
   void statement(const std::string& cmd, const std::string& text, const Style& scope) {
+    if (cmd == "matrix") {
+      matrixStatement(text, scope);
+      return;
+    }
     PathItem path;
     path.style = scope;
     std::size_t i = 0;
