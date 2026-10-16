@@ -58,6 +58,8 @@ class DisplayAtom : public Atom {
 private:
   sptr<Atom> _base;
   Alignment _align;
+  bool _equation = false, _interrupts = false, _fullWidth = false;
+  float _innerWidth = 0;
 
 public:
   /** `align`: centred (a display, \centering) or to the right
@@ -66,6 +68,21 @@ public:
       : _base(base), _align(align) {}
 
   Alignment alignment() const { return _align; }
+
+  /** A display equation, which TeX sets off from the lines round it by the display skips (VRowAtom decides which);
+   *  `interrupts`: text of its paragraph stands before it, so the width of that line chooses between the long skips
+   *  and the short ones. */
+  void asEquation(bool interrupts, bool fullWidth = false) {
+    _fullWidth = fullWidth;
+    _equation = true;
+    _interrupts = interrupts;
+  }
+  bool isEquation() const { return _equation; }
+  bool interrupts() const { return _interrupts; }
+  /** An alignment fills the line, so it starts at its left edge, and its skips are the long ones after any text. */
+  bool fullWidth() const { return _fullWidth; }
+  /** The width of what the display holds (known once it has its box): where it starts in the line follows from it. */
+  float innerWidth() const { return _innerWidth; }
 
   sptr<Box> createBox(Env& env) override;
 };

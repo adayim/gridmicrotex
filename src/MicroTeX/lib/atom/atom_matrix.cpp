@@ -670,7 +670,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
         const float w = Units::fsize(pw->second, env);
         if (w > 0) {
           auto cell = boxarr[i][j];
-          auto [wasSplit, splitBox] = BoxSplitter::split(cell, w, env.lineSpace());
+          auto [wasSplit, splitBox] = BoxSplitter::split(cell, w, env.baselineSkip());
           (void)wasSplit;
           boxarr[i][j] = alignedCell(splitBox, w, lineAlign(j));
         }
@@ -763,7 +763,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
             MergeTextGuard guard(true);
             cell = env.withTextWidth(xw, [&](Env& e) { return cellBox(atom, j, e); });
           }
-          const auto [wasSplit, splitBox] = BoxSplitter::split(cell, xw, env.lineSpace());
+          const auto [wasSplit, splitBox] = BoxSplitter::split(cell, xw, env.baselineSkip());
           (void)wasSplit;
           boxarr[i][j] = alignedCell(splitBox, xw, lineAlign(j));
           made = true;

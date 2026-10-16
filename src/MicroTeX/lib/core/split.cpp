@@ -16,6 +16,16 @@ using namespace microtex;
 
 namespace {
 
+/** A line under the ones before it: `baselineSkip` from the last one's baseline, or a twelfth of it (TeX's ineskip,
+ *  1pt at 10pt) from its depth when the two are too tall for that. */
+void stackLine(VBox& vbox, const sptr<Box>& line, float baselineSkip) {
+  if (vbox._children.empty()) {
+    vbox.add(line);
+    return;
+  }
+  vbox.add(line, std::max(baselineSkip / 12.f, baselineSkip - vbox._children.back()->_depth - line->_height));
+}
+
 // A colour, a size, a highlight or ulem's underline and strike-out is one
 // box around the run it applies to, and the splitter breaks only inside
 // rows (HBox): text in them never wrapped. Opening such a box puts it
@@ -635,7 +645,7 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
     // ragged. The trailing `second` added after this loop is that line,
     // and is deliberately left alone.
     if (_justify) justifyLine(first, width);
-    vbox->add(first, lineSpace);
+    stackLine(*vbox, first, lineSpace);
     splitted = true;
     hbox = second;
   }
@@ -643,7 +653,7 @@ std::pair<bool, sptr<Box>> BoxSplitter::split(const sptr<HBox>& hb, float width,
   if (second != nullptr) {
     // The last line, left ragged but still ordered.
     reorderLine(second);
-    vbox->add(second, lineSpace);
+    stackLine(*vbox, second, lineSpace);
     return {splitted, vbox};
   }
 

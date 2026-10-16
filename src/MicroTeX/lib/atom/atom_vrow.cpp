@@ -47,11 +47,45 @@ void VRowAtom::addGapAfterLast(const Dimen& gap) {
   if (!_elements.empty()) _gaps[_elements.size() - 1] = gap;
 }
 
+namespace {
+
+/** The rows of an alignment display, found inside the boxes it is wrapped in: TeX sets such a display as a vertical list,
+ *  so the space above it is measured to its first row's baseline and below it from its last row's. */
+const VBox* rowsOf(const sptr<Box>& box) {
+  if (const auto* v = dynamic_cast<const VBox*>(box.get())) return v->_children.empty() ? nullptr : v;
+  if (const auto* d = dynamic_cast<const DecorBox*>(box.get())) return rowsOf(d->_base);
+  if (const auto* h = dynamic_cast<const HBox*>(box.get())) {
+    const VBox* found = nullptr;
+    for (const auto& child : h->_children) {
+      if (child->_height + child->_depth <= 0.f) continue;
+      if (found != nullptr) return nullptr;
+      found = rowsOf(child);
+      if (found == nullptr) return nullptr;
+    }
+    return found;
+  }
+  return nullptr;
+}
+
+/** The width of the last line `box` makes when it is broken to `width`: what TeX calls predisplaysize, less the 2em. */
+float lastLineWidth(const sptr<Box>& box, float width, float baselineSkip) {
+  if (width == POS_INF || box->_width <= width) return box->_width;
+  const auto [split, lines] = BoxSplitter::split(box, width, baselineSkip);
+  const auto vb = std::dynamic_pointer_cast<VBox>(lines);
+  if (!split || vb == nullptr || vb->_children.empty()) return box->_width;
+  return vb->_children.back()->_width;
+}
+
+}  // namespace
+
 sptr<Box> VRowAtom::createBox(Env& env) {
   auto vb = sptrOf<VBox>();
   // Interline space is what makes these a label's lines (getAsVRow()).
   vb->_rows = _addInterline;
-  auto lineSpace = sptrOf<StrutBox>(0.f, env.lineSpace(), 0.f, 0.f);
+  // The space between two lines: TeX's interline glue (Env::interline()), from the depth of the one to the height of the next.
+  const auto lineSpace = [&](const sptr<Box>& above, const sptr<Box>& below) {
+    return sptrOf<StrutBox>(0.f, env.interline(above->_depth, below->_height), 0.f, 0.f);
+  };
   // `\\[len]`: extra space below an element that has one.
   const auto gapAfter = [&](size_t i) {
     const auto it = _gaps.find(i);
@@ -74,7 +108,7 @@ sptr<Box> VRowAtom::createBox(Env& env) {
       auto hb = sptrOf<HBox>(box, maxWidth, _halign);
       vb->add(hb);
       if (i < size - 1) gapAfter(i);
-      if (_addInterline && i < size - 1) vb->add(lineSpace);
+      if (_addInterline && i < size - 1) vb->add(lineSpace(box, boxes[i + 1]));
     }
   } else {
     // convert atoms to boxes and add to the vertical box
@@ -85,6 +119,29 @@ sptr<Box> VRowAtom::createBox(Env& env) {
       boxes.push_back(atom->createBox(env));
       widest = std::max(widest, boxes.back()->_width);
     }
+    // TeX's display skips (\abovedisplayskip and \belowdisplayskip, 1em at 10pt) are long when the line before the
+    // display reaches past where the equation starts, 2em of room counted, and short (0 above, 0.6em below) when it
+    // does not -- or when no text of the paragraph stands before the display. One choice for the display's two skips.
+    const float measure = env.textWidth() == POS_INF ? widest : env.textWidth();
+    const auto equation = [&](size_t i) -> const DisplayAtom* {
+      const auto* d = dynamic_cast<DisplayAtom*>(_elements[i].get());
+      return d != nullptr && d->isEquation() ? d : nullptr;
+    };
+    vector<int> shortSkips(size, -1);
+    const auto isShort = [&](size_t d) {
+      if (shortSkips[d] < 0) {
+        const DisplayAtom* eq = equation(d);
+        bool shortSkip = true;
+        if (eq != nullptr && eq->interrupts() && d > 0) {
+          const float pre = lastLineWidth(boxes[d - 1], measure, env.baselineSkip());
+          const float left =
+            eq->alignment() == Alignment::center && !eq->fullWidth() ? (measure - eq->innerWidth()) / 2 : 0.f;
+          shortSkip = left > pre + 2 * env.em();
+        }
+        shortSkips[d] = shortSkip ? 1 : 0;
+      }
+      return shortSkips[d] == 1;
+    };
     for (size_t i = 0; i < size; i++) {
       // A display, or a centred or right-aligned line, with no text width
       // to align in is aligned on the widest line.
@@ -94,7 +151,21 @@ sptr<Box> VRowAtom::createBox(Env& env) {
       }
       vb->add(boxes[i]);
       if (i < size - 1) gapAfter(i);
-      if (_addInterline && i < size - 1) vb->add(lineSpace);
+      if (_addInterline && i < size - 1) {
+        // An alignment display is measured from its last row below and to its first row above.
+        float depth = boxes[i]->_depth, height = boxes[i + 1]->_height;
+        if (const auto* d = dynamic_cast<DisplayAtom*>(_elements[i].get()); d != nullptr && d->fullWidth()) {
+          if (const VBox* rows = rowsOf(boxes[i])) depth = rows->_children.back()->_depth;
+        }
+        if (const auto* d = dynamic_cast<DisplayAtom*>(_elements[i + 1].get()); d != nullptr && d->fullWidth()) {
+          if (const VBox* rows = rowsOf(boxes[i + 1])) height = rows->_children.front()->_height;
+        }
+        vb->add(sptrOf<StrutBox>(0.f, env.interline(depth, height), 0.f, 0.f));
+      }
+      float skip = 0.f;
+      if (i < size - 1 && equation(i + 1) != nullptr) skip += isShort(i + 1) ? 0.f : env.em();
+      if (i < size - 1 && equation(i) != nullptr) skip += isShort(i) ? 0.6f * env.em() : env.em();
+      if (skip > 0.f) vb->add(sptrOf<StrutBox>(0.f, skip, 0.f, 0.f));
     }
   }
 
@@ -119,13 +190,14 @@ sptr<Box> VRowAtom::createBox(Env& env) {
 sptr<Box> DisplayAtom::createBox(Env& env) {
   auto box = _base->createBox(env);
   const float width = env.textWidth();
+  _innerWidth = std::min(box->_width, width);
   if (width == POS_INF) return box;
   if (box->_width <= width) return sptrOf<HBox>(box, width, _align);
   // Too wide for the line: broken as any line is, and each line it makes
   // aligned -- not justified, as LaTeX's \centering leaves them.
   const bool justify = BoxSplitter::_justify;
   BoxSplitter::_justify = false;
-  const auto [split, lines] = BoxSplitter::split(box, width, env.lineSpace());
+  const auto [split, lines] = BoxSplitter::split(box, width, env.baselineSkip());
   BoxSplitter::_justify = justify;
   const auto vb = std::dynamic_pointer_cast<VBox>(lines);
   if (!split || vb == nullptr) return box;
@@ -166,7 +238,7 @@ sptr<Box> MinipageAtom::createBox(Env& env) {
     box = env.withTextWidth(measured ? width : env.textWidth(),
                             [&](Env& e) { return _body->createBox(e); });
   }
-  if (measured) box = BoxSplitter::split(box, width, env.lineSpace()).second;
+  if (measured) box = BoxSplitter::split(box, width, env.baselineSkip()).second;
 
   // A column of lines, whose baseline can be put where the position says.
   auto vb = std::dynamic_pointer_cast<VBox>(box);
@@ -211,7 +283,7 @@ sptr<Box> HangingAtom::createBox(Env& env) {
   auto lead = _lead->createBox(env);
   const float rest = width - lead->_width;
   if (rest <= 0) return whole;
-  const auto [split, lines] = BoxSplitter::split(_rest->createBox(env), rest, env.lineSpace());
+  const auto [split, lines] = BoxSplitter::split(_rest->createBox(env), rest, env.baselineSkip());
   if (!split) return whole;
   // The title's lines are a column whose baseline is their first line.
   auto row = sptrOf<HBox>();

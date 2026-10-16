@@ -1840,6 +1840,9 @@ private:
      *  that follows one unindented, whether it comes straight after the
      *  heading or after a blank line. */
     bool afterHeading = false;
+    // Text of the paragraph stands on the line before: a display after it interrupts the paragraph, and TeX chooses its
+    // skips by how far that line reaches. A paragraph break, a heading or another block ends it.
+    bool textBefore = false;
     /** A document, not a label: its displays go on lines of their own. */
     bool document = false;
     /** How lines set now are aligned, in a document: centred (center,
@@ -1976,6 +1979,7 @@ private:
       l.line->add(wrap(l, sptrOf<FontStyleAtom>(FontStyle::rm, false, styled), true, false));
       l.drawn = true;
       l.afterHeading = false;
+      l.textBefore = true;
       if (l.align != Alignment::left) l.lineAlign = l.align;
     }
     l.prose.reset();
@@ -2013,6 +2017,7 @@ private:
     if (brk != kNoNode && node(brk).aux == 1) {
       l.indentNext = !l.afterHeading;
       l.afterHeading = false;
+      l.textBefore = false;
       // \parskip, when the input made it more than the nothing article has.
       if (l.drawn && l.gap.empty() && !Units::getDimen("\\parskip").isEmpty()) l.gap = "\\parskip";
     }
@@ -2099,6 +2104,7 @@ private:
     l.gap = "1.15em";
     l.indentNext = false;
     l.afterHeading = true;
+    l.textBefore = false;
   }
 
   /** Something a document sets on a line of its own, `skip` above and
@@ -2108,7 +2114,10 @@ private:
    *  goes on unindented, as in TeX. */
   void blockLine(Label& l, NodeId id, bool display, const char* skip) {
     lineBreak(l);
-    if (l.drawn) l.gap = skip;
+    // The text before it, if any, is ended by now.
+    const bool interrupts = l.textBefore;
+    // A display is set off by TeX's display skips, which VRowAtom chooses once it knows the width of the line before.
+    if (l.drawn && !display) l.gap = skip;
     l.indentNext = false;
     beforeLine(l);
     Formula g;
@@ -2119,13 +2128,24 @@ private:
       lowerItem(id, g);
     }
     auto atom = g._root == nullptr ? sptrOf<EmptyAtom>() : g._root;
-    // An equation or align is in display style, as `\[...\]` is.
+    // An equation or align is in display style, as a display is.
     if (display && node(id).kind != NodeKind::math) atom = sptrOf<StyleAtom>(TexStyle::display, atom);
     atom = wrap(l, atom);
-    l.line->add(display ? sptrOf<DisplayAtom>(atom) : atom);
+    if (display) {
+      auto shown = sptrOf<DisplayAtom>(atom);
+      // amsmath's alignments are `\halign to \displaywidth`: they start at the left margin, so the long skips apply.
+      static const std::set<std::string> wide = {"align", "alignat", "flalign", "gather", "multline", "eqnarray"};
+      std::string name = node(id).kind == NodeKind::environment ? node(id).text : std::string();
+      if (!name.empty() && name.back() == '*') name.pop_back();
+      shown->asEquation(interrupts, wide.count(name) > 0);
+      l.line->add(shown);
+    } else {
+      l.line->add(atom);
+    }
     lineBreak(l);
-    l.gap = skip;
+    if (!display) l.gap = skip;
     l.indentNext = false;
+    l.textBefore = false;
   }
 
   /** The content of a group a document sets apart from its paragraphs,
@@ -2145,6 +2165,7 @@ private:
     l.align = was;
     l.gap = skip;
     l.indentNext = false;
+    l.textBefore = false;
   }
 
   /** `atom` under the declarations whose bodies a document is reading line
