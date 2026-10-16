@@ -16,10 +16,12 @@ LaTeX installation needed. Built on a
 [fork](https://github.com/adayim/MicroTeX) of the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
 
-Everything on [KaTeX’s list of supported
-functions](https://katex.org/docs/supported) is drawn, and more: amsmath
-and mathtools environments, equation numbers, tables from `kable()` and
-gt, `tikz-cd` diagrams, `\ce{}` chemistry, and a subset of siunitx.
+Broad LaTeX coverage: amsmath and mathtools environments, equation
+numbers, tables from `kable()` and gt, `tikz-cd` diagrams and TikZ
+pictures, `\ce{}` chemistry, a subset of siunitx, footnotes, `tcolorbox`
+and `multicols`. [What is
+supported](https://adayim.github.io/gridmicrotex/supported-functions.pdf)
+lists each command with its output.
 
 ## Installation
 
