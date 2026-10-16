@@ -27,6 +27,19 @@ test_that("multicols fills its columns four, four and two in a real font, as mul
   expect_equal(col, c(1, 1, 1, 1, 2, 2, 2, 2, 3, 3))
 })
 
+test_that("multicols stretches a column that is a line short to the others' last baseline", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  # pdflatex: ant..dog and elk, fox, gnu end on one baseline; the short column's paragraph glue takes the missing line.
+  words <- c("ant", "bee", "cat", "dog", "elk", "fox", "gnu")
+  t <- latex_tree(paste0("\\begin{multicols}{2}", paste(words, collapse = "\\par "), "\\end{multicols}"),
+                  input_mode = "document", max_width = 345)
+  r <- t$records[t$records$type == "text", ]
+  y <- r$y[match(words, r$text)]
+  expect_equal(y[7], y[4], tolerance = 1e-6)
+  expect_equal(y[6] - y[5], y[7] - y[6], tolerance = 1e-6)
+  expect_gt(y[6] - y[5], y[2] - y[1] + 1)
+})
+
 test_that("a document's text width follows the grob's gpar fontsize", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # A paragraph's indent is 1.5em of the size the label is set in.

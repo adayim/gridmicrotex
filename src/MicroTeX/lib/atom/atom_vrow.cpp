@@ -1,6 +1,8 @@
 #include "atom/atom_vrow.h"
 
 #include <algorithm>
+#include <set>
+#include <vector>
 
 #include "atom/atom_row.h"
 #include "box/box_group.h"
@@ -417,11 +419,16 @@ bool hasColumnBreak(const sptr<Box>& box) {
   return false;
 }
 
-/** The lines and gaps of a column, one below the other: the rows of a body and the lines of its paragraphs. */
-void columnLeaves(const sptr<Box>& box, std::vector<sptr<Box>>& out) {
+/** The lines and gaps of a column, one below the other: the rows of a body and the lines of its paragraphs. `gaps`
+ *  collects the glue between rows, the paragraphs' `\parskip`, which a short column stretches; the glue between a
+ *  paragraph's own lines does not stretch. */
+void columnLeaves(const sptr<Box>& box, std::vector<sptr<Box>>& out, std::set<const Box*>& gaps) {
   const auto v = std::dynamic_pointer_cast<VBox>(box);
   if (v != nullptr && (v->_lines || v->_rows) && !v->_children.empty()) {
-    for (const auto& child : v->_children) columnLeaves(child, out);
+    for (const auto& child : v->_children) {
+      if (v->_rows && !v->_lines && child->isSpace()) gaps.insert(child.get());
+      columnLeaves(child, out, gaps);
+    }
   } else {
     out.push_back(box);
   }
@@ -451,7 +458,8 @@ sptr<Box> MulticolsAtom::createBox(Env& env) {
   if (measure == POS_INF || n < 2 || colWidth <= 0.f) return setBox(_body, measure);
 
   std::vector<sptr<Box>> leaves;
-  columnLeaves(setBox(_body, colWidth), leaves);
+  std::set<const Box*> gaps;
+  columnLeaves(setBox(_body, colWidth), leaves, gaps);
   // Columns of at most `limit` high, filled from the top, a break after a line that holds a \columnbreak. Glue at the
   // top of a column is dropped, as TeX drops it where a page breaks, and at the bottom it takes no room.
   using Column = std::vector<sptr<Box>>;
@@ -501,7 +509,31 @@ sptr<Box> MulticolsAtom::createBox(Env& env) {
   }
   // A quarter of a line over: lines differ by their own height and depth (a digit's, a descender's), where TeX's
   // columns are made of lines that take the same space each, so a column is not a line short for 11 units of depth.
-  const std::vector<Column> cols = fill(high + 0.25f * env.baselineSkip());
+  std::vector<Column> cols = fill(high + 0.25f * env.baselineSkip());
+  // multicol sets every column to the height of the tallest, stretching the glue between a short column's paragraphs
+  // evenly: pdflatex's rows of a column a line short are 18 apart where the others' are 12 (a column two lines short,
+  // the last of ten lines in three, is left as it is).
+  // Columns start on the same baseline, so a column ends where its last baseline is: its extent less the first line's
+  // height above the baseline and the last line's depth below.
+  const auto heightOf = [](const Column& column) {
+    if (column.empty()) return 0.f;
+    float sum = 0.f;
+    for (const auto& leaf : column) sum += leaf->_height + leaf->_depth;
+    return sum - column.front()->_height - column.back()->_depth;
+  };
+  float target = 0.f;
+  for (const auto& column : cols) target = std::max(target, heightOf(column));
+  for (auto& column : cols) {
+    const float shortBy = target - heightOf(column);
+    if (shortBy < 0.01f || shortBy > 1.3f * env.baselineSkip()) continue;
+    std::vector<std::size_t> stretchy;
+    for (std::size_t k = 0; k < column.size(); k++) {
+      if (gaps.count(column[k].get()) > 0) stretchy.push_back(k);
+    }
+    for (const std::size_t k : stretchy) {
+      column[k] = sptrOf<StrutBox>(0.f, column[k]->_height + shortBy / static_cast<float>(stretchy.size()), 0.f, 0.f);
+    }
+  }
   auto row = sptrOf<HBox>();
   // The last line of the tallest column ends the columns.
   float lastDepth = 0.f, tallestColumn = -1.f;
