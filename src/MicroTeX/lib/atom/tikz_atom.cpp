@@ -219,6 +219,7 @@ private:
   void layoutItem(const PathItem& item);
   void layoutNode(const Node& n, const Style& st, P at, bool atGiven, const SegInfo* seg, double t);
   void placeLabel(const Style& ownerStyle, const Geom& owner, const Label& lb);
+  void placeChildren(const Node& parent, const Geom& g);
   Geom makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt, const FitBox* fit) const;
   void nodeOutline(const Geom& g, const Style& st, Prim& prim) const;
   void connect(const PathItem& item, const PathOp& op, const Where& from, const Where& to, std::vector<Sub>& out,
@@ -1111,6 +1112,29 @@ void Layout::layoutNode(const Node& n, const Style& st, P at, bool atGiven, cons
   }
   if (!prim.subs.empty() || prim.content != nullptr) _prims.push_back(std::move(prim));
   for (const Label& lb : n.labels) placeLabel(st, g, lb);
+  if (!n.children.empty()) placeChildren(n, g);
+}
+
+/** The children of a node, as pgf grows a tree: each one `level distance` from the parent's centre in the direction of
+ *  `grow`, and, where `grow` was not set at its own level, spread along the line across it, `sibling distance` apart
+ *  and centred on the parent (`(n + 1) / 2` units to the left, then `j` to the right; `grow'` the other way). A
+ *  `missing` child has its place and no node. */
+void Layout::placeChildren(const Node& parent, const Geom& g) {
+  const int count = static_cast<int>(parent.children.size());
+  for (int j = 0; j < count; j++) {
+    const Child& c = parent.children[static_cast<std::size_t>(j)];
+    if (c.missing) continue;
+    const double ld = len(c.style.levelDistance, 1.5 * _cm), sd = len(c.style.siblingDistance, 1.5 * _cm);
+    const double angle = c.style.growAngle.value_or(-90.f);
+    P shift = polar(angle, ld);
+    if (c.style.growLevel != c.level) {
+      const double left = c.style.growSwap ? angle + 90 : angle - 90, right = c.style.growSwap ? angle - 90 : angle + 90;
+      shift = shift + polar(left, 0.5 * (count + 1) * sd) + polar(right, (j + 1) * sd);
+    }
+    Node child = c.node;
+    child.hasAt = false;
+    layoutNode(child, child.style, g.c + shift, true, nullptr, 0.5);
+  }
 }
 
 /** A label or a pin: a node put on the border of `owner` at an angle, `label distance` (`pin distance`, 3ex)

@@ -137,6 +137,14 @@ struct Style {
   std::optional<float> rotate;                   // a node's own rotation
   // `label=` and `pin=` as written (pin: true), read into a Node's labels; the distances they use.
   std::vector<Coord> fit;                        // `fit=(a)(b)`: the points a node is put round
+  // Trees (`child`): where a child is put, and how its edge runs.
+  std::optional<Dimen> levelDistance, siblingDistance;
+  std::optional<float> growAngle;                // `grow=`, degrees; down (-90) when not said
+  bool growSwap = false;                         // `grow'`: the siblings run the other way
+  int growLevel = -1;                            // the tree level `grow` was set at: its siblings are not spread there
+  bool missing = false;                          // `child[missing]`: a place with no node
+  std::string edgePath;                          // `edge from parent path`: a path naming the parent and the child nodes
+  std::string parentAnchor, childAnchor;        // `parent anchor`, `child anchor`
   std::optional<int> layer;                      // `on background layer`: -1 is drawn before 0, the main one
   std::vector<std::pair<bool, std::string>> labelSpecs;
   std::optional<Dimen> labelDistance, pinDistance;
@@ -163,6 +171,8 @@ struct Label {
   Style edge;                                    // a pin's line to its node
 };
 
+struct Child;
+
 struct Node {
   std::string name;
   Style style;
@@ -174,6 +184,16 @@ struct Node {
   bool between = false;                          // written between an operation and its coordinate
   int alongOp = -1;                              // then: the operation it sits on
   std::vector<Label> labels;
+  std::vector<Child> children;                   // `child {...}`: placed round it when it is
+};
+
+/** A child of a node in a tree: its node (which has children of its own), the scope it grows in, and its place in the
+ *  list (`missing` ones count and are not drawn). */
+struct Child {
+  Style style;
+  Node node;
+  int level = 1;
+  bool missing = false;
 };
 
 struct PathItem {

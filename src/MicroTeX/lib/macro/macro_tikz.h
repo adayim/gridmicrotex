@@ -187,7 +187,10 @@ private:
 
 class Reader {
 public:
-  Reader(CommandArgs& args, TikzAtom& pic) : _args(args), _pic(pic) {}
+  Reader(CommandArgs& args, TikzAtom& pic) : _args(args), _pic(pic) {
+    // pgf's own styles that a picture may change.
+    _styles["edge from parent"] = "draw";
+  }
 
   /** The picture: its options, then its statements. */
   void picture(std::string body) {
@@ -205,6 +208,10 @@ private:
   std::map<std::string, std::string> _styles;      // name -> its options
   std::map<std::string, std::string> _appended;
   int _nodes = 0;
+  int _treeLevel = 0;                              // how deep in a tree the options being read are
+  int _treeNames = 0;                              // parents of trees that had no name
+  std::string _nodeExtra;                          // a style a node takes after `every node`: `every child node`
+  std::vector<PathItem> _edges;                    // the edges from parents, drawn after the path that grew them
 
   void warn(const std::string& what) {
     if (_warned.insert(what).second) _args.warn(what);
@@ -533,6 +540,18 @@ private:
       st.shortenEnd = Dimen{1.f, UnitType::pt};
     } else if ((node || key == "label distance" || key == "pin distance" || key == "pin edge" || key == "every label" || key == "every pin") && applyNodeOption(st, key, value, hasValue, c)) {
       // read
+    } else if (key == "level distance" && hasValue) {
+      st.levelDistance = dimen(value);
+    } else if (key == "sibling distance" && hasValue) {
+      st.siblingDistance = dimen(value);
+    } else if ((key == "grow" || key == "grow'") && hasValue) {
+      growOf(st, value, key == "grow'");
+    } else if (key == "missing") {
+      st.missing = !hasValue || value != "false";
+    } else if (key == "edge from parent path" && hasValue) {
+      st.edgePath = value;
+    } else if ((key == "parent anchor" || key == "child anchor") && hasValue) {
+      (key == "parent anchor" ? st.parentAnchor : st.childAnchor) = trim(value) == "border" ? std::string() : trim(value);
     } else if (key == "on background layer" || key == "on main layer" || key == "on foreground layer") {
       st.layer = key == "on background layer" ? -1 : key == "on main layer" ? 0 : 1;
     } else if (key == "cycle") {
@@ -846,6 +865,231 @@ private:
     return out;
   }
 
+  // --- trees ------------------------------------------------------------------------------------
+
+  /** `grow=down`, `grow=right`, `grow=30`, `grow=north east`: the way a tree grows. */
+  void growOf(Style& st, const std::string& value, bool swap) {
+    static const std::map<std::string, float> names = {
+      {"down", -90.f},       {"up", 90.f},         {"left", 180.f},        {"right", 0.f},
+      {"south", -90.f},      {"north", 90.f},      {"west", 180.f},        {"east", 0.f},
+      {"north east", 45.f},  {"north west", 135.f}, {"south east", -45.f},  {"south west", -135.f}};
+    const std::string v = trim(value);
+    double angle = 0;
+    const auto it = names.find(v);
+    if (it != names.end()) {
+      angle = it->second;
+    } else if (!number(v, angle)) {
+      warn("tikz: grow=" + v + " is not a direction: left out");
+      return;
+    }
+    st.growAngle = static_cast<float>(angle);
+    st.growSwap = swap;
+    st.growLevel = _treeLevel;
+  }
+
+  /** The index of `needle` as a word of `text` outside every group, bracket and parenthesis, from `from`. */
+  static std::size_t findTop(const std::string& text, const std::string& needle, std::size_t from = 0) {
+    int depth = 0;
+    for (std::size_t k = from; k < text.size(); k++) {
+      const char c = text[k];
+      if (c == '{' || c == '[' || c == '(') depth++;
+      if (c == '}' || c == ']' || c == ')') depth--;
+      if (depth == 0 && text.compare(k, needle.size(), needle) == 0 &&
+          (k == 0 || std::isalpha(static_cast<unsigned char>(text[k - 1])) == 0) &&
+          (k + needle.size() >= text.size() || std::isalpha(static_cast<unsigned char>(text[k + needle.size()])) == 0)) {
+        return k;
+      }
+    }
+    return std::string::npos;
+  }
+
+  /** The `child` items that follow a node, with the options between them: the node's children, as TikZ grows them
+   *  (`tikz.code.tex`, `\tikz@children`). Each child's body is a node and what follows it -- its own children, its
+   *  `edge from parent` -- and each edge becomes a path of its own, drawn after the one the tree is on. */
+  void readTree(Node& parent, const Style& scope, int level, const std::string& t, std::size_t& i) {
+    struct Source {
+      std::string options, body;
+    };
+    const std::size_t start = i;
+    const int was = _treeLevel;
+    Style ctx = scope;
+    std::vector<Source> kids;
+    const auto atWord = [&](std::size_t k, const char* w) {
+      const std::size_t n = std::string(w).size();
+      return t.compare(k, n, w) == 0 && (k + n >= t.size() || std::isalpha(static_cast<unsigned char>(t[k + n])) == 0);
+    };
+    for (;;) {
+      const std::size_t save = i;
+      skipSpace(t, i);
+      if (i < t.size() && t[i] == '[') {
+        // Options for the rest of the path, if a child comes after them.
+        std::size_t at = i;
+        const std::string o = groupAt(t, at);
+        std::size_t k = at;
+        skipSpace(t, k);
+        if (k < t.size() && (t[k] == '[' || atWord(k, "child"))) {
+          _treeLevel = level - 1;
+          applyOptions(ctx, o, false, 0);
+          i = at;
+          continue;
+        }
+        i = save;
+        break;
+      }
+      if (i < t.size() && atWord(i, "child")) {
+        i += 5;
+        skipSpace(t, i);
+        std::string options;
+        if (i < t.size() && t[i] == '[') {
+          std::size_t at = i;
+          options = groupAt(t, at);
+          i = at;
+        }
+        skipSpace(t, i);
+        if (atWord(i, "foreach")) {
+          // child foreach \x in {a,b} {body}: one child for each value.
+          i += 7;
+          skipSpace(t, i);
+          std::vector<std::string> vars;
+          while (i < t.size() && t[i] == '\\') {
+            i++;
+            vars.push_back(word(t, i));
+            skipSpace(t, i);
+            if (i < t.size() && t[i] == '/') i++;
+            skipSpace(t, i);
+          }
+          if (t.compare(i, 2, "in") == 0 && !vars.empty()) {
+            i += 2;
+            skipSpace(t, i);
+            std::string list, body;
+            if (i < t.size() && t[i] == '{') {
+              std::size_t at = i;
+              list = groupAt(t, at);
+              i = at;
+            }
+            skipSpace(t, i);
+            if (i < t.size() && t[i] == '{') {
+              std::size_t at = i;
+              body = groupAt(t, at);
+              i = at;
+            }
+            for (const std::vector<std::string>& values : foreachValues(list, vars.size())) {
+              std::string one = body;
+              for (std::size_t v = 0; v < vars.size(); v++) {
+                one = replaceControl(one, vars[v], v < values.size() ? values[v] : "");
+              }
+              kids.push_back({options, one});
+            }
+          } else {
+            warn("tikz: child foreach is not in the form `\\x in {list}': left out");
+          }
+          continue;
+        }
+        std::string body;
+        if (i < t.size() && t[i] == '{') {
+          std::size_t at = i;
+          body = groupAt(t, at);
+          i = at;
+        }
+        kids.push_back({options, body});
+        continue;
+      }
+      i = save;
+      break;
+    }
+    if (kids.empty()) {
+      i = start;
+      _treeLevel = was;
+      return;
+    }
+    // The styles of the level, then each child's own.
+    _treeLevel = level;
+    applyStyleNamed(ctx, "level " + std::to_string(level));
+    if (_styles.count("level") > 0) option(ctx, "level", std::to_string(level), true, false, 0);
+    if (parent.name.empty()) parent.name = "tikz@tree" + std::to_string(++_treeNames);
+    const int count = static_cast<int>(kids.size());
+    for (int j = 0; j < count; j++) {
+      Child c;
+      c.level = level;
+      c.style = ctx;
+      applyStyleNamed(c.style, "every child");
+      applyOptions(c.style, kids[static_cast<std::size_t>(j)].options, false, 0);
+      c.missing = c.style.missing;
+      c.style.missing = false;
+      if (!c.missing) readChild(c, parent.name, j + 1, kids[static_cast<std::size_t>(j)].body);
+      parent.children.push_back(std::move(c));
+    }
+    _treeLevel = was;
+  }
+
+  /** One child's body: `node ... child ... edge from parent ...`; a body with no node is a point. */
+  void readChild(Child& c, const std::string& parentName, int index, const std::string& source) {
+    // `edge from parent` ends what the node and its children are, and starts the edge's own options and labels.
+    std::string body = source, edgeText;
+    const std::size_t edgeAt = findTop(source, "edge");
+    if (edgeAt != std::string::npos) {
+      std::size_t k = edgeAt + 4;
+      skipSpace(source, k);
+      if (source.compare(k, 4, "from") == 0) {
+        k += 4;
+        skipSpace(source, k);
+        if (source.compare(k, 6, "parent") == 0) {
+          body = source.substr(0, edgeAt);
+          edgeText = source.substr(k + 6);
+          // Children written after the edge's labels belong to the node as well.
+          const std::size_t childAt = findTop(edgeText, "child");
+          if (childAt != std::string::npos) {
+            body += " " + edgeText.substr(childAt);
+            edgeText = edgeText.substr(0, childAt);
+          }
+        }
+      }
+    }
+    std::size_t b = 0;
+    skipSpace(body, b);
+    const bool isNode = body.compare(b, 4, "node") == 0, isCoordinate = body.compare(b, 10, "coordinate") == 0;
+    Node cn;
+    if (isNode || isCoordinate) {
+      b += isNode ? 4 : 10;
+      _nodeExtra = "every child node";
+      cn = nodeOf(isCoordinate, body, b, c.style, false, c.style);
+      _nodeExtra.clear();
+    } else {
+      cn.style = c.style;
+      cn.style.shape = "coordinate";
+    }
+    if (cn.name.empty()) cn.name = parentName + "-" + std::to_string(index);
+    readTree(cn, c.style, c.level + 1, body, b);
+    // The edge: a path from the parent to the child, with labels.
+    PathItem e;
+    e.style = c.style;
+    e.style.draw = Paint();
+    e.style.fill = Paint();
+    applyStyleNamed(e.style, "edge from parent");
+    std::size_t k = 0;
+    skipSpace(edgeText, k);
+    if (k < edgeText.size() && edgeText[k] == '[') {
+      std::size_t at = k;
+      applyOptions(e.style, groupAt(edgeText, at), false, 0);
+      k = at;
+    }
+    std::string path = e.style.edgePath.empty() ? "(\\tikzparentnode\\tikzparentanchor) -- (\\tikzchildnode\\tikzchildanchor)"
+                                                 : e.style.edgePath;
+    path = replaceControl(path, "tikzparentanchor", e.style.parentAnchor.empty() ? "" : "." + e.style.parentAnchor);
+    path = replaceControl(path, "tikzchildanchor", e.style.childAnchor.empty() ? "" : "." + e.style.childAnchor);
+    path = replaceControl(path, "tikzparentnode", parentName);
+    path = replaceControl(path, "tikzchildnode", cn.name);
+    pathOps(e, path + " " + edgeText.substr(k), 0);
+    _edges.push_back(std::move(e));
+    c.node = std::move(cn);
+  }
+
+  /** The edges the statement just read made, now that its own path is in the picture. */
+  void flushEdges() {
+    for (PathItem& e : _edges) _pic.paths.push_back(std::move(e));
+    _edges.clear();
+  }
+
   // --- statements -------------------------------------------------------------------------------
 
   static void skipSpace(const std::string& t, std::size_t& i) {
@@ -1118,14 +1362,17 @@ private:
       // \node[options] (name) at (coord) {text};
       i = 0;
       Node n = nodeOf(cmd == "coordinate", text, i, path.style, true, scope);
+      readTree(n, scope, 1, text, i);
       path.isNode = true;
       path.nodes.push_back(std::move(n));
       _pic.paths.push_back(std::move(path));
+      flushEdges();
       return;
     }
     if (cmd == "clip") warn("tikz: \\clip is not supported: the path is drawn as it stands");
     pathOps(path, text, i);
     _pic.paths.push_back(std::move(path));
+    flushEdges();
   }
 
   void applyStyleNamed(Style& st, const std::string& name) {
@@ -1148,6 +1395,7 @@ private:
       n.style.rounded.reset();
     }
     applyStyleNamed(n.style, "every node");
+    if (!_nodeExtra.empty()) applyStyleNamed(n.style, _nodeExtra);
     std::string optionsText;
     bool optionsRead = false;
     std::string text;
@@ -1466,6 +1714,7 @@ private:
           push(std::move(op));
         } else if (w == "node" || w == "coordinate") {
           Node n = nodeOf(w == "coordinate", t, i, path.style, false, path.style);
+          readTree(n, path.style, 1, t, i);
           const bool before = pending != Pending::none;
           n.between = before;
           path.nodes.push_back(std::move(n));
