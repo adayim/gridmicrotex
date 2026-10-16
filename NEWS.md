@@ -1,24 +1,10 @@
 # gridmicrotex 0.2.1
 
-- `\usepackage` now loads packages. New `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
-- A name from a package a label does not load can be defined with `\newcommand`, as in LaTeX.
-- Bug fix: macros and dimensions were read wrongly in a few cases, such as a parameter next to a control word and letters after a unit.
-- Bug fix: the rows of matrices, `cases`, `align` and kin were closer together than in LaTeX, and a `\frac` in a matrix was too large.
-- Bug fix: a display holding only its number, such as `\[\tag{1}\]`, crashed when set at a width.
-- Bug fix: a colour such as `red!50` was drawn black, so `\rowcolor{gray!10}` painted a row black. Colours are now mixed as in xcolor, and a colour that is not defined warns instead of drawing black. New `\colorlet`.
-- `\parbox`, `\setlength`, `\addtolength`, `\newlength` and counters (`\newcounter`, `\setcounter`, `\stepcounter`, `\arabic`, ...) now work. `\parindent`, `\parskip`, `\tabcolsep` and `\arraycolsep` can be set.
-- Bug fix: text tables had 1em between their columns and at their edges, 2pt less than LaTeX's `\tabcolsep`; they are now padded as LaTeX pads them.
-- Bug fix: `\fbox`, `\colorbox`, `\fcolorbox` and `\boxed` had 5bp of room around their text at a size of 10, LaTeX's `\fboxsep` is 3pt; they are set as LaTeX sets them, and `\fboxsep` and `\fboxrule` can be set.
-- Bug fix: a `tablenotes` list (threeparttable, kableExtra's footnotes) drew `\item` as a red name; `\makecell[tl]` and siunitx `S` columns made the whole table fail. Notes are now a list of superscript labels, `\makecell` takes its `[vh]` letters, and an `S` column lines up its decimal markers.
-- `\cite` draws the number of its `\bibitem` (or its `[label]`) instead of `[?]`, before or after the `thebibliography`, and `\bibitem[label]` is marked with its label.
-- New: `tikzpicture` draws paths, nodes, arrows, `positioning`, `\foreach`, `\tikzset` and `\tikzstyle`, as TikZ does, in grid grobs and on devices. It also draws `ellipse`, `diamond` and `rounded rectangle` nodes, `label` and `pin`, `calc` coordinates, `fit`, background layers, trees (`child`), `matrix of nodes` and `brace` decorations. The other shapes and decorations are not drawn yet.
-- Bug fix: the lines of a paragraph, or of a label with `\\`, were set from the font's height plus a gap, 11bp apart at a size of 10 where LaTeX's `\baselineskip` is 12 (`gp$lineheight` times the font size, as in grid); and a display was 1em from the lines around it, not LaTeX's `\abovedisplayskip` and `\belowdisplayskip` with their short forms after a short line. Documents, wrapped text and multi-line labels are taller by up to 10%.
-- `\footnote` in a document is a raised mark in the text and a note after the body (`\footnotesize`, with the rule), numbered as LaTeX numbers it; `\footnotemark`, `\footnotetext` and `\thefootnote` work. A label still draws the note's text where it stands, with a warning.
-- New: `tcolorbox` draws tcolorbox's default framed box, as wide as the line, with `title`, `colback`, `colframe`, `colbacktitle`, `coltitle`, `fonttitle`, `boxrule`, `arc`, `sharp corners`, `boxsep`, `left`, `right`, `top` and `bottom`; other keys warn.
-- Bug fix: in a `tikzpicture` a unit inside a coordinate expression (`(\i*3mm, 0)`, `(1cm + 5mm, 0)`) was read as nothing and the point drawn at the origin, with no warning; and a coordinate that names no node drawn before it now warns, and the path is left out.
-- New: `multicols{n}[header]` sets its body in `n` balanced columns a `\columnsep` apart, with `\columnbreak`, the header across the whole width and LaTeX's `\multicolsep` round it.
-- A float's `\caption` is "Figure 1: text" or "Table 1: text", each kind counting on its own, with LaTeX's skip above it in a document (`\caption*` stays unnumbered); `subfigure` and `subtable` (subcaption) are lettered "(a) text", and `\ref` of one is "1a", `\subref` "a".
-- Bug fix: `orange`, `purple`, `violet` and `brown` were dvips's colours, not the ones LaTeX's xcolor has under those names (dvips's are `Orange` ...), and `lime`, `olive`, `pink`, `teal`, `darkgray` and `lightgray` were not defined.
+- `\usepackage` now loads the commands of the usual packages (amsmath, physics, ...), `load_sty()` makes a `.sty` file of your own one, and `latex_options(packages = )` loads packages before every label.
+- New: `tikzpicture` draws paths, nodes, arrows, shapes, labels, `calc`, `fit`, trees, `matrix of nodes` and braces, in grid grobs and on devices. The rest of TikZ is not drawn yet.
+- New in documents: `\footnote` as a mark and a note after the body, captions numbered "Figure 1:" and "Table 1:" with lettered `subfigure`s, `tcolorbox`, `multicols`, `\parbox`, lengths and counters, and `\cite` that draws the number of its `\bibitem`.
+- Lines, displays and the rows of matrices, `align` and kin are now spaced as LaTeX spaces them, so documents and multi-line labels are taller by up to 10%; text tables, `\fbox` and `\colorbox` are padded by `\tabcolsep` and `\fboxsep`.
+- Bug fix: a colour such as `red!50` was drawn black, so `\rowcolor{gray!10}` painted a row black; colours are mixed as in xcolor and an undefined one warns. Also fixed: `tablenotes`, `\makecell[tl]` and siunitx `S` columns failing, macros and dimensions read wrongly in a few cases, and a crash on `\[\tag{1}\]` at a width.
 
 # gridmicrotex 0.2.0
 
