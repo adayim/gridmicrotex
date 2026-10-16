@@ -378,7 +378,42 @@ bool Layout::resolve(const Coord& c, const Style& st, P base, Where& out) {
       }
       return true;
     }
-    case Coord::Kind::calc: return false;
+    case Coord::Kind::calc: {
+      // tikzlibrarycalc: a sum of signed, scaled points, each taken through its `!` steps in turn. Every point
+      // in it is a point of the canvas already, so the sum is not transformed again.
+      if (c.calc == nullptr) return false;
+      P total{0, 0};
+      for (const CalcTerm& term : c.calc->terms) {
+        Where w;
+        if (!resolve(term.first, st, base, w)) return false;
+        P p = w.p;
+        for (const CalcStep& step : term.steps) {
+          Where target;
+          if (!resolve(step.to, st, base, target)) return false;
+          P b = target.p;
+          if (step.rotated) {
+            // The target is turned about the point so far before it is used.
+            const P d = b - p;
+            const double a = radians(step.angle);
+            b = p + P{d.x * std::cos(a) - d.y * std::sin(a), d.x * std::sin(a) + d.y * std::cos(a)};
+          }
+          if (step.kind == CalcStep::Kind::fraction) {
+            p = p * (1.0 - step.fraction) + b * step.fraction;
+          } else if (step.kind == CalcStep::Kind::distance) {
+            p = p + unit(b - p) * len(step.distance);
+          } else {
+            Where via;
+            if (!resolve(step.via, st, base, via)) return false;
+            const P u = unit(b - p);
+            const P q = via.p - p;
+            p = p + u * (q.x * u.x + q.y * u.y);
+          }
+        }
+        total = total + p * term.factor;
+      }
+      out.p = total;
+      return true;
+    }
   }
   return false;
 }

@@ -663,7 +663,7 @@ private:
     const std::string s = trim(inside);
     if (!s.empty() && s[0] == '$') {
       c.kind = Coord::Kind::calc;
-      c.expr = s;
+      c.calc = calcOf(s);
       return c;
     }
     // `a:r`, an angle and a radius; not `cs:`.
@@ -696,6 +696,127 @@ private:
     c.name = trim(dot == std::string::npos ? s : s.substr(0, dot));
     if (dot != std::string::npos) c.anchor = trim(s.substr(dot + 1));
     return c;
+  }
+
+  /** The text of `($ ... $)` as tikzlibrarycalc reads it: terms joined by `+` and `-`, each an optional factor
+   *  and `*`, a coordinate, and `!` steps (`!0.3!(b)`, `!1cm!(b)`, `!(p)!(b)`, a target turned by `!30:(b)`). */
+  std::shared_ptr<CalcExpr> calcOf(const std::string& source) {
+    auto out = std::make_shared<CalcExpr>();
+    std::string e = trim(source);
+    if (!e.empty() && e.front() == '$') e.erase(0, 1);
+    if (!e.empty() && e.back() == '$') e.pop_back();
+    const auto bad = [&](const std::string& why) {
+      warn("tikz: in a calculation, " + why + ": the rest of it is left out");
+    };
+    // A point, and the angle in front of it if it has one, from `i`.
+    const auto target = [&](std::size_t& i, CalcStep& step) {
+      skipSpace(e, i);
+      const std::size_t paren = e.find('(', i), colon = e.find(':', i);
+      if (colon != std::string::npos && paren != std::string::npos && colon < paren) {
+        double a = 0;
+        if (!number(e.substr(i, colon - i), a)) return false;
+        step.rotated = true;
+        step.angle = static_cast<float>(a);
+        i = colon + 1;
+        skipSpace(e, i);
+      }
+      if (i >= e.size() || e[i] != '(') return false;
+      std::size_t at = i;
+      step.to = coord(parenAt(e, at));
+      i = at;
+      return true;
+    };
+    std::size_t i = 0;
+    for (;;) {
+      skipSpace(e, i);
+      if (i >= e.size()) break;
+      CalcTerm term;
+      if (e[i] == '+') {
+        i++;
+      } else if (e[i] == '-') {
+        term.factor = -1;
+        i++;
+      }
+      skipSpace(e, i);
+      if (i < e.size() && e[i] != '(') {
+        // The factor, up to the `*` that is followed by a point.
+        std::size_t star = std::string::npos;
+        int depth = 0;
+        for (std::size_t k = i; k < e.size() && star == std::string::npos; k++) {
+          if (e[k] == '(') depth++;
+          if (e[k] == ')') depth--;
+          if (e[k] != '*' || depth != 0) continue;
+          std::size_t j = k + 1;
+          skipSpace(e, j);
+          if (j < e.size() && e[j] == '(') star = k;
+        }
+        double f = 1;
+        if (star == std::string::npos || !number(e.substr(i, star - i), f)) {
+          bad("a factor must be a number and `*` before a point");
+          break;
+        }
+        term.factor *= f;
+        i = star + 1;
+        skipSpace(e, i);
+      }
+      if (i >= e.size() || e[i] != '(') {
+        bad("a point is expected");
+        break;
+      }
+      std::size_t at = i;
+      term.first = coord(parenAt(e, at));
+      i = at;
+      bool ok = true;
+      for (;;) {
+        skipSpace(e, i);
+        if (i >= e.size() || e[i] != '!') break;
+        i++;
+        skipSpace(e, i);
+        CalcStep step;
+        if (i < e.size() && e[i] == '(') {
+          step.kind = CalcStep::Kind::project;
+          std::size_t from = i;
+          step.via = coord(parenAt(e, from));
+          i = from;
+          skipSpace(e, i);
+          if (i >= e.size() || e[i] != '!') {
+            ok = false;
+            break;
+          }
+          i++;
+        } else {
+          const std::size_t bang = e.find('!', i);
+          if (bang == std::string::npos) {
+            ok = false;
+            break;
+          }
+          const std::string amount = trim(e.substr(i, bang - i));
+          i = bang + 1;
+          // A length (`1cm`) walks along the line; a number is how far of it.
+          std::size_t k = 0;
+          if (k < amount.size() && (amount[k] == '+' || amount[k] == '-')) k++;
+          while (k < amount.size() && (std::isdigit(static_cast<unsigned char>(amount[k])) != 0 || amount[k] == '.')) k++;
+          if (k > 0 && k < amount.size() && isUnit(trim(amount.substr(k)))) {
+            step.kind = CalcStep::Kind::distance;
+            step.distance = dimen(amount);
+          } else if (!number(amount, step.fraction)) {
+            ok = false;
+            break;
+          }
+        }
+        if (!target(i, step)) {
+          ok = false;
+          break;
+        }
+        term.steps.push_back(std::move(step));
+      }
+      if (!ok) {
+        bad("a `!` is not followed by a number, a length or a point, and a point");
+        break;
+      }
+      out->terms.push_back(std::move(term));
+    }
+    return out;
   }
 
   // --- statements -------------------------------------------------------------------------------

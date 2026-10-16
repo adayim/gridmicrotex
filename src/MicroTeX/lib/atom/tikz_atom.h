@@ -8,6 +8,7 @@
 // takes the font: createBox() resolves everything in the order the picture is written.
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
@@ -21,6 +22,8 @@
 namespace microtex {
 namespace tikz {
 
+struct CalcExpr;
+
 /** A point of a picture, as written: `(1,2)`, `(30:2cm)`, `(a)`, `(a.north)`, `+(1,0)`. */
 struct Coord {
   enum class Kind { xy, polar, node, calc } kind = Kind::xy;
@@ -28,8 +31,31 @@ struct Coord {
   float angle = 0.f;             // polar: degrees
   Dimen r, r2;                   // polar: the radius, and the second one of an ellipse
   std::string name, anchor;      // node: its name, and the anchor after the dot
-  std::string expr;              // calc: the text between the dollars
+  std::shared_ptr<CalcExpr> calc;  // calc: `($ ... $)`
   int relative = 0;              // 0 absolute, 1 `+` (the base stays), 2 `++` (the base moves)
+};
+
+/** One `!` of a calculation: `(a)!0.3!(b)` (a fraction of the way), `(a)!1cm!(b)` (a distance towards), `(a)!(p)!(b)`
+ *  (the foot of p on the line), the target optionally turned about the point first (`!30:(b)`). */
+struct CalcStep {
+  enum class Kind { fraction, distance, project } kind = Kind::fraction;
+  double fraction = 0;
+  Dimen distance;
+  Coord via;                     // project: the point that is projected
+  Coord to;
+  bool rotated = false;
+  float angle = 0.f;
+};
+
+/** A signed, scaled coordinate with its steps; a calculation is a sum of them. */
+struct CalcTerm {
+  double factor = 1;
+  Coord first;
+  std::vector<CalcStep> steps;
+};
+
+struct CalcExpr {
+  std::vector<CalcTerm> terms;
 };
 
 /** One of `draw`, `fill`: not said, off, in the current colour, or in a colour of its own. */
