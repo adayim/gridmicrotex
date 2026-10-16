@@ -11,7 +11,7 @@
 \begin{document}
 \begin{center}\Large\textbf{What gridmicrotex draws}\end{center}
 
-Each row is a LaTeX input and what the package makes of it, three to a line where they fit, in the order of KaTeX's list of supported functions, then what KaTeX does not have. A row is a test: it must be drawn with no warning. Where LaTeX has nothing to compare with, only the name is listed.
+Each row is a LaTeX input and what the package makes of it, three to a line where they fit: accents, delimiters, operators, relations and symbols first, then further parts of LaTeX -- units, equations, tables, diagrams, TikZ pictures, boxes and columns. A row is a test: it must be drawn with no warning. Where LaTeX has nothing to compare with, only the name is listed.
 
 \textbf{This PDF is rendered with this package}.
 
@@ -1467,7 +1467,39 @@ $} & & \\
 \end{tabular}
 
 \newpage
-\section*{Beyond KaTeX}
+\section*{Extensions}
+
+\subsection*{mhchem}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\ce{H2O}|} & {\large $\ce{H2O}
+$} & {\small\verb|\ce{1/2 H2O}|} & {\large $\ce{1/2 H2O}
+$} & {\small\verb|\ce{CuSO4*5H2O}|} & {\large $\ce{CuSO4*5H2O}
+$} \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\ce{CO2 + C -> 2 CO}|} & {\large $\ce{CO2 + C -> 2 CO}
+$} & {\small\verb|\ce{^{227}_{90}Th+}|} & {\large $\ce{^{227}_{90}Th+}
+$} \\
+{\small\verb|\ce{Fe^{3+} + 3e- -> Fe(s)}|} & {\large $\ce{Fe^{3+} + 3e- -> Fe(s)}
+$} & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\ce{SO4^2- + Ba^2+ -> BaSO4 v}|} \\ {\large $\ce{SO4^2- + Ba^2+ -> BaSO4 v}
+$} \\[4pt]
+{\small\verb|\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}|} \\ {\large $\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}
+$} \\[4pt]
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\pu{1.5 mol/L}|} & {\small\verb|\pu{123 kJ/mol}|} & {\small\verb|\pu{1.2e-3 mol L-1}|} \\
+\end{tabular}
+
+\section*{Further LaTeX}
 
 \subsection*{More commands}
 
@@ -1535,6 +1567,9 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
+\newpage
+\subsection*{Further LaTeX / Equations (continued)}
+
 {\small\verb|a = b \tag{1}|}
 
 \[a = b \tag{1}\]
@@ -1548,12 +1583,6 @@ $} \\[4pt]
 \begin{tabular}{@{}l@{}}
 {\small\verb!\begin{tabular}{|l|r|} \hline a & 1 \\ \hline b & 22 \\ \hline!} \\ {\small\verb|\end{tabular}|} \\ {\large $\begin{tabular}{|l|r|} \hline a & 1 \\ \hline b & 22 \\ \hline \end{tabular}
 $} \\[4pt]
-\end{tabular}
-
-\newpage
-\subsection*{Beyond KaTeX / Tables (continued)}
-
-\begin{tabular}{@{}l@{}}
 {\small\verb|\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\|} \\ {\small\verb!\verb|verbatim| \end{array}!} \\ {\large $\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\ \verb|verbatim| \end{array}
 $} \\[4pt]
 \end{tabular}
@@ -1575,41 +1604,7 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
-\section*{Extensions}
-
-\subsection*{mhchem}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
-{\small\verb|\ce{H2O}|} & {\large $\ce{H2O}
-$} & {\small\verb|\ce{1/2 H2O}|} & {\large $\ce{1/2 H2O}
-$} & {\small\verb|\ce{CuSO4*5H2O}|} & {\large $\ce{CuSO4*5H2O}
-$} \\
-\end{tabular}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
-{\small\verb|\ce{CO2 + C -> 2 CO}|} & {\large $\ce{CO2 + C -> 2 CO}
-$} & {\small\verb|\ce{^{227}_{90}Th+}|} & {\large $\ce{^{227}_{90}Th+}
-$} \\
-{\small\verb|\ce{Fe^{3+} + 3e- -> Fe(s)}|} & {\large $\ce{Fe^{3+} + 3e- -> Fe(s)}
-$} & & \\
-\end{tabular}
-
-\begin{tabular}{@{}l@{}}
-{\small\verb|\ce{SO4^2- + Ba^2+ -> BaSO4 v}|} \\ {\large $\ce{SO4^2- + Ba^2+ -> BaSO4 v}
-$} \\[4pt]
-{\small\verb|\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}|} \\ {\large $\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}
-$} \\[4pt]
-\end{tabular}
-
-{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
-
-\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
-{\small\verb|\pu{1.5 mol/L}|} & {\small\verb|\pu{123 kJ/mol}|} & {\small\verb|\pu{1.2e-3 mol L-1}|} \\
-\end{tabular}
-
 \newpage
-\section*{Beyond KaTeX}
-
 \subsection*{TikZ pictures}
 
 \begin{tabular}{@{}l@{}}

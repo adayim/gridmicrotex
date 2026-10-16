@@ -12,11 +12,11 @@ examples <- function() {
 }
 
 
-test_that("the sections are KaTeX's, and have rows", {
+test_that("the sections have rows", {
   ex <- examples()
   sections <- unique(sub(" / .*", "", ex$section))
   for (s in c("Accents", "Delimiters", "Environments", "Operators", "Relations", "Symbols and Punctuation",
-              "Beyond KaTeX", "Extensions")) {
+              "Further LaTeX", "Extensions")) {
     expect_true(s %in% sections, info = s)
   }
   expect_false(anyNA(ex$source))
