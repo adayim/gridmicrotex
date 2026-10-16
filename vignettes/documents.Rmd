@@ -200,16 +200,20 @@ dev.off()
 A document is drawn as one piece and does not flow onto a second page.
 Split a long one at paragraph breaks and draw each part on its own page.
 
-## Packages
+## Packages and commands of your own
 
-`\usepackage` loads a package that comes with gridmicrotex, or one of your
-own. The packages that math usually needs, such as amsmath, amssymb,
-mathtools and braket, are already loaded, so `\usepackage{amsmath}` changes
-nothing and can stay in a pasted preamble. `physics`, as in the example
-above, has to be asked for, because it changes `\qty`, `\bra`, `\ket` and
-`\div`.
+`\usepackage` does not read the packages of a TeX installation. The commands
+of the usual ones, such as amsmath, mathtools, braket and physics, are part
+of gridmicrotex, in small files written for it, and `\usepackage{physics}`
+loads one of them. Most are already loaded, so `\usepackage{amsmath}` changes
+nothing and can stay in a pasted preamble. `physics` has to be asked for, as in
+the example above, because it changes `\qty`, `\bra`, `\ket` and `\div`. A
+package that gridmicrotex does not have is ignored, without a warning.
 
-Your own commands go in a `.sty` file, which `load_sty()` makes a package:
+To add commands of your own, put them in a `.sty` file, which `load_sty()`
+makes a package. The bundled files, in
+`system.file("tex", package = "gridmicrotex")`, are examples of how to write
+one:
 
 ```{r sty}
 sty <- tempfile(fileext = ".sty")
@@ -224,10 +228,11 @@ grid.latex(r"(\usepackage{mymath} $f\colon \RR^n \to \RR, \quad \norm{x} \ge 0$)
            x = 0.5, y = 0.5, gp = gpar(fontsize = 13))
 ```
 
-`latex_options(packages = "mymath")` loads it before every label. A package
-is read as LaTeX reads one, with `\newcommand`, `\def`, `\newenvironment`,
+`latex_options(packages = "mymath")` loads it before every label. A file
+holds definitions, with `\newcommand`, `\def`, `\newenvironment`,
 `\NewDocumentCommand`, `\newif` and the `\if` tests; registers, boxes and
-`\catcode` are not supported.
+`\catcode` are not supported, so a package from CTAN usually cannot be copied
+in as it is.
 
 ## Limitations
 
