@@ -91,6 +91,8 @@ struct Style {
   ToSpec to;
   // Nodes.
   std::string shape;                             // rectangle, circle, ... ("" is the default)
+  std::optional<float> aspect;                   // `aspect=`, `shape aspect=`: a diamond's width over its height
+  std::optional<float> arcLength;                // `rounded rectangle arc length=`, degrees
   std::optional<Dimen> innerX, innerY, outerSep;
   std::optional<Dimen> minWidth, minHeight;
   std::optional<Dimen> textWidth;

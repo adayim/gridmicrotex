@@ -135,6 +135,9 @@ struct Geom {
   std::string shape;
   double baseline = 0;       // the text's baseline, relative to the centre (negative: below)
   bool point = false;        // a coordinate, no shape
+  double arcR = 0;           // a rounded rectangle: the radius of its ends,
+  double inset = 0;          // and how far the ends' chords are in from the tips
+  double halfArc = 0;        // and half the angle an end covers, degrees
 };
 
 P bezier(P a, P b, P c, P d, double t) {
@@ -281,6 +284,26 @@ P Layout::borderToward(const Geom& g, P target) const {
   if (g.point || n < 1e-9) return g.c;
   const P u = d * (1.0 / n);
   if (g.shape == "circle") return g.c + u * (g.hw + g.outer);
+  // An ellipse and a diamond are given by the radii of their outer border: the point on the ray.
+  if (g.shape == "ellipse") {
+    const double rx = g.hw + g.outer, ry = g.hh + g.outer;
+    return g.c + u * (1.0 / std::hypot(u.x / rx, u.y / ry));
+  }
+  if (g.shape == "diamond") {
+    const double rx = g.hw + g.outer, ry = g.hh + g.outer;
+    return g.c + u * (1.0 / (std::fabs(u.x) / rx + std::fabs(u.y) / ry));
+  }
+  if (g.shape == "rounded rectangle") {
+    // The straight top or bottom between the corners, else the arc at the end, its radius grown by the outer sep.
+    const double top = g.hh + g.outer, limit = g.hw - g.inset;
+    if (std::fabs(u.y) > 1e-12) {
+      const double t = top / std::fabs(u.y);
+      if (std::fabs(t * u.x) <= limit) return g.c + u * t;
+    }
+    const P centre{(u.x < 0 ? -1.0 : 1.0) * (g.hw - g.arcR), 0};
+    const double R = g.arcR + g.outer, b = u.x * centre.x + u.y * centre.y;
+    return g.c + u * (b + std::sqrt(std::max(0.0, b * b - (centre.x * centre.x + centre.y * centre.y) + R * R)));
+  }
   // A rectangle: the distance along `u` to the side it meets first.
   const double hw = g.hw + g.outer, hh = g.hh + g.outer;
   const double tx = std::fabs(u.x) > 1e-12 ? hw / std::fabs(u.x) : 1e30;
@@ -294,10 +317,14 @@ P Layout::anchorOf(const Geom& g, const std::string& anchor) const {
   const double hw = g.hw + g.outer, hh = g.hh + g.outer;
   const bool circle = g.shape == "circle";
   const double r = g.hw + g.outer;
-  // A circle's corners are on the circle, at 45 degrees.
+  // A circle's corners are on the circle, at 45 degrees, an ellipse's at 0.707107 of its radii (pgf's
+  // constant), a diamond's half way to its tips.
+  const double k = circle || g.shape == "ellipse" ? 0.707107 : g.shape == "diamond" ? 0.5 : 1.0;
   const auto corner = [&](double sx, double sy) {
     if (circle) return g.c + P{sx * r * std::cos(kPi / 4), sy * r * std::sin(kPi / 4)};
-    return g.c + P{sx * hw, sy * hh};
+    // A rounded rectangle's corners are where the straight side meets the arc.
+    if (g.shape == "rounded rectangle") return g.c + P{sx * (g.hw - g.inset), sy * hh};
+    return g.c + P{sx * hw * k, sy * hh * k};
   };
   const double ew = circle ? r : hw, ns = circle ? r : hh;
   if (anchor == "north") return g.c + P{0, ns};
@@ -807,6 +834,31 @@ Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt)
   if (g.shape == "circle") {
     const double r = std::max({0.5 * std::hypot(w0, h0), 0.5 * minW, 0.5 * minH});
     g.hw = g.hh = r;
+  } else if (g.shape == "ellipse") {
+    // pgf: the ellipse through the corners of the box (1.4142136 of its half sides), at least half the minimum size.
+    g.hw = std::max(1.4142136 * 0.5 * w0, 0.5 * minW);
+    g.hh = std::max(1.4142136 * 0.5 * h0, 0.5 * minH);
+  } else if (g.shape == "rounded rectangle") {
+    // pgf's convex ends: a circular arc of `arc length` degrees (180: a semicircle) over the whole height, the
+    // text pushed in by the chord it leaves free, wider where a minimum width asks or the two arcs would meet.
+    const double halfArc = radians(0.5 * st.arcLength.value_or(180.f));
+    const double H = std::max(0.5 * h0, 0.5 * minH), htw = 0.5 * tw, hth = 0.5 * (th + td);
+    const double r = H / std::sin(halfArc);
+    const double chord = r * (1.0 - std::cos(std::asin(std::min(1.0, hth / r))));
+    double xoffset = ix;
+    const double natural = 2.0 * (htw + ix) + 2.0 * chord;
+    if (natural < minW) xoffset = 0.5 * (minW - natural);
+    if (r - chord > htw + xoffset) xoffset = (r - chord) - (htw + xoffset) + xoffset;
+    g.arcR = r;
+    g.inset = r * (1.0 - std::cos(halfArc));
+    g.halfArc = degrees(halfArc);
+    g.hw = htw + xoffset + chord;
+    g.hh = H;
+  } else if (g.shape == "diamond") {
+    // pgf: the tips are at the half box widened by the other side times the aspect.
+    const double aspect = st.aspect.value_or(1.f) > 0 ? st.aspect.value_or(1.f) : 1.0;
+    g.hw = std::max(0.5 * w0 + aspect * 0.5 * h0, 0.5 * minW);
+    g.hh = std::max(0.5 * w0 / aspect + 0.5 * h0, 0.5 * minH);
   } else {
     g.hw = 0.5 * std::max(w0, minW);
     g.hh = 0.5 * std::max(h0, minH);
@@ -822,6 +874,42 @@ void Layout::nodeOutline(const Geom& g, const Style& st, Prim& prim) const {
   if (g.shape == "circle") {
     s.start = g.c + P{g.hw, 0};
     arcSegments(s, g.c, g.hw, g.hw, 0, 360);
+    s.closed = true;
+    prim.subs.push_back(s);
+    return;
+  }
+  if (g.shape == "ellipse") {
+    s.start = g.c + P{g.hw, 0};
+    arcSegments(s, g.c, g.hw, g.hh, 0, 360);
+    s.closed = true;
+    prim.subs.push_back(s);
+    return;
+  }
+  if (g.shape == "rounded rectangle") {
+    const double a = g.halfArc;
+    const double xe = g.hw - g.inset;
+    s.start = g.c + P{0, g.hh};
+    Seg top;
+    top.to = g.c + P{xe, g.hh};
+    s.segs.push_back(top);
+    arcSegments(s, g.c + P{g.hw - g.arcR, 0}, g.arcR, g.arcR, a, -a);
+    Seg bottom;
+    bottom.to = g.c + P{-xe, -g.hh};
+    s.segs.push_back(bottom);
+    arcSegments(s, g.c + P{-(g.hw - g.arcR), 0}, g.arcR, g.arcR, 180 + a, 180 - a);
+    s.closed = true;
+    prim.subs.push_back(s);
+    return;
+  }
+  if (g.shape == "diamond") {
+    // pgf draws the outline in from the outer border by 1.414213 of the outer separation.
+    const double x = g.hw + g.outer - 1.414213 * g.outer, y = g.hh + g.outer - 1.414213 * g.outer;
+    s.start = g.c + P{x, 0};
+    Seg a, b, c;
+    a.to = g.c + P{0, y};
+    b.to = g.c + P{-x, 0};
+    c.to = g.c + P{0, -y};
+    s.segs = {a, b, c};
     s.closed = true;
     prim.subs.push_back(s);
     return;

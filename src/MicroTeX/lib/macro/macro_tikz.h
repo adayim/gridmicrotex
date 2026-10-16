@@ -533,14 +533,33 @@ private:
 
   /** The options of a node alone; false when `key` is not one. */
   bool applyNodeOption(Style& st, const std::string& key, const std::string& value, bool hasValue, color&) {
-    static const std::set<std::string> shapes = {"rectangle", "circle", "ellipse", "diamond", "coordinate", "trapezium",
-                                                 "regular polygon", "cylinder", "star", "semicircle", "kite", "dart"};
+    // The shapes that are drawn; any other is said, with its name, where it is asked for.
+    static const std::set<std::string> shapes = {"rectangle", "circle", "ellipse", "diamond", "coordinate", "rounded rectangle"};
+    static const std::set<std::string> known = {"trapezium", "regular polygon", "cylinder", "star", "semicircle", "kite", "dart",
+                                                "isosceles triangle", "circular sector", "cross out", "strike out",
+                                                "chamfered rectangle", "rectangle split"};
     if (shapes.count(key) > 0 && !hasValue) {
       st.shape = key;
       return true;
     }
+    if (known.count(key) > 0 && !hasValue) {
+      warn("tikz: the shape " + key + " is not drawn yet: a rectangle is");
+      return true;
+    }
     if (key == "shape") {
-      st.shape = value;
+      if (shapes.count(value) > 0) {
+        st.shape = value;
+      } else {
+        warn("tikz: the shape " + value + " is not drawn yet: a rectangle is");
+      }
+      return true;
+    }
+    if (key == "rounded rectangle arc length" && hasValue) {
+      st.arcLength = static_cast<float>(std::atof(value.c_str()));
+      return true;
+    }
+    if ((key == "aspect" || key == "shape aspect") && hasValue) {
+      st.aspect = static_cast<float>(std::atof(value.c_str()));
       return true;
     }
     if (key == "inner sep") {
