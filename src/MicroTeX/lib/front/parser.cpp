@@ -699,16 +699,13 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
       items.push_back(_ast.add(std::move(n), args));
       return lineBreak(at, mode);
     }
-    if (name == "ref" || name == "pageref" || name == "eqref" || isCitation(name) ||
-        name == "footnote") {
+    if (name == "ref" || name == "pageref" || name == "eqref" || isCitation(name)) {
       std::vector<NodeId> args;
       for (const ArgSpec& a : spec->args) args.push_back(parseArgument(a, mode, who));
       const Node& last = _ast.node(args.back());
       const std::string key = trim(last.raw);
       if (!last.flag) {
         // No argument at all: parseArgument() has said so.
-      } else if (name == "footnote") {
-        _diags.warn(at, "\\footnote has no page to put a note on: its text is drawn here");
       } else if (name == "pageref") {
         _diags.warn(at, "reference `" + key + "' is undefined: drawn as ??");
       }

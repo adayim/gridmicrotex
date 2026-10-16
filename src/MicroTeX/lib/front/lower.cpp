@@ -141,7 +141,9 @@ struct Numbering {
     std::string where;
     std::string parent;
   };
-  std::map<std::string, Counter> counters;
+  std::map<std::string, Counter> counters{{"footnote", Counter()}};
+  /** The page notes so far, (mark, text as written): a document sets them after its body (finishNotes()). */
+  std::vector<std::pair<std::string, std::string>> notes;
   /** What a \label names now, as \@currentlabel: the number of the last
    *  equation or heading. */
   std::string current;
@@ -377,6 +379,8 @@ private:
   /** Whether the preamble of a document is being lowered, where a font
    *  role is set for the whole body. */
   bool _inPreamble = false;
+  /** The document of the whole input is being lowered, so a \footnote has a note to leave for its foot. */
+  bool _pageNotes = false;
 
   /** What an alignment's row, or a display, says about its own number:
    *  \notag, \tag, and the labels written in it. */
@@ -800,10 +804,19 @@ private:
                                   pre.empty() ? nullptr : fragment(pre, false),
                                   post.empty() ? nullptr : fragment(post, false));
     }
-    // No page to put the note on, so its text is set where it was written.
-    // Its optional number has no note to number.
-    if (name == "footnote") {
-      const NodeId text = child(id, count(id) - 1);
+    // \footnote and kin are the prelude's, over these three: the mark as the counter has it by now, and the note.
+    // A document has the notes set after its body (finishNotes()); a label has no page to put them on, so a
+    // note's text is set where it was written.
+    if (name == "gmfootnote" || name == "gmfootnotetext" || name == "gmfootnotemark") {
+      const std::string mark = trimmed(withCounterValues(id, rawOf(child(id, 0))));
+      const sptr<Atom> sign = fragment("\\textsuperscript{" + mark + "}", false);
+      if (name == "gmfootnotemark") return sign;
+      const NodeId text = child(id, 1);
+      if (_pageNotes) {
+        nums().notes.emplace_back(mark, rawOf(text));
+        return name == "gmfootnote" ? sign : nullptr;
+      }
+      _diags.warn(node(id).span, "\\footnote has no page to put a note on: its text is drawn here");
       return argumentFormula(text, rawOf(text), false);
     }
     // A caption is a line of text, as \text{} sets one; the parser put the
@@ -2071,8 +2084,34 @@ private:
     // starts, as TeX does, between paragraphs, where a space is nothing.
     l.indentNext = paragraphs;
     l.afterBreak = paragraphs;
+    _pageNotes = paragraphs && _numbering.outermost();
     feedBody(l);
+    if (_pageNotes) finishNotes(l);
+    _pageNotes = false;
     finishLabel(l, f);
+  }
+
+  /** The notes of the page, set after the body of a document, as LaTeX sets them at the foot of a page: \skip\footins (9pt) below the
+   *  text, \footnoterule (0.4 of the line, 0.4pt), then each note in \footnotesize, its first line indented 1em and the mark
+   *  in a box of 1.8em, right-aligned, before the text; the notes a \footnotesep (6.65pt) strut apart. */
+  void finishNotes(Label& l) {
+    if (nums().notes.empty()) return;
+    lineBreak(l);
+    l.gap = "0.9em";
+    l.indentNext = false;
+    beforeLine(l);
+    l.line->add(fragment("\\rule{0.4\\linewidth}{0.4pt}", false));
+    lineBreak(l);
+    bool first = true;
+    for (const auto& note : nums().notes) {
+      l.gap = first ? "0.2em" : "0.05em";
+      first = false;
+      l.indentNext = false;
+      beforeLine(l);
+      l.line->add(fragment("{\\footnotesize \\hspace{2.8em}\\llap{\\textsuperscript{" + note.first + "}}" + note.second + "}", false));
+      lineBreak(l);
+    }
+    nums().notes.clear();
   }
 
   /** Everything fed: the label's last line set, and its lines made the

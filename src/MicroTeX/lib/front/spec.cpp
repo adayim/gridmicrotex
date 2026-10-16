@@ -257,7 +257,9 @@ struct Table {
     add({"cite"}, "Rr", Shape::prefix, Bare::none, true);
     // natbib's: \citep[post]{keys} or \citep[pre][post]{keys}.
     add({"citep", "citet", "citealp"}, "RRr", Shape::prefix, Bare::none, true);
-    add({"footnote"}, "Rt", Shape::prefix, Bare::none, true);
+    // The page notes (the prelude's \footnote and kin): the mark, then the note.
+    add({"gmfootnote", "gmfootnotetext"}, "rt", Shape::prefix, Bare::none, true);
+    add({"gmfootnotemark"}, "r");
     // Equation numbers: the lowering numbers the displays of an input and
     // keeps the labels, which a reference then names. The starred form of tag is
     // the expander's gmtagstar.

@@ -13,6 +13,7 @@
 - `\cite` draws the number of its `\bibitem` (or its `[label]`) instead of `[?]`, before or after the `thebibliography`, and `\bibitem[label]` is marked with its label.
 - New: `tikzpicture` draws paths, nodes, arrows, `positioning`, `\foreach`, `\tikzset` and `\tikzstyle`, as TikZ does, in grid grobs and on devices. It also draws `ellipse`, `diamond` and `rounded rectangle` nodes, `label` and `pin`, `calc` coordinates, `fit`, background layers, trees (`child`), `matrix of nodes` and `brace` decorations. The other shapes and decorations are not drawn yet.
 - Bug fix: the lines of a paragraph, or of a label with `\\`, were set from the font's height plus a gap, 11bp apart at a size of 10 where LaTeX's `\baselineskip` is 12 (`gp$lineheight` times the font size, as in grid); and a display was 1em from the lines around it, not LaTeX's `\abovedisplayskip` and `\belowdisplayskip` with their short forms after a short line. Documents, wrapped text and multi-line labels are taller by up to 10%.
+- `\footnote` in a document is a raised mark in the text and a note after the body (`\footnotesize`, with the rule), numbered as LaTeX numbers it; `\footnotemark`, `\footnotetext` and `\thefootnote` work. A label still draws the note's text where it stands, with a warning.
 - Bug fix: `orange`, `purple`, `violet` and `brown` were dvips's colours, not the ones LaTeX's xcolor has under those names (dvips's are `Orange` ...), and `lime`, `olive`, `pink`, `teal`, `darkgray` and `lightgray` were not defined.
 
 # gridmicrotex 0.2.0
