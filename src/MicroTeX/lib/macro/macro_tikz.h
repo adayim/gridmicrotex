@@ -133,6 +133,24 @@ private:
       char* end = nullptr;
       const double v = std::strtod(_s.c_str() + _i, &end);
       _i = static_cast<std::size_t>(end - _s.c_str());
+      // A unit on the number (`3mm`, `\i*3mm`): pgfmath calls the result a dimension, and a coordinate reads a bare
+      // number as centimetres, so every length here is centimetres.
+      std::size_t j = _i;
+      std::string unit;
+      while (j < _s.size() && std::isalpha(static_cast<unsigned char>(_s[j])) != 0) unit += _s[j++];
+      if (!unit.empty()) {
+        static const std::map<std::string, double> cm = {
+          {"cm", 1.0}, {"mm", 0.1}, {"in", 2.54}, {"pt", 2.54 / 72.27}, {"bp", 2.54 / 72.0}, {"pc", 12 * 2.54 / 72.27},
+          {"dd", 1238.0 / 1157.0 * 2.54 / 72.27}, {"cc", 12 * 1238.0 / 1157.0 * 2.54 / 72.27},
+          {"sp", 2.54 / 72.27 / 65536.0}, {"em", 10 * 2.54 / 72.27}, {"ex", 4.3 * 2.54 / 72.27}};
+        const auto it = cm.find(unit);
+        if (it == cm.end()) {
+          _ok = false;
+          return 0;
+        }
+        _i = j;
+        return v * it->second;
+      }
       return v;
     }
     if (std::isalpha(static_cast<unsigned char>(_s[_i])) != 0) {
@@ -205,6 +223,7 @@ private:
   CommandArgs& _args;
   TikzAtom& _pic;
   std::set<std::string> _warned;
+  std::set<std::string> _defined;                  // the nodes read so far
   std::map<std::string, std::string> _styles;      // name -> its options
   std::map<std::string, std::string> _appended;
   int _nodes = 0;
@@ -782,7 +801,18 @@ private:
     const auto dot = s.find('.');
     c.name = trim(dot == std::string::npos ? s : s.substr(0, dot));
     if (dot != std::string::npos) c.anchor = trim(s.substr(dot + 1));
+    refer(c.name);
     return c;
+  }
+
+  /** TikZ needs a node to exist before a coordinate names it; the layout leaves a path out when it does not, and
+   *  cannot say so, so it is said here, once. A name `m-1-2` is a cell of the matrix `m`, and `p-1` a child of `p`. */
+  void refer(const std::string& name) {
+    if (name.empty() || name.compare(0, 8, "current ") == 0 || _defined.count(name) > 0) return;
+    for (const std::string& d : _defined) {
+      if (name.size() > d.size() && name.compare(0, d.size(), d) == 0 && name[d.size()] == '-') return;
+    }
+    warn("tikz: `(" + name + ")' is not a node drawn before it or a coordinate this reads: the path is left out");
   }
 
   /** The text of `($ ... $)` as tikzlibrarycalc reads it: terms joined by `+` and `-`, each an optional factor
@@ -1076,6 +1106,7 @@ private:
     applyStyleNamed(ctx, "level " + std::to_string(level));
     if (_styles.count("level") > 0) option(ctx, "level", std::to_string(level), true, false, 0);
     if (parent.name.empty()) parent.name = "tikz@tree" + std::to_string(++_treeNames);
+    _defined.insert(parent.name);
     const int count = static_cast<int>(kids.size());
     for (int j = 0; j < count; j++) {
       Child c;
@@ -1128,6 +1159,7 @@ private:
       cn.style.shape = "coordinate";
     }
     if (cn.name.empty()) cn.name = parentName + "-" + std::to_string(index);
+    _defined.insert(cn.name);
     readTree(cn, c.style, c.level + 1, body, b);
     // The edge: a path from the parent to the child, with labels.
     PathItem e;
@@ -1455,6 +1487,7 @@ private:
       return;
     }
     if (mn.name.empty()) mn.name = "tikz@matrix" + std::to_string(++_treeNames);
+    _defined.insert(mn.name);
     // Rows end at `\\`, cells at `&`, outside every group.
     std::vector<std::string> rowTexts;
     std::vector<Dimen> skips{Dimen()};
@@ -1642,6 +1675,7 @@ private:
         std::size_t at = i;
         const std::string inside = parenAt(t, at);
         n.name = trim(inside);
+        _defined.insert(n.name);
         i = at;
         continue;
       }

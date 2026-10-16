@@ -34,13 +34,15 @@ vectors and matrices used in the body.
 doc <- r"(\documentclass{article}
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{physics}
+\usepackage{tcolorbox, multicol}
 \newtheorem{thm}{Theorem}
 \newcommand{\RR}{\mathbb{R}}
 
 \begin{document}
 \section{Methods}
 We fit a straight line to $n$ observations $(x_i, y_i)$ by least
-squares, which chooses the intercept and slope that minimise the sum
+squares,\footnote{Ordinary least squares: every observation has the
+same weight.} which chooses the intercept and slope that minimise the sum
 of squared residuals
 \[ S(\beta_0, \beta_1) = \sum_{i=1}^{n} (y_i - \beta_0 - \beta_1 x_i)^2. \]
 Setting both partial derivatives to zero gives the estimates
@@ -70,7 +72,9 @@ The errors are taken to be
 \end{itemize}
 
 \section{Results}
-\begin{center}
+Table~\ref{coef} gives the estimates.
+\begin{table}[h]
+\centering
 \begin{tabular}{lrr}
 \toprule
  & Estimate & Std.\ error \\
@@ -79,7 +83,13 @@ Intercept $\hat\beta_0$ & 1.84 & 0.21 \\
 Slope $\hat\beta_1$ & 0.52 & 0.04 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\caption{Fitted coefficients.}\label{coef}
+\end{table}
+
+\begin{tcolorbox}[title=In practice, colback=yellow!10, colframe=orange!70!black]
+Plot the residuals before trusting the standard errors: they are
+valid only if the assumptions above hold.
+\end{tcolorbox}
 
 \begin{thm}[Gauss--Markov]\label{gm}
 With uncorrelated errors of equal variance, least squares has the least
@@ -90,12 +100,24 @@ Write any other such estimator as least squares plus a correction, and
 show that the correction can only add variance.
 \end{proof}
 Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.
+
+\section{Notation}
+\begin{multicols}{2}
+\begin{itemize}
+  \item $x_i$, the predictor
+  \item $y_i$, the response
+  \item $\beta_0, \beta_1$, the intercept and slope
+  \item $\hat y_i$, the fitted value
+  \item $e_i$, the residual
+  \item $\sigma^2$, the error variance
+\end{itemize}
+\end{multicols}
 \end{document})"
 ```
 
 `max_width` is the text width in big points (1/72 inch):
 
-```{r draw-doc, fig.width = 6, fig.height = 9.9, out.width = "90%"}
+```{r draw-doc, fig.width = 6, fig.height = 13.4, out.width = "90%"}
 grid.newpage()
 grid.latex(doc, input_mode = "document", max_width = 5.6 * 72,
            x = 0.03, y = 0.985, hjust = 0, vjust = 1,
@@ -126,6 +148,14 @@ As in LaTeX:
 - **Theorems.** `\newtheorem` declares them, with the shared and
   `[section]` counters and a starred, unnumbered form; `proof` ends with
   a box.
+- **Footnotes and floats.** `\footnote` leaves a raised number in the text
+  and sets the note after the body, with a rule above it. A `table` or
+  `figure` is set where it is written, its `\caption` numbered "Table 1:"
+  or "Figure 1:", and the `subfigure` and `subtable` of subcaption are
+  lettered "(a)".
+- **Boxes and columns.** `tcolorbox` draws a framed box, with `title` and
+  the colour keys, and `multicols{n}` sets its body in `n` balanced
+  columns.
 - **Text.** `--` and `---` are dashes, quotes are curly, and `~` is a
   non-breaking space. `\centering` and `center` centre lines.
   `\textsc` sets small capitals, and `\verb` and `verbatim` set code
@@ -206,11 +236,12 @@ is read as LaTeX reads one, with `\newcommand`, `\def`, `\newenvironment`,
   `\bibitem`, so a `thebibliography` in the same text is cited; a key none
   names draws `[?]`, with a warning, and so does a `\ref` to a label that is
   not there.
-- A footnote's text is set where it is written.
+- A footnote in a label, not a document, is set where it is written, with a
+  warning.
 - Tables and figures are placed where they are written.
 - `\maketitle` draws nothing.
 
 For a complicated document, with packages from a TeX installation, pages,
-floats, bibliographies or TikZ, use the
+floats that move, or all of TikZ, use the
 [xdvir](https://CRAN.R-project.org/package=xdvir) package, which typesets
 with LaTeX itself and draws the result in grid.

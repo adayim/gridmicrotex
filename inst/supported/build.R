@@ -23,7 +23,9 @@
   r"(\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,xcolor,mathdots,amsthm})",
   r"(\usepackage[normalem]{ulem})",
   r"(\usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde})",
-  r"(\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing})")
+  r"(\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing,decorations.pathreplacing})",
+  r"(\usetikzlibrary{positioning,arrows.meta,shapes.geometric,calc,fit,matrix})",
+  r"(\usepackage{tcolorbox,multicol})")
 
 supported_tex <- function(path = "supported-functions.tex",
                           examples = system.file("supported/examples.tsv", package = "gridmicrotex")) {
@@ -57,7 +59,7 @@ supported_tex <- function(path = "supported-functions.tex",
     c(lines, cur)
   }
   small <- function(s) paste0("{\\small", s, "}")
-  is_display <- function(s) grepl(r"(^\\begin\{(align|alignat|gather|equation|multline|flalign|eqnarray)\*?\})", s) ||
+  is_display <- function(s) grepl(r"(^\\begin\{(align|alignat|gather|equation|multline|flalign|eqnarray|tcolorbox|multicols)\*?\})", s) ||
     grepl("\\tag", s, fixed = TRUE)
   display_tex <- function(s) if (grepl("\\tag", s, fixed = TRUE) && !grepl("^\\\\begin", s)) paste0("\\[", s, "\\]") else s
 
@@ -187,7 +189,7 @@ supported_tex <- function(path = "supported-functions.tex",
                                                                         max_width = width,
                                                                         gp = grid::gpar(fontsize = 10))$height,
                                            "bigpts", valueOnly = TRUE), error = function(e) 40)
-          block(c(small(paste(vapply(lines, verb, ""), collapse = " ")), "", display_tex(s)),
+          block(c(small(paste(vapply(lines, verb, ""), collapse = " \\\\ ")), "", display_tex(s)),
                 h + 12 * length(lines) + 34)
         }
       }

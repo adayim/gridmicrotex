@@ -622,7 +622,9 @@ inline sptr<Atom> listBuild(
   const auto arr = args.alignmentOfText(s);
   arr->checkDimensions();
   if (columns == nullptr) columns = description ? "l@{\\quad}X" : "r@{\\quad}X";
-  return sptrOf<MatrixAtom>(args.isPartial(), arr, columns, false);
+  auto list = sptrOf<MatrixAtom>(args.isPartial(), arr, columns, false);
+  list->_flow = true;
+  return list;
 }
 
 // threeparttable's tablenotes: a list whose item labels are superscripts in a

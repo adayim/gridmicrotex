@@ -968,3 +968,12 @@ Extensions / mhchem	ok	\ce{CuSO4*5H2O}
 Extensions / mhchem	nolatex	\pu{1.5 mol/L}
 Extensions / mhchem	nolatex	\pu{123 kJ/mol}
 Extensions / mhchem	nolatex	\pu{1.2e-3 mol L-1}
+Beyond KaTeX / TikZ pictures	ok	\begin{tikzpicture}\draw[->, thick] (0,0) -- (2,1) node[right] {$f$}; \fill[red!70] (1,0.5) circle (2pt); \draw[blue, dashed] (0,0) arc (180:90:0.5);\end{tikzpicture}
+Beyond KaTeX / TikZ pictures	ok	\begin{tikzpicture}[node distance=8mm, >=stealth] \node[draw, rounded corners] (a) {Read}; \node[draw, diamond, aspect=2, right=of a] (b) {Ok?}; \node[draw, fill=blue!10, right=of b] (c) {Fit}; \draw[->] (a) -- (b); \draw[->] (b) -- node[above] {yes} (c); \draw[->] (b) |- ++(0,-1) node[right] {no} -| (a);\end{tikzpicture}
+Beyond KaTeX / TikZ pictures	ok	\begin{tikzpicture}\foreach \x/\c in {0/red,1/orange,2/green,3/blue} {\fill[\c] (\x*0.5,0) circle (0.2);}\end{tikzpicture}
+Beyond KaTeX / TikZ pictures	ok	\begin{tikzpicture}\node[draw, ellipse] (a) at (0,0) {Ellipse}; \node[draw, circle, label=above:{$\alpha$}, pin=right:pin] (b) at (2.4,0) {B}; \draw[->] (a) to[bend left] (b); \draw[red] ($(a)!0.5!(b)$) circle (2pt);\end{tikzpicture}
+Beyond KaTeX / TikZ pictures	ok	\begin{tikzpicture}[level distance=8mm, sibling distance=14mm] \node {root} child {node {a} child {node {c}} child {node {d}}} child {node {b}};\end{tikzpicture}
+Beyond KaTeX / TikZ pictures	ok	\begin{tikzpicture}\matrix (m) [matrix of nodes, row sep=3mm, column sep=6mm] {$a$ & $b$ \\ $c$ & $d$ \\}; \draw[->] (m-1-1) -- (m-2-2); \draw[decorate, decoration={brace, amplitude=4pt}] (m-2-1.south west) -- (m-2-2.south east);\end{tikzpicture}
+Beyond KaTeX / Boxes and columns	ok	\begin{tcolorbox}[title=A box] Text in a box, which is as wide as the line. \end{tcolorbox}
+Beyond KaTeX / Boxes and columns	ok	\begin{tcolorbox}[colback=yellow!15, colframe=blue!50!black, colbacktitle=blue!15, coltitle=black, title=Colours] A title band, a frame, and a body in colours of its own. \end{tcolorbox}
+Beyond KaTeX / Boxes and columns	ok	\begin{multicols}{2}[A header over both columns] One paragraph of some words that run on to a second line.\par Another, in the first column too.\par A third, which is balanced into the second.\par A fourth. \end{multicols}

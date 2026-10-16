@@ -163,6 +163,9 @@ private:
 
   sptr<Box> createBoxInner(Env& env);
 
+  /** createBox() in the style the cells are set in. */
+  sptr<Box> createBoxStyled(Env& env);
+
 public:
   // The color to draw the rule of the matrix
   static color LINE_COLOR;
@@ -204,6 +207,9 @@ public:
     _tableWidth = width;
     _spread = spread;
   }
+
+  /** A list's rows are items a column of multicols may break between: its box is marked (`VBox::_flow`). */
+  bool _flow = false;
 
   static void defineColumnSpecifier(const std::string& rep, const std::string& spe);
 };

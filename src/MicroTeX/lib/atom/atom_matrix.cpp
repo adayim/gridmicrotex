@@ -1038,6 +1038,14 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
 }
 
 sptr<Box> MatrixAtom::createBox(Env& env) {
+  sptr<Box> box = createBoxStyled(env);
+  if (_flow) {
+    if (const auto rows = std::dynamic_pointer_cast<VBox>(box)) rows->_flow = true;
+  }
+  return box;
+}
+
+sptr<Box> MatrixAtom::createBoxStyled(Env& env) {
   _baseEm = env.em();
   _texRows = _spacing == RowSpacing::sub ||
              (_spacing != RowSpacing::content && env.style() < TexStyle::script);

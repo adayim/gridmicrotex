@@ -422,7 +422,27 @@ bool hasColumnBreak(const sptr<Box>& box) {
 /** The lines and gaps of a column, one below the other: the rows of a body and the lines of its paragraphs. `gaps`
  *  collects the glue between rows, the paragraphs' `\parskip`, which a short column stretches; the glue between a
  *  paragraph's own lines does not stretch. */
+/** The list that a line holds alone, whose items a column may break between. */
+sptr<VBox> flowOf(const sptr<Box>& box) {
+  if (const auto v = std::dynamic_pointer_cast<VBox>(box)) return v->_flow ? v : nullptr;
+  if (const auto h = std::dynamic_pointer_cast<HBox>(box)) {
+    sptr<VBox> found;
+    for (const auto& child : h->_children) {
+      if (child->_height + child->_depth <= 0.f) continue;
+      if (found != nullptr) return nullptr;
+      found = flowOf(child);
+      if (found == nullptr) return nullptr;
+    }
+    return found;
+  }
+  return nullptr;
+}
+
 void columnLeaves(const sptr<Box>& box, std::vector<sptr<Box>>& out, std::set<const Box*>& gaps) {
+  if (const sptr<VBox> list = flowOf(box); list != nullptr && !list->_children.empty()) {
+    for (const auto& item : list->_children) out.push_back(item);
+    return;
+  }
   const auto v = std::dynamic_pointer_cast<VBox>(box);
   if (v != nullptr && (v->_lines || v->_rows) && !v->_children.empty()) {
     for (const auto& child : v->_children) {
