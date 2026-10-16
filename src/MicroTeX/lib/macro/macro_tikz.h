@@ -6,6 +6,7 @@
 // `;` -- and what it does not know it says once and leaves out: a picture that is mostly drawn is more use
 // than none.
 
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
@@ -261,7 +262,20 @@ private:
       warn("tikz: styles nest too deeply: left out");
       return;
     }
-    for (const std::string& raw : splitTop(list, ',')) {
+    // The options are split at commas, but a point such as `(1,2)` in `fit=(1,2)(3,4)` keeps its own.
+    std::vector<std::string> pieces;
+    {
+      std::string held;
+      for (const std::string& raw : splitTop(list, ',')) {
+        held += held.empty() ? raw : "," + raw;
+        if (std::count(held.begin(), held.end(), '(') <= std::count(held.begin(), held.end(), ')')) {
+          pieces.push_back(held);
+          held.clear();
+        }
+      }
+      if (!held.empty()) pieces.push_back(held);
+    }
+    for (const std::string& raw : pieces) {
       const std::string item = trim(raw);
       if (item.empty()) continue;
       // The first `=` outside braces and brackets: `-{Stealth[length=4mm]}` is a key.
@@ -519,6 +533,8 @@ private:
       st.shortenEnd = Dimen{1.f, UnitType::pt};
     } else if ((node || key == "label distance" || key == "pin distance" || key == "pin edge" || key == "every label" || key == "every pin") && applyNodeOption(st, key, value, hasValue, c)) {
       // read
+    } else if (key == "on background layer" || key == "on main layer" || key == "on foreground layer") {
+      st.layer = key == "on background layer" ? -1 : key == "on main layer" ? 0 : 1;
     } else if (key == "cycle") {
     } else if (!hasValue && !key.empty() && arrowSpec(st, key)) {
       // read
@@ -551,6 +567,17 @@ private:
         st.shape = value;
       } else {
         warn("tikz: the shape " + value + " is not drawn yet: a rectangle is");
+      }
+      return true;
+    }
+    if (key == "fit" && hasValue) {
+      // `fit=(a)(b)`: the points, one after the other.
+      st.fit.clear();
+      std::size_t i = 0;
+      for (;;) {
+        skipSpace(value, i);
+        if (i >= value.size() || value[i] != '(') break;
+        st.fit.push_back(coord(parenAt(value, i)));
       }
       return true;
     }
@@ -918,6 +945,22 @@ private:
           const std::string options = listPeelOptional(inner);
           applyOptions(child, options, false, 0);
           run(inner, child, depth + 1);
+        } else if (env == "pgfonlayer") {
+          // `\begin{pgfonlayer}{background}`: the paths in it are drawn on that layer.
+          std::size_t at = 0;
+          skipSpace(inner, at);
+          const std::string name = trim(groupAt(inner, at));
+          Style child = scope;
+          if (name == "background") {
+            child.layer = -1;
+          } else if (name == "main") {
+            child.layer = 0;
+          } else if (name == "foreground") {
+            child.layer = 1;
+          } else {
+            warn("tikz: the layer " + name + " is not declared here: the main layer is used");
+          }
+          run(inner.substr(at), child, depth + 1);
         } else {
           warn("tikz: \\begin{" + env + "} is not supported in a picture: left out");
         }

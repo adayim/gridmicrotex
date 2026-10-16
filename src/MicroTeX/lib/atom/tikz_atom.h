@@ -136,6 +136,8 @@ struct Style {
   bool sloped = false, autoSide = false, swap = false;
   std::optional<float> rotate;                   // a node's own rotation
   // `label=` and `pin=` as written (pin: true), read into a Node's labels; the distances they use.
+  std::vector<Coord> fit;                        // `fit=(a)(b)`: the points a node is put round
+  std::optional<int> layer;                      // `on background layer`: -1 is drawn before 0, the main one
   std::vector<std::pair<bool, std::string>> labelSpecs;
   std::optional<Dimen> labelDistance, pinDistance;
   std::string pinEdge;                           // `pin edge={...}`

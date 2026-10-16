@@ -11,7 +11,8 @@
 - Bug fix: `\fbox`, `\colorbox`, `\fcolorbox` and `\boxed` had 5bp of room around their text at a size of 10, LaTeX's `\fboxsep` is 3pt; they are set as LaTeX sets them, and `\fboxsep` and `\fboxrule` can be set.
 - Bug fix: a `tablenotes` list (threeparttable, kableExtra's footnotes) drew `\item` as a red name; `\makecell[tl]` and siunitx `S` columns made the whole table fail. Notes are now a list of superscript labels, `\makecell` takes its `[vh]` letters, and an `S` column lines up its decimal markers.
 - `\cite` draws the number of its `\bibitem` (or its `[label]`) instead of `[?]`, before or after the `thebibliography`, and `\bibitem[label]` is marked with its label.
-- New: `tikzpicture` draws paths, nodes, arrows, `positioning`, `\foreach`, `\tikzset` and `\tikzstyle`, as TikZ does, in grid grobs and on devices. Shapes beyond rectangles and circles, `calc`, trees and matrices are not drawn yet.
+- New: `tikzpicture` draws paths, nodes, arrows, `positioning`, `\foreach`, `\tikzset` and `\tikzstyle`, as TikZ does, in grid grobs and on devices. It also draws `ellipse`, `diamond` and `rounded rectangle` nodes, `label` and `pin`, `calc` coordinates, `fit` and background layers. The other shapes, trees and matrices are not drawn yet.
+- Bug fix: `orange`, `purple`, `violet` and `brown` were dvips's colours, not the ones LaTeX's xcolor has under those names (dvips's are `Orange` ...), and `lime`, `olive`, `pink`, `teal`, `darkgray` and `lightgray` were not defined.
 
 # gridmicrotex 0.2.0
 

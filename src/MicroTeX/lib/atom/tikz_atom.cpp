@@ -113,6 +113,7 @@ struct Prim {
   sptr<Box> content;
   P at;
   color textCol = 0;
+  int layer = 0;             // `on background layer` (-1) is drawn before the main layer (0)
 };
 
 struct Matrix {
@@ -128,6 +129,12 @@ struct Matrix {
 };
 
 /** A node once it has its size: where it is, how far it reaches, and what draws its text. */
+/** The box of the points a node is fitted to. */
+struct FitBox {
+  P centre;
+  double width = 0, height = 0;
+};
+
 struct Geom {
   P c;                       // the centre of the shape
   double hw = 0, hh = 0;     // half the width and height of the shape, outer separation not included
@@ -212,7 +219,7 @@ private:
   void layoutItem(const PathItem& item);
   void layoutNode(const Node& n, const Style& st, P at, bool atGiven, const SegInfo* seg, double t);
   void placeLabel(const Style& ownerStyle, const Geom& owner, const Label& lb);
-  Geom makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt) const;
+  Geom makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt, const FitBox* fit) const;
   void nodeOutline(const Geom& g, const Style& st, Prim& prim) const;
   void connect(const PathItem& item, const PathOp& op, const Where& from, const Where& to, std::vector<Sub>& out,
                SegInfo& info, const Style& st);
@@ -275,6 +282,7 @@ Prim Layout::primOf(const Style& st, bool stroke, bool fill) const {
   p.cap = st.cap.value_or(CAP_BUTT);
   p.join = st.join.value_or(JOIN_MITER);
   p.textCol = alpha(st.textColor.value_or(current), st.textOpacity.value_or(1.f));
+  p.layer = st.layer.value_or(0);
   return p;
 }
 
@@ -828,6 +836,7 @@ void Layout::applyTips(const Style& st, std::vector<Sub>& subs, double lw, std::
     p.strokeCol = c;
     p.fillCol = c;
     p.lw = tg.lw;
+    p.layer = st.layer.value_or(0);
     p.cap = tg.cap;
     p.join = tg.join;
     const P n = left(u);
@@ -852,11 +861,13 @@ void Layout::applyTips(const Style& st, std::vector<Sub>& subs, double lw, std::
 
 // --- nodes --------------------------------------------------------------------------------------
 
-Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt) const {
+Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt, const FitBox* fit) const {
   Geom g;
   g.shape = st.shape.empty() ? "rectangle" : st.shape;
   box = n.content != nullptr ? n.content->createBox(_env) : nullptr;
-  const double tw = box ? box->_width : 0.0, th = box ? box->_height : 0.0, td = box ? box->_depth : 0.0;
+  // A fitted node's text box is the box of the points: that wide, that high.
+  const double tw = fit ? fit->width : box ? box->_width : 0.0, th = fit ? fit->height : box ? box->_height : 0.0,
+               td = fit ? 0.0 : box ? box->_depth : 0.0;
   if (g.shape == "coordinate") {
     g.point = true;
     g.baseline = 0;
@@ -903,6 +914,13 @@ Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt)
   // The text box is centred in the shape, its baseline below its middle by half its height less its depth.
   g.baseline = -0.5 * (th - td);
   textAt = {-0.5 * tw, g.baseline};
+  if (fit) {
+    // tikzlibraryfit gives the text box the height of the points and `text badly centered`: the text is centred
+    // across it, its first baseline half its depth above the middle (pdfTeX, tools/tikz-ref f07).
+    const double cw = box ? box->_width : 0.0, cd = box ? box->_depth : 0.0;
+    g.baseline = 0.5 * cd;
+    textAt = {-0.5 * cw, g.baseline};
+  }
   return g;
 }
 
@@ -971,10 +989,32 @@ void Layout::nodeOutline(const Geom& g, const Style& st, Prim& prim) const {
 void Layout::layoutNode(const Node& n, const Style& st, P at, bool atGiven, const SegInfo* seg, double t) {
   sptr<Box> box;
   P textAt;
-  Geom g = makeGeom(n, st, box, textAt);
+  // `fit=(a)(b)`: the box of the points, a node's four border anchors for a node named alone.
+  std::optional<FitBox> fit;
+  if (!st.fit.empty()) {
+    double x0 = 1e30, x1 = -1e30, y0 = 1e30, y1 = -1e30;
+    const auto grow = [&](P p) {
+      x0 = std::min(x0, p.x);
+      x1 = std::max(x1, p.x);
+      y0 = std::min(y0, p.y);
+      y1 = std::max(y1, p.y);
+    };
+    for (const Coord& c : st.fit) {
+      Where w;
+      if (!resolve(c, st, P{0, 0}, w)) continue;
+      if (w.node != nullptr) {
+        for (const char* a : {"west", "east", "north", "south"}) grow(anchorOf(*w.node, a));
+      } else {
+        grow(w.p);
+      }
+    }
+    if (x0 <= x1) fit = FitBox{P{0.5 * (x0 + x1), 0.5 * (y0 + y1)}, x1 - x0, y1 - y0};
+  }
+  Geom g = makeGeom(n, st, box, textAt, fit ? &*fit : nullptr);
   // Where its anchor is to stand.
-  std::string anchor = st.anchor;
-  P target = at;
+  std::string anchor = fit ? "center" : st.anchor;
+  // `at` comes after the options in the source, so it wins over where `fit` puts the node: the size alone is fitted.
+  P target = fit && !n.hasAt ? fit->centre : at;
   static const struct Place {
     const char* name;
     const char* anchor;
@@ -992,7 +1032,7 @@ void Layout::layoutNode(const Node& n, const Style& st, P at, bool atGiven, cons
   for (const Place& p : places) {
     if (st.placement == p.name) place = &p;
   }
-  if (place != nullptr) {
+  if (place != nullptr && !fit) {
     const Dist nd = st.nodeDist.value_or(Dist());
     const bool haveNd = st.nodeDist.has_value();
     const auto distances = [&](const std::optional<Dist>& d, double factor, double& dxLen, double& dyLen) {
@@ -1033,7 +1073,7 @@ void Layout::layoutNode(const Node& n, const Style& st, P at, bool atGiven, cons
       }
       if (anchor.empty()) anchor = place->anchor;
     }
-  } else if (!atGiven && !n.hasAt) {
+  } else if (!fit && !atGiven && !n.hasAt) {
     target = at;
   }
   // `auto` and `swap`: the node stands on the left of the way the path goes (or the right), clear of it.
@@ -1628,6 +1668,8 @@ sptr<Box> Layout::run() {
   };
 
   auto box = sptrOf<TikzBox>();
+  // Background layers first, in the order they were written within one.
+  std::stable_sort(_prims.begin(), _prims.end(), [](const Prim& a, const Prim& b) { return a.layer < b.layer; });
   box->prims = std::move(_prims);
   box->origin = {_minx, _miny};
   box->_width = static_cast<float>(_maxx - _minx);
