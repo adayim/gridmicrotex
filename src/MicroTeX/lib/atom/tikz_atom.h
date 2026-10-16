@@ -109,6 +109,10 @@ struct Style {
   std::optional<float> pos;                      // `pos=`, `midway` ...: along the segment before a node
   bool sloped = false, autoSide = false, swap = false;
   std::optional<float> rotate;                   // a node's own rotation
+  // `label=` and `pin=` as written (pin: true), read into a Node's labels; the distances they use.
+  std::vector<std::pair<bool, std::string>> labelSpecs;
+  std::optional<Dimen> labelDistance, pinDistance;
+  std::string pinEdge;                           // `pin edge={...}`
 };
 
 /** A step of a path. */
@@ -122,6 +126,15 @@ struct PathOp {
   std::optional<Style> own;                      // a `to` or `edge` with options of its own
 };
 
+/** A label or a pin: a node of its own, put beside the node it belongs to. */
+struct Label {
+  Style style;
+  sptr<Atom> content;
+  std::string angle;                             // `above`, `30`, `center` ...
+  bool pin = false;
+  Style edge;                                    // a pin's line to its node
+};
+
 struct Node {
   std::string name;
   Style style;
@@ -132,6 +145,7 @@ struct Node {
   bool posGiven = false;
   bool between = false;                          // written between an operation and its coordinate
   int alongOp = -1;                              // then: the operation it sits on
+  std::vector<Label> labels;
 };
 
 struct PathItem {

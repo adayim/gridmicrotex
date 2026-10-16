@@ -517,7 +517,7 @@ private:
       arrow.defaultTip = true;
       st.tipEnd = arrow;
       st.shortenEnd = Dimen{1.f, UnitType::pt};
-    } else if (node && applyNodeOption(st, key, value, hasValue, c)) {
+    } else if ((node || key == "label distance" || key == "pin distance" || key == "pin edge" || key == "every label" || key == "every pin") && applyNodeOption(st, key, value, hasValue, c)) {
       // read
     } else if (key == "cycle") {
     } else if (!hasValue && !key.empty() && arrowSpec(st, key)) {
@@ -552,6 +552,18 @@ private:
       } else {
         warn("tikz: the shape " + value + " is not drawn yet: a rectangle is");
       }
+      return true;
+    }
+    if ((key == "label" || key == "pin") && hasValue) {
+      st.labelSpecs.emplace_back(key == "pin", value);
+      return true;
+    }
+    if ((key == "label distance" || key == "pin distance") && hasValue) {
+      (key == "label distance" ? st.labelDistance : st.pinDistance) = dimen(value);
+      return true;
+    }
+    if (key == "pin edge" && hasValue) {
+      st.pinEdge = value;
       return true;
     }
     if (key == "rounded rectangle arc length" && hasValue) {
@@ -941,7 +953,7 @@ private:
     if (nodeCommand) {
       // \node[options] (name) at (coord) {text};
       i = 0;
-      Node n = nodeOf(cmd == "coordinate", text, i, path.style, true);
+      Node n = nodeOf(cmd == "coordinate", text, i, path.style, true, scope);
       path.isNode = true;
       path.nodes.push_back(std::move(n));
       _pic.paths.push_back(std::move(path));
@@ -958,9 +970,11 @@ private:
   }
 
   /** `node [options] (name) at (coord) {text}` from `i`, which is on the `[`, the `(` or the `{` after the word. */
-  Node nodeOf(bool coordinateOnly, const std::string& t, std::size_t& i, const Style& pathStyle, bool standalone) {
+  Node nodeOf(bool coordinateOnly, const std::string& t, std::size_t& i, const Style& pathStyle, bool standalone,
+              const Style& enclosing) {
     Node n;
     n.style = pathStyle;
+    n.style.labelSpecs.clear();  // the node's label= was read once already, as an option of its path
     // A node is not a path: what is drawn, filled or pointed is its own.
     if (!standalone || true) {
       n.style.draw = Paint();
@@ -1016,7 +1030,63 @@ private:
     n.pos = n.style.pos.value_or(0.5f);
     n.posGiven = n.style.pos.has_value();
     n.content = haveText && !coordinateOnly ? contentOf(text, n.style) : nullptr;
+    // TikZ reads `label distance`, `pin distance` and `pin edge` where the label is set up, after the node's own
+    // options are closed: the scope round the node decides, whatever the node says (checked with pdfTeX).
+    n.style.labelDistance = enclosing.labelDistance;
+    n.style.pinDistance = enclosing.pinDistance;
+    n.style.pinEdge = enclosing.pinEdge;
+    for (const auto& spec : n.style.labelSpecs) n.labels.push_back(labelOf(spec.first, spec.second, n.style));
+    n.style.labelSpecs.clear();
     return n;
+  }
+
+  /** `label=[options]angle:text` and `pin=...`: the angle is a direction (`above`, `30`) and defaults to
+   *  `above`; the options and the text are those of a node of its own, drawn beside the one it belongs to. */
+  Label labelOf(bool pin, const std::string& spec, const Style& owner) {
+    Label l;
+    l.pin = pin;
+    std::string rest = trim(spec), options;
+    if (!rest.empty() && rest[0] == '[') {
+      std::size_t at = 0;
+      options = groupAt(rest, at);
+      rest = trim(rest.substr(at));
+    }
+    std::size_t colon = std::string::npos;
+    int depth = 0;
+    for (std::size_t k = 0; k < rest.size() && colon == std::string::npos; k++) {
+      if (rest[k] == '{' || rest[k] == '[') depth++;
+      if (rest[k] == '}' || rest[k] == ']') depth--;
+      if (depth == 0 && rest[k] == ':') colon = k;
+    }
+    std::string text = rest;
+    if (colon != std::string::npos) {
+      l.angle = trim(rest.substr(0, colon));
+      text = rest.substr(colon + 1);
+    }
+    if (l.angle.empty()) l.angle = "above";
+    Style s;
+    s.current = owner.current;
+    s.textColor = owner.textColor;
+    s.font = owner.font;
+    s.shape = "rectangle";
+    applyStyleNamed(s, pin ? "every pin" : "every label");
+    applyOptions(s, options, true, 0);
+    s.labelSpecs.clear();
+    l.style = s;
+    l.content = contentOf(trim(text), s);
+    if (pin) {
+      // `every pin edge` is `help lines`: gray, 0.2pt.
+      Style e;
+      color gray = 0;
+      if (colour("gray", gray)) e.current = gray;
+      e.draw.mode = Paint::Mode::current;
+      e.lineWidth = Dimen{0.2f, UnitType::pt};
+      applyStyleNamed(e, "every pin edge");
+      // The pin's own `pin edge=` wins over the scope's.
+      applyOptions(e, s.pinEdge.empty() ? owner.pinEdge : s.pinEdge, false, 0);
+      l.edge = e;
+    }
+    return l;
   }
 
   /** The text of a node as an atom: set to its text width and alignment, in its font. */
@@ -1231,7 +1301,7 @@ private:
           readArc(t, i, op);
           push(std::move(op));
         } else if (w == "node" || w == "coordinate") {
-          Node n = nodeOf(w == "coordinate", t, i, path.style, false);
+          Node n = nodeOf(w == "coordinate", t, i, path.style, false, path.style);
           const bool before = pending != Pending::none;
           n.between = before;
           path.nodes.push_back(std::move(n));

@@ -181,6 +181,7 @@ private:
   TikzAtom& _pic;
   Env& _env;
   double _cm = 0, _em = 0, _pt = 0;
+  int _labelCount = 0;
   std::vector<Prim> _prims;
   std::map<std::string, Geom> _nodes;
   // The picture's extent, with a path's control points as pgf takes them.
@@ -210,6 +211,7 @@ private:
 
   void layoutItem(const PathItem& item);
   void layoutNode(const Node& n, const Style& st, P at, bool atGiven, const SegInfo* seg, double t);
+  void placeLabel(const Style& ownerStyle, const Geom& owner, const Label& lb);
   Geom makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt) const;
   void nodeOutline(const Geom& g, const Style& st, Prim& prim) const;
   void connect(const PathItem& item, const PathOp& op, const Where& from, const Where& to, std::vector<Sub>& out,
@@ -1033,6 +1035,75 @@ void Layout::layoutNode(const Node& n, const Style& st, P at, bool atGiven, cons
     prim.at = g.c + textAt;
   }
   if (!prim.subs.empty() || prim.content != nullptr) _prims.push_back(std::move(prim));
+  for (const Label& lb : n.labels) placeLabel(st, g, lb);
+}
+
+/** A label or a pin: a node put on the border of `owner` at an angle, `label distance` (`pin distance`, 3ex)
+ *  beyond it, its anchor the one that faces the owner, as `tikz@compute@direction` chooses it. A pin has a
+ *  line to its node as well. */
+void Layout::placeLabel(const Style& ownerStyle, const Geom& owner, const Label& lb) {
+  static const struct {
+    const char* name;
+    double angle;
+  } words[] = {{"right", 0},       {"above right", 45}, {"above", 90},       {"above left", 135},
+               {"left", 180},      {"below left", 225}, {"below", 270},      {"below right", 315}};
+  Style ls = lb.style;
+  P at = owner.c;
+  if (lb.angle != "center") {
+    double angle = 90;
+    bool known = false;
+    for (const auto& w : words) {
+      if (lb.angle == w.name) {
+        angle = w.angle;
+        known = true;
+      }
+    }
+    if (!known) {
+      char* end = nullptr;
+      const double a = std::strtod(lb.angle.c_str(), &end);
+      if (end != lb.angle.c_str() && *end == '\0') angle = a;
+    }
+    const double distance = lb.pin ? len(ownerStyle.pinDistance, len(Dimen{3.f, UnitType::ex}))
+                                   : len(ownerStyle.labelDistance, 0.0);
+    at = borderToward(owner, owner.c + polar(angle, 1.0)) + polar(angle, distance);
+    if (ls.anchor.empty()) {
+      double a = std::fmod(angle, 360.0);
+      if (a < 0) a += 360.0;
+      const int k = static_cast<int>(a);
+      ls.anchor = k < 4     ? "west"
+                  : k < 87  ? "south west"
+                  : k < 94  ? "south"
+                  : k < 177 ? "south east"
+                  : k < 184 ? "east"
+                  : k < 267 ? "north east"
+                  : k < 274 ? "north"
+                  : k < 357 ? "north west"
+                            : "west";
+    }
+  } else if (ls.anchor.empty()) {
+    ls.anchor = "center";
+  }
+  Node ln;
+  ln.name = "\x01label" + std::to_string(_labelCount++);
+  ln.style = ls;
+  ln.content = lb.content;
+  layoutNode(ln, ls, at, true, nullptr, 0.5);
+  if (!lb.pin) return;
+  const auto it = _nodes.find(ln.name);
+  if (it == _nodes.end() || owner.point) return;
+  const Geom& pin = it->second;
+  Prim p = primOf(lb.edge, true, false);
+  Sub sub;
+  sub.start = borderToward(owner, pin.c);
+  Seg line;
+  line.to = borderToward(pin, owner.c);
+  sub.segs.push_back(line);
+  std::vector<Sub> subs{sub};
+  std::vector<Prim> tips;
+  applyTips(lb.edge, subs, p.lw, tips);
+  p.subs = std::move(subs);
+  _prims.push_back(std::move(p));
+  for (Prim& t : tips) _prims.push_back(std::move(t));
 }
 
 // --- connections --------------------------------------------------------------------------------
