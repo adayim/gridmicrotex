@@ -892,8 +892,9 @@ private:
       return node(id).mode == Mode::math ? sptrOf<FontStyleAtom>(FontStyle::rm, false, caps) : caps;
     }
     if (name == "gmtheorem") return fragment(theoremHead(id), false);
-    if (name == "verb") {
-      const NodeId text = child(id, 0);
+    if (name == "verb" || name == "lstinline" || name == "mintinline" || name == "Verb") {
+      // The code is the last argument; listings', minted's and fancyvrb's options and language are not drawn.
+      const NodeId text = child(id, count(id) - 1);
       return typewriter(rawOf(text), node(text).star);
     }
     if (name == "includegraphics") return image(id);
@@ -1083,7 +1084,7 @@ private:
       const std::size_t to = x.raw.find('\n', from);
       const std::string line =
         x.raw.substr(from, to == std::string::npos ? std::string::npos : to - from);
-      lines->append(typewriter(line.empty() ? " " : line, x.text == "verbatim*"));
+      lines->append(typewriter(line.empty() ? " " : line, x.text.back() == '*'));
       if (to == std::string::npos) break;
       from = to + 1;
     }
@@ -2125,7 +2126,7 @@ private:
     const Node& x = node(id);
     return x.kind == NodeKind::environment &&
            (x.text == "itemize" || x.text == "enumerate" || x.text == "description" || x.text == "tablenotes" ||
-            x.text == "verbatim" || x.text == "verbatim*" || x.text == "tcolorbox" || x.text == "multicols");
+            isVerbatimEnvironment(x.text) || x.text == "tcolorbox" || x.text == "multicols");
   }
 
   /** A space a break takes with it: not `~`, which TeX never drops. */
@@ -2638,7 +2639,7 @@ private:
     if (x.text == "minipage") return minipage(id);
     if (x.text == "multicols") return multicols(id);
     if (x.text == "tcolorbox") return tcolorbox(id);
-    if (x.text == "verbatim" || x.text == "verbatim*") return verbatimBlock(x);
+    if (isVerbatimEnvironment(x.text)) return verbatimBlock(x);
     const EnvSpec* spec = findEnvironment(x.text);
     const std::string macName = (spec != nullptr ? x.text : std::string("matrix")) + "@@env";
     MacroInfo* mac = MacroInfo::get(macName);

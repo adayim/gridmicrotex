@@ -125,6 +125,10 @@ bool isNumberedEnvironment(const std::string& name);
  *  LaTeX's [h] placement does, apart from the paragraphs around it. */
 bool isFloatEnvironment(const std::string& name);
 
+/** An environment whose body is read as typed: verbatim, and the code of listings, minted and fancyvrb (set as
+ *  verbatim is; their options only change a look this package does not draw). A name ending in `*` shows spaces. */
+bool isVerbatimEnvironment(const std::string& name);
+
 /** A prelude environment of text blocks (abstract, thebibliography, proof): its
  *  expansion is transparent, as document's is, so a document sets the
  *  headings and paragraphs in it as its own. */

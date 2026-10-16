@@ -169,6 +169,10 @@ struct Table {
     add({"href"}, "uc");
     // Its argument is its own delimited text (the parser reads it).
     add({"verb"}, "v");
+    // The inline code of listings, minted and fancyvrb: options and the language come first, then the code between
+    // a delimiter (or braces), which the parser reads as \verb's.
+    add({"lstinline", "Verb"}, "Rv");
+    add({"mintinline"}, "Rrv");
     // booktabs' \cmidrule, which the parser reads as \cline.
     add({"cmidrule"}, "r", Shape::prefix, Bare::none, true);
     add({"left", "middle", "right"}, "l", Shape::prefix, Bare::none, true);
@@ -310,6 +314,9 @@ struct Table {
     env({"tblr", "talltblr", "longtblr"}, "Rr", EnvBody::alignment, true);
     env({"itemize", "enumerate", "description", "tablenotes"}, "", EnvBody::raw, true);
     env({"verbatim", "verbatim*"}, "", EnvBody::verbatim, true);
+    // The code of listings (`[options]`), fancyvrb and minted (`[options]{language}`): set as verbatim is.
+    env({"lstlisting", "Verbatim", "Verbatim*"}, "R", EnvBody::verbatim, true);
+    env({"minted"}, "Rr", EnvBody::verbatim, true);
     // Commutative diagrams: amscd's, and tikz-cd's, which a handler reads
     // whole (its options and arrows are in the body).
     env({"CD", "tikzcd", "tikzpicture"}, "", EnvBody::raw);
@@ -348,6 +355,11 @@ bool isHeadingLine(const std::string& name) {
 
 bool isFloatEnvironment(const std::string& name) {
   return name == "table" || name == "table*" || name == "figure" || name == "figure*";
+}
+
+bool isVerbatimEnvironment(const std::string& name) {
+  return name == "verbatim" || name == "verbatim*" || name == "lstlisting" || name == "minted" ||
+         name == "Verbatim" || name == "Verbatim*";
 }
 
 bool isBlockEnvironment(const std::string& name) {

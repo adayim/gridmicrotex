@@ -945,7 +945,8 @@ NodeId Parser::parseArgument(const ArgSpec& spec, Mode mode, const std::string& 
 }
 
 NodeId Parser::parseRawArgument(const ArgSpec& spec, const std::string& who) {
-  if (spec.kind == ArgKind::verb) return parseVerb();
+  // listings' \lstinline and minted's \mintinline also take their code in braces.
+  if (spec.kind == ArgKind::verb) return parseVerb(who == "\\lstinline" || who == "\\mintinline");
   Node arg;
   arg.kind = NodeKind::argument;
   arg.mode = Mode::text;
@@ -1022,7 +1023,7 @@ const std::string kVerbatimChars = "\\%#_^~&${} \t\r\n";
 
 }  // namespace
 
-NodeId Parser::parseVerb() {
+NodeId Parser::parseVerb(bool braces) {
   Node arg;
   arg.kind = NodeKind::argument;
   arg.mode = Mode::text;
@@ -1042,15 +1043,63 @@ NodeId Parser::parseVerb() {
   if (noDelimiter) {
     _diags.warn(arg.span, "\\verb needs a delimiter: an empty text is used");
   } else {
-    const std::string delimiter = d.text;
+    // `{code}`: the braces pair, so a brace inside the code (`{a{b}c}`) does not end it.
+    const bool paired = braces && d.text == "{";
+    const std::string delimiter = paired ? "}" : d.text;
+    int depth = 0;
     while (true) {
       ExpandedToken u = next();
       if (u.tok.kind == TokKind::end || u.text == "\n" || u.text == "\r") {
         _diags.warn(arg.span, "\\verb is not closed on its line: " + delimiter + " inserted");
         break;
       }
-      if (u.text == delimiter) break;
+      if (paired && u.text == "{") depth++;
+      if (u.text == delimiter) {
+        if (depth == 0) break;
+        depth--;
+      }
       arg.raw += u.text;
+    }
+  }
+  return _ast.add(std::move(arg), {});
+}
+
+NodeId Parser::parseVerbatimArgument(bool optional) {
+  Node arg;
+  arg.kind = NodeKind::argument;
+  arg.mode = Mode::text;
+  arg.text = optional ? "R" : "r";
+  const CatcodesAsOther verbatim(_in, kVerbatimChars);
+  const std::string open = optional ? "[" : "{", close = optional ? "]" : "}";
+  // Spaces before it are skipped, a line end is not: it is the body's first.
+  std::vector<ExpandedToken> held;
+  ExpandedToken t = next();
+  while (t.tok.kind == TokKind::character && (t.text == " " || t.text == "\t")) {
+    held.push_back(std::move(t));
+    t = next();
+  }
+  arg.span = t.tok.span;
+  if (t.tok.kind == TokKind::character && t.text == open) {
+    arg.flag = true;
+    int braces = 0;
+    while (true) {
+      ExpandedToken u = next();
+      if (u.tok.kind == TokKind::end || u.text == "\n" || u.text == "\r") {
+        _diags.warn(arg.span, "the argument in " + open + close + " is not closed on its line: " + close + " inserted");
+        unread(std::move(u));
+        break;
+      }
+      if (u.text == "{") braces++;
+      if (u.text == "}") braces--;
+      if (u.text == close && (optional ? braces <= 0 : braces < 0)) break;
+      arg.raw += u.text;
+    }
+  } else {
+    if (!optional) _diags.warn(arg.span, "a required argument in { } is missing");
+    unread(std::move(t));
+    while (!held.empty()) {
+      unread(std::move(held.back()));
+      held.pop_back();
     }
   }
   return _ast.add(std::move(arg), {});
@@ -1075,7 +1124,12 @@ std::string Parser::readVerbatim(const std::string& name, const SourceSpan& at) 
     }
   }
   if (!closed) _diags.warn(at, "missing \\end{" + name + "} inserted");
-  // The line end after \begin{verbatim} and the one before \end are not text.
+  // The line end after \begin{verbatim} and the one before \end are not text. A listing also drops the spaces left
+  // on its \begin line after the options, as listings does.
+  if (name != "verbatim" && name != "verbatim*") {
+    const std::size_t blank = body.find_first_not_of(" \t");
+    if (blank != std::string::npos && body[blank] == '\n') body.erase(0, blank);
+  }
   if (!body.empty() && body.front() == '\n') body.erase(0, 1);
   if (!body.empty() && body.back() == '\n') body.pop_back();
   return body;
@@ -1308,7 +1362,10 @@ NodeId Parser::parseEnvironment(const ExpandedToken& begin, Mode mode) {
   const Mode cellMode = n.flag ? Mode::text : Mode::math;
   std::vector<NodeId> kids;
   if (spec != nullptr) {
-    for (const ArgSpec& a : spec->args) kids.push_back(parseArgument(a, mode, "\\begin{" + name + "}"));
+    for (const ArgSpec& a : spec->args) {
+      kids.push_back(spec->body == EnvBody::verbatim ? parseVerbatimArgument(a.optional)
+                                                     : parseArgument(a, mode, "\\begin{" + name + "}"));
+    }
   }
   if (spec != nullptr && spec->body == EnvBody::text) {
     // Paragraphs, in text whatever the mode around it: a blank line in a

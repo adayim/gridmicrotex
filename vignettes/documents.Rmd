@@ -244,6 +244,10 @@ in as it is.
 - A footnote in a label, not a document, is set where it is written, with a
   warning.
 - Tables and figures are placed where they are written.
+- `lstlisting`, `minted` and `Verbatim` (and `\lstinline`, `\mintinline`) set
+  their code as typed, in the typewriter face, with none of their colours, line
+  numbers or frames; markdown highlights code if that is what you want.
+- Algorithms (`algorithm`, `algorithmic`) are not drawn.
 - `\maketitle` draws nothing.
 
 For a complicated document, with packages from a TeX installation, pages,
