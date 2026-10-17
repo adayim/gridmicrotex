@@ -328,7 +328,7 @@ struct Table {
     // [position][height][inner position]{width}: a box of paragraphs.
     env({"minipage"}, "RDRd", EnvBody::text);
     // [keys]: tcolorbox's framed box of paragraphs, with the keys that change how it is drawn.
-    env({"tcolorbox"}, "R", EnvBody::text);
+    env({"tcolorbox", "mdframed"}, "R", EnvBody::text);
     // {columns}[header]: multicol's balanced columns.
     env({"multicols"}, "rR", EnvBody::text);
   }
@@ -359,7 +359,8 @@ bool isHeadingLine(const std::string& name) {
 }
 
 bool isFloatEnvironment(const std::string& name) {
-  return name == "table" || name == "table*" || name == "figure" || name == "figure*";
+  return name == "table" || name == "table*" || name == "figure" || name == "figure*" || name == "wrapfigure" ||
+         name == "wraptable";
 }
 
 bool isVerbatimEnvironment(const std::string& name) {
@@ -369,7 +370,8 @@ bool isVerbatimEnvironment(const std::string& name) {
 
 bool isBlockEnvironment(const std::string& name) {
   return name == "abstract" || name == "thebibliography" || name == "proof" ||
-         name == "subequations" || isFloatEnvironment(name);
+         name == "subequations" || name == "framed" || name == "shaded" || name == "shaded*" || name == "snugshade" ||
+         name == "snugshade*" || isFloatEnvironment(name);
 }
 
 bool isCrossReference(const std::string& name) {

@@ -2394,7 +2394,7 @@ private:
     const Node& x = node(id);
     return x.kind == NodeKind::environment &&
            (x.text == "itemize" || x.text == "enumerate" || x.text == "description" || x.text == "tablenotes" ||
-            isVerbatimEnvironment(x.text) || x.text == "tcolorbox" || x.text == "multicols");
+            isVerbatimEnvironment(x.text) || x.text == "tcolorbox" || x.text == "mdframed" || x.text == "multicols");
   }
 
   /** A space a break takes with it: not `~`, which TeX never drops. */
@@ -2676,7 +2676,7 @@ private:
         if (x.text == "multicols") {
           blockLine(l, id, false, "1.2em", child(id, 1) != kNoNode && !trimmed(rawOf(child(id, 1))).empty() ? "0em" : nullptr);
         } else {
-          blockLine(l, id, false, x.text == "tcolorbox" ? "0.6em" : "0.8em");
+          blockLine(l, id, false, x.text == "tcolorbox" || x.text == "mdframed" ? "0.6em" : "0.8em");
         }
       } else if (l.document && x.kind == NodeKind::command && !x.flag && x.text == "caption") {
         // On a line of its own, unindented; the parser ended its line.
@@ -2828,7 +2828,23 @@ private:
    *  padded by `boxsep` and `left`, `right`, `top`, `bottom` -- with the keys that change how it is drawn
    *  (`title`, the colours, the lengths); another key warns and is ignored. */
   sptr<Atom> tcolorbox(NodeId id) {
+    // mdframed is the same box with its own keys and defaults (mdframed.sty: a 0.4pt black line, white inside, 10pt at the
+    // sides and 0.4 baselineskip above and below the text, square corners, a title that is not on a band of its own).
+    const bool md = node(id).text == "mdframed";
+    const std::string name = md ? "mdframed" : "tcolorbox";
     TcolorboxStyle style;
+    bool titleBack = false;
+    if (md) {
+      style.back = 0xFFFFFFFF;
+      style.frame = 0xFF000000;
+      style.titleText = 0xFF000000;
+      style.rule = 0.04f;
+      style.arc = 0.f;
+      style.boxsep = 0.f;
+      style.left = style.right = 1.f;
+      style.top = style.bottom = 0.48f;
+      style.sharp = true;
+    }
     std::string title, fonttitle;
     std::vector<std::string> keys{""};
     int depth = 0;
@@ -2843,10 +2859,27 @@ private:
     }
     for (const std::string& item : keys) {
       const std::size_t eq = item.find('=');
-      const std::string key = trimmed(item.substr(0, eq));
+      std::string key = trimmed(item.substr(0, eq));
       std::string value = eq == std::string::npos ? std::string() : trimmed(item.substr(eq + 1));
       if (value.size() >= 2 && value.front() == '{' && value.back() == '}') value = value.substr(1, value.size() - 2);
       if (key.empty()) continue;
+      if (md) {
+        // mdframed's keys, as the tcolorbox keys that draw the same thing.
+        static const std::map<std::string, std::string> names = {
+          {"linecolor", "colframe"},       {"linewidth", "boxrule"},         {"backgroundcolor", "colback"},
+          {"roundcorner", "arc"},          {"innerleftmargin", "left"},      {"innerrightmargin", "right"},
+          {"innertopmargin", "top"},       {"innerbottommargin", "bottom"},  {"frametitle", "title"},
+          {"frametitlefont", "fonttitle"}, {"frametitlefontcolor", "coltitle"},
+          {"frametitlebackgroundcolor", "colbacktitle"}};
+        const auto named = names.find(key);
+        if (named != names.end()) key = named->second;
+        if (key == "hidealllines") {
+          if (value == "true" || value.empty()) style.rule = 0.f;
+          continue;
+        }
+        if (key == "colbacktitle") titleBack = true;
+        if (key == "arc") style.sharp = false;
+      }
       const auto colour = [&](color& into) {
         const color c = colourOf(id, value);
         if (!isTransparent(c)) into = c;
@@ -2854,7 +2887,7 @@ private:
       const auto length = [&](float& into) {
         float em = 0.f;
         if (!tcolorboxLength(value, em) || em < 0.f) {
-          _diags.warn(node(id).span, "tcolorbox: `" + key + "=" + value + "' is not a length of zero or more: ignored");
+          _diags.warn(node(id).span, name + ": `" + key + "=" + value + "' is not a length of zero or more: ignored");
         } else {
           into = em;
         }
@@ -2873,8 +2906,11 @@ private:
       else if (key == "top") length(style.top);
       else if (key == "bottom") length(style.bottom);
       else if (key == "sharp corners") style.sharp = true;
-      else _diags.warn(node(id).span, "tcolorbox: the key `" + key + "' is not drawn: ignored");
+      else _diags.warn(node(id).span, name + ": the key `" + key + "' is not drawn: ignored");
     }
+    // mdframed's title stands on the box's own colour unless it has one.
+    if (md && !titleBack) style.backTitle = style.back;
+    if (md && style.arc <= 0.f) style.sharp = true;
     sptr<Atom> head;
     if (!title.empty()) {
       head = fragment(fonttitle.empty() ? title : "{" + fonttitle + " " + title + "}", false);
@@ -2911,7 +2947,7 @@ private:
     const Node& x = node(id);
     if (x.text == "minipage") return minipage(id);
     if (x.text == "multicols") return multicols(id);
-    if (x.text == "tcolorbox") return tcolorbox(id);
+    if (x.text == "tcolorbox" || x.text == "mdframed") return tcolorbox(id);
     if (isVerbatimEnvironment(x.text)) return verbatimBlock(x);
     const EnvSpec* spec = findEnvironment(x.text);
     const std::string macName = (spec != nullptr ? x.text : std::string("matrix")) + "@@env";
