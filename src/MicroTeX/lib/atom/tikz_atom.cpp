@@ -114,6 +114,7 @@ struct Prim {
   P at;
   color textCol = 0;
   int layer = 0;             // `on background layer` (-1) is drawn before the main layer (0)
+  std::vector<int> clips;    // the clip paths this is drawn inside of (a PathItem's clipId)
 };
 
 struct Matrix {
@@ -145,7 +146,43 @@ struct Geom {
   double arcR = 0;           // a rounded rectangle: the radius of its ends,
   double inset = 0;          // and how far the ends' chords are in from the tips
   double halfArc = 0;        // and half the angle an end covers, degrees
+  // A polygon (regular polygon, star, isosceles triangle): the corners as drawn and the polygon of the anchors (the corners
+  // moved out by the outer separation, mitred), both relative to the centre, and the anchors a shape names (`corner 2`).
+  std::vector<P> outline, poly;
+  std::map<std::string, P> named;
 };
+
+/** The polygon `v` (either way round) with every side moved out by `o`, the corners mitred: the border pgf's polygons
+ *  keep their anchors on, at the radii `radius + o * csc(...)` its code works out one by one. */
+std::vector<P> offsetPolygon(const std::vector<P>& v, double o) {
+  const std::size_t n = v.size();
+  double area = 0;
+  for (std::size_t i = 0; i < n; i++) area += v[i].x * v[(i + 1) % n].y - v[(i + 1) % n].x * v[i].y;
+  const double sign = area >= 0 ? 1.0 : -1.0;
+  std::vector<P> out;
+  for (std::size_t i = 0; i < n; i++) {
+    const P a = v[(i + n - 1) % n], b = v[i], c = v[(i + 1) % n];
+    const P d1 = unit(b - a), d2 = unit(c - b);
+    const P n1{d1.y * sign, -d1.x * sign}, n2{d2.y * sign, -d2.x * sign};
+    const double k = 1.0 + n1.x * n2.x + n1.y * n2.y;
+    out.push_back(k > 1e-9 ? b + (n1 + n2) * (o / k) : b + n1 * o);
+  }
+  return out;
+}
+
+/** How far along `u` from the origin the polygon `poly` is met (the origin is inside it). */
+double rayPolygon(const std::vector<P>& poly, P u) {
+  double best = 1e30;
+  const std::size_t n = poly.size();
+  for (std::size_t i = 0; i < n; i++) {
+    const P a = poly[i], e = poly[(i + 1) % n] - poly[i];
+    const double den = u.x * e.y - u.y * e.x;
+    if (std::fabs(den) < 1e-12) continue;
+    const double t = (a.x * e.y - a.y * e.x) / den, s = (a.x * u.y - a.y * u.x) / den;
+    if (t >= 0 && s >= -1e-9 && s <= 1 + 1e-9) best = std::min(best, t);
+  }
+  return best < 1e29 ? best : 0.0;
+}
 
 P bezier(P a, P b, P c, P d, double t) {
   const double u = 1 - t;
@@ -193,11 +230,21 @@ private:
   std::map<std::string, Geom> _nodes;
   // The picture's extent, with a path's control points as pgf takes them.
   double _minx = 1e30, _maxx = -1e30, _miny = 1e30, _maxy = -1e30;
+  // Clip paths: each one's region (a convex polygon, counter-clockwise; empty when it is not one), and the box of the
+  // regions that are in force for the item being laid out -- what is drawn inside them counts towards the picture's
+  // size only as far as they reach, as in pgf.
+  std::map<int, std::vector<P>> _regions;
+  bool _clipped = false;
+  double _cx0 = 0, _cx1 = 0, _cy0 = 0, _cy1 = 0;
 
   double len(const Dimen& d) const { return d.isValid() ? Units::fsize(d, _env) : 0.0; }
   double len(const std::optional<Dimen>& d, double fallback) const { return d ? len(*d) : fallback; }
 
   void see(P p) {
+    if (_clipped) {
+      p.x = std::min(std::max(p.x, _cx0), _cx1);
+      p.y = std::min(std::max(p.y, _cy0), _cy1);
+    }
     _minx = std::min(_minx, p.x);
     _maxx = std::max(_maxx, p.x);
     _miny = std::min(_miny, p.y);
@@ -217,12 +264,16 @@ private:
   P borderToward(const Geom& g, P target) const;
 
   void layoutItem(const PathItem& item);
+  void layoutPath(const PathItem& item);
+  void clipPrims();
+  void clipOne(const Prim& p, const std::vector<P>& region, std::vector<Prim>& out) const;
   void layoutNodeMatrix(const NodeMatrix& gm, const Style& st);
   void layoutNode(const Node& n, const Style& st, P at, bool atGiven, const SegInfo* seg, double t);
   void placeLabel(const Style& ownerStyle, const Geom& owner, const Label& lb);
   void placeChildren(const Node& parent, const Geom& g);
   Geom makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt, const FitBox* fit) const;
   void nodeOutline(const Geom& g, const Style& st, Prim& prim) const;
+  void polygonGeom(Geom& g, const Style& st, double hx, double hy, double minW, double minH) const;
   void connect(const PathItem& item, const PathOp& op, const Where& from, const Where& to, std::vector<Sub>& out,
                SegInfo& info, const Style& st);
 
@@ -286,6 +337,7 @@ Prim Layout::primOf(const Style& st, bool stroke, bool fill) const {
   p.join = st.join.value_or(JOIN_MITER);
   p.textCol = alpha(st.textColor.value_or(current), st.textOpacity.value_or(1.f));
   p.layer = st.layer.value_or(0);
+  p.clips = st.clips;
   return p;
 }
 
@@ -296,6 +348,7 @@ P Layout::borderToward(const Geom& g, P target) const {
   const double n = length(d);
   if (g.point || n < 1e-9) return g.c;
   const P u = d * (1.0 / n);
+  if (!g.poly.empty()) return g.c + u * rayPolygon(g.poly, u);
   if (g.shape == "circle") return g.c + u * (g.hw + g.outer);
   // An ellipse and a diamond are given by the radii of their outer border: the point on the ray.
   if (g.shape == "ellipse") {
@@ -327,6 +380,19 @@ P Layout::borderToward(const Geom& g, P target) const {
 P Layout::anchorOf(const Geom& g, const std::string& anchor) const {
   if (anchor.empty() || anchor == "center") return g.c;
   if (g.point) return g.c;
+  if (!g.poly.empty()) {
+    // A polygon's own anchors (`corner 2`, `apex`), then the compass points as the border in that direction.
+    const auto named = g.named.find(anchor);
+    if (named != g.named.end()) return g.c + named->second;
+    static const struct {
+      const char* name;
+      double dx, dy;
+    } dirs[] = {{"north", 0, 1},  {"south", 0, -1},  {"east", 1, 0},       {"west", -1, 0},
+                {"north east", 1, 1}, {"north west", -1, 1}, {"south east", 1, -1}, {"south west", -1, -1}};
+    for (const auto& d : dirs) {
+      if (anchor == d.name) return borderToward(g, g.c + P{d.dx, d.dy});
+    }
+  }
   const double hw = g.hw + g.outer, hh = g.hh + g.outer;
   const bool circle = g.shape == "circle";
   const double r = g.hw + g.outer;
@@ -891,6 +957,7 @@ void Layout::applyTips(const Style& st, std::vector<Sub>& subs, double lw, std::
     p.fillCol = c;
     p.lw = tg.lw;
     p.layer = st.layer.value_or(0);
+    p.clips = st.clips;
     p.cap = tg.cap;
     p.join = tg.join;
     const P n = left(u);
@@ -961,6 +1028,8 @@ Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt,
     const double aspect = st.aspect.value_or(1.f) > 0 ? st.aspect.value_or(1.f) : 1.0;
     g.hw = std::max(0.5 * w0 + aspect * 0.5 * h0, 0.5 * minW);
     g.hh = std::max(0.5 * w0 / aspect + 0.5 * h0, 0.5 * minH);
+  } else if (g.shape == "regular polygon" || g.shape == "star" || g.shape == "isosceles triangle") {
+    polygonGeom(g, st, 0.5 * tw + ix, 0.5 * (th + td) + iy, minW, minH);
   } else {
     g.hw = 0.5 * std::max(w0, minW);
     g.hh = 0.5 * std::max(h0, minH);
@@ -978,8 +1047,115 @@ Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt,
   return g;
 }
 
+/** The shapes that are polygons (pgflibraryshapes.geometric): `hx` and `hy` are half the text box and its inner separation. The
+ *  corners are read from the library's own radii; the anchors' polygon is the corners moved out by the outer separation. */
+void Layout::polygonGeom(Geom& g, const Style& st, double hx, double hy, double minW, double minH) const {
+  const double rotate = st.borderRotate.value_or(0.f);
+  const double m = std::max(hx, hy);
+  const double minimum = 0.5 * std::max(minW, minH);
+  std::vector<P> corners;
+  if (g.shape == "regular polygon") {
+    // The incircle is 1.41421 of the half box; the corners lie at its secant, and a corner is up for an odd number of
+    // sides, half a step round for an even one.
+    const int n = st.polySides.value_or(5);
+    const double step = 360.0 / n;
+    const double R = std::max(1.41421 * m / std::cos(radians(180.0 / n)), minimum);
+    const double start = (n % 2 != 0 ? 90.0 : 90.0 - 0.5 * step) + rotate;
+    for (int k = 0; k < n; k++) corners.push_back(polar(start + k * step, R));
+  } else if (g.shape == "star") {
+    const int n = st.starPoints.value_or(5);
+    const double step = 180.0 / n;
+    double inner = 1.41421 * m;
+    const double height = len(st.starHeight, 0.5 * _cm), ratio = st.starRatio.value_or(1.5);
+    double outer = st.starByHeight ? inner + height : ratio * inner;
+    if (outer < minimum) {
+      // The outer radius grew to the minimum size: the inner follows by the ratio, or the point height.
+      outer = minimum;
+      inner = st.starByHeight ? outer - height : outer / ratio;
+    }
+    for (int k = 0; k < 2 * n; k++) corners.push_back(polar(90.0 + rotate + k * step, k % 2 == 0 ? outer : inner));
+  } else {
+    // An isosceles triangle, its apex right unless `shape border rotate` turns it. By default it is the smallest round the
+    // text box (the turn is then a quarter turn at most, the box's sides swapped); with `shape border uses incircle` it is round
+    // the circle that holds the text.
+    const double half = 0.5 * st.apexAngle.value_or(45.f);
+    const double sinH = std::sin(radians(half)), cosH = std::cos(radians(half)), tanH = std::tan(radians(half));
+    double x = hx, y = hy, turn = rotate, xa = 0, ya = 0;
+    if (st.borderIncircle) {
+      x = 1.414213 * m;
+      xa = x + x / sinH;
+      ya = tanH * xa;
+    } else {
+      double r = std::fmod(rotate, 360.0);
+      if (r < 0) r += 360.0;
+      turn = std::floor((r + 45.0) / 90.0) * 90.0;
+      if (turn == 90.0 || turn == 270.0) std::swap(x, y);
+      xa = 2.0 * x;
+      ya = tanH * xa;
+      xa += y / tanH;
+      ya += y;
+    }
+    if (ya < 0.5 * minW) {
+      ya = 0.5 * minW;
+      xa = ya / tanH;
+    }
+    if (xa < minH) {
+      xa = minH;
+      ya = tanH * xa;
+    }
+    // From the centre of the text back to the base.
+    const double base = st.borderIncircle ? xa * sinH / (1.0 + sinH) : (cosH * (ya - y) - 2.0 * sinH * x) / (1.0 + sinH) + x;
+    const double c = std::cos(radians(turn)), s = std::sin(radians(turn));
+    for (const P& p : {P{xa - base, 0.0}, P{-base, ya}, P{-base, -ya}}) corners.push_back(P{c * p.x - s * p.y, s * p.x + c * p.y});
+  }
+  g.outline = corners;
+  g.poly = offsetPolygon(corners, g.outer);
+  double ex = 0, ey = 0;
+  for (const P& p : g.poly) {
+    ex = std::max(ex, std::fabs(p.x));
+    ey = std::max(ey, std::fabs(p.y));
+  }
+  g.hw = std::max(0.0, ex - g.outer);
+  g.hh = std::max(0.0, ey - g.outer);
+  const auto side = [&](std::size_t i) { return (g.poly[i] + g.poly[(i + 1) % g.poly.size()]) * 0.5; };
+  if (g.shape == "regular polygon") {
+    for (std::size_t k = 0; k < g.poly.size(); k++) {
+      g.named["corner " + std::to_string(k + 1)] = g.poly[k];
+      g.named["side " + std::to_string(k + 1)] = side(k);
+    }
+  } else if (g.shape == "star") {
+    for (std::size_t k = 0; k + 1 < g.poly.size(); k += 2) {
+      g.named["outer point " + std::to_string(k / 2 + 1)] = g.poly[k];
+      g.named["inner point " + std::to_string(k / 2 + 1)] = g.poly[k + 1];
+    }
+  } else {
+    g.named["apex"] = g.poly[0];
+    g.named["left corner"] = g.poly[1];
+    g.named["right corner"] = g.poly[2];
+    g.named["left side"] = side(0);
+    g.named["lower side"] = side(1);
+    g.named["right side"] = side(2);
+  }
+}
+
 void Layout::nodeOutline(const Geom& g, const Style& st, Prim& prim) const {
   Sub s;
+  if (!g.outline.empty()) {
+    s.start = g.c + g.outline[0];
+    for (std::size_t k = 1; k < g.outline.size(); k++) {
+      Seg l;
+      l.to = g.c + g.outline[k];
+      s.segs.push_back(l);
+    }
+    s.closed = true;
+    const double r = len(st.rounded, 0.0);
+    if (r > 1e-9) {
+      rounded({s}, r, prim.subs);
+    } else {
+      prim.subs.push_back(s);
+    }
+    return;
+  }
   if (g.shape == "circle") {
     s.start = g.c + P{g.hw, 0};
     arcSegments(s, g.c, g.hw, g.hw, 0, 360);
@@ -1406,7 +1582,187 @@ void Layout::layoutNodeMatrix(const NodeMatrix& gm, const Style& st) {
 
 // --- a path -------------------------------------------------------------------------------------
 
+/** An item, with the clip paths in force for it: the part of the picture it adds is only what lies inside them. */
 void Layout::layoutItem(const PathItem& item) {
+  _clipped = false;
+  for (const int id : item.style.clips) {
+    const auto it = _regions.find(id);
+    if (it == _regions.end() || it->second.empty()) continue;
+    double x0 = 1e30, x1 = -1e30, y0 = 1e30, y1 = -1e30;
+    for (const P& p : it->second) {
+      x0 = std::min(x0, p.x);
+      x1 = std::max(x1, p.x);
+      y0 = std::min(y0, p.y);
+      y1 = std::max(y1, p.y);
+    }
+    if (_clipped) {
+      x0 = std::max(x0, _cx0);
+      x1 = std::min(x1, _cx1);
+      y0 = std::max(y0, _cy0);
+      y1 = std::min(y1, _cy1);
+    }
+    _cx0 = x0;
+    _cx1 = std::max(x0, x1);
+    _cy0 = y0;
+    _cy1 = std::max(y0, y1);
+    _clipped = true;
+  }
+  layoutPath(item);
+  _clipped = false;
+}
+
+// --- clipping --------------------------------------------------------------------------------------
+
+namespace {
+
+/** Which side of the line a to b the point is on: positive to its left. */
+double sideOf(P a, P b, P p) {
+  return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+}
+
+bool insideRegion(const std::vector<P>& region, P p) {
+  for (std::size_t i = 0; i < region.size(); i++) {
+    if (sideOf(region[i], region[(i + 1) % region.size()], p) < -1e-9) return false;
+  }
+  return true;
+}
+
+/** The polygon `in` cut to the convex, counter-clockwise `region` (Sutherland and Hodgman). */
+std::vector<P> clipPolygon(std::vector<P> in, const std::vector<P>& region) {
+  for (std::size_t e = 0; e < region.size() && !in.empty(); e++) {
+    const P a = region[e], b = region[(e + 1) % region.size()];
+    std::vector<P> out;
+    for (std::size_t i = 0; i < in.size(); i++) {
+      const P cur = in[i], prev = in[(i + in.size() - 1) % in.size()];
+      const double sc = sideOf(a, b, cur), sp = sideOf(a, b, prev);
+      if (sc >= 0) {
+        if (sp < 0) out.push_back(prev + (cur - prev) * (sp / (sp - sc)));
+        out.push_back(cur);
+      } else if (sp >= 0) {
+        out.push_back(prev + (cur - prev) * (sp / (sp - sc)));
+      }
+    }
+    in = std::move(out);
+  }
+  return in;
+}
+
+/** The pieces of the polyline `pts` that lie inside the convex `region` (Liang and Barsky). */
+std::vector<std::vector<P>> clipPolyline(const std::vector<P>& pts, const std::vector<P>& region) {
+  std::vector<std::vector<P>> pieces;
+  std::vector<P> run;
+  const auto flush = [&]() {
+    if (run.size() > 1 && length(run.back() - run.front()) > 1e-9) pieces.push_back(run);
+    run.clear();
+  };
+  for (std::size_t i = 1; i < pts.size(); i++) {
+    const P p = pts[i - 1], q = pts[i];
+    double t0 = 0, t1 = 1;
+    bool outside = false;
+    for (std::size_t e = 0; e < region.size() && !outside; e++) {
+      const P a = region[e], b = region[(e + 1) % region.size()];
+      const double sp = sideOf(a, b, p), sq = sideOf(a, b, q);
+      if (sp < 0 && sq < 0) {
+        outside = true;
+      } else if (sp < 0) {
+        t0 = std::max(t0, sp / (sp - sq));
+      } else if (sq < 0) {
+        t1 = std::min(t1, sp / (sp - sq));
+      }
+    }
+    if (outside || t0 > t1) {
+      flush();
+      continue;
+    }
+    if (t0 > 0 || run.empty()) {
+      flush();
+      run.push_back(p + (q - p) * t0);
+    }
+    run.push_back(p + (q - p) * t1);
+    if (t1 < 1) flush();
+  }
+  flush();
+  return pieces;
+}
+
+}  // namespace
+
+/** One primitive cut to a clip region: a filled shape becomes the polygon inside it, a stroked path the pieces of line
+ *  inside it (so the clip's own edge is not stroked), and a node's text stays when its point is inside. What lies wholly
+ *  inside is kept as it was, curves and all. */
+void Layout::clipOne(const Prim& p, const std::vector<P>& region, std::vector<Prim>& out) const {
+  const bool keepText = p.content == nullptr || insideRegion(region, p.at);
+  const auto inside = [&](const Sub& s) {
+    if (!insideRegion(region, s.start)) return false;
+    for (const Seg& g : s.segs) {
+      if (!insideRegion(region, g.to) || (g.cubic && (!insideRegion(region, g.c1) || !insideRegion(region, g.c2)))) return false;
+    }
+    return true;
+  };
+  Prim fillP = p, strokeP = p;
+  fillP.stroke = false;
+  fillP.content = nullptr;
+  fillP.subs.clear();
+  strokeP.fill = false;
+  strokeP.subs.clear();
+  if (!keepText) strokeP.content = nullptr;
+  const auto polyline = [](const std::vector<P>& pts, bool closed) {
+    Sub s;
+    s.start = pts.front();
+    for (std::size_t k = 1; k < pts.size(); k++) {
+      Seg g;
+      g.to = pts[k];
+      s.segs.push_back(g);
+    }
+    s.closed = closed;
+    return s;
+  };
+  for (const Sub& s : p.subs) {
+    if (inside(s)) {
+      if (p.fill) fillP.subs.push_back(s);
+      if (p.stroke) strokeP.subs.push_back(s);
+      continue;
+    }
+    std::vector<P> pts = flatten(s, 24);
+    if (p.fill) {
+      std::vector<P> poly = pts;
+      if (s.closed && poly.size() > 1) poly.pop_back();
+      poly = clipPolygon(poly, region);
+      if (poly.size() >= 3) fillP.subs.push_back(polyline(poly, true));
+    }
+    if (p.stroke) {
+      for (const std::vector<P>& piece : clipPolyline(pts, region)) strokeP.subs.push_back(polyline(piece, false));
+    }
+  }
+  if (p.fill && !fillP.subs.empty()) out.push_back(std::move(fillP));
+  if (!strokeP.subs.empty() || strokeP.content != nullptr) out.push_back(std::move(strokeP));
+}
+
+/** Every primitive drawn inside clip paths, cut to them (each in turn: the regions are convex, so one after the other is
+ *  their intersection). */
+void Layout::clipPrims() {
+  std::vector<Prim> out;
+  for (Prim& p : _prims) {
+    if (p.clips.empty()) {
+      out.push_back(std::move(p));
+      continue;
+    }
+    const std::vector<int> ids = p.clips;
+    std::vector<Prim> parts;
+    parts.push_back(std::move(p));
+    for (const int id : ids) {
+      const auto it = _regions.find(id);
+      if (it == _regions.end() || it->second.empty()) continue;
+      std::vector<Prim> next;
+      for (const Prim& q : parts) clipOne(q, it->second, next);
+      parts = std::move(next);
+    }
+    for (Prim& q : parts) out.push_back(std::move(q));
+  }
+  _prims = std::move(out);
+}
+
+void Layout::layoutPath(const PathItem& item) {
   const Style& st = item.style;
   if (item.grid != nullptr) {
     layoutNodeMatrix(*item.grid, st);
@@ -1691,6 +2047,28 @@ void Layout::layoutItem(const PathItem& item) {
   }
   if (open && !cur.segs.empty()) subs.push_back(cur);
 
+  if (item.clipId >= 0) {
+    // A clip path draws nothing; its first subpath, if it is a convex polygon once flattened, is the region.
+    std::vector<P> region;
+    for (const Sub& s : subs) {
+      std::vector<P> pts = flatten(s, 24);
+      if (pts.size() > 1 && length(pts.back() - pts.front()) < 1e-9) pts.pop_back();
+      if (pts.size() >= 3) {
+        region = std::move(pts);
+        break;
+      }
+    }
+    double area = 0;
+    for (std::size_t k = 0; k < region.size(); k++) area += sideOf(P{0, 0}, region[k], region[(k + 1) % region.size()]);
+    if (area < 0) std::reverse(region.begin(), region.end());
+    for (std::size_t k = 0; k < region.size(); k++) {
+      const P e1 = region[(k + 1) % region.size()] - region[k], e2 = region[(k + 2) % region.size()] - region[(k + 1) % region.size()];
+      if (e1.x * e2.y - e1.y * e2.x < -1e-7 * length(e1) * length(e2)) region.clear();   // a corner turns the wrong way
+      if (region.empty()) break;
+    }
+    _regions[item.clipId] = region;
+  }
+
   if (!subs.empty() && (stroke || fill)) {
     Prim prim = primOf(st, stroke, fill);
     std::vector<Sub> drawn;
@@ -1730,6 +2108,7 @@ void Layout::layoutItem(const PathItem& item) {
 sptr<Box> Layout::run() {
   for (const PathItem& p : _pic.paths) layoutItem(p);
   if (_minx > _maxx) return sptrOf<StrutBox>(0.f, 0.f, 0.f, 0.f);
+  clipPrims();
 
   class TikzBox : public Box {
   public:

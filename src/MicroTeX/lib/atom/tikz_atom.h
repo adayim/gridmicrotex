@@ -119,6 +119,16 @@ struct Style {
   std::string shape;                             // rectangle, circle, ... ("" is the default)
   std::optional<float> aspect;                   // `aspect=`, `shape aspect=`: a diamond's width over its height
   std::optional<float> arcLength;                // `rounded rectangle arc length=`, degrees
+  std::optional<int> polySides, starPoints;      // `regular polygon sides=`, `star points=`
+  std::optional<double> starRatio;               // `star point ratio=`
+  std::optional<Dimen> starHeight;               // `star point height=` (the last of the two to be given is used)
+  bool starByHeight = false;
+  std::optional<float> borderRotate;             // `shape border rotate=`, degrees
+  std::optional<float> apexAngle;                // `isosceles triangle apex angle=`, degrees
+  bool borderIncircle = false;                   // `shape border uses incircle` (pgf: false unless said)
+  // `\clip` and `clip`: the clip paths in force, by id (a PathItem's `clipId`); a scope ends them with its group.
+  std::vector<int> clips;
+  bool clipPath = false;                         // the `clip` option: the path is also a clip path
   std::optional<Dimen> innerX, innerY, outerSep;
   std::optional<Dimen> minWidth, minHeight;
   std::optional<Dimen> textWidth;
@@ -152,6 +162,13 @@ struct Style {
   std::string edgePath;                          // `edge from parent path`: a path naming the parent and the child nodes
   std::string parentAnchor, childAnchor;        // `parent anchor`, `child anchor`
   std::optional<int> layer;                      // `on background layer`: -1 is drawn before 0, the main one
+  // `plot`: the range and number of samples, the handler (sharp, smooth, const, xcomb, ycomb, sharp cycle), the variable.
+  std::optional<std::string> domain;             // `domain=a:b`, as written
+  std::optional<int> samples;
+  std::optional<std::string> samplesAt;          // `samples at={...}`
+  std::string plotHandler;
+  std::optional<double> tension;
+  std::string plotVariable;                      // `variable=\t`; `\x` when empty
   // Decorations: `decorate` with `decoration={brace, amplitude=, aspect=, mirror, raise=}`.
   bool decorate = false;
   std::string decoration;
@@ -230,6 +247,7 @@ struct PathItem {
   std::vector<Node> nodes;
   bool isNode = false;                           // a \node or \coordinate: one node, no path
   bool clip = false;
+  int clipId = -1;                               // >= 0: this path is a clip path, drawn as nothing
   std::shared_ptr<NodeMatrix> grid;              // a \matrix: one node and its cells, no path
 };
 

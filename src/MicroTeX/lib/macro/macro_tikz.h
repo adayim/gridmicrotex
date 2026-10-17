@@ -112,6 +112,17 @@ private:
     return atom();
   }
 
+  /** A trailing `r` says the value is in radians (`sin(\x r)`); the functions take degrees. */
+  double radiansSuffix(double v) {
+    std::size_t j = _i;
+    while (j < _s.size() && std::isspace(static_cast<unsigned char>(_s[j])) != 0) j++;
+    if (j < _s.size() && _s[j] == 'r' && (j + 1 >= _s.size() || std::isalpha(static_cast<unsigned char>(_s[j + 1])) == 0)) {
+      _i = j + 1;
+      return v * 180.0 / 3.14159265358979323846;
+    }
+    return v;
+  }
+
   double atom() {
     skip();
     if (_i >= _s.size()) {
@@ -127,7 +138,7 @@ private:
       } else {
         _ok = false;
       }
-      return v;
+      return radiansSuffix(v);
     }
     if (std::isdigit(static_cast<unsigned char>(_s[_i])) != 0 || _s[_i] == '.') {
       char* end = nullptr;
@@ -138,6 +149,10 @@ private:
       std::size_t j = _i;
       std::string unit;
       while (j < _s.size() && std::isalpha(static_cast<unsigned char>(_s[j])) != 0) unit += _s[j++];
+      if (unit == "r") {
+        _i = j;
+        return v * 180.0 / 3.14159265358979323846;
+      }
       if (!unit.empty()) {
         static const std::map<std::string, double> cm = {
           {"cm", 1.0}, {"mm", 0.1}, {"in", 2.54}, {"pt", 2.54 / 72.27}, {"bp", 2.54 / 72.0}, {"pc", 12 * 2.54 / 72.27},
@@ -151,7 +166,7 @@ private:
         _i = j;
         return v * it->second;
       }
-      return v;
+      return radiansSuffix(v);
     }
     if (std::isalpha(static_cast<unsigned char>(_s[_i])) != 0) {
       std::string name;
@@ -195,6 +210,18 @@ private:
       if (name == "exp") return std::exp(a);
       if (name == "ln") return std::log(a);
       if (name == "pow") return std::pow(a, b);
+      if (name == "asin") return std::asin(a) / toRad;
+      if (name == "acos") return std::acos(a) / toRad;
+      if (name == "atan") return std::atan(a) / toRad;
+      if (name == "atan2") return std::atan2(a, b) / toRad;
+      if (name == "deg") return a / toRad;            // radians to degrees
+      if (name == "rad") return a * toRad;            // degrees to radians
+      if (name == "sinh") return std::sinh(a);
+      if (name == "cosh") return std::cosh(a);
+      if (name == "tanh") return std::tanh(a);
+      if (name == "log10") return std::log10(a);
+      if (name == "log2") return std::log2(a);
+      if (name == "mod") return std::fabs(b) < 1e-12 ? (_ok = false, 0.0) : a - b * std::floor(a / b);
       _ok = false;
       return 0;
     }
@@ -227,7 +254,8 @@ private:
   std::map<std::string, std::string> _styles;      // name -> its options
   std::map<std::string, std::string> _appended;
   int _nodes = 0;
-  int _treeLevel = 0;                              // how deep in a tree the options being read are
+  int _clips = 0;                                  // clip paths made so far: their ids
+  int _treeLevel = 0;                             // how deep in a tree the options being read are
   int _treeNames = 0;                              // parents of trees that had no name
   std::string _nodeExtra;                          // a style a node takes after `every node`: `every child node`
   std::vector<PathItem> _edges;                    // the edges from parents, drawn after the path that grew them
@@ -577,7 +605,26 @@ private:
       (key == "parent anchor" ? st.parentAnchor : st.childAnchor) = trim(value) == "border" ? std::string() : trim(value);
     } else if (key == "on background layer" || key == "on main layer" || key == "on foreground layer") {
       st.layer = key == "on background layer" ? -1 : key == "on main layer" ? 0 : 1;
+    } else if (key == "domain" && hasValue) {
+      st.domain = value;
+    } else if (key == "samples" && hasValue) {
+      double v = 0;
+      if (number(value, v)) st.samples = std::max(2, static_cast<int>(std::lround(v)));
+    } else if (key == "samples at" && hasValue) {
+      st.samplesAt = value;
+    } else if (key == "smooth" || key == "smooth cycle" || key == "sharp plot" || key == "sharp cycle" || key == "const plot" ||
+               key == "xcomb" || key == "ycomb") {
+      st.plotHandler = key == "sharp plot" ? std::string() : key;
+    } else if (key == "tension" && hasValue) {
+      double v = 0;
+      if (number(value, v)) st.tension = v;
+    } else if (key == "variable" && hasValue) {
+      st.plotVariable = trim(value);
+    } else if (key == "range" || key == "xrange" || key == "yrange") {
+      // gnuplot's clipping of `plot function`, which is not read
     } else if (key == "cycle") {
+    } else if (key == "clip") {
+      st.clipPath = !hasValue || trim(value) != "false";
     } else if (!hasValue && !key.empty() && arrowSpec(st, key)) {
       // read
     } else if (!hasValue && colour(key, c) && ColorAtom::hasName(key.substr(0, key.find('!')))) {
@@ -592,10 +639,40 @@ private:
   /** The options of a node alone; false when `key` is not one. */
   bool applyNodeOption(Style& st, const std::string& key, const std::string& value, bool hasValue, color&) {
     // The shapes that are drawn; any other is said, with its name, where it is asked for.
-    static const std::set<std::string> shapes = {"rectangle", "circle", "ellipse", "diamond", "coordinate", "rounded rectangle"};
-    static const std::set<std::string> known = {"trapezium", "regular polygon", "cylinder", "star", "semicircle", "kite", "dart",
-                                                "isosceles triangle", "circular sector", "cross out", "strike out",
-                                                "chamfered rectangle", "rectangle split"};
+    static const std::set<std::string> shapes = {"rectangle", "circle", "ellipse", "diamond", "coordinate", "rounded rectangle",
+                                                 "regular polygon", "star", "isosceles triangle"};
+    static const std::set<std::string> known = {"trapezium", "cylinder", "semicircle", "kite", "dart", "circular sector",
+                                                "cross out", "strike out", "chamfered rectangle", "rectangle split"};
+    if ((key == "regular polygon sides" || key == "star points") && hasValue) {
+      double v = 0;
+      if (number(value, v)) (key == "star points" ? st.starPoints : st.polySides) = std::max(key == "star points" ? 2 : 3, static_cast<int>(std::lround(v)));
+      return true;
+    }
+    if (key == "star point ratio" && hasValue) {
+      double v = 0;
+      if (number(value, v) && v > 0) st.starRatio = v;
+      st.starByHeight = false;
+      return true;
+    }
+    if (key == "star point height" && hasValue) {
+      st.starHeight = dimen(value);
+      st.starByHeight = true;
+      return true;
+    }
+    if (key == "shape border rotate" && hasValue) {
+      double v = 0;
+      if (number(value, v)) st.borderRotate = static_cast<float>(v);
+      return true;
+    }
+    if (key == "isosceles triangle apex angle" && hasValue) {
+      double v = 0;
+      if (number(value, v) && v > 0 && v < 180) st.apexAngle = static_cast<float>(v);
+      return true;
+    }
+    if (key == "shape border uses incircle") {
+      st.borderIncircle = !hasValue || trim(value) != "false";
+      return true;
+    }
     if (shapes.count(key) > 0 && !hasValue) {
       st.shape = key;
       return true;
@@ -1223,11 +1300,13 @@ private:
     return t.size();
   }
 
-  void run(const std::string& text, const Style& scope, int depth) {
+  void run(const std::string& text, const Style& outside, int depth) {
     if (depth > 24) {
       warn("tikz: scopes nest too deeply: left out");
       return;
     }
+    // What the statements here start from: the scope's style, and the clip paths they add, which last to its end.
+    Style scope = outside;
     std::size_t i = 0;
     while (true) {
       skipSpace(text, i);
@@ -1254,7 +1333,8 @@ private:
       if (cmd == "draw" || cmd == "path" || cmd == "fill" || cmd == "filldraw" || cmd == "node" || cmd == "coordinate" || cmd == "matrix" ||
           cmd == "clip" || cmd == "shade" || cmd == "shadedraw" || cmd == "useasboundingbox") {
         const std::size_t end = statementEnd(text, i);
-        statement(cmd, text.substr(i, end - i), scope);
+        const int clip = statement(cmd, text.substr(i, end - i), scope);
+        if (clip >= 0) scope.clips.push_back(clip);
         i = end + 1;
       } else if (cmd == "begin") {
         skipSpace(text, i);
@@ -1593,10 +1673,11 @@ private:
     return n;
   }
 
-  void statement(const std::string& cmd, const std::string& text, const Style& scope) {
+  /** One statement; the id of the clip path it made, or -1. */
+  int statement(const std::string& cmd, const std::string& text, const Style& scope) {
     if (cmd == "matrix") {
       matrixStatement(text, scope);
-      return;
+      return -1;
     }
     PathItem path;
     path.style = scope;
@@ -1627,12 +1708,35 @@ private:
       path.nodes.push_back(std::move(n));
       _pic.paths.push_back(std::move(path));
       flushEdges();
-      return;
+      return -1;
     }
-    if (cmd == "clip") warn("tikz: \\clip is not supported: the path is drawn as it stands");
     pathOps(path, text, i);
+    // `\clip` and the `clip` option: what is drawn after, in this scope, stays inside the path. Only a path of straight
+    // sides, rectangles, circles and ellipses is a region the layout can clip to; any other is drawn as it stands.
+    int clip = -1;
+    if (cmd == "clip" || path.style.clipPath) {
+      bool simple = !path.ops.empty();
+      for (const PathOp& op : path.ops) {
+        if (op.kind == PathOp::Kind::curve || op.kind == PathOp::Kind::arc || op.kind == PathOp::Kind::to ||
+            op.kind == PathOp::Kind::grid) {
+          simple = false;
+        }
+      }
+      if (simple) {
+        clip = _clips++;
+        PathItem region = path;
+        region.clipId = clip;
+        region.nodes.clear();
+        region.style.draw = region.style.fill = Paint();
+        if (cmd != "clip") _pic.paths.push_back(path);   // `\draw[clip]` also draws
+        path = std::move(region);
+      } else {
+        warn("tikz: a clip path of curves is not supported: only rectangles, circles, ellipses and straight sides are clipped to");
+      }
+    }
     _pic.paths.push_back(std::move(path));
     flushEdges();
+    return clip;
   }
 
   void applyStyleNamed(Style& st, const std::string& name) {
@@ -1801,6 +1905,176 @@ private:
     const std::string rest = t.substr(i + 1);
     i = t.size();
     return rest;
+  }
+
+  /** A point of a plot as `x, y` -- each an expression, in cm when it has no unit; false when it is not a number. */
+  bool plotPoint(const std::string& text, double& x, double& y) {
+    const std::vector<std::string> parts = splitTop(text, ',');
+    if (parts.size() < 2) return false;
+    Expr ex(unbrace(parts[0])), ey(unbrace(parts[1]));
+    return ex.value(x) && ey.value(y) && std::isfinite(x) && std::isfinite(y);
+  }
+
+  /** `text` with the plot's variable replaced by the number `v`. */
+  static std::string bindVariable(const std::string& text, const std::string& var, double v) {
+    char buf[40];
+    std::snprintf(buf, sizeof buf, "(%.12g)", v);
+    std::string out;
+    const bool word = !var.empty() && std::isalpha(static_cast<unsigned char>(var.back())) != 0;
+    for (std::size_t k = 0; k < text.size();) {
+      const bool here = text.compare(k, var.size(), var) == 0;
+      const bool more = here && word && k + var.size() < text.size() && std::isalpha(static_cast<unsigned char>(text[k + var.size()])) != 0;
+      if (here && !more) {
+        out += buf;
+        k += var.size();
+      } else {
+        out += text[k++];
+      }
+    }
+    return out;
+  }
+
+  /** The values of the plot's variable: `samples at`, or `samples` of them evenly over the `domain`. */
+  std::vector<double> plotSamples(const Style& s) {
+    std::vector<double> xs;
+    if (s.samplesAt) {
+      // `0,0.5,...,2`: the dots continue the step of the two values before them.
+      std::vector<std::string> items;
+      for (const std::string& raw : splitTop(unbrace(*s.samplesAt), ',')) items.push_back(trim(raw));
+      for (std::size_t k = 0; k < items.size(); k++) {
+        double v = 0;
+        if (items[k] == "..." || items[k] == "\\ldots") {
+          double last = 0;
+          if (xs.size() >= 2 && k + 1 < items.size() && number(items[k + 1], last)) {
+            const double step = xs[xs.size() - 1] - xs[xs.size() - 2];
+            if (std::fabs(step) > 1e-12) {
+              for (double x = xs.back() + step; step > 0 ? x < last - 1e-9 : x > last + 1e-9; x += step) xs.push_back(x);
+            }
+          }
+        } else if (number(items[k], v)) {
+          xs.push_back(v);
+        }
+      }
+      return xs;
+    }
+    const std::string domain = s.domain.value_or("-5:5");
+    const auto colon = domain.find(':');
+    double a = 0, b = 0;
+    if (colon == std::string::npos || !number(domain.substr(0, colon), a) || !number(domain.substr(colon + 1), b)) {
+      warn("tikz: domain=" + domain + " is not a range a:b: left out");
+      return xs;
+    }
+    const int n = s.samples.value_or(25);
+    if (std::fabs(b - a) / (n - 1) < 1e-4) return {a, b};
+    for (int k = 0; k < n; k++) xs.push_back(a + (b - a) * k / (n - 1));
+    return xs;
+  }
+
+  /** `plot[options] (\x, {f(\x)})` and `plot[options] coordinates {(x,y) ...}`, as the handler the options name (pgfplothandlers)
+   *  turns the points into path operations. The first point is a line when a `--` came before `plot`, else a move. */
+  void plotOps(PathItem& path, const std::string& t, std::size_t& i, bool lineFirst, std::vector<PathOp>& out) {
+    skipSpace(t, i);
+    Style s = path.style;
+    if (i < t.size() && t[i] == '[') applyOptions(s, groupAt(t, i), false, 0);
+    skipSpace(t, i);
+    std::vector<std::pair<double, double>> pts;
+    bool skipped = false;
+    if (t.compare(i, 11, "coordinates") == 0) {
+      i += 11;
+      skipSpace(t, i);
+      if (i < t.size() && t[i] == '{') {
+        const std::string body = groupAt(t, i);
+        for (std::size_t k = 0; k < body.size();) {
+          if (body[k] != '(') {
+            k++;
+            continue;
+          }
+          double x = 0, y = 0;
+          if (plotPoint(parenAt(body, k), x, y)) {
+            pts.emplace_back(x, y);
+          } else {
+            skipped = true;
+          }
+        }
+      }
+    } else if (t.compare(i, 8, "function") == 0) {
+      i += 8;
+      skipSpace(t, i);
+      if (i < t.size() && t[i] == '{') groupAt(t, i);
+      warn("tikz: plot function (gnuplot) is not supported: left out");
+      return;
+    } else if (i < t.size() && t[i] == '(') {
+      const std::string expression = parenAt(t, i);
+      const std::string var = s.plotVariable.empty() ? std::string("\\x") : s.plotVariable;
+      for (const double v : plotSamples(s)) {
+        double x = 0, y = 0;
+        if (plotPoint(bindVariable(expression, var, v), x, y)) {
+          pts.emplace_back(x, y);
+        } else {
+          skipped = true;
+        }
+      }
+    } else {
+      warn("tikz: plot is not followed by a point, coordinates or function: left out");
+      return;
+    }
+    if (skipped) warn("tikz: a point of a plot is not a number: left out");
+    if (pts.empty()) return;
+    const auto at = [](double x, double y) {
+      Coord c;
+      c.x = Dimen{static_cast<float>(x), UnitType::cm};
+      c.y = Dimen{static_cast<float>(y), UnitType::cm};
+      return c;
+    };
+    const auto add = [&](PathOp::Kind kind, double x, double y) {
+      PathOp op;
+      op.kind = kind;
+      op.p = at(x, y);
+      out.push_back(std::move(op));
+    };
+    const PathOp::Kind first = lineFirst ? PathOp::Kind::line : PathOp::Kind::move;
+    const std::string& handler = s.plotHandler;
+    if (handler == "ycomb" || handler == "xcomb") {
+      // A line from the axis to every point, each its own subpath.
+      for (const auto& p : pts) {
+        add(PathOp::Kind::move, handler == "ycomb" ? p.first : 0.0, handler == "ycomb" ? 0.0 : p.second);
+        add(PathOp::Kind::line, p.first, p.second);
+      }
+    } else if (handler == "const plot") {
+      add(first, pts[0].first, pts[0].second);
+      for (std::size_t k = 1; k < pts.size(); k++) {
+        add(PathOp::Kind::line, pts[k].first, pts[k - 1].second);
+        add(PathOp::Kind::line, pts[k].first, pts[k].second);
+      }
+    } else if (handler == "smooth" || handler == "smooth cycle") {
+      if (handler == "smooth cycle") warn("tikz: smooth cycle is drawn as smooth, not closed");
+      // pgf's curveto handler: the controls lie along the line through the neighbours, 0.2775 * tension of the way.
+      const double k = 0.2775 * s.tension.value_or(0.5);
+      add(first, pts[0].first, pts[0].second);
+      std::pair<double, double> support = pts[0];
+      for (std::size_t n = 1; n < pts.size(); n++) {
+        PathOp op;
+        op.kind = PathOp::Kind::curve;
+        op.p = at(pts[n].first, pts[n].second);
+        op.c1 = at(support.first, support.second);
+        if (n + 1 < pts.size()) {
+          const double dx = k * (pts[n + 1].first - pts[n - 1].first), dy = k * (pts[n + 1].second - pts[n - 1].second);
+          op.c2 = at(pts[n].first - dx, pts[n].second - dy);
+          support = {pts[n].first + dx, pts[n].second + dy};
+        } else {
+          op.c2 = op.p;
+        }
+        out.push_back(std::move(op));
+      }
+    } else {
+      add(first, pts[0].first, pts[0].second);
+      for (std::size_t n = 1; n < pts.size(); n++) add(PathOp::Kind::line, pts[n].first, pts[n].second);
+      if (handler == "sharp cycle") {
+        PathOp op;
+        op.kind = PathOp::Kind::close;
+        out.push_back(std::move(op));
+      }
+    }
   }
 
   void pathOps(PathItem& path, const std::string& t, std::size_t i) {
@@ -1998,8 +2272,9 @@ private:
         } else if (w == "at") {
           // `\path at (x,y) node ...`: the node takes the position; nothing to do here.
         } else if (w == "plot") {
-          warn("tikz: plot is not supported: left out");
-          i = statementEnd(t, i);
+          std::vector<PathOp> ops;
+          plotOps(path, t, i, pending == Pending::line, ops);
+          for (PathOp& op : ops) push(std::move(op));
         } else if (w == "and") {
         } else {
           i = before + 1;
