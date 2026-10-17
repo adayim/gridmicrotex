@@ -793,6 +793,31 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
       const float strut = 1.2f * _baseEm * _matrix->_stretch;
       for (int i = 0; i < rows; i++) {
         if (isRule(i)) continue;
+        // A paragraph in a cell (p{}, X) ends in a strut of the row's, as array's \@finalstrut makes it: the last
+        // line is at least 0.3 of a baselineskip deep, so the rule under it stands that far below its text.
+        for (int j = 0; j < cols; j++) {
+          const auto& cell = boxarr[i][j];
+          if (cell == nullptr || cell->_type == AtomType::multiRow) continue;
+          // The paragraph is the one box with size in what wraps it (an HBox of it and a strut).
+          const sptr<Box>* inner = &cell;
+          while (const auto* h = dynamic_cast<const HBox*>(inner->get())) {
+            const sptr<Box>* only = nullptr;
+            int sized = 0;
+            for (const auto& child : h->_children) {
+              if (child->_height + child->_depth <= 0.f) continue;
+              only = &child;
+              sized++;
+            }
+            if (sized != 1) break;
+            inner = only;
+          }
+          const auto* lines = dynamic_cast<const VBox*>(inner->get());
+          // A paragraph (the lines a p{} or X cell was broken into), not a fraction or a stack.
+          if (lines == nullptr || !(lines->_lines || lines->_rows) || lines->_children.size() < 2) continue;
+          const float extra = std::max(0.f, 0.3f * strut - lines->_children.back()->_depth);
+          cell->_depth += extra;
+          lineDepth[i] = max(lineDepth[i], cell->_depth);
+        }
         lineHeight[i] = max(lineHeight[i], 0.7f * strut);
         lineDepth[i] = max(lineDepth[i], 0.3f * strut);
       }

@@ -736,7 +736,7 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
       return _ast.add(std::move(n), args);
     }
     if (name == "cmidrule") {
-      // booktabs' \cmidrule[width](trim){a-b}: the rule of \cline{a-b};
+      // booktabs' \cmidrule[width](trim){a-b}: a light rule across the columns a to b;
       // its width and trims have nothing to act on here.
       if (isOther(peekNonSpace().tok, '[')) {
         nextNonSpace();
@@ -753,7 +753,6 @@ NodeId Parser::parseCommand(ExpandedToken t, Mode mode, const Stop& stop,
           if (isOther(u.tok, ')')) break;
         }
       }
-      n.text = "cline";
     }
     if (isRule(n.text) || name == "intertext") {
       std::vector<NodeId> args;

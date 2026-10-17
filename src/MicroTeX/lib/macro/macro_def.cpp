@@ -110,6 +110,7 @@ map<string, MacroInfo*> MacroInfo::_commands{
   mac(0, macro_hdashline, "hdashline"),
   mac(3, macro_specialrule, "specialrule"),
   mac(1, macro_cline, "cline"),
+  mac(1, macro_cmidrule, "cmidrule"),
   mac(3, macro_multirow, "multirow"),
   mac(1, macro_rowcolor, "rowcolor"),
   mac(1, macro_columnbg, "columncolor"),

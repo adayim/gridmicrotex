@@ -57,6 +57,7 @@ inline sptr<Atom> widthTable(CommandArgs& args, bool spread) {
   auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(2), true);
   setColumnSepOf(*table, args);
   table->setTableWidth(Units::getDimen(args.text(1)), spread);
+  table->setRowSpacing(RowSpacing::strut);
   return table;
 }
 
@@ -75,6 +76,7 @@ inline cmdmacro(longtableATATenv) {
   arr->checkDimensions();
   auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
   setColumnSepOf(*table, args);
+  table->setRowSpacing(RowSpacing::strut);
   return table;
 }
 
@@ -93,12 +95,12 @@ inline cmdmacro(arrayATATenv) {
   arr->checkDimensions();
   auto table = sptrOf<MatrixAtom>(args.isPartial(), arr, args.text(1), true);
   setColumnSepOf(*table, args);
-  // tabular is this handler too: a table of text keeps the engine's rows.
+  // tabular is this handler too: a table of text has TeX's strut rows as an array has.
   if (arr->_rows == "jot") {
     table->setRowSpacing(RowSpacing::jot);
   } else if (arr->_rows == "sub") {
     table->setRowSpacing(RowSpacing::sub);
-  } else if (args.isMathMode()) {
+  } else {
     table->setRowSpacing(RowSpacing::strut);
   }
   return table;
@@ -286,8 +288,7 @@ inline cmdmacro(thickhline) {
   return a;
 }
 
-// booktabs' \specialrule{thickness}{above}{below}: a rule of that
-// thickness. The space above and below is not set; no rule here has any.
+// booktabs' \specialrule{thickness}{above}{below}: a rule of that thickness, with that much space above and below it.
 inline cmdmacro(specialrule) {
   if (args.alignmentHere() == nullptr)
     throw ex_parse("The macro \\specialrule only available in array mode!");
@@ -298,6 +299,7 @@ inline cmdmacro(specialrule) {
   } else {
     a->setThicknessScale(2.f);  // an unreadable thickness: \toprule's
   }
+  a->setSpacing(Units::getDimen(args.text(2)), Units::getDimen(args.text(3)));
   return a;
 }
 
@@ -317,9 +319,8 @@ inline cmdmacro(addlinespace) {
   return a;
 }
 
-inline cmdmacro(cline) {
-  if (args.alignmentHere() == nullptr)
-    throw ex_parse("The macro \\cline only available in array mode!");
+inline sptr<HlineAtom> clineRule(CommandArgs& args, const char* name) {
+  if (args.alignmentHere() == nullptr) throw ex_parse(std::string("The macro \\") + name + " only available in array mode!");
   const std::string& spec = args.text(1);
   int a = 0, b = 0;
   const auto dash = spec.find('-');
@@ -337,6 +338,19 @@ inline cmdmacro(cline) {
   a = std::min(std::max(a, 0), most);
   b = std::min(std::max(b, 0), most);
   at->setColumnRange(a - 1, b - 1);
+  return at;
+}
+
+inline cmdmacro(cline) {
+  return clineRule(args, "cline");
+}
+
+// booktabs' \cmidrule[width](trim){a-b}: a light rule across columns a to b, with \aboverulesep (0.4ex) above it and
+// \belowrulesep (0.65ex) below, as \midrule has.
+inline cmdmacro(cmidrule) {
+  auto at = clineRule(args, "cmidrule");
+  at->setThickness(0.05f, UnitType::em);
+  at->setSpacing({0.4f, UnitType::ex}, {0.65f, UnitType::ex});
   return at;
 }
 

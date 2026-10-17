@@ -381,7 +381,7 @@ bool isCitation(const std::string& name) {
 }
 
 bool isRule(const std::string& name) {
-  return name == "hline" || name == "thickhline" || name == "hdashline" || name == "cline" || name == "specialrule" ||
+  return name == "hline" || name == "thickhline" || name == "hdashline" || name == "cline" || name == "cmidrule" || name == "specialrule" ||
          name == "addlinespace" || name == "endhead" || name == "endfirsthead" ||
          name == "endfoot" || name == "endlastfoot";
 }

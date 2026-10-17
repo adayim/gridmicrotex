@@ -4,6 +4,7 @@
 #include "atom/atom.h"
 #include "atom/atom_row.h"
 #include "box/box_single.h"
+#include "env/units.h"
 #include "unimath/math_type.h"
 
 namespace microtex {
@@ -143,6 +144,8 @@ private:
   bool _blank = false;
   // Dashes, not a line (\hdashline).
   bool _dashed = false;
+  // booktabs' space above and below a rule (\aboverulesep, \belowrulesep, ...), set in the rule's own row.
+  Dimen _above, _below;
 
 public:
   HlineAtom() noexcept
@@ -162,6 +165,12 @@ public:
   inline void setThicknessScale(float s) { _thicknessScale = s; }
 
   inline void setBlank(bool blank) { _blank = blank; }
+
+  /** Space above and below the rule, which booktabs puts round its rules; none for an \hline. */
+  inline void setSpacing(const Dimen& above, const Dimen& below) {
+    _above = above;
+    _below = below;
+  }
 
   inline void setThickness(float value, UnitType unit) {
     _thickness = value;

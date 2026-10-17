@@ -18,7 +18,7 @@
   </clipPath>
 </defs>
 <g clip-path='url(#cpMC4wMHw3MjAuMDB8MC4wMHw1NzYuMDA=)'>
-<rect x='201.60' y='-0.000000000000057' width='316.80' height='276.23' style='stroke-width: 0.75; stroke: #666666; fill: #F5F5F5;' />
+<rect x='201.60' y='-0.000000000000057' width='316.80' height='277.23' style='stroke-width: 0.75; stroke: #666666; fill: #F5F5F5;' />
 <text x='211.56' y='33.52' style='font-size: 32.50px; font-weight: bold; font-family: sans;' textLength='61.39px' lengthAdjust='spacingAndGlyphs'>Title</text>
 <text x='211.56' y='49.54' style='font-size: 13.00px; font-family: sans;' textLength='25.27px' lengthAdjust='spacingAndGlyphs'>First</text>
 <text x='240.08' y='49.54' style='font-size: 13.00px; font-family: sans;' textLength='59.27px' lengthAdjust='spacingAndGlyphs'>paragraph</text>
@@ -48,12 +48,12 @@
 <text x='211.56' y='190.51' style='font-size: 13.00px; font-family: sans;' textLength='32.88px' lengthAdjust='spacingAndGlyphs'>x &lt;- 1</text>
 <text x='211.56' y='205.59' style='font-size: 13.00px; font-family: sans;' textLength='32.88px' lengthAdjust='spacingAndGlyphs'>y &lt;- 2</text>
 <rect x='211.56' y='218.61' width='45.66' height='1.72' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<text x='219.36' y='232.68' style='font-size: 13.00px; font-weight: bold; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>a</text>
-<text x='242.19' y='232.68' style='font-size: 13.00px; font-weight: bold; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>b</text>
-<rect x='211.56' y='235.73' width='45.66' height='0.86' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<text x='219.36' y='248.59' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>1</text>
-<text x='242.19' y='248.59' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>2</text>
-<rect x='211.56' y='251.51' width='45.66' height='1.72' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<rect x='211.56' y='262.51' width='296.87' height='1.00' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
+<text x='219.36' y='231.25' style='font-size: 13.00px; font-weight: bold; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>a</text>
+<text x='242.19' y='231.25' style='font-size: 13.00px; font-weight: bold; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>b</text>
+<rect x='211.56' y='235.93' width='45.66' height='0.86' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
+<text x='219.36' y='247.71' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>1</text>
+<text x='242.19' y='247.71' style='font-size: 13.00px; font-family: sans;' textLength='7.23px' lengthAdjust='spacingAndGlyphs'>2</text>
+<rect x='211.56' y='252.39' width='45.66' height='1.72' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
+<rect x='211.56' y='263.51' width='296.87' height='1.00' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
 </g>
 </svg>
