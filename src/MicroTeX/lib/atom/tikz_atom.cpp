@@ -241,6 +241,7 @@ private:
   double len(const std::optional<Dimen>& d, double fallback) const { return d ? len(*d) : fallback; }
 
   void see(P p) {
+    if (!std::isfinite(p.x) || !std::isfinite(p.y)) return;   // a shape of no size (an arc of 0 degrees) is nowhere
     if (_clipped) {
       p.x = std::min(std::max(p.x, _cx0), _cx1);
       p.y = std::min(std::max(p.y, _cy0), _cy1);
@@ -2129,7 +2130,8 @@ void Layout::layoutPath(const PathItem& item) {
 
 sptr<Box> Layout::run() {
   for (const PathItem& p : _pic.paths) layoutItem(p);
-  if (_minx > _maxx) return sptrOf<StrutBox>(0.f, 0.f, 0.f, 0.f);
+  // Nothing, or a picture too large for a box to hold (its size would not be a number the host can read).
+  if (_minx > _maxx || !(_maxx - _minx < 1e7) || !(_maxy - _miny < 1e7)) return sptrOf<StrutBox>(0.f, 0.f, 0.f, 0.f);
   clipPrims();
 
   class TikzBox : public Box {

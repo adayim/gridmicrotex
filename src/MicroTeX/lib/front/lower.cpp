@@ -628,6 +628,8 @@ private:
   /** How many alignment rows or displays are being lowered: a \label in
    *  one names its number, which is known when it ends. */
   int _inRow = 0;
+  /** Rows or displays whose number a abel waits for (align, gather, equation, a display): inside one, labels are kept. */
+  int _inFamilyRow = 0;
   struct Reference {
     std::string key;
     SourceSpan at;
@@ -1071,9 +1073,11 @@ private:
     // A caption is a line of text, as \text{} sets one; the parser put the
     // break that ends its line after it.
     if (name == "caption") {
+      // The number first: a \label in the caption's own text (`\caption{Text\label{fig}}`, as it is mostly written) names
+      // the float it is in, so the counter has stepped by the time that label is read.
+      const std::string label = node(id).star ? std::string() : captionLabel();
       const NodeId text = child(id, count(id) - 1);
       const sptr<Atom> body = argumentFormula(text, rawOf(text), false);
-      const std::string label = node(id).star ? std::string() : captionLabel();
       sptr<Atom> line = body;
       if (!label.empty()) {
         // "Figure 1: text", "Table 1: text", or in a sub-float "(a) text", as LaTeX and subcaption set them.
@@ -1310,15 +1314,37 @@ private:
     return head + (italic ? "." : "\\textbf{.}");
   }
 
-  /** The text of a verbatim environment: a line to a row, flush left. */
+  /** `line` with its tabs as spaces: to the next multiple of 8 columns, as listings and fancyvrb set them (`stops`), or one
+   *  space each, as LaTeX's own `verbatim` does. */
+  static std::string withoutTabs(const std::string& line, bool stops) {
+    std::string out;
+    std::size_t column = 0;
+    for (const char c : line) {
+      if (c == '\t') {
+        const std::size_t n = stops ? 8 - column % 8 : 1;
+        out.append(n, ' ');
+        column += n;
+      } else {
+        out += c;
+        if ((static_cast<unsigned char>(c) & 0xC0) != 0x80) column++;   // a UTF-8 continuation byte is no column
+      }
+    }
+    return out;
+  }
+
+  /** The text of a verbatim environment: a line to a row, flush left, a baselineskip apart (a blank line is a row too, as
+   *  in LaTeX: without the glue between rows they stood as close as their glyphs, and blank lines were no taller than
+   *  nothing). */
   sptr<Atom> verbatimBlock(const Node& x) {
     auto lines = sptrOf<VRowAtom>();
     lines->_halign = Alignment::left;
+    lines->setAddInterline(true);
+    const bool stops = x.text != "verbatim" && x.text != "verbatim*";
     std::size_t from = 0;
     while (true) {
       const std::size_t to = x.raw.find('\n', from);
-      const std::string line =
-        x.raw.substr(from, to == std::string::npos ? std::string::npos : to - from);
+      const std::string line = withoutTabs(
+        x.raw.substr(from, to == std::string::npos ? std::string::npos : to - from), stops);
       lines->append(typewriter(line.empty() ? " " : line, x.text.back() == '*'));
       if (to == std::string::npos) break;
       from = to + 1;
@@ -2138,8 +2164,11 @@ private:
     /** The `[len]` of that break: space below the line it ends. */
     std::string gap;
     /** What `\vspace` has asked for since: TeX's glue between this line and the next, added to the baselineskip glue.
-     *  It lands before the next line that starts, wherever in its paragraph the command stood (vadjust). */
+     *  It lands before the next line that starts. */
     Dimen skip;
+    /** What a `\vspace` in the text of a line not yet started asked for: the glue goes after that line (it is a vadjust,
+     *  which TeX puts below the line holding it), so it becomes `skip` when the line starts. */
+    Dimen skipAfter;
     /** Nothing placed since a line break: a space here goes with it. */
     bool afterBreak = false;
     /** Anything drawn at all: a break before that is none. */
@@ -2287,6 +2316,38 @@ private:
     if (gap.isValid()) l.rows->addRowGap(gap);
     l.gap.clear();
     l.rows->addRow();
+    // A \vspace written in this line's own text lies below it, before the next.
+    if (l.skipAfter.isValid()) {
+      l.skip = l.skipAfter;
+      l.skipAfter = Dimen();
+    }
+  }
+
+  /** The natural length of the glue `\vspace` is given. A grob's lines do not stretch, so `1cm plus 5pt minus 2pt` is 1cm;
+   *  `\smallskipamount`, `\medskipamount` and `\bigskipamount` are LaTeX's 3, 6 and 12pt. What is not a length warns and
+   *  is no space (it was read as a number of pixels, and `20sp` as 65536 times too much). */
+  Dimen glueNatural(std::string text, NodeId id) {
+    for (const char* word : {"plus", "minus"}) {
+      for (std::size_t p = text.find(word); p != std::string::npos; p = text.find(word, p + 1)) {
+        if (p > 0 && std::isspace(static_cast<unsigned char>(text[p - 1])) != 0) {
+          text.erase(p);
+          break;
+        }
+      }
+    }
+    text = trimmed(text);
+    static const std::map<std::string, std::string> amounts = {
+      {"\\smallskipamount", "3pt"}, {"\\medskipamount", "6pt"}, {"\\bigskipamount", "12pt"}};
+    const auto named = amounts.find(text);
+    if (named != amounts.end()) text = named->second;
+    const Dimen d = Units::getDimen(text);
+    const bool known = d.isValid() && (d.unit != UnitType::pixel || text.find("px") != std::string::npos) &&
+                       (d.unit != UnitType::none || d.val == 0.f);
+    if (!known) {
+      _diags.warn(node(id).span, "\\vspace: `" + text + "' is not a length: no space is added");
+      return Dimen();
+    }
+    return d;
   }
 
   /** Two skips added: in one unit when they have it, else in points when both are lengths of the page; two skips of
@@ -2697,8 +2758,13 @@ private:
       } else if (l.document && l.drawn && x.kind == NodeKind::command && !x.flag && x.text == "vspace") {
         // Glue between this line and the next, as TeX adds it: on top of the baselineskip glue, not instead of it.
         // Before anything is drawn (the top of a page, which TeX would drop) it stays what it was, a height.
-        const Dimen d = Units::getDimen(rawOf(child(id, 0)));
-        if (d.isValid()) l.skip = l.skip.isValid() ? addSkips(l.skip, d) : d;
+        const Dimen d = glueNatural(rawOf(child(id, 0)), id);
+        if (d.isValid()) {
+          // In the text of a line that has not started (words of the paragraph are waiting), the glue is below that line.
+          const bool inText = l.broken && l.prose != nullptr && l.prose->_root != nullptr;
+          Dimen& into = inText ? l.skipAfter : l.skip;
+          into = into.isValid() ? addSkips(into, d) : d;
+        }
       } else if (isBreakNode(x)) {
         lineBreak(l, id);
       } else if (x.kind == NodeKind::command && !x.flag && x.text == "noindent") {
@@ -2911,6 +2977,16 @@ private:
     // mdframed's title stands on the box's own colour unless it has one.
     if (md && !titleBack) style.backTitle = style.back;
     if (md && style.arc <= 0.f) style.sharp = true;
+    if (md && !title.empty()) {
+      // A title has 5pt of its own above and below (frametitleaboveskip, frametitlebelowskip): tcolorbox's band is its
+      // `boxsep` above and below, which the margins give up so that the text stands where they say.
+      const float sep = 0.5f;
+      style.boxsep = sep;
+      style.left = std::max(0.f, style.left - sep);
+      style.right = std::max(0.f, style.right - sep);
+      style.top = std::max(0.f, style.top - sep);
+      style.bottom = std::max(0.f, style.bottom - sep);
+    }
     sptr<Atom> head;
     if (!title.empty()) {
       head = fragment(fonttitle.empty() ? title : "{" + fonttitle + " " + title + "}", false);
@@ -3018,6 +3094,7 @@ private:
     RowNote outer = std::move(_note);
     _note = RowNote();
     _inRow++;
+    if (family) _inFamilyRow++;
     int lastRow = -1;
     std::vector<NodeId> rows;
     for (std::uint32_t r = 0; r < count(env); r++) {
@@ -3088,6 +3165,7 @@ private:
     if (family && once && lastRow >= 0) finishRow(*arr, lastRow, automatic);
     if (lettered) nums().sub = false;
     _inRow--;
+    if (family) _inFamilyRow--;
     RowNote inner = std::move(_note);
     _note = std::move(outer);
     if (!family) {
@@ -3109,14 +3187,28 @@ private:
            name == "endlastfoot";
   }
 
+  /** Whether a row holds nothing but spaces and the command `name` that ends it. */
+  bool holdsOnly(NodeId row, const std::string& name) const {
+    for (std::uint32_t c = 0; c < count(row); c++) {
+      const NodeId list = child(child(row, c), 0);
+      for (std::uint32_t i = 0; i < count(list); i++) {
+        const Node& x = node(child(list, i));
+        if (!isSpace(x) && !(x.kind == NodeKind::command && x.text == name)) return false;
+      }
+    }
+    return true;
+  }
+
   /** A longtable's rows, in the order a single page sets them: the first
    *  head (the head, where there is no first one), the rows, and the last
    *  foot (the foot). A group ends at the row that has its marker. */
   std::vector<NodeId> longtableOrder(const std::vector<NodeId>& rows) const {
     std::vector<NodeId> firstHead, head, foot, lastFoot, group;
     for (const NodeId row : rows) {
-      group.push_back(row);
       const std::string& end = node(row).text;
+      // `H1 & H2 \\ \endhead`: the `\\` ended the last row of the head, so the row that only carries `\endhead` is no
+      // row at all (it was a blank row of its own, a baselineskip tall).
+      if (!(isLongtableMarker(end) && holdsOnly(row, end))) group.push_back(row);
       std::vector<NodeId>* to = end == "endfirsthead"  ? &firstHead
                                 : end == "endhead"     ? &head
                                 : end == "endfoot"     ? &foot
@@ -3503,8 +3595,10 @@ private:
     RowNote outer = std::move(_note);
     _note = RowNote();
     _inRow++;
+    _inFamilyRow++;
     const sptr<Atom> body = build(list);
     _inRow--;
+    _inFamilyRow--;
     const bool tagged = _note.tag != nullptr;
     auto arr = sptrOf<ArrayFormula>();
     // `\[\tag{1}\]`: a display with nothing in it still has its number.
@@ -3520,7 +3614,10 @@ private:
   /** \label: what it names is the number of the row or display it is in,
    *  known when that ends; elsewhere, the last number set. */
   void label(const std::string& key) {
-    if (_inRow > 0) {
+    // In a numbered row (align, gather, equation: `_inFamilyRow`) the label waits for the row's number. Anywhere else -- a
+    // list item, a table cell, an aligned on its own -- it names what is current, as LaTeX's \label does: the item's
+    // number, the float's, the section's. It used to wait for a row number that nothing gave, and \ref found nothing.
+    if (_inFamilyRow > 0) {
       _note.labels.push_back(key);
     } else {
       (*nums().labels)[key] = nums().current;

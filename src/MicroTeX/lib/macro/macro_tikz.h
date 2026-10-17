@@ -113,12 +113,34 @@ private:
   }
 
   /** A trailing `r` says the value is in radians (`sin(\x r)`); the functions take degrees. */
+  /** What a unit is in centimetres (a coordinate reads a length so). */
+  static bool unitFactor(const std::string& unit, double& factor) {
+    static const std::map<std::string, double> cm = {
+      {"cm", 1.0}, {"mm", 0.1}, {"in", 2.54}, {"pt", 2.54 / 72.27}, {"bp", 2.54 / 72.0}, {"pc", 12 * 2.54 / 72.27},
+      {"dd", 1238.0 / 1157.0 * 2.54 / 72.27}, {"cc", 12 * 1238.0 / 1157.0 * 2.54 / 72.27},
+      {"sp", 2.54 / 72.27 / 65536.0}, {"em", 10 * 2.54 / 72.27}, {"ex", 4.3 * 2.54 / 72.27}};
+    const auto it = cm.find(unit);
+    if (it == cm.end()) return false;
+    factor = it->second;
+    return true;
+  }
+
+  /** After a bracketed value or a number, a word that says what it is: `r` for radians (the functions take degrees), or a
+   *  unit of length (`(\x) cm`, which is what a plot's variable becomes once it has a number). */
   double radiansSuffix(double v) {
     std::size_t j = _i;
     while (j < _s.size() && std::isspace(static_cast<unsigned char>(_s[j])) != 0) j++;
-    if (j < _s.size() && _s[j] == 'r' && (j + 1 >= _s.size() || std::isalpha(static_cast<unsigned char>(_s[j + 1])) == 0)) {
-      _i = j + 1;
+    std::size_t k = j;
+    while (k < _s.size() && std::isalpha(static_cast<unsigned char>(_s[k])) != 0) k++;
+    const std::string word = _s.substr(j, k - j);
+    double f = 0;
+    if (word == "r") {
+      _i = k;
       return v * 180.0 / 3.14159265358979323846;
+    }
+    if (!word.empty() && unitFactor(word, f)) {
+      _i = k;
+      return v * f;
     }
     return v;
   }
@@ -154,17 +176,13 @@ private:
         return v * 180.0 / 3.14159265358979323846;
       }
       if (!unit.empty()) {
-        static const std::map<std::string, double> cm = {
-          {"cm", 1.0}, {"mm", 0.1}, {"in", 2.54}, {"pt", 2.54 / 72.27}, {"bp", 2.54 / 72.0}, {"pc", 12 * 2.54 / 72.27},
-          {"dd", 1238.0 / 1157.0 * 2.54 / 72.27}, {"cc", 12 * 1238.0 / 1157.0 * 2.54 / 72.27},
-          {"sp", 2.54 / 72.27 / 65536.0}, {"em", 10 * 2.54 / 72.27}, {"ex", 4.3 * 2.54 / 72.27}};
-        const auto it = cm.find(unit);
-        if (it == cm.end()) {
+        double factor = 0;
+        if (!unitFactor(unit, factor)) {
           _ok = false;
           return 0;
         }
         _i = j;
-        return v * it->second;
+        return v * factor;
       }
       return radiansSuffix(v);
     }
@@ -200,7 +218,10 @@ private:
       if (name == "sin") return std::sin(a * toRad);
       if (name == "cos") return std::cos(a * toRad);
       if (name == "tan") return std::tan(a * toRad);
-      if (name == "sqrt") return std::sqrt(std::max(0.0, a));
+      if (name == "sqrt") {
+        if (a < 0) _ok = false;   // not a number: the point is left out, as for 1/0
+        return std::sqrt(std::max(0.0, a));
+      }
       if (name == "abs") return std::fabs(a);
       if (name == "min") return std::min(a, b);
       if (name == "max") return std::max(a, b);
@@ -232,6 +253,9 @@ private:
 
 class Reader {
 public:
+  /** The most points one plot has, samples, corners of a polygon: a path that long is no picture, and a loop to a billion is a hang. */
+  static constexpr double kMaxPoints = 20000;
+
   Reader(CommandArgs& args, TikzAtom& pic) : _args(args), _pic(pic) {
     // pgf's own styles that a picture may change.
     _styles["edge from parent"] = "draw";
@@ -609,7 +633,7 @@ private:
       st.domain = value;
     } else if (key == "samples" && hasValue) {
       double v = 0;
-      if (number(value, v)) st.samples = std::max(2, static_cast<int>(std::lround(v)));
+      if (number(value, v)) st.samples = static_cast<int>(std::min(std::max(v, 2.0), kMaxPoints));
     } else if (key == "samples at" && hasValue) {
       st.samplesAt = value;
     } else if (key == "smooth" || key == "smooth cycle" || key == "sharp plot" || key == "sharp cycle" || key == "const plot" ||
@@ -645,7 +669,7 @@ private:
                                                 "cross out", "strike out", "chamfered rectangle", "rectangle split"};
     if ((key == "regular polygon sides" || key == "star points") && hasValue) {
       double v = 0;
-      if (number(value, v)) (key == "star points" ? st.starPoints : st.polySides) = std::max(key == "star points" ? 2 : 3, static_cast<int>(std::lround(v)));
+      if (number(value, v)) (key == "star points" ? st.starPoints : st.polySides) = static_cast<int>(std::min(std::max(v, key == "star points" ? 2.0 : 3.0), 1000.0));
       return true;
     }
     if (key == "star point ratio" && hasValue) {
@@ -750,7 +774,13 @@ private:
       return true;
     }
     if (key == "rounded rectangle arc length" && hasValue) {
-      st.arcLength = static_cast<float>(std::atof(value.c_str()));
+      // An end is an arc of that many degrees over the whole height: none at 0 and a full circle at 360, which have no size.
+      const double a = std::atof(value.c_str());
+      if (a > 0.0 && a < 360.0) {
+        st.arcLength = static_cast<float>(a);
+      } else {
+        warn("tikz: rounded rectangle arc length=" + value + " is not between 0 and 360 degrees: left out");
+      }
       return true;
     }
     if ((key == "aspect" || key == "shape aspect") && hasValue) {
@@ -1676,17 +1706,34 @@ private:
   /** Whether a path of straight sides is, as far as its literal coordinates say, a convex polygon -- the only region the layout
    *  clips to. A coordinate that is not a number of lengths (a node, a calculation, a relative point) cannot be judged here,
    *  and a path with one counts as convex; the layout drops a concave region it is handed. */
+  /** A length written in absolute units, in centimetres; false for one that follows the text (`em`) or is not known. */
+  static bool lengthInCm(const Dimen& d, double& out) {
+    switch (d.unit) {
+      case UnitType::cm: out = d.val; return true;
+      case UnitType::mm: out = d.val * 0.1; return true;
+      case UnitType::in: out = d.val * 2.54; return true;
+      case UnitType::pt: out = d.val * 2.54 / 72.0; return true;
+      case UnitType::point: out = d.val * 2.54 / 72.27; return true;
+      default: return false;
+    }
+  }
+
+  /** Whether a literal coordinate is within a hundred metres of the origin: a picture further out has no use, and its size
+   *  overflows what a box and the host can hold. One that cannot be told (a node, a calculation) is taken to be. */
+  static bool coordinateIsReasonable(const Coord& c) {
+    double a = 0, b = 0;
+    constexpr double limit = 1e4;
+    if (c.kind == Coord::Kind::xy) {
+      if (lengthInCm(c.x, a) && !(std::fabs(a) <= limit)) return false;
+      if (lengthInCm(c.y, b) && !(std::fabs(b) <= limit)) return false;
+    } else if (c.kind == Coord::Kind::polar) {
+      if (lengthInCm(c.r, a) && !(std::fabs(a) <= limit)) return false;
+    }
+    return true;
+  }
+
   static bool convexSides(const std::vector<PathOp>& ops) {
-    const auto toCm = [](const Dimen& d, double& out) {
-      switch (d.unit) {
-        case UnitType::cm: out = d.val; return true;
-        case UnitType::mm: out = d.val * 0.1; return true;
-        case UnitType::in: out = d.val * 2.54; return true;
-        case UnitType::pt: out = d.val * 2.54 / 72.0; return true;
-        case UnitType::point: out = d.val * 2.54 / 72.27; return true;
-        default: return false;
-      }
-    };
+    const auto toCm = [](const Dimen& d, double& out) { return lengthInCm(d, out); };
     const auto at = [&](const Coord& c, double& x, double& y) {
       if (c.relative != 0) return false;
       if (c.kind == Coord::Kind::xy) return toCm(c.x, x) && toCm(c.y, y);
@@ -1780,16 +1827,24 @@ private:
     // sides, rectangles, circles and ellipses is a region the layout can clip to; any other is drawn as it stands.
     int clip = -1;
     if (cmd == "clip" || path.style.clipPath) {
-      bool simple = !path.ops.empty();
+      bool curved = false;
+      int parts = 0;
       for (const PathOp& op : path.ops) {
         if (op.kind == PathOp::Kind::curve || op.kind == PathOp::Kind::arc || op.kind == PathOp::Kind::to ||
             op.kind == PathOp::Kind::grid) {
-          simple = false;
+          curved = true;
         }
+        if (op.kind == PathOp::Kind::move) parts++;
       }
+      bool simple = !path.ops.empty() && !curved;
       if (simple && !convexSides(path.ops)) {
         simple = false;
         warn("tikz: a clip path that is not convex is not supported: it is not clipped to");
+      } else if (curved) {
+        warn("tikz: a clip path of curves is not supported: only rectangles, circles, ellipses and straight sides are clipped to");
+      }
+      if (simple && parts > 1) {
+        warn("tikz: a clip path of several parts is clipped to its first part only");
       }
       if (simple) {
         clip = _clips++;
@@ -1799,8 +1854,6 @@ private:
         region.style.draw = region.style.fill = Paint();
         if (cmd != "clip") _pic.paths.push_back(path);   // `\draw[clip]` also draws
         path = std::move(region);
-      } else {
-        warn("tikz: a clip path of curves is not supported: only rectangles, circles, ellipses and straight sides are clipped to");
       }
     }
     _pic.paths.push_back(std::move(path));
@@ -1978,10 +2031,21 @@ private:
 
   /** A point of a plot as `x, y` -- each an expression, in cm when it has no unit; false when it is not a number. */
   bool plotPoint(const std::string& text, double& x, double& y) {
-    const std::vector<std::string> parts = splitTop(text, ',');
-    if (parts.size() < 2) return false;
+    std::vector<std::string> parts = splitTop(text, ',');
+    if (parts.size() < 2) {
+      // Polar, `angle:radius`, as a coordinate writes it.
+      const std::vector<std::string> polar = splitTop(text, ':');
+      if (polar.size() != 2) return false;
+      Expr ea(unbrace(polar[0])), er(unbrace(polar[1]));
+      double angle = 0, r = 0;
+      if (!ea.value(angle) || !er.value(r) || !(std::fabs(r) <= 1e4)) return false;
+      x = r * std::cos(angle * 3.14159265358979 / 180.0);
+      y = r * std::sin(angle * 3.14159265358979 / 180.0);
+      return true;
+    }
     Expr ex(unbrace(parts[0])), ey(unbrace(parts[1]));
-    return ex.value(x) && ey.value(y) && std::isfinite(x) && std::isfinite(y);
+    // (Within a hundred metres: `exp(\x)` runs off the page long before it overflows, and the comparison is false for NaN.)
+    return ex.value(x) && ey.value(y) && std::fabs(x) <= 1e4 && std::fabs(y) <= 1e4;
   }
 
   /** `text` with the plot's variable replaced by the number `v`. */
@@ -2017,7 +2081,13 @@ private:
           if (xs.size() >= 2 && k + 1 < items.size() && number(items[k + 1], last)) {
             const double step = xs[xs.size() - 1] - xs[xs.size() - 2];
             if (std::fabs(step) > 1e-12) {
-              for (double x = xs.back() + step; step > 0 ? x < last - 1e-9 : x > last + 1e-9; x += step) xs.push_back(x);
+              for (double x = xs.back() + step; step > 0 ? x < last - 1e-9 : x > last + 1e-9; x += step) {
+                if (xs.size() >= static_cast<std::size_t>(kMaxPoints)) {
+                  warn("tikz: samples at has more than " + std::to_string(static_cast<int>(kMaxPoints)) + " values: the rest are left out");
+                  return xs;
+                }
+                xs.push_back(x);
+              }
             }
           }
         } else if (number(items[k], v)) {
@@ -2185,6 +2255,10 @@ private:
         Coord co = coord(parenAt(t, at));
         co.relative = relative;
         i = at;
+        if (!coordinateIsReasonable(co)) {
+          warn("tikz: a coordinate more than 100 metres from the origin is left out");
+          continue;
+        }
         PathOp op;
         op.p = co;
         if (pending == Pending::to || pending == Pending::edge) {

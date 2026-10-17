@@ -60,8 +60,8 @@ const function<float(const Env&)> _unitConversions[]{
   [](const Env& env) -> float { return 2.8346456693f * pt(env); },
   // 1 in = 72 point
   [](const Env& env) -> float { return 72.f * pt(env); },
-  // 1 sp = 65536 point
-  [](const Env& env) -> float { return 65536.f * pt(env); },
+  // 1 sp = 1/65536 point (TeX: a point is 65536 sp)
+  [](const Env& env) -> float { return pt(env) / 65536.f; },
   // 1 pt = 0.99626401 point (in printer's)
   [](const Env& env) -> float { return 0.99626401f * pt(env); },
   // 1 dd = 1.0660349422 point

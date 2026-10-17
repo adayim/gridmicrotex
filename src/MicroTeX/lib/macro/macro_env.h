@@ -593,7 +593,8 @@ inline sptr<Atom> listBuild(
   bool description = false,
   const char* columns = nullptr,
   bool noteLabels = false,
-  const std::string& declarations = std::string()
+  const std::string& declarations = std::string(),
+  bool numbered = false
 ) {
   if (items.empty()) return nullptr;
   std::string s;
@@ -618,6 +619,8 @@ inline sptr<Atom> listBuild(
     } else {
       mark = marker(++counted);
     }
+    // What a \label in an enumerated item names: the item's number, as `\theenumi` is, which a custom label does not change.
+    const std::string named = numbered && label.empty() ? "\\gmcurrentlabel{" + std::to_string(counted) + "}" : std::string();
     const auto parts = listParts(body);
     bool first = true;
     for (size_t k = 0; k < parts.size(); k++) {
@@ -625,9 +628,9 @@ inline sptr<Atom> listBuild(
       if (part.empty()) continue;
       const bool nested = k % 2 == 1;
       // A nested list is met in text when its item is text.
-      const std::string content = args.isMathMode() ? part
+      const std::string content = (first ? named : std::string()) + (args.isMathMode() ? part
                                   : nested         ? "\\text{" + part + "}"
-                                                   : listTextItem(part);
+                                                   : listTextItem(part));
       row(first ? mark : "", declarations.empty() ? content : declarations + " " + content);
       first = false;
     }
@@ -683,7 +686,7 @@ inline cmdmacro(enumerateATATenv) {
   if (opt.empty()) opt = "\\arabic*.";
   return listBuild(args, listSplitItems(body), [&](int n) {
     return "\\mathrm{" + listFormatLabel(opt, n) + "}";
-  });
+  }, false, nullptr, false, std::string(), true);
 }
 
 // A description: each item's label, in bold, hangs before its text.

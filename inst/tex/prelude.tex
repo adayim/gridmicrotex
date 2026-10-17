@@ -34,6 +34,8 @@
 % subcaption's sub-floats: minipages whose \caption is "(a) text", lettered within the float; \subref{key} is the letter.
 \NewDocumentEnvironment{subfigure}{O{c}m}{\begin{minipage}[#1]{#2}\gmsubfloat{subfigure}}{\gmsubfloat{}\end{minipage}}
 \NewDocumentEnvironment{subtable}{O{c}m}{\begin{minipage}[#1]{#2}\gmsubfloat{subtable}}{\gmsubfloat{}\end{minipage}}
+% A table's row end that a `\centering` cell cannot spell as `\\` (array.sty); here it is the same.
+\newcommand{\tabularnewline}{\\}
 \newenvironment{center}{}{}
 \newenvironment{flushleft}{}{}
 \newenvironment{flushright}{}{}
