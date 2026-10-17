@@ -1673,6 +1673,71 @@ private:
     return n;
   }
 
+  /** Whether a path of straight sides is, as far as its literal coordinates say, a convex polygon -- the only region the layout
+   *  clips to. A coordinate that is not a number of lengths (a node, a calculation, a relative point) cannot be judged here,
+   *  and a path with one counts as convex; the layout drops a concave region it is handed. */
+  static bool convexSides(const std::vector<PathOp>& ops) {
+    const auto toCm = [](const Dimen& d, double& out) {
+      switch (d.unit) {
+        case UnitType::cm: out = d.val; return true;
+        case UnitType::mm: out = d.val * 0.1; return true;
+        case UnitType::in: out = d.val * 2.54; return true;
+        case UnitType::pt: out = d.val * 2.54 / 72.0; return true;
+        case UnitType::point: out = d.val * 2.54 / 72.27; return true;
+        default: return false;
+      }
+    };
+    const auto at = [&](const Coord& c, double& x, double& y) {
+      if (c.relative != 0) return false;
+      if (c.kind == Coord::Kind::xy) return toCm(c.x, x) && toCm(c.y, y);
+      if (c.kind == Coord::Kind::polar && !c.r2.isValid()) {
+        double r = 0;
+        if (!toCm(c.r, r)) return false;
+        x = r * std::cos(c.angle * 3.14159265358979 / 180.0);
+        y = r * std::sin(c.angle * 3.14159265358979 / 180.0);
+        return true;
+      }
+      return false;
+    };
+    std::vector<std::vector<std::pair<double, double>>> polygons(1);
+    for (const PathOp& op : ops) {
+      auto& pts = polygons.back();
+      double x = 0, y = 0;
+      switch (op.kind) {
+        case PathOp::Kind::move:
+          if (!pts.empty()) polygons.emplace_back();
+          if (!at(op.p, x, y)) return true;
+          polygons.back().emplace_back(x, y);
+          break;
+        case PathOp::Kind::line:
+          if (!at(op.p, x, y)) return true;
+          pts.emplace_back(x, y);
+          break;
+        case PathOp::Kind::hline:
+        case PathOp::Kind::vline:
+          if (pts.empty() || !at(op.p, x, y)) return true;
+          pts.emplace_back(op.kind == PathOp::Kind::hline ? x : pts.back().first, op.kind == PathOp::Kind::hline ? pts.back().second : y);
+          pts.emplace_back(x, y);
+          break;
+        default: break;   // close, rectangle, circle, ellipse, nodes: convex or no corner of their own
+      }
+    }
+    for (const auto& pts : polygons) {
+      if (pts.size() < 3) continue;
+      int sign = 0;
+      for (std::size_t i = 0; i < pts.size(); i++) {
+        const auto &a = pts[i], &b = pts[(i + 1) % pts.size()], &c = pts[(i + 2) % pts.size()];
+        const double cross = (b.first - a.first) * (c.second - b.second) - (b.second - a.second) * (c.first - b.first);
+        const double scale = std::hypot(b.first - a.first, b.second - a.second) * std::hypot(c.first - b.first, c.second - b.second);
+        if (std::fabs(cross) <= 1e-7 * scale) continue;   // a straight angle (or a repeated point)
+        const int s = cross > 0 ? 1 : -1;
+        if (sign != 0 && s != sign) return false;
+        sign = s;
+      }
+    }
+    return true;
+  }
+
   /** One statement; the id of the clip path it made, or -1. */
   int statement(const std::string& cmd, const std::string& text, const Style& scope) {
     if (cmd == "matrix") {
@@ -1721,6 +1786,10 @@ private:
             op.kind == PathOp::Kind::grid) {
           simple = false;
         }
+      }
+      if (simple && !convexSides(path.ops)) {
+        simple = false;
+        warn("tikz: a clip path that is not convex is not supported: it is not clipped to");
       }
       if (simple) {
         clip = _clips++;

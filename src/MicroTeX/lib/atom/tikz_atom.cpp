@@ -1336,9 +1336,31 @@ void Layout::layoutNode(const Node& n, const Style& st, P at, bool atGiven, cons
   const bool fill = st.fill.mode == Paint::Mode::current || st.fill.mode == Paint::Mode::color;
   Prim prim = primOf(st, stroke, fill);
   if (!g.point) {
-    if (stroke || fill) nodeOutline(g, st, prim);
-    see(g.c + P{-g.hw - g.outer, -g.hh - g.outer});
-    see(g.c + P{g.hw + g.outer, g.hh + g.outer});
+    // The picture holds the node's outline -- not its outer separation, which only keeps other things off it -- and, when
+    // it is drawn, half the line on either side (pdfTeX: `outer sep=5pt` is no wider, `line width=2pt` is 2pt wider).
+    Prim shape;
+    nodeOutline(g, st, shape);
+    double x0 = 1e30, x1 = -1e30, y0 = 1e30, y1 = -1e30;
+    const auto grow = [&](P p) {
+      x0 = std::min(x0, p.x);
+      x1 = std::max(x1, p.x);
+      y0 = std::min(y0, p.y);
+      y1 = std::max(y1, p.y);
+    };
+    for (const Sub& s : shape.subs) {
+      grow(s.start);
+      for (const Seg& sg : s.segs) {
+        grow(sg.to);
+        if (sg.cubic) {
+          grow(sg.c1);
+          grow(sg.c2);
+        }
+      }
+    }
+    const double half = stroke ? 0.5 * prim.lw : 0.0;
+    see(P{x0 - half, y0 - half});
+    see(P{x1 + half, y1 + half});
+    if (stroke || fill) prim.subs = std::move(shape.subs);
   } else {
     see(g.c);
   }

@@ -350,7 +350,8 @@ build_path_grob <- function(path_data, col, idx, total_h) {
 #' @param lwd Line width, in grid's units (1/96 inch).
 #' @param idx Index for naming.
 #' @param total_h Total height for y-axis flipping.
-#' @return A [grid::polylineGrob()] or `NULL`.
+#' @return A [grid::polylineGrob()] of the open subpaths, a [grid::polygonGrob()]
+#'   (no fill) of the closed ones, a gTree of both, or `NULL`.
 #' @noRd
 build_stroke_grob <- function(path_data, col, lwd, idx, total_h) {
   cmds <- path_data$cmd
@@ -361,15 +362,25 @@ build_stroke_grob <- function(path_data, col, lwd, idx, total_h) {
   all_y <- numeric(0)
   all_id <- integer(0)
   current_id <- 1L
+  # A closed subpath is a polygon: its first corner is joined to its last, where a polyline would end it with two caps.
+  closed_x <- numeric(0)
+  closed_y <- numeric(0)
+  closed_id <- integer(0)
+  closed_n <- 0L
   sub_x <- numeric(0)
   sub_y <- numeric(0)
 
   flush_subpath <- function(close = FALSE) {
-    if (close && length(sub_x) > 1) {
-      sub_x <<- c(sub_x, sub_x[1])
-      sub_y <<- c(sub_y, sub_y[1])
-    }
-    if (length(sub_x) > 1) {
+    if (close && length(sub_x) > 2) {
+      if (sub_x[length(sub_x)] == sub_x[1] && sub_y[length(sub_y)] == sub_y[1]) {
+        sub_x <<- sub_x[-length(sub_x)]
+        sub_y <<- sub_y[-length(sub_y)]
+      }
+      closed_n <<- closed_n + 1L
+      closed_x <<- c(closed_x, sub_x)
+      closed_y <<- c(closed_y, sub_y)
+      closed_id <<- c(closed_id, rep(closed_n, length(sub_x)))
+    } else if (length(sub_x) > 1) {
       all_x <<- c(all_x, sub_x)
       all_y <<- c(all_y, sub_y)
       all_id <<- c(all_id, rep(current_id, length(sub_x)))
@@ -410,17 +421,26 @@ build_stroke_grob <- function(path_data, col, lwd, idx, total_h) {
     )
   }
   flush_subpath()
-  if (length(all_x) == 0) return(NULL)
+  if (length(all_x) == 0 && length(closed_x) == 0) return(NULL)
 
   cap <- c("butt", "round", "square")[(path_data$cap %||% 0L) + 1L]
   join <- c("bevel", "mitre", "round")[(path_data$join %||% 1L) + 1L]
-  grid::polylineGrob(
-    x = grid::unit(all_x, "bigpts"),
-    y = grid::unit(all_y, "bigpts"),
-    id = all_id,
-    gp = grid::gpar(col = col, fill = NA, lwd = lwd, lineend = cap, linejoin = join),
-    name = paste0("stroke.", idx)
-  )
+  gp <- grid::gpar(col = col, fill = NA, lwd = lwd, lineend = cap, linejoin = join)
+  open <- if (length(all_x) > 0) {
+    grid::polylineGrob(
+      x = grid::unit(all_x, "bigpts"), y = grid::unit(all_y, "bigpts"), id = all_id,
+      gp = gp, name = paste0("stroke.", idx)
+    )
+  }
+  shut <- if (length(closed_x) > 0) {
+    grid::polygonGrob(
+      x = grid::unit(closed_x, "bigpts"), y = grid::unit(closed_y, "bigpts"), id = closed_id,
+      gp = gp, name = paste0("stroke.closed.", idx)
+    )
+  }
+  if (is.null(open)) return(shut)
+  if (is.null(shut)) return(open)
+  grid::gTree(children = grid::gList(open, shut), name = paste0("stroke.", idx))
 }
 
 #' Approximate a cubic bezier curve with line segments

@@ -140,6 +140,7 @@ void emit_path(const Frame &f, SEXP rec, rcolor col, bool stroke, double lwd_bp,
 
     std::vector<double> xs, ys;
     std::vector<int> nper;
+    std::vector<char> shut;   // a stroked subpath that was closed: a polygon, so its first corner is joined to its last
     size_t sub_start = 0;
     // Flattening happens in layout space, so the curve is subdivided the
     // same way regardless of device scale or rotation -- matching what
@@ -148,9 +149,9 @@ void emit_path(const Frame &f, SEXP rec, rcolor col, bool stroke, double lwd_bp,
     bool   have_last = false;
 
     // A fill needs a polygon; a stroke is a line of two points or more.
-    auto flush = [&]() {
+    auto flush = [&](bool close = false) {
         size_t n = xs.size() - sub_start;
-        if (n >= (stroke ? 2u : 3u)) nper.push_back((int) n);
+        if (n >= (stroke ? 2u : 3u)) { nper.push_back((int) n); shut.push_back(close && stroke && n >= 3); }
         else { xs.resize(sub_start); ys.resize(sub_start); }
         sub_start = xs.size();
     };
@@ -190,12 +191,8 @@ void emit_path(const Frame &f, SEXP rec, rcolor col, bool stroke, double lwd_bp,
             }
         }
         else if (cm[0] == 'Z') {
-            // A closed stroke ends where it began.
-            if (stroke && xs.size() > sub_start) {
-                xs.push_back(xs[sub_start]);
-                ys.push_back(ys[sub_start]);
-            }
-            flush();
+            // A closed stroke is a polygon without its fill (a polyline that ended where it began would cap its first corner).
+            flush(true);
             have_last = false;
         }
     }
@@ -215,8 +212,10 @@ void emit_path(const Frame &f, SEXP rec, rcolor col, bool stroke, double lwd_bp,
         g.col   = col;
         g.lwd   = lwd_bp * 96.0 / 72.0;   // R/grid-builder.R:24
         size_t at = 0;
-        for (int n : nper) {
-            if (dd->polyline) dd->polyline(n, xs.data() + at, ys.data() + at, &g, dd);
+        for (size_t k = 0; k < nper.size(); k++) {
+            const int n = nper[k];
+            if (shut[k] && dd->polygon) dd->polygon(n, xs.data() + at, ys.data() + at, &g, dd);
+            else if (dd->polyline) dd->polyline(n, xs.data() + at, ys.data() + at, &g, dd);
             at += (size_t) n;
         }
         return;

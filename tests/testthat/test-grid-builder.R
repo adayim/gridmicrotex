@@ -111,14 +111,23 @@ test_that("build_stroke_grob draws each subpath as a polyline with the path's wi
   expect_equal(c(g$gp$lineend, g$gp$linejoin), c("round", "round"))
   expect_true(is.na(g$gp$fill))
 
-  # A closed path ends where it began; a curve is flattened
+  # A closed path is a polygon of its corners, so the first one is joined to the last as every other is (a polyline
+  # that ended where it began would cap the first corner: the star's top spike lost its miter); a curve is flattened
   closed <- gridmicrotex:::build_stroke_grob(
     list(cmd = c("M", "L", "L", "Z"),
          coords = matrix(c(0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
                          nrow = 4, byrow = TRUE)),
     "#000000", 1, 1, 20)
-  expect_equal(length(closed$x), 4)
-  expect_equal(as.numeric(closed$x)[4], as.numeric(closed$x)[1])
+  expect_s3_class(closed, "polygon")
+  expect_equal(length(closed$x), 3)
+  expect_true(is.na(closed$gp$fill))
+  # Open and closed subpaths of one record are both drawn
+  both <- gridmicrotex:::build_stroke_grob(
+    list(cmd = c("M", "L", "L", "Z", "M", "L"),
+         coords = matrix(c(0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                           0, 20, 0, 0, 0, 0, 5, 20, 0, 0, 0, 0), nrow = 6, byrow = TRUE)),
+    "#000000", 1, 1, 30)
+  expect_equal(unname(vapply(both$children, function(k) class(k)[1], "")), c("polyline", "polygon"))
   curve <- gridmicrotex:::build_stroke_grob(
     list(cmd = c("M", "C"), coords = matrix(c(0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 3, 0), nrow = 2, byrow = TRUE)),
     "#000000", 1, 1, 20)
@@ -133,5 +142,5 @@ test_that("a tikzpicture is drawn as polylines of its stroked paths and shapes o
   }
   expect_equal(unname(kinds(r"(\begin{tikzpicture}\draw (0,0) -- (1,1);\end{tikzpicture})")), "polyline")
   filled <- kinds(r"(\begin{tikzpicture}\filldraw[fill=red] (0,0) rectangle (1,1);\end{tikzpicture})")
-  expect_setequal(unname(filled), c("polyline", "pathgrob"))
+  expect_setequal(unname(filled), c("polygon", "pathgrob"))
 })
