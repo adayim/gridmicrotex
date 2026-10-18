@@ -172,10 +172,11 @@ LaTeX from a document can be pasted as it is: the output of
 [`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html) or
 `xtable`, a `table` float, or a paper's body with
 `input_mode = "document"`. The preamble, `\maketitle` and `\label` draw
-nothing, and `\caption` is drawn where it is written. `\ref` and
-`\pageref` draw `??`, `\eqref` draws `(??)` and `\cite` draws `[?]`,
-with a warning. A footnote is set where it is written, and equations are
-not numbered.
+nothing, and `\caption` is drawn where it is written. `\pageref` draws
+`??`. `\cite` draws the number of its `\bibitem`; a `\ref`, `\eqref` or
+`\cite` that names nothing in the text draws `??`, `(??)` or `[?]`, with
+a warning. A footnote is set where it is written, and equations are not
+numbered.
 
 Not supported: `\tag`, `\verb`, `\textsc`, switches such as `\bfseries`
 and `\itshape` (use `\textbf{}` and `\textit{}`, or `\bf` and `\it`),

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,7 +71,7 @@
       <h1>Rendering Markdown with Math</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.2.0/vignettes/markdown.Rmd" class="external-link"><code>vignettes/markdown.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/vignettes/markdown.Rmd" class="external-link"><code>vignettes/markdown.Rmd</code></a></small>
       <div class="d-none name"><code>markdown.Rmd</code></div>
     </div>
 
@@ -484,9 +484,12 @@ rules do not apply to a LaTeX table; style it in LaTeX.</p>
 <li>Footnotes are placed at the bottom in
 <code><a href="../reference/markdown_box_grob.html">markdown_box_grob()</a></code>; in <code><a href="../reference/markdown_grob.html">markdown_grob()</a></code> only
 the marker is shown.</li>
-<li>HTML blocks other than <code>&lt;div&gt;</code> and
-<code>&lt;img&gt;</code> are dropped, <code>&lt;table&gt;</code>
-included. Use markdown tables.</li>
+<li>A raw HTML block (<code>&lt;p align="center"&gt;</code>,
+<code>&lt;details&gt;</code>, <code>&lt;center&gt;</code>,
+<code>&lt;table&gt;</code>, lists, headings) is read as HTML: its text,
+tables, lists and alignment are drawn, but markdown inside it is not
+read, as in HTML, and an <code>&lt;img&gt;</code> that cannot be drawn
+is left out with a warning.</li>
 <li>Markdown tables cannot merge cells; use LaTeX (above).</li>
 <li>Small caps are not supported.</li>
 <li>The syntax class names (<code>co</code>, <code>st</code>,

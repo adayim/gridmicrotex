@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,36 +71,57 @@
       <h1>Typesetting a document</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.2.0/vignettes/documents.Rmd" class="external-link"><code>vignettes/documents.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/vignettes/documents.Rmd" class="external-link"><code>vignettes/documents.Rmd</code></a></small>
       <div class="d-none name"><code>documents.Rmd</code></div>
     </div>
 
     
     
 <p>With <code>input_mode = "document"</code>, <code><a href="../reference/latex_grob.html">grid.latex()</a></code>
-sets the body of a LaTeX document: paragraphs, headings, displayed
-equations, lists and tables. Use it for a methods section, an appendix
-or a long caption, with no LaTeX installation.</p>
+sets a LaTeX document: paragraphs, headings, displayed equations, lists,
+tables, theorems and the packages it loads. Use it for a methods
+section, an appendix or a long caption, with no LaTeX installation. For
+a complicated document, see the end.</p>
 <div class="section level2">
-<h2 id="a-document-body">A document body<a class="anchor" aria-label="anchor" href="#a-document-body"></a>
+<h2 id="a-document">A document<a class="anchor" aria-label="anchor" href="#a-document"></a>
 </h2>
-<p>This is ordinary LaTeX, as it would appear between
-<code>\begin{document}</code> and <code>\end{document}</code>:</p>
+<p>This is a whole file, as it would be given to LaTeX: a preamble that
+loads packages and makes definitions, then the body. The preamble is
+read for what it defines and draws nothing;
+<code>\usepackage{physics}</code> gives the derivatives, vectors and
+matrices used in the body.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">body</span> <span class="op">&lt;-</span> <span class="st">r"(\section{Methods}</span></span>
+<code class="sourceCode R"><span><span class="va">doc</span> <span class="op">&lt;-</span> <span class="st">r"(\documentclass{article}</span></span>
+<span><span class="st">\usepackage{amsmath, amssymb, amsthm}</span></span>
+<span><span class="st">\usepackage{physics}</span></span>
+<span><span class="st">\usepackage{tcolorbox, multicol}</span></span>
+<span><span class="st">\newtheorem{thm}{Theorem}</span></span>
+<span><span class="st">\newcommand{\RR}{\mathbb{R}}</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">\begin{document}</span></span>
+<span><span class="st">\section{Methods}</span></span>
 <span><span class="st">We fit a straight line to $n$ observations $(x_i, y_i)$ by least</span></span>
-<span><span class="st">squares, which chooses the intercept and slope that minimise the sum</span></span>
+<span><span class="st">squares,\footnote{Ordinary least squares: every observation has the</span></span>
+<span><span class="st">same weight.} which chooses the intercept and slope that minimise the sum</span></span>
 <span><span class="st">of squared residuals</span></span>
 <span><span class="st">\[ S(\beta_0, \beta_1) = \sum_{i=1}^{n} (y_i - \beta_0 - \beta_1 x_i)^2. \]</span></span>
 <span><span class="st">Setting both partial derivatives to zero gives the estimates</span></span>
 <span><span class="st">\begin{align}</span></span>
-<span><span class="st">  \hat\beta_1 &amp;= \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \label{slope} \\</span></span>
-<span><span class="st">  \hat\beta_0 &amp;= \bar y - \hat\beta_1 \bar x. \label{intercept}</span></span>
+<span><span class="st">  \pdv{S}{\beta_1} = 0 &amp;\implies \hat\beta_1 = \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \label{slope} \\</span></span>
+<span><span class="st">  \pdv{S}{\beta_0} = 0 &amp;\implies \hat\beta_0 = \bar y - \hat\beta_1 \bar x. \label{intercept}</span></span>
 <span><span class="st">\end{align}</span></span>
-<span><span class="st"></span></span>
 <span><span class="st">The fitted values are $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$, and</span></span>
 <span><span class="st">the residuals $e_i = y_i - \hat y_i$ are what is left over. Together</span></span>
 <span><span class="st">\eqref{slope} and \eqref{intercept} make them sum to zero.</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">\subsection{Matrix form}</span></span>
+<span><span class="st">With the design matrix $X$ and the responses $\vb{y} \in \RR^n$, where</span></span>
+<span><span class="st">\[ X = \mqty(1 &amp; x_1 \\ \vdots &amp; \vdots \\ 1 &amp; x_n), \]</span></span>
+<span><span class="st">the same estimates are</span></span>
+<span><span class="st">\begin{equation}</span></span>
+<span><span class="st">  \hat{\vb*{\beta}} = (X^\top X)^{-1} X^\top \vb{y}</span></span>
+<span><span class="st">  = \arg\min_{\vb*{\beta}} \norm{\vb{y} - X\vb*{\beta}}^2 .</span></span>
+<span><span class="st">\end{equation}</span></span>
 <span><span class="st"></span></span>
 <span><span class="st">\subsection{Assumptions}</span></span>
 <span><span class="st">The errors are taken to be</span></span>
@@ -109,21 +130,70 @@ or a long caption, with no LaTeX installation.</p>
 <span><span class="st">  \item of constant variance $\sigma^2$, and</span></span>
 <span><span class="st">  \item normally distributed --- which matters only for the tests.</span></span>
 <span><span class="st">\end{itemize}</span></span>
-<span><span class="st">)"</span></span></code></pre></div>
+<span><span class="st"></span></span>
+<span><span class="st">\section{Results}</span></span>
+<span><span class="st">Table~\ref{coef} gives the estimates.</span></span>
+<span><span class="st">\begin{table}[h]</span></span>
+<span><span class="st">\centering</span></span>
+<span><span class="st">\begin{tabular}{lrr}</span></span>
+<span><span class="st">\toprule</span></span>
+<span><span class="st"> &amp; Estimate &amp; Std.\ error \\</span></span>
+<span><span class="st">\midrule</span></span>
+<span><span class="st">Intercept $\hat\beta_0$ &amp; 1.84 &amp; 0.21 \\</span></span>
+<span><span class="st">Slope $\hat\beta_1$ &amp; 0.52 &amp; 0.04 \\</span></span>
+<span><span class="st">\bottomrule</span></span>
+<span><span class="st">\end{tabular}</span></span>
+<span><span class="st">\caption{Fitted coefficients.}\label{coef}</span></span>
+<span><span class="st">\end{table}</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">\begin{tcolorbox}[title=In practice, colback=yellow!10, colframe=orange!70!black]</span></span>
+<span><span class="st">Plot the residuals before trusting the standard errors: they are</span></span>
+<span><span class="st">valid only if the assumptions above hold.</span></span>
+<span><span class="st">\end{tcolorbox}</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">\begin{thm}[Gauss--Markov]\label{gm}</span></span>
+<span><span class="st">With uncorrelated errors of equal variance, least squares has the least</span></span>
+<span><span class="st">variance among the linear unbiased estimators.</span></span>
+<span><span class="st">\end{thm}</span></span>
+<span><span class="st">\begin{proof}</span></span>
+<span><span class="st">Write any other such estimator as least squares plus a correction, and</span></span>
+<span><span class="st">show that the correction can only add variance.</span></span>
+<span><span class="st">\end{proof}</span></span>
+<span><span class="st">Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">\section{Notation}</span></span>
+<span><span class="st">\begin{multicols}{2}</span></span>
+<span><span class="st">\begin{itemize}</span></span>
+<span><span class="st">  \item $x_i$, the predictor</span></span>
+<span><span class="st">  \item $y_i$, the response</span></span>
+<span><span class="st">  \item $\beta_0, \beta_1$, the intercept and slope</span></span>
+<span><span class="st">  \item $\hat y_i$, the fitted value</span></span>
+<span><span class="st">  \item $e_i$, the residual</span></span>
+<span><span class="st">  \item $\sigma^2$, the error variance</span></span>
+<span><span class="st">\end{itemize}</span></span>
+<span><span class="st">\end{multicols}</span></span>
+<span><span class="st">\end{document})"</span></span></code></pre></div>
 <p><code>max_width</code> is the text width in big points (1/72
 inch):</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">body</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.6</span> <span class="op">*</span> <span class="fl">72</span>,</span>
-<span>           x <span class="op">=</span> <span class="fl">0.03</span>, y <span class="op">=</span> <span class="fl">0.97</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">doc</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.6</span> <span class="op">*</span> <span class="fl">72</span>,</span>
+<span>           x <span class="op">=</span> <span class="fl">0.03</span>, y <span class="op">=</span> <span class="fl">0.985</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="documents_files/figure-html/draw-body-1.png" class="r-plt" alt="" width="90%"></p>
+<p><img src="documents_files/figure-html/draw-doc-1.png" class="r-plt" alt="" width="90%"></p>
 </div>
 <div class="section level2">
-<h2 id="how-the-body-is-read">How the body is read<a class="anchor" aria-label="anchor" href="#how-the-body-is-read"></a>
+<h2 id="how-a-document-is-read">How a document is read<a class="anchor" aria-label="anchor" href="#how-a-document-is-read"></a>
 </h2>
 <p>As in LaTeX:</p>
 <ul>
+<li>
+<strong>Preamble.</strong> Everything before
+<code>\begin{document}</code> is read for what it defines, such as
+<code>\usepackage</code>, <code>\newcommand</code>,
+<code>\newtheorem</code> and <code>\definecolor</code>, and draws
+nothing. What follows <code>\end{document}</code> is not read. A
+document without a preamble is read from its first line.</li>
 <li>
 <strong>Paragraphs.</strong> A blank line or <code>\par</code>
 starts a new, indented paragraph. <code>\noindent</code> suppresses the
@@ -139,8 +209,12 @@ are inline. <code>\[...\]</code>, <code>$$...$$</code>,
 <code>multline</code> are centred on their own line. The last four are
 numbered at the right margin, a row each (<code>multline</code>: one),
 unless starred or marked <code>\notag</code>; <code>\tag{x}</code> sets
-a number, and <code>\label</code> with <code>\ref</code> or
-<code>\eqref</code> refer to it.</li>
+a number, and <code>\label</code> with <code>\ref</code>,
+<code>\eqref</code>, <code>\cref</code> or <code>\autoref</code> refer
+to it (<code>\cref</code> names what it refers to: “eq. (1)”, “fig. 2”,
+“section 3”). <code>subequations</code> numbers its equations 1a, 1b, …,
+and <code>numcases{left side}</code> is a brace of cases with a number
+each.</li>
 <li>
 <strong>Lists and tables.</strong> <code>itemize</code>,
 <code>enumerate</code>, <code>description</code> and
@@ -150,6 +224,18 @@ a number, and <code>\label</code> with <code>\ref</code> or
 <strong>Theorems.</strong> <code>\newtheorem</code> declares them,
 with the shared and <code>[section]</code> counters and a starred,
 unnumbered form; <code>proof</code> ends with a box.</li>
+<li>
+<strong>Footnotes and floats.</strong> <code>\footnote</code> leaves
+a raised number in the text and sets the note after the body, with a
+rule above it. A <code>table</code> or <code>figure</code> is set where
+it is written, its <code>\caption</code> numbered “Table 1:” or “Figure
+1:”, and the <code>subfigure</code> and <code>subtable</code> of
+subcaption are lettered “(a)”.</li>
+<li>
+<strong>Boxes and columns.</strong> <code>tcolorbox</code> draws a
+framed box, with <code>title</code> and the colour keys, and
+<code>multicols{n}</code> sets its body in <code>n</code> balanced
+columns.</li>
 <li>
 <strong>Text.</strong> <code>--</code> and <code>---</code> are
 dashes, quotes are curly, and <code>~</code> is a non-breaking space.
@@ -161,32 +247,12 @@ dashes, quotes are curly, and <code>~</code> is a non-breaking space.
 column.</p>
 </div>
 <div class="section level2">
-<h2 id="a-theorem-and-its-proof">A theorem and its proof<a class="anchor" aria-label="anchor" href="#a-theorem-and-its-proof"></a>
-</h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">thm</span> <span class="op">&lt;-</span> <span class="st">r"(\newtheorem{thm}{Theorem}</span></span>
-<span><span class="st">\begin{thm}[Gauss--Markov]\label{gm}</span></span>
-<span><span class="st">With uncorrelated errors of equal variance, least squares has the least</span></span>
-<span><span class="st">variance among the linear unbiased estimators.</span></span>
-<span><span class="st">\end{thm}</span></span>
-<span><span class="st">\begin{proof}</span></span>
-<span><span class="st">Write any other such estimator as least squares plus a correction, and</span></span>
-<span><span class="st">show that the correction can only add variance.</span></span>
-<span><span class="st">\end{proof}</span></span>
-<span><span class="st">Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.)"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">thm</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.6</span> <span class="op">*</span> <span class="fl">72</span>,</span>
-<span>           x <span class="op">=</span> <span class="fl">0.03</span>, y <span class="op">=</span> <span class="fl">0.97</span>, hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>           gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="documents_files/figure-html/theorem-1.png" class="r-plt" alt="" width="90%"></p>
-</div>
-<div class="section level2">
 <h2 id="justified-text">Justified text<a class="anchor" aria-label="anchor" href="#justified-text"></a>
 </h2>
 <p><code>justify = TRUE</code> fills every line but the last, and
 <code>line_break = "optimal"</code> chooses the breaks for the whole
 paragraph:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">para</span> <span class="op">&lt;-</span> <span class="st">r"(Least squares has a closed form, which is why it was the</span></span>
 <span><span class="st">method of choice long before computers made iterative fitting cheap. It</span></span>
 <span><span class="st">is also optimal among unbiased linear estimators when the errors are</span></span>
@@ -203,13 +269,13 @@ paragraph:</p>
 </h2>
 <p>Use <code><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf()</a></code> so the text can be selected.
 <code><a href="../reference/latex_dims.html">latex_dims()</a></code> gives the height to size the page:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/latex_dims.html">latex_dims</a></span><span class="op">(</span><span class="va">body</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.5</span> <span class="op">*</span> <span class="fl">72</span>,</span>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/latex_dims.html">latex_dims</a></span><span class="op">(</span><span class="va">doc</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.5</span> <span class="op">*</span> <span class="fl">72</span>,</span>
 <span>                gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">height</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">height</span><span class="op">)</span> <span class="op">/</span> <span class="fl">72</span> <span class="op">+</span> <span class="fl">1</span>   <span class="co"># inches, with margins</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/cairo.html" class="external-link">cairo_pdf</a></span><span class="op">(</span><span class="st">"methods.pdf"</span>, width <span class="op">=</span> <span class="fl">6.5</span>, height <span class="op">=</span> <span class="va">height</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">body</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.5</span> <span class="op">*</span> <span class="fl">72</span>,</span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">doc</span>, input_mode <span class="op">=</span> <span class="st">"document"</span>, max_width <span class="op">=</span> <span class="fl">5.5</span> <span class="op">*</span> <span class="fl">72</span>,</span>
 <span>           x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="st">"in"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1</span>, <span class="st">"npc"</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="st">"in"</span><span class="op">)</span>,</span>
 <span>           hjust <span class="op">=</span> <span class="fl">0</span>, vjust <span class="op">=</span> <span class="fl">1</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grDevices/dev.html" class="external-link">dev.off</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
@@ -218,17 +284,70 @@ page. Split a long one at paragraph breaks and draw each part on its own
 page.</p>
 </div>
 <div class="section level2">
+<h2 id="packages-and-commands-of-your-own">Packages and commands of your own<a class="anchor" aria-label="anchor" href="#packages-and-commands-of-your-own"></a>
+</h2>
+<p><code>\usepackage</code> does not read the packages of a TeX
+installation. The commands of the usual ones, such as amsmath,
+mathtools, braket and physics, are part of gridmicrotex, in small files
+written for it, and <code>\usepackage{physics}</code> loads one of them.
+Most are already loaded, so <code>\usepackage{amsmath}</code> changes
+nothing and can stay in a pasted preamble. <code>physics</code> has to
+be asked for, as in the example above, because it changes
+<code>\qty</code>, <code>\bra</code>, <code>\ket</code> and
+<code>\div</code>. A package that gridmicrotex does not have is ignored,
+without a warning.</p>
+<p>To add commands of your own, put them in a <code>.sty</code> file,
+which <code><a href="../reference/load_sty.html">load_sty()</a></code> makes a package. The bundled files, in
+<code>system.file("tex", package = "gridmicrotex")</code>, are examples
+of how to write one:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sty</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".sty"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"\\newcommand{\\RR}{\\mathbb{R}}"</span>,</span>
+<span>             <span class="st">"\\NewDocumentCommand{\\norm}{m}{\\left\\lVert #1\\right\\rVert}"</span><span class="op">)</span>, <span class="va">sty</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/load_sty.html">load_sty</a></span><span class="op">(</span><span class="va">sty</span>, name <span class="op">=</span> <span class="st">"mymath"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="st">r"(\usepackage{mymath} $f\colon \RR^n \to \RR, \quad \norm{x} \ge 0$)"</span>,</span>
+<span>           x <span class="op">=</span> <span class="fl">0.5</span>, y <span class="op">=</span> <span class="fl">0.5</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">13</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="documents_files/figure-html/mine-1.png" class="r-plt" alt="" width="70%"></p>
+<p><code>latex_options(packages = "mymath")</code> loads it before every
+label. A file holds definitions, with <code>\newcommand</code>,
+<code>\def</code>, <code>\newenvironment</code>,
+<code>\NewDocumentCommand</code>, <code>\newif</code> and the
+<code>\if</code> tests; registers, boxes and <code>\catcode</code> are
+not supported, so a package from CTAN usually cannot be copied in as it
+is.</p>
+</div>
+<div class="section level2">
 <h2 id="limitations">Limitations<a class="anchor" aria-label="anchor" href="#limitations"></a>
 </h2>
 <ul>
+<li>A package from a TeX installation is not read.</li>
 <li>
-<code>\pageref</code> draws <code>??</code> and <code>\cite</code>
+<code>\pageref</code> draws <code>??</code>, with a warning.
+<code>\cite</code> draws the number of its <code>\bibitem</code>, so a
+<code>thebibliography</code> in the same text is cited; a key none names
 draws <code>[?]</code>, with a warning, and so does a <code>\ref</code>
 to a label that is not there.</li>
-<li>A footnote’s text is set where it is written.</li>
+<li>A footnote in a label, not a document, is set where it is written,
+with a warning.</li>
 <li>Tables and figures are placed where they are written.</li>
-<li>The preamble and <code>\maketitle</code> draw nothing.</li>
+<li>
+<code>lstlisting</code>, <code>minted</code> and
+<code>Verbatim</code> (and <code>\lstinline</code>,
+<code>\mintinline</code>) set their code as typed, in the typewriter
+face, with none of their colours, line numbers or frames; markdown
+highlights code if that is what you want.</li>
+<li>Algorithms (<code>algorithm</code>, <code>algorithmic</code>) are
+not drawn.</li>
+<li>
+<code>\maketitle</code> sets the title, authors and date, centred
+and on no page of its own; <code>\date</code> is today’s date when none
+is given, as in LaTeX.</li>
 </ul>
+<p>For a complicated document, with packages from a TeX installation,
+pages, floats that move, or all of TikZ, use the <a href="https://CRAN.R-project.org/package=xdvir" class="external-link">xdvir</a> package, which
+typesets with LaTeX itself and draws the result in grid.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

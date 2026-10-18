@@ -11,7 +11,7 @@ always wins over the default."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,7 +49,7 @@ always wins over the default."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Set or show default rendering options</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.2.0/R/options.R" class="external-link"><code>R/options.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/options.R" class="external-link"><code>R/options.R</code></a></small>
       <div class="d-none name"><code>latex_options.Rd</code></div>
     </div>
 
@@ -72,7 +72,8 @@ always wins over the default.</p>
 <span>  device_math <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  main_font <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sans_font <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  mono_font <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  mono_font <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  packages <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">reset_latex_options</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
@@ -135,6 +136,13 @@ file, which is loaded. <code>NULL</code> keeps the defaults: <code>gp$fontfamily
 <code>"sans"</code>) for the body, <code>"sans"</code> and <code>"mono"</code>. A <code>gp$fontfamily</code> in a
 call wins over <code>main_font</code>.</p></dd>
 
+
+<dt id="arg-packages">packages<a class="anchor" aria-label="anchor" href="#arg-packages"></a></dt>
+<dd><p>LaTeX packages to load before every label, as
+<code>\usepackage</code> would, named or as <code>.sty</code> files (see <code><a href="load_sty.html">load_sty()</a></code>).
+Without this, a label can load a package with <code>\usepackage{name}</code>.
+<code>NULL</code> loads none.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -151,7 +159,7 @@ settings are returned, so <code>do.call(latex_options, old)</code> restores them
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="available_fonts.html">available_fonts()</a></code>, <code><a href="load_font.html">load_font()</a></code>, <code><a href="latex_grob.html">latex_grob()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="available_fonts.html">available_fonts()</a></code>, <code><a href="load_font.html">load_font()</a></code>, <code><a href="load_sty.html">load_sty()</a></code>, <code><a href="latex_grob.html">latex_grob()</a></code></p></div>
     </div>
 
     <div class="section level2">

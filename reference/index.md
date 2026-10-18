@@ -53,6 +53,8 @@ Project-wide defaults and advanced tooling
   [`clear_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
   [`list_macros()`](https://adayim.github.io/gridmicrotex/reference/define_macro.md)
   : Define a LaTeX shorthand for every label
+- [`load_sty()`](https://adayim.github.io/gridmicrotex/reference/load_sty.md)
+  : Load a LaTeX package file
 - [`latex_cache_limit()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)
   [`latex_cache_clear()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)
   [`latex_cache_info()`](https://adayim.github.io/gridmicrotex/reference/latex_cache_limit.md)

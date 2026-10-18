@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -45,9 +45,18 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.2.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.1" id="gridmicrotex-021">gridmicrotex 0.2.1<a class="anchor" aria-label="anchor" href="#gridmicrotex-021"></a></h2>
+<ul><li>The bundled MicroTeX is now the <a href="https://github.com/adayim/MicroTeX" class="external-link">adayim fork</a>, version 0.1.0 (forked from <a href="https://github.com/NanoMichael/MicroTeX" class="external-link">NanoMichael/MicroTeX</a>), and LaTeX coverage is much broader.</li>
+<li>New <code><a href="../reference/load_sty.html">load_sty()</a></code> makes a <code>.sty</code> file of your own a package, and <code>latex_options(packages = )</code> loads packages before every label.</li>
+<li>Lines, displays and the rows of matrices, <code>align</code> and kin are now spaced as LaTeX spaces them, so documents and multi-line labels are taller by up to 10%; <code>\vspace</code> and <code>\bigskip</code> between lines add to the line spacing, as in LaTeX; text tables take LaTeX’s row height and booktabs’ rule spacing and are padded by <code>\tabcolsep</code>, as <code>\fbox</code> and <code>\colorbox</code> are by <code>\fboxsep</code>.</li>
+<li>A markdown code block is now one block of text, so it draws several times faster (300 lines: 0.64 s to 0.11 s), and a brace or backslash in code stands in the same column as the characters around it. The code that knitr and pandoc write is drawn as typed with its colours (<code>alltt</code>, <code>Verbatim[commandchars=]</code>, <code>tabsize=</code>, <code>\DefineVerbatimEnvironment</code>); <code>quote</code>, <code>quotation</code>, <code>verse</code> and the <code>comment</code> environment work.</li>
+<li>Markdown reads a raw HTML block as HTML, where it dropped it with its text: <code>&lt;p align="center"&gt;</code>, <code>&lt;center&gt;</code>, <code>&lt;details&gt;</code>, <code>&lt;table&gt;</code>, lists, headings and <code>&lt;blockquote&gt;</code> are drawn, so a README’s header and tables are.</li>
+<li>Bug fix: a colour such as <code>red!50</code> was drawn black, so <code>\rowcolor{gray!10}</code> painted a row black; an undefined colour now warns. Also fixed: <code>tablenotes</code>, <code>\makecell[tl]</code> and siunitx <code>S</code> columns failing, macros and dimensions read wrongly in a few cases, and a crash on <code>\[\tag{1}\]</code> at a width.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="gridmicrotex-020">gridmicrotex 0.2.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-020"></a></h2><p class="text-muted">CRAN release: 2026-10-04</p>
 <ul><li>LaTeX is read by a new, faster parser that follows TeX’s rules, so macros, environments and starred forms work as in LaTeX, and malformed input is drawn with a warning giving its line:col instead of failing. As in TeX, a space after a command is dropped (write <code>\LaTeX{} is</code>), and <code>_</code>, <code>^</code>, <code>#</code> and <code>&amp;</code> outside math warn.</li>

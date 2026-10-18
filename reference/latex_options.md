@@ -22,7 +22,8 @@ latex_options(
   device_math = NULL,
   main_font = NULL,
   sans_font = NULL,
-  mono_font = NULL
+  mono_font = NULL,
+  packages = NULL
 )
 
 reset_latex_options()
@@ -96,6 +97,14 @@ reset_latex_options()
   defaults: `gp$fontfamily` (or `"sans"`) for the body, `"sans"` and
   `"mono"`. A `gp$fontfamily` in a call wins over `main_font`.
 
+- packages:
+
+  LaTeX packages to load before every label, as `\usepackage` would,
+  named or as `.sty` files (see
+  [`load_sty()`](https://adayim.github.io/gridmicrotex/reference/load_sty.md)).
+  Without this, a label can load a package with `\usepackage{name}`.
+  `NULL` loads none.
+
 ## Value
 
 The previous settings, invisibly. With no arguments, the current
@@ -114,6 +123,7 @@ Size and line spacing are set with `gp` (`fontsize`, `cex`,
 
 [`available_fonts()`](https://adayim.github.io/gridmicrotex/reference/available_fonts.md),
 [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md),
+[`load_sty()`](https://adayim.github.io/gridmicrotex/reference/load_sty.md),
 [`latex_grob()`](https://adayim.github.io/gridmicrotex/reference/latex_grob.md)
 
 ## Examples

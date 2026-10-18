@@ -5,11 +5,13 @@
 \usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,xcolor,mathdots,amsthm}
 \usepackage[normalem]{ulem}
 \usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde}
-\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing}
+\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing,decorations.pathreplacing}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,calc,fit,matrix}
+\usepackage{tcolorbox,multicol,alltt}
 \begin{document}
 \begin{center}\Large\textbf{What gridmicrotex draws}\end{center}
 
-Each row is a LaTeX input and what the package makes of it, three to a line where they fit, in the order of KaTeX's list of supported functions, then what KaTeX does not have. A row is a test: it must be drawn with no warning. Where LaTeX has nothing to compare with, only the name is listed.
+Each row is a LaTeX input and what the package makes of it, three to a line where they fit: accents, delimiters, operators, relations and symbols first, then further parts of LaTeX -- units, equations, tables, diagrams, TikZ pictures, boxes and columns. A row is a test: it must be drawn with no warning. Where LaTeX has nothing to compare with, only the name is listed.
 
 \textbf{This PDF is rendered with this package}.
 
@@ -169,12 +171,12 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
-\newpage
-\subsection*{Environments (continued)}
-
-{\small\verb|\begin{equation}\begin{split}a| \verb|&=b+c\\&=e+f\end{split}\end{equation}|}
+{\small\verb|\begin{equation}\begin{split}a| \\ \verb|&=b+c\\&=e+f\end{split}\end{equation}|}
 
 \begin{equation}\begin{split}a &=b+c\\&=e+f\end{split}\end{equation}
+
+\newpage
+\subsection*{Environments (continued)}
 
 {\small\verb|\begin{align} a&=b+c \\ d+e&=f \end{align}|}
 
@@ -270,12 +272,6 @@ $} \\
 $} & {\small\verb|\psi|} & {\large $\psi
 $} & {\small\verb|\omega|} & {\large $\omega
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Letters and Unicode (continued)}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\varepsilon|} & {\large $\varepsilon
 $} & {\small\verb|\varkappa|} & {\large $\varkappa
 $} & {\small\verb|\vartheta|} & {\large $\vartheta
@@ -320,6 +316,12 @@ $} \\
 $} & {\small\verb|\daleth|} & {\large $\daleth
 $} & {\small\verb|\hbar|} & {\large $\hbar
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Letters and Unicode (continued)}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\text{\AE}|} & {\large $\text{\AE}
 $} & {\small\verb|\eth|} & {\large $\eth
 $} & {\small\verb|\hslash|} & {\large $\hslash
@@ -378,9 +380,6 @@ $} \\[4pt]
 
 \[\tag{hi} x+y^{2x}\]
 
-\newpage
-\subsection*{Layout / Annotation (continued)}
-
 {\small\verb|\tag*{hi} x+y^{2x}|}
 
 \[\tag*{hi} x+y^{2x}\]
@@ -391,6 +390,7 @@ $} \\[4pt]
 {\small\verb|\phase{30^\circ}|} & {\small\verb|\angl{n}|} & {\small\verb|\angln|} \\
 \end{tabular}
 
+\newpage
 \subsection*{Vertical Layout}
 
 \begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
@@ -487,7 +487,6 @@ $} \\
 {\small\verb|\Set{ x \VERT x<\frac 1 2 }|} \\
 \end{tabular}
 
-\newpage
 \section*{Macros}
 
 \begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
@@ -518,6 +517,7 @@ $} \\[4pt]
 {\small\verb|\@firstoftwo{a}{b}\;\@secondoftwo{a}{b}|} \\
 \end{tabular}
 
+\newpage
 \section*{Operators}
 
 \subsection*{Big Operators}
@@ -626,12 +626,6 @@ $} \\
 $} & {\small\verb|\divideontimes|} & {\large $\divideontimes
 $} & {\small\verb|\ominus|} & {\large $\ominus
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Operators / Binary Operators (continued)}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\uplus|} & {\large $\uplus
 $} & {\small\verb|\boxtimes|} & {\large $\boxtimes
 $} & {\small\verb|\dotplus|} & {\large $\dotplus
@@ -689,6 +683,7 @@ $} \\
 {\small\verb|{a \above{2pt} b+1}|} &  &  \\
 \end{tabular}
 
+\newpage
 \subsection*{Math Operators}
 
 \begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
@@ -763,7 +758,6 @@ $} & & \\
 {\small\verb|\plim|} &  &  \\
 \end{tabular}
 
-\newpage
 \subsection*{Square roots}
 
 \begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
@@ -871,6 +865,12 @@ $} \\
 $} & {\small\verb|\Colonapprox|} & {\large $\Colonapprox
 $} & {\small\verb|\gggtr|} & {\large $\gggtr
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Relations (continued)}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\precapprox|} & {\large $\precapprox
 $} & {\small\verb|\thickapprox|} & {\large $\thickapprox
 $} & {\small\verb|\coloneq|} & {\large $\coloneq
@@ -945,12 +945,6 @@ $} \\
 
 \begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
 {\small\verb|\approxcoloncolon|} & {\small\verb|\lt|} & {\small\verb|\origof|} \\
-\end{tabular}
-
-\newpage
-\subsection*{Relations (continued)}
-
-\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
 {\small\verb|\gt|} & {\small\verb|\imageof|} & {\small\verb|\simcoloncolon|} \\
 \end{tabular}
 
@@ -1043,6 +1037,7 @@ $} & & & & \\
 {\small\verb|\notni|} &  &  \\
 \end{tabular}
 
+\newpage
 \subsection*{Arrows}
 
 \begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
@@ -1126,12 +1121,6 @@ $} \\
 $} & {\small\verb|\leftarrow|} & {\large $\leftarrow
 $} & {\small\verb|\nrightarrow|} & {\large $\nrightarrow
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Relations / Arrows (continued)}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\upharpoonright|} & {\large $\upharpoonright
 $} & {\small\verb|\Leftarrow|} & {\large $\Leftarrow
 $} & {\small\verb|\nRightarrow|} & {\large $\nRightarrow
@@ -1192,6 +1181,7 @@ $} & & \\
 {\small\verb|\xtwoheadleftarrow{abc}|} &  &  \\
 \end{tabular}
 
+\newpage
 \section*{Special Notation}
 
 {\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
@@ -1264,12 +1254,6 @@ $} \\
 {\small\verb|\textstyle\sum_{i=1}^n|} & {\large $\textstyle\sum_{i=1}^n
 $} & {\small\verb|\scriptscriptstyle x|} & {\large $\scriptscriptstyle x
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Style, Color, Size, and Font (continued)}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\mathchoice{D}{T}{S}{SS}|} & {\large $\mathchoice{D}{T}{S}{SS}
 $} & & \\
 \end{tabular}
@@ -1367,6 +1351,12 @@ $} \\
 $} & {\small\verb|\lozenge|} & {\large $\lozenge
 $} & {\small\verb|\mho|} & {\large $\mho
 $} \\
+\end{tabular}
+
+\newpage
+\subsection*{Symbols and Punctuation (continued)}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\blacklozenge|} & {\large $\blacklozenge
 $} & {\small\verb|\diagdown|} & {\large $\diagdown
 $} & {\small\verb|\text{\P}|} & {\large $\text{\P}
@@ -1429,12 +1419,6 @@ $} \\
 {\small\verb|\text{\textdegree}|} & {\large $\text{\textdegree}
 $} & {\small\verb|\text{\textbraceright}|} & {\large $\text{\textbraceright}
 $} \\
-\end{tabular}
-
-\newpage
-\subsection*{Symbols and Punctuation (continued)}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
 {\small\verb|\text{\textbackslash}|} & {\large $\text{\textbackslash}
 $} & {\small\verb|\text{\textregistered}|} & {\large $\text{\textregistered}
 $} \\
@@ -1470,7 +1454,40 @@ $} & & \\
 {\small\verb|\scriptscriptstyle\rule{10pt}{10pt}|} \\
 \end{tabular}
 
-\section*{Beyond KaTeX}
+\section*{Extensions}
+
+\subsection*{mhchem}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\ce{H2O}|} & {\large $\ce{H2O}
+$} & {\small\verb|\ce{1/2 H2O}|} & {\large $\ce{1/2 H2O}
+$} & {\small\verb|\ce{CuSO4*5H2O}|} & {\large $\ce{CuSO4*5H2O}
+$} \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
+{\small\verb|\ce{CO2 + C -> 2 CO}|} & {\large $\ce{CO2 + C -> 2 CO}
+$} & {\small\verb|\ce{^{227}_{90}Th+}|} & {\large $\ce{^{227}_{90}Th+}
+$} \\
+{\small\verb|\ce{Fe^{3+} + 3e- -> Fe(s)}|} & {\large $\ce{Fe^{3+} + 3e- -> Fe(s)}
+$} & & \\
+\end{tabular}
+
+\begin{tabular}{@{}l@{}}
+{\small\verb|\ce{SO4^2- + Ba^2+ -> BaSO4 v}|} \\ {\large $\ce{SO4^2- + Ba^2+ -> BaSO4 v}
+$} \\[4pt]
+{\small\verb|\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}|} \\ {\large $\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}
+$} \\[4pt]
+\end{tabular}
+
+{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+
+\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
+{\small\verb|\pu{1.5 mol/L}|} & {\small\verb|\pu{123 kJ/mol}|} & {\small\verb|\pu{1.2e-3 mol L-1}|} \\
+\end{tabular}
+
+\newpage
+\section*{Further LaTeX}
 
 \subsection*{More commands}
 
@@ -1538,9 +1555,6 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
-\newpage
-\subsection*{Beyond KaTeX / Equations (continued)}
-
 {\small\verb|a = b \tag{1}|}
 
 \[a = b \tag{1}\]
@@ -1557,6 +1571,9 @@ $} \\[4pt]
 {\small\verb|\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\|} \\ {\small\verb!\verb|verbatim| \end{array}!} \\ {\large $\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\ \verb|verbatim| \end{array}
 $} \\[4pt]
 \end{tabular}
+
+\newpage
+\subsection*{Further LaTeX / Tables (continued)}
 
 {\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
 
@@ -1575,37 +1592,67 @@ $} \\[4pt]
 $} \\[4pt]
 \end{tabular}
 
-\newpage
-\section*{Extensions}
-
-\subsection*{mhchem}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{\hspace{14pt}}l@{\hspace{4pt}}l@{}}
-{\small\verb|\ce{H2O}|} & {\large $\ce{H2O}
-$} & {\small\verb|\ce{1/2 H2O}|} & {\large $\ce{1/2 H2O}
-$} & {\small\verb|\ce{CuSO4*5H2O}|} & {\large $\ce{CuSO4*5H2O}
-$} \\
-\end{tabular}
-
-\begin{tabular}{@{}l@{\hspace{4pt}}l@{\hspace{20pt}}l@{\hspace{4pt}}l@{}}
-{\small\verb|\ce{CO2 + C -> 2 CO}|} & {\large $\ce{CO2 + C -> 2 CO}
-$} & {\small\verb|\ce{^{227}_{90}Th+}|} & {\large $\ce{^{227}_{90}Th+}
-$} \\
-{\small\verb|\ce{Fe^{3+} + 3e- -> Fe(s)}|} & {\large $\ce{Fe^{3+} + 3e- -> Fe(s)}
-$} & & \\
-\end{tabular}
+\subsection*{TikZ pictures}
 
 \begin{tabular}{@{}l@{}}
-{\small\verb|\ce{SO4^2- + Ba^2+ -> BaSO4 v}|} \\ {\large $\ce{SO4^2- + Ba^2+ -> BaSO4 v}
+{\small\verb|\begin{tikzpicture}\draw[->, thick] (0,0) -- (2,1) node[right]|} \\ {\small\verb|{$f$}; \fill[red!70] (1,0.5) circle (2pt); \draw[blue, dashed]|} \\ {\small\verb|(0,0) arc (180:90:0.5);\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}\draw[->, thick] (0,0) -- (2,1) node[right] {$f$}; \fill[red!70] (1,0.5) circle (2pt); \draw[blue, dashed] (0,0) arc (180:90:0.5);\end{tikzpicture}
 $} \\[4pt]
-{\small\verb|\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}|} \\ {\large $\ce{Zn^2+ <=>[+ 2OH-][+ 2H+] Zn(OH)2 v}
+{\small\verb|\begin{tikzpicture}[node distance=8mm, >=stealth] \node[draw,|} \\ {\small\verb|rounded corners] (a) {Read}; \node[draw, diamond, aspect=2,|} \\ {\small\verb|right=of a] (b) {Ok?}; \node[draw, fill=blue!10, right=of b] (c)|} \\ {\small\verb|{Fit}; \draw[->] (a) -- (b); \draw[->] (b) -- node[above] {yes}|} \\ {\small\verb!(c); \draw[->] (b) |- ++(0,-1) node[right] {no} -|!} \\ {\small\verb|(a);\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}[node distance=8mm, >=stealth] \node[draw, rounded corners] (a) {Read}; \node[draw, diamond, aspect=2, right=of a] (b) {Ok?}; \node[draw, fill=blue!10, right=of b] (c) {Fit}; \draw[->] (a) -- (b); \draw[->] (b) -- node[above] {yes} (c); \draw[->] (b) |- ++(0,-1) node[right] {no} -| (a);\end{tikzpicture}
+$} \\[4pt]
+{\small\verb|\begin{tikzpicture}\foreach \x/\c in|} \\ {\small\verb|{0/red,1/orange,2/green,3/blue} {\fill[\c] (\x*0.5,0) circle|} \\ {\small\verb|(0.2);}\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}\foreach \x/\c in {0/red,1/orange,2/green,3/blue} {\fill[\c] (\x*0.5,0) circle (0.2);}\end{tikzpicture}
 $} \\[4pt]
 \end{tabular}
 
-{\small\itshape Drawn by the package; LaTeX has no equivalent, so no output is shown:}
+\newpage
+\subsection*{Further LaTeX / TikZ pictures (continued)}
 
-\begin{tabular}{@{}l@{\hspace{14pt}}l@{\hspace{14pt}}l@{}}
-{\small\verb|\pu{1.5 mol/L}|} & {\small\verb|\pu{123 kJ/mol}|} & {\small\verb|\pu{1.2e-3 mol L-1}|} \\
+\begin{tabular}{@{}l@{}}
+{\small\verb|\begin{tikzpicture}\node[draw, ellipse] (a) at (0,0) {Ellipse};|} \\ {\small\verb|\node[draw, circle, label=above:{$\alpha$}, pin=right:pin] (b)|} \\ {\small\verb|at (2.4,0) {B}; \draw[->] (a) to[bend left] (b); \draw[red]|} \\ {\small\verb|($(a)!0.5!(b)$) circle (2pt);\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}\node[draw, ellipse] (a) at (0,0) {Ellipse}; \node[draw, circle, label=above:{$\alpha$}, pin=right:pin] (b) at (2.4,0) {B}; \draw[->] (a) to[bend left] (b); \draw[red] ($(a)!0.5!(b)$) circle (2pt);\end{tikzpicture}
+$} \\[4pt]
+{\small\verb|\begin{tikzpicture}[level distance=8mm, sibling distance=14mm]|} \\ {\small\verb|\node {root} child {node {a} child {node {c}} child {node {d}}}|} \\ {\small\verb|child {node {b}};\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}[level distance=8mm, sibling distance=14mm] \node {root} child {node {a} child {node {c}} child {node {d}}} child {node {b}};\end{tikzpicture}
+$} \\[4pt]
+{\small\verb|\begin{tikzpicture}\matrix (m) [matrix of nodes, row sep=3mm,|} \\ {\small\verb|column sep=6mm] {$a$ & $b$ \\ $c$ & $d$ \\}; \draw[->] (m-1-1)|} \\ {\small\verb|-- (m-2-2); \draw[decorate, decoration={brace, amplitude=4pt}]|} \\ {\small\verb|(m-2-1.south west) -- (m-2-2.south east);\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}\matrix (m) [matrix of nodes, row sep=3mm, column sep=6mm] {$a$ & $b$ \\ $c$ & $d$ \\}; \draw[->] (m-1-1) -- (m-2-2); \draw[decorate, decoration={brace, amplitude=4pt}] (m-2-1.south west) -- (m-2-2.south east);\end{tikzpicture}
+$} \\[4pt]
+{\small\verb|\begin{tikzpicture}[scale=0.8]\draw[->] (0,0) -- (4.2,0);|} \\ {\small\verb|\draw[->] (0,0) -- (0,2.2); \draw[domain=0:4, smooth,|} \\ {\small\verb|samples=12, red, thick] plot (\x, {1+sin(\x r)}); \draw[blue]|} \\ {\small\verb|plot[const plot] coordinates {(0,0.3) (1,1.2) (2,0.6)|} \\ {\small\verb|(3,1.8)};\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}[scale=0.8]\draw[->] (0,0) -- (4.2,0); \draw[->] (0,0) -- (0,2.2); \draw[domain=0:4, smooth, samples=12, red, thick] plot (\x, {1+sin(\x r)}); \draw[blue] plot[const plot] coordinates {(0,0.3) (1,1.2) (2,0.6) (3,1.8)};\end{tikzpicture}
+$} \\[4pt]
+{\small\verb|\begin{tikzpicture}\node[regular polygon, regular polygon|} \\ {\small\verb|sides=6, draw, fill=blue!10] (h) {hex}; \node[star, star|} \\ {\small\verb|points=6, draw, fill=yellow!30, right=8mm of h] (s) {six};|} \\ {\small\verb|\node[isosceles triangle, isosceles triangle apex angle=60,|} \\ {\small\verb|shape border rotate=90, draw, right=8mm of s] (t) {up};|} \\ {\small\verb|\draw[->] (h.east) -- (s.west);\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}\node[regular polygon, regular polygon sides=6, draw, fill=blue!10] (h) {hex}; \node[star, star points=6, draw, fill=yellow!30, right=8mm of h] (s) {six}; \node[isosceles triangle, isosceles triangle apex angle=60, shape border rotate=90, draw, right=8mm of s] (t) {up}; \draw[->] (h.east) -- (s.west);\end{tikzpicture}
+$} \\[4pt]
+{\small\verb|\begin{tikzpicture}\draw (0,0) circle (1); \draw (1,0) circle|} \\ {\small\verb|(1); \begin{scope}\clip (0,0) circle (1); \fill[red!40] (1,0)|} \\ {\small\verb|circle (1);\end{scope}\end{tikzpicture}|} \\ {\large $\begin{tikzpicture}\draw (0,0) circle (1); \draw (1,0) circle (1); \begin{scope}\clip (0,0) circle (1); \fill[red!40] (1,0) circle (1);\end{scope}\end{tikzpicture}
+$} \\[4pt]
 \end{tabular}
+
+\newpage
+\subsection*{Boxes and columns}
+
+{\small\verb|\begin{tcolorbox}[title=A box] Text in a box, which is as wide| \\ \verb|as the line. \end{tcolorbox}|}
+
+\begin{tcolorbox}[title=A box] Text in a box, which is as wide as the line. \end{tcolorbox}
+
+{\small\verb|\begin{tcolorbox}[colback=yellow!15, colframe=blue!50!black,| \\ \verb|colbacktitle=blue!15, coltitle=black, title=Colours] A title| \\ \verb|band, a frame, and a body in colours of its own. \end{tcolorbox}|}
+
+\begin{tcolorbox}[colback=yellow!15, colframe=blue!50!black, colbacktitle=blue!15, coltitle=black, title=Colours] A title band, a frame, and a body in colours of its own. \end{tcolorbox}
+
+{\small\verb|\begin{multicols}{2}[A header over both columns] One paragraph| \\ \verb|of some words that run on to a second line.\par Another, in the| \\ \verb|first column too.\par A third, which is balanced into the| \\ \verb|second.\par A fourth. \end{multicols}|}
+
+\begin{multicols}{2}[A header over both columns] One paragraph of some words that run on to a second line.\par Another, in the first column too.\par A third, which is balanced into the second.\par A fourth. \end{multicols}
+
+{\small\verb|\begin{quote} A short quotation, set in from both margins of the| \\ \verb|line. \end{quote}|}
+
+\begin{quote} A short quotation, set in from both margins of the line. \end{quote}
+
+{\small\verb|\begin{quotation} A quotation's first paragraph, its first line| \\ \verb|indented.\par And a second paragraph, indented as the first is.| \\ \verb|\end{quotation}|}
+
+\begin{quotation} A quotation's first paragraph, its first line indented.\par And a second paragraph, indented as the first is. \end{quotation}
+
+{\small\verb|\begin{verse} A line of verse \\ and a second line, long enough| \\ \verb|to wrap onto another line of the page, which is then set in| \\ \verb|against the first \end{verse}|}
+
+\begin{verse} A line of verse \\ and a second line, long enough to wrap onto another line of the page, which is then set in against the first \end{verse}
+
+\newpage
+\subsection*{Further LaTeX / Boxes and columns (continued)}
+
+{\small\verb|\begin{alltt}Text as typed,  spaces   kept, with \textbf{bold}| \\ \verb|and \textcolor{red}{red} in it\end{alltt}|}
+
+\begin{alltt}Text as typed,  spaces   kept, with \textbf{bold} and \textcolor{red}{red} in it\end{alltt}
 
 \end{document}

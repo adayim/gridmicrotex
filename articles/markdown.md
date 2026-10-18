@@ -343,8 +343,10 @@ in LaTeX.
   in
   [`markdown_grob()`](https://adayim.github.io/gridmicrotex/reference/markdown_grob.md)
   only the marker is shown.
-- HTML blocks other than `<div>` and `<img>` are dropped, `<table>`
-  included. Use markdown tables.
+- A raw HTML block (`<p align="center">`, `<details>`, `<center>`,
+  `<table>`, lists, headings) is read as HTML: its text, tables, lists
+  and alignment are drawn, but markdown inside it is not read, as in
+  HTML, and an `<img>` that cannot be drawn is left out with a warning.
 - Markdown tables cannot merge cells; use LaTeX (above).
 - Small caps are not supported.
 - The syntax class names (`co`, `st`, `kw`, `dt`, …) also apply to your

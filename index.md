@@ -1,13 +1,16 @@
 # gridmicrotex
 
 LaTeX math and markdown for R graphics: grid, base plots and ggplot2. No
-LaTeX installation needed. Built on the
+LaTeX installation needed. Built on a
+[fork](https://github.com/adayim/MicroTeX) of the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
 
-Everything on [KaTeX’s list of supported
-functions](https://katex.org/docs/supported) is drawn, and more: amsmath
-and mathtools environments, equation numbers, tables from `kable()` and
-gt, `tikz-cd` diagrams, `\ce{}` chemistry, and a subset of siunitx.
+Broad LaTeX coverage: amsmath and mathtools environments, equation
+numbers, tables from `kable()` and gt, `tikz-cd` diagrams and TikZ
+pictures, `\ce{}` chemistry, a subset of siunitx, footnotes, `tcolorbox`
+and `multicols`. [What is
+supported](https://adayim.github.io/gridmicrotex/supported-functions.pdf)
+lists each command with its output.
 
 ## Installation
 
@@ -137,13 +140,21 @@ use [ragg](https://CRAN.R-project.org/package=ragg),
 - [Markdown](https://adayim.github.io/gridmicrotex/articles/markdown.html)
 - [Documents](https://adayim.github.io/gridmicrotex/articles/documents.html)
 
+## Credits
+
+The layout engine is the [adayim
+fork](https://github.com/adayim/MicroTeX) (version 0.1.0) of
+[MicroTeX](https://github.com/NanoMichael/MicroTeX) by Nano Michael and
+the MicroTeX contributors; the fork’s README says what it changes. Lete
+Sans Math and STIX Two Math are bundled. Their licences, and the
+engine’s, are in `inst/COPYRIGHTS`.
+
 ## Disclaimer
 
-**A note on development**: This package was developed as a proof of
-concept for AI-assisted package creation. I designed the architecture
-and specification, and the core C++ integration (via
-[MicroTeX](https://github.com/NanoMichael/MicroTeX)) was largely
-facilitated by AI, with my review and oversight of the design and final
-outputs. I am sharing it because it works, and I hope that others will
-find it useful. Contributions, bug reports and improvements from the
-community are very welcome.
+This package was developed as a proof of concept for AI-assisted package
+creation. I designed the architecture and specification, and the core
+C++ integration of the MicroTeX engine was largely facilitated by AI,
+with my review and oversight of the design and final outputs. I am
+sharing it because it works, and I hope that others will find it useful.
+Contributions, bug reports and improvements from the community are very
+welcome.

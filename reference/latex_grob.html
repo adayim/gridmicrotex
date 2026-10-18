@@ -13,7 +13,7 @@ grobX() and grobY()."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">gridmicrotex</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,7 @@ grobX() and grobY()."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Create a grid grob from LaTeX</h1>
-      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/v0.2.0/R/latex-grob.R" class="external-link"><code>R/latex-grob.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/adayim/gridmicrotex/blob/main/R/latex-grob.R" class="external-link"><code>R/latex-grob.R</code></a></small>
       <div class="d-none name"><code>latex_grob.Rd</code></div>
     </div>
 
@@ -228,9 +228,10 @@ an error.</p>
 <p>LaTeX from a document can be pasted as it is: the output of
 <code><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">knitr::kable()</a></code> or <code>xtable</code>, a <code>table</code> float, or a paper's body with
 <code>input_mode = "document"</code>. The preamble, <code>\maketitle</code> and <code>\label</code> draw
-nothing, and <code>\caption</code> is drawn where it is written. <code>\ref</code> and
-<code>\pageref</code> draw <code>??</code>, <code>\eqref</code> draws <code>(??)</code> and <code>\cite</code> draws <code>[?]</code>,
-with a warning. A footnote is set where it is written, and equations
+nothing, and <code>\caption</code> is drawn where it is written. <code>\pageref</code> draws
+<code>??</code>. <code>\cite</code> draws the number of its <code>\bibitem</code>; a <code>\ref</code>, <code>\eqref</code> or
+<code>\cite</code> that names nothing in the text draws <code>??</code>, <code>(??)</code> or <code>[?]</code>, with
+a warning. A footnote is set where it is written, and equations
 are not numbered.</p>
 <p>Not supported: <code>\tag</code>, <code>\verb</code>, <code>\textsc</code>, switches such as <code>\bfseries</code>
 and <code>\itshape</code> (use <code>\textbf{}</code> and <code>\textit{}</code>, or <code>\bf</code> and <code>\it</code>),
