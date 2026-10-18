@@ -1,6 +1,6 @@
 # Changelog
 
-## gridmicrotex 0.2.1
+## gridmicrotex 0.3.0
 
 - The bundled MicroTeX is now the [adayim
   fork](https://github.com/adayim/MicroTeX), version 0.1.0 (forked from
