@@ -69,7 +69,7 @@ using BodyRange = std::pair<std::uint32_t, std::uint32_t>;
 // end of its line.
 std::size_t verbatimEnd(const std::string& s, std::size_t i) {
   static const std::string names[] = {"\\begin{verbatim}", "\\begin{verbatim*}", "\\begin{lstlisting}",
-                                      "\\begin{minted}", "\\begin{Verbatim}", "\\begin{Verbatim*}"};
+                                      "\\begin{minted}", "\\begin{Verbatim}", "\\begin{Verbatim*}", "\\begin{comment}"};
   for (const std::string& open : names) {
     if (s.compare(i, open.size(), open) != 0) continue;
     const std::string close = "\\end{" + open.substr(7);

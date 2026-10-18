@@ -74,6 +74,10 @@ struct Table {
     // The rows of the array that comes next: jot (amsmath's, \openup\jot) or
     // sub (\substack's), as the prelude's split and substack say.
     add({"gmrows"}, "r");
+    // The code of an alltt or a Verbatim with commandchars, as the parser puts it back (Parser::commandLines()): one
+    // \gmcodeline a line, and in it the text between the commands as \gmlit{hex}, which is set as typed.
+    add({"gmlit"}, "r");
+    add({"gmcodeline"}, "t");
     add({"cfrac"}, "Rmm");
     add({"xleftarrow", "xrightarrow", "xleftrightarrow", "xRightarrow", "xLeftarrow",
          "xLeftrightarrow", "xhookleftarrow", "xhookrightarrow", "xmapsto",
@@ -322,6 +326,12 @@ struct Table {
     // The code of listings (`[options]`), fancyvrb and minted (`[options]{language}`): set as verbatim is.
     env({"lstlisting", "Verbatim", "Verbatim*"}, "R", EnvBody::verbatim, true);
     env({"minted"}, "Rr", EnvBody::verbatim, true);
+    // alltt: verbatim whose backslash and braces keep their meaning, so its commands act.
+    env({"alltt"}, "", EnvBody::verbatim, true);
+    // The comment package's: the body is skipped.
+    env({"comment"}, "", EnvBody::verbatim, true);
+    // article's quote, quotation and verse: a body of paragraphs between margins.
+    env({"quote", "quotation", "verse"}, "", EnvBody::text);
     // Commutative diagrams: amscd's, and tikz-cd's, which a handler reads
     // whole (its options and arrows are in the body).
     env({"CD", "tikzcd", "tikzpicture"}, "", EnvBody::raw);
@@ -365,11 +375,11 @@ bool isFloatEnvironment(const std::string& name) {
 
 bool isVerbatimEnvironment(const std::string& name) {
   return name == "verbatim" || name == "verbatim*" || name == "lstlisting" || name == "minted" ||
-         name == "Verbatim" || name == "Verbatim*";
+         name == "Verbatim" || name == "Verbatim*" || name == "alltt";
 }
 
 bool isBlockEnvironment(const std::string& name) {
-  return name == "abstract" || name == "thebibliography" || name == "proof" ||
+  return name == "abstract" || name == "titlepage" || name == "thebibliography" || name == "proof" ||
          name == "subequations" || name == "framed" || name == "shaded" || name == "shaded*" || name == "snugshade" ||
          name == "snugshade*" || isFloatEnvironment(name);
 }

@@ -240,6 +240,8 @@ struct Expander::Impl {
   std::unordered_set<std::string> foreachNames;  // the names some \foreach loops over, read as written from then on
   // `\tikzset` and `\tikzstyle` so far, as the statements the pictures after them begin with.
   std::string tikzStyles;
+  // fancyvrb's \DefineVerbatimEnvironment{name}{Verbatim}{options}: name -> (the environment it is, its options).
+  std::unordered_map<std::string, std::pair<std::string, std::string>> verbatimEnvironments;
   // Where the input ends for now (Expander::endInputAt()), and the first
   // token past that, read and held back until the end moves on.
   std::uint32_t limit = UINT32_MAX;
@@ -1410,6 +1412,22 @@ struct Expander::Impl {
     tikzStyles += "\\tikzset{" + trim(name) + "/.style={" + (keys ? *keys : std::string()) + "}}";
   }
 
+  /** fancyvrb's \DefineVerbatimEnvironment{name}{Verbatim}{options} (and \RecustomVerbatimEnvironment): `name` is that
+   *  environment with those options from here on, which the parser reads (Expander::verbatimEnvironment()). Pandoc's
+   *  Highlighting is one. Only the environments of this engine's own can be made over. */
+  void defineVerbatimEnvironment(const ExpToken& e) {
+    const std::string who = "\\" + e.tok.text;
+    const std::string name = trim(readArg(who));
+    const std::string base = trim(readArg(who));
+    const std::string options = readArg(who);
+    if (name.empty()) return;
+    if (base != "Verbatim" && base != "Verbatim*" && base != "alltt") {
+      diags.warn(e.tok.span, who + ": `" + base + "' is not an environment that can be made over (Verbatim is)");
+      return;
+    }
+    verbatimEnvironments[name] = {base, options};
+  }
+
   /** \ce and \pu, a subset of mhchem (front/mhchem.h): the text is read and what
    *  it makes is read in its place. */
   void chemCommand(const ExpToken& e) {
@@ -1512,7 +1530,7 @@ struct Expander::Impl {
     static const std::unordered_set<std::string> names = {
       "newcommand", "renewcommand", "providecommand", "DeclareRobustCommand", "DeclareMathOperator",
       "DeclarePairedDelimiter", "ce", "pu", "newtheorem", "newfontfamily", "newfontface",
-      "tikzset", "tikzstyle",
+      "tikzset", "tikzstyle", "DefineVerbatimEnvironment", "RecustomVerbatimEnvironment",
       "theoremstyle", "def", "gdef", "edef", "xdef", "@ifstar", "@ifnextchar", "global",
       "expandafter", "noexpand", "futurelet", "let", "newenvironment", "renewenvironment",
       "makeatletter", "makeatother", "begingroup", "endgroup", "begin", "end", "usepackage",
@@ -2370,6 +2388,10 @@ struct Expander::Impl {
       tikzStyleCommand(e);
       return true;
     }
+    if ((name == "DefineVerbatimEnvironment" || name == "RecustomVerbatimEnvironment") && unshadowed()) {
+      defineVerbatimEnvironment(e);
+      return true;
+    }
     if ((name == "newfontfamily" || name == "newfontface") && unshadowed()) {
       declareFontFamily();
       return true;
@@ -2695,12 +2717,24 @@ const std::string& Expander::tikzStyles() const {
   return _impl->tikzStyles;
 }
 
+bool Expander::verbatimEnvironment(const std::string& name, std::string& base, std::string& options) const {
+  const auto it = _impl->verbatimEnvironments.find(name);
+  if (it == _impl->verbatimEnvironments.end()) return false;
+  base = it->second.first;
+  options = it->second.second;
+  return true;
+}
+
 void Expander::endInputAt(std::uint32_t offset) {
   _impl->endInputAt(offset);
 }
 
 void Expander::setCatcode(c32 ch, Cat cat) {
   _impl->cats.set(ch, cat);
+}
+
+void Expander::pushText(const std::string& text, const SourceSpan& at) {
+  _impl->pushExpansion(text, at);
 }
 
 Cat Expander::catcode(c32 ch) const {

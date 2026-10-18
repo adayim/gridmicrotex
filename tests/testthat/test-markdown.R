@@ -54,12 +54,23 @@ test_that("TeX special characters in prose are escaped", {
   expect_match(.md_to_tex("x & y"),     "x \\& y",     fixed = TRUE)
   expect_match(.md_to_tex("no #1"),     "no \\#1",     fixed = TRUE)
   # `^` and `~` are the characters, not the accents \^{} and \~{}.
-  expect_match(.md_to_tex("2 ^ 3"),     "2 \\char94{} 3", fixed = TRUE)
+  expect_match(.md_to_tex("2 ^ 3"),     "2 \\textasciicircum{} 3", fixed = TRUE)
   expect_false(grepl("\\^{}", .md_to_tex("2 ^ 3"), fixed = TRUE))
-  expect_match(.md_to_tex("a ~ b"),     "\\char126{}", fixed = TRUE)
-  # There is no \textbackslash; \backslash is a math symbol.
-  expect_match(.md_to_tex("a \\ b"), "$\\backslash$", fixed = TRUE)
-  expect_false(grepl("textbackslash", .md_to_tex("a \\ b"), fixed = TRUE))
+  expect_match(.md_to_tex("a ~ b"),     "\\textasciitilde{}", fixed = TRUE)
+  expect_match(.md_to_tex("a \\ b"), "a \\textbackslash{} b", fixed = TRUE)
+  expect_false(grepl("backslash$", .md_to_tex("a \\ b"), fixed = TRUE))
+})
+
+test_that("the characters escaped in prose are drawn as one glyph each, with no warning", {
+  # \textbackslash and the two ASCII ones the escaper spells are the engine's.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (ch in c("\\", "~", "^")) {
+    tex <- .md_document(.md_escape_tex(paste0("a", ch, "b")))
+    df <- expect_no_warning(parse_latex_cpp(tex, text_size = 12, use_path = FALSE,
+                                            input_mode = "document"))
+    expect_identical(paste0(df$text[df$type == "text"], collapse = ""), paste0("a", ch, "b"),
+                     info = ch)
+  }
 })
 
 test_that("a lone dollar sign is literal, not an unclosed math span", {

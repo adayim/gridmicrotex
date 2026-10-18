@@ -120,17 +120,12 @@
   s <- gsub("([{}$&#_%])", "\\\\\\1", s)
   # `~` and `^` are NOT escaped to \~{} and \^{}: those are the tilde and
   # circumflex *accents*, which float above the line the way a diacritic
-  # does -- so `lm(y ~ x)` in a code block drew its tilde up at cap
-  # height, and prose `~5` did the same.
-  #
-  # Neither can be left bare either: `~` is a non-breaking space in LaTeX,
-  # so the character was lost, and `^` in text is drawn but warned about,
-  # as TeX refuses it there. Neither \textasciitilde nor \textasciicircum
-  # exists -- like \textbackslash they typeset their own letters.
-  # \char126 and \char94 are the spellings that work, and the empty group
-  # is required: \char126b swallows the `b`.
-  s <- gsub("~", "\\\\char126{}", s)
-  s <- gsub("^", "\\char94{}", s, fixed = TRUE)
+  # does -- so `lm(y ~ x)` drew its tilde up at cap height, and prose `~5`
+  # did the same. Neither can be left bare either: `~` is a non-breaking
+  # space in LaTeX, so the character was lost, and `^` in text is drawn but
+  # warned about, as TeX refuses it there. They are text characters.
+  s <- gsub("~", "\\\\textasciitilde{}", s)
+  s <- gsub("^", "\\textasciicircum{}", s, fixed = TRUE)
   # Quotes and dashes stay as CommonMark writes them (it curls nothing
   # without its `smart` extension), where TeX would make `--` a dash and
   # ' a curly quote. Only a hyphen next to another forms a dash.
@@ -140,10 +135,7 @@
   # CommonMark decodes &nbsp; to a real U+00A0, which is TeX's `~`: a space
   # no line breaks at. (After the `~` above, which is a character.)
   s <- gsub(.MD_NBSP, "~", s, fixed = TRUE)
-  # MicroTeX has no \textbackslash -- it would typeset those 13 letters
-  # literally. \backslash is the spelling that works, and it is a math
-  # symbol, so it goes in math, as LaTeX would have it.
-  gsub(.MD_ESC_BS, "$\\backslash$", s, fixed = TRUE)
+  gsub(.MD_ESC_BS, "\\textbackslash{}", s, fixed = TRUE)
 }
 
 # Render one markdown text node: the prose escaped, its math spans put

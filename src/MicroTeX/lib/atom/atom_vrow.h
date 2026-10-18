@@ -118,6 +118,19 @@ public:
   sptr<Box> createBox(Env& env) override;
 };
 
+/** A body set between margins, as LaTeX's quote, quotation and verse set theirs (lists whose margins are \leftmargin
+ *  of 2.5em): narrower than the line by `left` and `right` em of the text around, and `left` in from its left edge. */
+class IndentAtom : public Atom {
+private:
+  sptr<Atom> _body;
+  float _left, _right;
+
+public:
+  IndentAtom(const sptr<Atom>& body, float left, float right) : _body(body), _left(left), _right(right) {}
+
+  sptr<Box> createBox(Env& env) override;
+};
+
 /** What a tcolorbox looks like: the keys of the package that are drawn, with its defaults (tcolorbox.sty, `size=normal`).
  *  Lengths are in em of the text around, a millimetre being 0.2845em as at LaTeX's 10pt, so that a grob's size scales the
  *  box with its text. A transparent `backTitle` is a title on the colour of the frame. */

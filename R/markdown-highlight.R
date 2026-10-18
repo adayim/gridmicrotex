@@ -649,11 +649,7 @@
 
 # --- one code line -> TeX --------------------------------------------
 
-# Split a line into the runs that will become \text{} groups: one per
-# stretch of the same token class, plus one per space wherever spaces
-# run two or more deep. A code block used to lose its indentation
-# entirely because the whole line went into a single run and MicroTeX
-# collapses a run of spaces inside one \text{}.
+# Split a line into the runs of one token class.
 #
 # Kept apart from the TeX building so the invariant that matters can be
 # asserted directly -- paste0(.hl_segments(line, cls)$text) == line --
@@ -663,41 +659,33 @@
 .hl_segments <- function(line, cls) {
   n <- nchar(line)
   if (!n) return(data.frame(text = character(0), class = character(0),
-                            space = logical(0), stringsAsFactors = FALSE))
-  ch <- substring(line, seq_len(n), seq_len(n))
+                            stringsAsFactors = FALSE))
   if (length(cls) != n) cls <- rep(NA_character_, n)
-  sp <- ch == " "
   key <- ifelse(is.na(cls), "", cls)
-
-  # Only a *run* of two or more spaces collapses inside one \text{}; a
-  # lone space is kept (\text{a }\text{b} and \text{a b} both measure
-  # 21bp at 12pt). Splitting only where it is needed matters: MicroTeX
-  # emits one draw record per run, so splitting at every space would
-  # multiply the records in a code block sixfold and undo the file-size
-  # win of drawing text a line at a time.
-  multi <- if (n == 1L) FALSE else sp & (c(FALSE, sp[-n]) | c(sp[-1], FALSE))
-  brk <- if (n == 1L) TRUE else
-    c(TRUE, multi[-1] | multi[-n] | key[-1] != key[-n])
-  grp <- cumsum(brk)
-  ends <- c(which(diff(grp) != 0L), n)
-  starts <- c(1L, utils::head(ends, -1L) + 1L)
-
-  data.frame(text = substring(line, starts, ends),
-             class = cls[starts], space = sp[starts],
+  starts <- which(c(TRUE, key[-1L] != key[-n]))
+  ends <- c(starts[-1L] - 1L, n)
+  data.frame(text = substring(line, starts, ends), class = cls[starts],
              stringsAsFactors = FALSE)
 }
 
+# One code line, for the body of a `Verbatim[commandchars=\\\{\}]`: the
+# engine sets the text as typed, spaces and all, and reads only the
+# commands in it, so a backslash and the braces are the text to escape and
+# a token's colour is a \textcolor around it.
 .hl_code_tex <- function(line, cls, colour) {
-  # An empty source line still occupies a row.
-  if (!nchar(line)) return("\\texttt{\\text{ }}")
+  if (!nzchar(line)) return("")
   seg <- .hl_segments(line, cls)
-  out <- paste0("\\text{", .md_escape_tex(seg$text), "}")
+  # Backslashes are parked while the braces are escaped: \textbackslash{}
+  # has braces of its own.
+  out <- gsub("\\", .MD_ESC_BS, seg$text, fixed = TRUE)
+  out <- gsub("([{}])", "\\\\\\1", out)
+  out <- gsub(.MD_ESC_BS, "\\textbackslash{}", out, fixed = TRUE)
   for (i in seq_len(nrow(seg))) {
-    if (seg$space[i] || is.na(seg$class[i])) next
+    if (is.na(seg$class[i])) next
     col <- colour(seg$class[i])
     if (!is.null(col)) out[i] <- paste0("\\textcolor{", col, "}{", out[i], "}")
   }
-  paste0("\\texttt{", paste0(out, collapse = ""), "}")
+  paste0(out, collapse = "")
 }
 
 # --- user-facing -----------------------------------------------------

@@ -1130,6 +1130,8 @@ private:
       return node(id).mode == Mode::math ? sptrOf<FontStyleAtom>(FontStyle::rm, false, caps) : caps;
     }
     if (name == "gmtheorem") return fragment(theoremHead(id), false);
+    // A run of the code of an alltt, as typed (the parser wrote its characters in hex).
+    if (name == "gmlit") return typewriter(unhex(rawOf(child(id, 0))), false);
     if (name == "verb" || name == "lstinline" || name == "mintinline" || name == "Verb") {
       // The code is the last argument; listings', minted's and fancyvrb's options and language are not drawn.
       const NodeId text = child(id, count(id) - 1);
@@ -1314,42 +1316,57 @@ private:
     return head + (italic ? "." : "\\textbf{.}");
   }
 
-  /** `line` with its tabs as spaces: to the next multiple of 8 columns, as listings and fancyvrb set them (`stops`), or one
-   *  space each, as LaTeX's own `verbatim` does. */
-  static std::string withoutTabs(const std::string& line, bool stops) {
-    std::string out;
-    std::size_t column = 0;
-    for (const char c : line) {
-      if (c == '\t') {
-        const std::size_t n = stops ? 8 - column % 8 : 1;
-        out.append(n, ' ');
-        column += n;
-      } else {
-        out += c;
-        if ((static_cast<unsigned char>(c) & 0xC0) != 0x80) column++;   // a UTF-8 continuation byte is no column
-      }
-    }
-    return out;
-  }
-
   /** The text of a verbatim environment: a line to a row, flush left, a baselineskip apart (a blank line is a row too, as
    *  in LaTeX: without the glue between rows they stood as close as their glyphs, and blank lines were no taller than
-   *  nothing). */
-  sptr<Atom> verbatimBlock(const Node& x) {
+   *  nothing). The parser has set its tabs as spaces. An `alltt`, or a `Verbatim` with `commandchars`, has its commands
+   *  read: the parser put them back as a `\gmcodeline` for each line, whose text between commands is `\gmlit`. */
+  sptr<Atom> verbatimBlock(NodeId id) {
+    const Node& x = node(id);
     auto lines = sptrOf<VRowAtom>();
     lines->_halign = Alignment::left;
     lines->setAddInterline(true);
-    const bool stops = x.text != "verbatim" && x.text != "verbatim*";
+    if (x.aux == 1 && count(id) > 0) {
+      const NodeId body = child(id, count(id) - 1);
+      for (std::uint32_t i = 0; i < count(body); i++) {
+        const NodeId item = child(body, i);
+        if (node(item).kind != NodeKind::command || node(item).text != "gmcodeline" || count(item) == 0) continue;
+        const NodeId arg = child(item, 0);
+        Formula g;
+        if (count(arg) > 0) lowerList(child(arg, 0), g, 0);
+        // In the typewriter face, nested as \texttt is: added to the roman the line is in.
+        lines->append(sptrOf<FontStyleAtom>(FontStyle::tt, false, g._root != nullptr ? g._root : literalText(" "), true));
+      }
+      return lines;
+    }
     std::size_t from = 0;
     while (true) {
       const std::size_t to = x.raw.find('\n', from);
-      const std::string line = withoutTabs(
-        x.raw.substr(from, to == std::string::npos ? std::string::npos : to - from), stops);
+      const std::string line = x.raw.substr(from, to == std::string::npos ? std::string::npos : to - from);
       lines->append(typewriter(line.empty() ? " " : line, x.text.back() == '*'));
       if (to == std::string::npos) break;
       from = to + 1;
     }
     return lines;
+  }
+
+  /** The text `hex` stands for, two digits a byte (`\gmlit`); what is not a digit is left out. */
+  static std::string unhex(const std::string& hex) {
+    std::string out;
+    int high = -1;
+    for (const char c : hex) {
+      int v = -1;
+      if (c >= '0' && c <= '9') v = c - '0';
+      if (c >= 'a' && c <= 'f') v = c - 'a' + 10;
+      if (c >= 'A' && c <= 'F') v = c - 'A' + 10;
+      if (v < 0) continue;
+      if (high < 0) {
+        high = v;
+      } else {
+        out += static_cast<char>(high * 16 + v);
+        high = -1;
+      }
+    }
+    return out;
   }
 
   /** \url and \href. A grob has no links, so only their look, LaTeX's
@@ -2455,7 +2472,8 @@ private:
     const Node& x = node(id);
     return x.kind == NodeKind::environment &&
            (x.text == "itemize" || x.text == "enumerate" || x.text == "description" || x.text == "tablenotes" ||
-            isVerbatimEnvironment(x.text) || x.text == "tcolorbox" || x.text == "mdframed" || x.text == "multicols");
+            isVerbatimEnvironment(x.text) || x.text == "tcolorbox" || x.text == "mdframed" || x.text == "multicols" ||
+            x.text == "quote" || x.text == "quotation" || x.text == "verse");
   }
 
   /** A space a break takes with it: not `~`, which TeX never drops. */
@@ -2737,7 +2755,10 @@ private:
         if (x.text == "multicols") {
           blockLine(l, id, false, "1.2em", child(id, 1) != kNoNode && !trimmed(rawOf(child(id, 1))).empty() ? "0em" : nullptr);
         } else {
-          blockLine(l, id, false, x.text == "tcolorbox" || x.text == "mdframed" ? "0.6em" : "0.8em");
+          // A quote is set off by \topsep and, after a blank line, \partopsep: 10pt (pdflatex: 22 between the baselines
+          // either side of it against 12 in a paragraph).
+          const bool quoted = x.text == "quote" || x.text == "quotation" || x.text == "verse";
+          blockLine(l, id, false, x.text == "tcolorbox" || x.text == "mdframed" ? "0.6em" : quoted ? "1em" : "0.8em");
         }
       } else if (l.document && x.kind == NodeKind::command && !x.flag && x.text == "caption") {
         // On a line of its own, unindented; the parser ended its line.
@@ -2847,15 +2868,25 @@ private:
    *  LaTeX's minipage sets \parindent to 0. It starts between paragraphs,
    *  as a document does, so the line end after `\begin{minipage}{..}` is
    *  nothing, and its last paragraph drops the spaces that end it. */
-  sptr<Atom> subDocument(NodeId list) {
+  sptr<Atom> subDocument(NodeId list, bool indents = false) {
     Formula f;
     Label l(f);
     l.document = true;
-    l.indents = false;
+    l.indents = indents;
+    l.indentNext = indents;
     l.afterBreak = true;
     feedLines(l, list);
     finishLabel(l, f);
     return f._root;
+  }
+
+  /** \begin{quote}, quotation and verse: article's lists with no label, whose margins are \leftmargin (2.5em at the first
+   *  level) on both sides. A quotation indents the first line of each paragraph by \listparindent, 1.5em; a verse sets
+   *  its lines at `\\`, and (for want of a hanging indent) its wrapped lines are not set in. */
+  sptr<Atom> quotation(NodeId id) {
+    sptr<Atom> body = subDocument(child(id, count(id) - 1), node(id).text == "quotation");
+    if (body == nullptr) return nullptr;
+    return sptrOf<IndentAtom>(body, 2.5f, 2.5f);
   }
 
   /** \begin{minipage}[position][height][inner position]{width}: its
@@ -3029,7 +3060,10 @@ private:
     if (x.text == "minipage") return minipage(id);
     if (x.text == "multicols") return multicols(id);
     if (x.text == "tcolorbox" || x.text == "mdframed") return tcolorbox(id);
-    if (isVerbatimEnvironment(x.text)) return verbatimBlock(x);
+    if (x.text == "quote" || x.text == "quotation" || x.text == "verse") return quotation(id);
+    // The comment package's: what is between its markers is not read.
+    if (x.text == "comment") return nullptr;
+    if (isVerbatimEnvironment(x.text)) return verbatimBlock(id);
     const EnvSpec* spec = findEnvironment(x.text);
     const std::string macName = (spec != nullptr ? x.text : std::string("matrix")) + "@@env";
     MacroInfo* mac = MacroInfo::get(macName);

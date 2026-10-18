@@ -308,6 +308,25 @@ sptr<Box> MinipageAtom::createBox(Env& env) {
   return sptrOf<HBox>(vb, width, Alignment::left);
 }
 
+sptr<Box> IndentAtom::createBox(Env& env) {
+  if (_body == nullptr) return sptrOf<StrutBox>(0.f, 0.f, 0.f, 0.f);
+  const float em = env.em();
+  const float measure = env.textWidth();
+  const float left = _left * em;
+  const float width = measure == POS_INF ? POS_INF : std::max(measure - left - _right * em, em);
+  sptr<Box> box;
+  {
+    // The breaker needs word-level runs, as in a minipage.
+    const MergeTextGuard guard(true);
+    box = env.withTextWidth(width, [&](Env& e) { return _body->createBox(e); });
+  }
+  if (width != POS_INF) box = BoxSplitter::split(box, width, env.baselineSkip()).second;
+  auto row = sptrOf<HBox>();
+  row->add(sptrOf<StrutBox>(left, 0.f, 0.f, 0.f));
+  row->add(box);
+  return row;
+}
+
 namespace {
 
 /** The frame, the fills and the two boxes of a tcolorbox, drawn from its top-left corner. */

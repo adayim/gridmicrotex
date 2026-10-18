@@ -3,6 +3,7 @@
 - The bundled MicroTeX is now the [adayim fork](https://github.com/adayim/MicroTeX), version 0.1.0 (forked from [NanoMichael/MicroTeX](https://github.com/NanoMichael/MicroTeX)), and LaTeX coverage is much broader.
 - New `load_sty()` makes a `.sty` file of your own a package, and `latex_options(packages = )` loads packages before every label.
 - Lines, displays and the rows of matrices, `align` and kin are now spaced as LaTeX spaces them, so documents and multi-line labels are taller by up to 10%; `\vspace` and `\bigskip` between lines add to the line spacing, as in LaTeX; text tables take LaTeX's row height and booktabs' rule spacing and are padded by `\tabcolsep`, as `\fbox` and `\colorbox` are by `\fboxsep`.
+- A markdown code block is now one block of text, so it draws several times faster (300 lines: 0.64 s to 0.11 s), and a brace or backslash in code stands in the same column as the characters around it. The code that knitr and pandoc write is drawn as typed with its colours (`alltt`, `Verbatim[commandchars=]`, `tabsize=`, `\DefineVerbatimEnvironment`); `quote`, `quotation`, `verse` and the `comment` environment work.
 - Bug fix: a colour such as `red!50` was drawn black, so `\rowcolor{gray!10}` painted a row black; an undefined colour now warns. Also fixed: `tablenotes`, `\makecell[tl]` and siunitx `S` columns failing, macros and dimensions read wrongly in a few cases, and a crash on `\[\tag{1}\]` at a width.
 
 # gridmicrotex 0.2.0

@@ -384,10 +384,10 @@ test_that("emphasis inherits into quotes, list items and divs", {
 })
 
 test_that("emphasis applies to pre and to tables, as CSS says it should", {
-  # A bold `pre` is bold monospace (128 + 2 + 1).
+  # A bold `pre` is bold monospace (128 + 2).
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 131)
-  expect_equal(styles_of("```\ncode\n```"), 129)
+  expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 130)
+  expect_equal(styles_of("```\ncode\n```"), 128)
 
   # font-weight inherits from `table` into the cells.
   s <- styles_of("| a |\n|---|\n| 1 |", "table { font-weight: bold }")
