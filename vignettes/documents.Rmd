@@ -18,31 +18,50 @@ library(gridmicrotex)
 library(grid)
 ```
 
-With `input_mode = "document"`, `grid.latex()` sets the body of a LaTeX
-document: paragraphs, headings, displayed equations, lists and tables.
-Use it for a methods section, an appendix or a long caption, with no
-LaTeX installation.
+With `input_mode = "document"`, `grid.latex()` sets a LaTeX document:
+paragraphs, headings, displayed equations, lists, tables, theorems and the
+packages it loads. Use it for a methods section, an appendix or a long
+caption, with no LaTeX installation. For a complicated document, see the end.
 
-## A document body
+## A document
 
-This is ordinary LaTeX, as it would appear between `\begin{document}` and
-`\end{document}`:
+This is a whole file, as it would be given to LaTeX: a preamble that loads
+packages and makes definitions, then the body. The preamble is read for what
+it defines and draws nothing; `\usepackage{physics}` gives the derivatives,
+vectors and matrices used in the body.
 
-```{r body}
-body <- r"(\section{Methods}
+```{r doc}
+doc <- r"(\documentclass{article}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{physics}
+\usepackage{tcolorbox, multicol}
+\newtheorem{thm}{Theorem}
+\newcommand{\RR}{\mathbb{R}}
+
+\begin{document}
+\section{Methods}
 We fit a straight line to $n$ observations $(x_i, y_i)$ by least
-squares, which chooses the intercept and slope that minimise the sum
+squares,\footnote{Ordinary least squares: every observation has the
+same weight.} which chooses the intercept and slope that minimise the sum
 of squared residuals
 \[ S(\beta_0, \beta_1) = \sum_{i=1}^{n} (y_i - \beta_0 - \beta_1 x_i)^2. \]
 Setting both partial derivatives to zero gives the estimates
 \begin{align}
-  \hat\beta_1 &= \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \label{slope} \\
-  \hat\beta_0 &= \bar y - \hat\beta_1 \bar x. \label{intercept}
+  \pdv{S}{\beta_1} = 0 &\implies \hat\beta_1 = \frac{\sum_i (x_i - \bar x)(y_i - \bar y)}{\sum_i (x_i - \bar x)^2}, \label{slope} \\
+  \pdv{S}{\beta_0} = 0 &\implies \hat\beta_0 = \bar y - \hat\beta_1 \bar x. \label{intercept}
 \end{align}
-
 The fitted values are $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$, and
 the residuals $e_i = y_i - \hat y_i$ are what is left over. Together
 \eqref{slope} and \eqref{intercept} make them sum to zero.
+
+\subsection{Matrix form}
+With the design matrix $X$ and the responses $\vb{y} \in \RR^n$, where
+\[ X = \mqty(1 & x_1 \\ \vdots & \vdots \\ 1 & x_n), \]
+the same estimates are
+\begin{equation}
+  \hat{\vb*{\beta}} = (X^\top X)^{-1} X^\top \vb{y}
+  = \arg\min_{\vb*{\beta}} \norm{\vb{y} - X\vb*{\beta}}^2 .
+\end{equation}
 
 \subsection{Assumptions}
 The errors are taken to be
@@ -51,47 +70,27 @@ The errors are taken to be
   \item of constant variance $\sigma^2$, and
   \item normally distributed --- which matters only for the tests.
 \end{itemize}
-)"
-```
 
-`max_width` is the text width in big points (1/72 inch):
+\section{Results}
+Table~\ref{coef} gives the estimates.
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+ & Estimate & Std.\ error \\
+\midrule
+Intercept $\hat\beta_0$ & 1.84 & 0.21 \\
+Slope $\hat\beta_1$ & 0.52 & 0.04 \\
+\bottomrule
+\end{tabular}
+\caption{Fitted coefficients.}\label{coef}
+\end{table}
 
-```{r draw-body, fig.width = 6, fig.height = 5.2, out.width = "90%"}
-grid.newpage()
-grid.latex(body, input_mode = "document", max_width = 5.6 * 72,
-           x = 0.03, y = 0.97, hjust = 0, vjust = 1,
-           gp = gpar(fontsize = 11))
-```
+\begin{tcolorbox}[title=In practice, colback=yellow!10, colframe=orange!70!black]
+Plot the residuals before trusting the standard errors: they are
+valid only if the assumptions above hold.
+\end{tcolorbox}
 
-## How the body is read
-
-As in LaTeX:
-
-- **Paragraphs.** A blank line or `\par` starts a new, indented
-  paragraph. `\noindent` suppresses the indent.
-- **Headings.** `\section`, `\subsection` and `\subsubsection` are
-  numbered; starred forms are not.
-- **Math.** `$...$` and `\(...\)` are inline. `\[...\]`, `$$...$$`,
-  `equation`, `align`, `gather` and `multline` are centred on their own
-  line. The last four are numbered at the right margin, a row each
-  (`multline`: one), unless starred or marked `\notag`; `\tag{x}` sets a
-  number, and `\label` with `\ref` or `\eqref` refer to it.
-- **Lists and tables.** `itemize`, `enumerate`, `description` and
-  `tabular` hold text, with math between `$...$`.
-- **Theorems.** `\newtheorem` declares them, with the shared and
-  `[section]` counters and a starred, unnumbered form; `proof` ends with
-  a box.
-- **Text.** `--` and `---` are dashes, quotes are curly, and `~` is a
-  non-breaking space. `\centering` and `center` centre lines.
-  `\textsc` sets small capitals, and `\verb` and `verbatim` set code
-  as it is typed.
-
-Problems produce one warning, listing each with its line and column.
-
-## A theorem and its proof
-
-```{r theorem, fig.width = 6, fig.height = 1.9, out.width = "90%"}
-thm <- r"(\newtheorem{thm}{Theorem}
 \begin{thm}[Gauss--Markov]\label{gm}
 With uncorrelated errors of equal variance, least squares has the least
 variance among the linear unbiased estimators.
@@ -100,12 +99,70 @@ variance among the linear unbiased estimators.
 Write any other such estimator as least squares plus a correction, and
 show that the correction can only add variance.
 \end{proof}
-Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.)"
+Theorem~\ref{gm} is why \verb|lm(y ~ x)| is the default.
+
+\section{Notation}
+\begin{multicols}{2}
+\begin{itemize}
+  \item $x_i$, the predictor
+  \item $y_i$, the response
+  \item $\beta_0, \beta_1$, the intercept and slope
+  \item $\hat y_i$, the fitted value
+  \item $e_i$, the residual
+  \item $\sigma^2$, the error variance
+\end{itemize}
+\end{multicols}
+\end{document})"
+```
+
+`max_width` is the text width in big points (1/72 inch):
+
+```{r draw-doc, fig.width = 6, fig.height = 13.4, out.width = "90%"}
 grid.newpage()
-grid.latex(thm, input_mode = "document", max_width = 5.6 * 72,
-           x = 0.03, y = 0.97, hjust = 0, vjust = 1,
+grid.latex(doc, input_mode = "document", max_width = 5.6 * 72,
+           x = 0.03, y = 0.985, hjust = 0, vjust = 1,
            gp = gpar(fontsize = 11))
 ```
+
+## How a document is read
+
+As in LaTeX:
+
+- **Preamble.** Everything before `\begin{document}` is read for what it
+  defines, such as `\usepackage`, `\newcommand`, `\newtheorem` and
+  `\definecolor`, and draws nothing. What follows `\end{document}` is not
+  read. A document without a preamble is read from its first line.
+- **Paragraphs.** A blank line or `\par` starts a new, indented
+  paragraph. `\noindent` suppresses the indent.
+- **Headings.** `\section`, `\subsection` and `\subsubsection` are
+  numbered; starred forms are not.
+- **Math.** `$...$` and `\(...\)` are inline. `\[...\]`, `$$...$$`,
+  `equation`, `align`, `gather` and `multline` are centred on their own
+  line. The last four are numbered at the right margin, a row each
+  (`multline`: one), unless starred or marked `\notag`; `\tag{x}` sets a
+  number, and `\label` with `\ref`, `\eqref`, `\cref` or `\autoref` refer to it
+  (`\cref` names what it refers to: "eq. (1)", "fig. 2", "section 3"). `subequations`
+  numbers its equations 1a, 1b, ..., and `numcases{left side}` is a
+  brace of cases with a number each.
+- **Lists and tables.** `itemize`, `enumerate`, `description` and
+  `tabular` hold text, with math between `$...$`.
+- **Theorems.** `\newtheorem` declares them, with the shared and
+  `[section]` counters and a starred, unnumbered form; `proof` ends with
+  a box.
+- **Footnotes and floats.** `\footnote` leaves a raised number in the text
+  and sets the note after the body, with a rule above it. A `table` or
+  `figure` is set where it is written, its `\caption` numbered "Table 1:"
+  or "Figure 1:", and the `subfigure` and `subtable` of subcaption are
+  lettered "(a)".
+- **Boxes and columns.** `tcolorbox` draws a framed box, with `title` and
+  the colour keys, and `multicols{n}` sets its body in `n` balanced
+  columns.
+- **Text.** `--` and `---` are dashes, quotes are curly, and `~` is a
+  non-breaking space. `\centering` and `center` centre lines.
+  `\textsc` sets small capitals, and `\verb` and `verbatim` set code
+  as it is typed.
+
+Problems produce one warning, listing each with its line and column.
 
 ## Justified text
 
@@ -130,12 +187,12 @@ Use `cairo_pdf()` so the text can be selected. `latex_dims()` gives the
 height to size the page:
 
 ```{r pdf, eval = FALSE}
-d <- latex_dims(body, input_mode = "document", max_width = 5.5 * 72,
+d <- latex_dims(doc, input_mode = "document", max_width = 5.5 * 72,
                 gp = gpar(fontsize = 11))
 height <- as.numeric(d$height) / 72 + 1   # inches, with margins
 
 cairo_pdf("methods.pdf", width = 6.5, height = height)
-grid.latex(body, input_mode = "document", max_width = 5.5 * 72,
+grid.latex(doc, input_mode = "document", max_width = 5.5 * 72,
            x = unit(0.5, "in"), y = unit(1, "npc") - unit(0.5, "in"),
            hjust = 0, vjust = 1, gp = gpar(fontsize = 11))
 dev.off()
@@ -144,10 +201,58 @@ dev.off()
 A document is drawn as one piece and does not flow onto a second page.
 Split a long one at paragraph breaks and draw each part on its own page.
 
+## Packages and commands of your own
+
+`\usepackage` does not read the packages of a TeX installation. The commands
+of the usual ones, such as amsmath, mathtools, braket and physics, are part
+of gridmicrotex, in small files written for it, and `\usepackage{physics}`
+loads one of them. Most are already loaded, so `\usepackage{amsmath}` changes
+nothing and can stay in a pasted preamble. `physics` has to be asked for, as in
+the example above, because it changes `\qty`, `\bra`, `\ket` and `\div`. A
+package that gridmicrotex does not have is ignored, without a warning.
+
+To add commands of your own, put them in a `.sty` file, which `load_sty()`
+makes a package. The bundled files, in
+`system.file("tex", package = "gridmicrotex")`, are examples of how to write
+one:
+
+```{r sty}
+sty <- tempfile(fileext = ".sty")
+writeLines(c("\\newcommand{\\RR}{\\mathbb{R}}",
+             "\\NewDocumentCommand{\\norm}{m}{\\left\\lVert #1\\right\\rVert}"), sty)
+load_sty(sty, name = "mymath")
+```
+
+```{r mine, fig.width = 6, fig.height = 0.5, out.width = "70%"}
+grid.newpage()
+grid.latex(r"(\usepackage{mymath} $f\colon \RR^n \to \RR, \quad \norm{x} \ge 0$)",
+           x = 0.5, y = 0.5, gp = gpar(fontsize = 13))
+```
+
+`latex_options(packages = "mymath")` loads it before every label. A file
+holds definitions, with `\newcommand`, `\def`, `\newenvironment`,
+`\NewDocumentCommand`, `\newif` and the `\if` tests; registers, boxes and
+`\catcode` are not supported, so a package from CTAN usually cannot be copied
+in as it is.
+
 ## Limitations
 
-- `\pageref` draws `??` and `\cite` draws `[?]`, with a warning, and so
-  does a `\ref` to a label that is not there.
-- A footnote's text is set where it is written.
+- A package from a TeX installation is not read.
+- `\pageref` draws `??`, with a warning. `\cite` draws the number of its
+  `\bibitem`, so a `thebibliography` in the same text is cited; a key none
+  names draws `[?]`, with a warning, and so does a `\ref` to a label that is
+  not there.
+- A footnote in a label, not a document, is set where it is written, with a
+  warning.
 - Tables and figures are placed where they are written.
-- The preamble and `\maketitle` draw nothing.
+- `lstlisting`, `minted` and `Verbatim` (and `\lstinline`, `\mintinline`) set
+  their code as typed, in the typewriter face, with none of their colours, line
+  numbers or frames; markdown highlights code if that is what you want.
+- Algorithms (`algorithm`, `algorithmic`) are not drawn.
+- `\maketitle` sets the title, authors and date, centred and on no page of its own;
+  `\date` is today's date when none is given, as in LaTeX.
+
+For a complicated document, with packages from a TeX installation, pages,
+floats that move, or all of TikZ, use the
+[xdvir](https://CRAN.R-project.org/package=xdvir) package, which typesets
+with LaTeX itself and draws the result in grid.

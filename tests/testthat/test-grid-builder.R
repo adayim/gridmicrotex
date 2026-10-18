@@ -88,3 +88,59 @@ test_that("build_latex_children processes all layout types", {
   na_row$text <- NA_character_
   expect_length(gridmicrotex:::build_latex_children(na_row, 100, render_mode = "path"), 0)
 })
+
+# ---- build_stroke_grob ----
+
+test_that("build_stroke_grob draws each subpath as a polyline with the path's width, cap and join", {
+  expect_null(gridmicrotex:::build_stroke_grob(
+    list(cmd = character(0), coords = matrix(numeric(0), nrow = 0, ncol = 6)), "#000000", 1, 1, 100))
+
+  pd <- list(
+    cmd    = c("M", "L", "M", "L", "L"),
+    coords = matrix(c(
+      0, 10, 0, 0, 0, 0,   20, 10, 0, 0, 0, 0,
+      0, 30, 0, 0, 0, 0,   10, 40, 0, 0, 0, 0,   20, 30, 0, 0, 0, 0
+    ), nrow = 5, ncol = 6, byrow = TRUE),
+    cap = 1L, join = 2L
+  )
+  g <- gridmicrotex:::build_stroke_grob(pd, "#FF0000", 2.5, 3, 50)
+  expect_s3_class(g, "polyline")
+  expect_equal(max(g$id), 2)
+  expect_equal(as.numeric(g$y)[c(1, 3)], c(40, 20))             # y is flipped to the grid's
+  expect_equal(g$gp$lwd, 2.5)
+  expect_equal(c(g$gp$lineend, g$gp$linejoin), c("round", "round"))
+  expect_true(is.na(g$gp$fill))
+
+  # A closed path is a polygon of its corners, so the first one is joined to the last as every other is (a polyline
+  # that ended where it began would cap the first corner: the star's top spike lost its miter); a curve is flattened
+  closed <- gridmicrotex:::build_stroke_grob(
+    list(cmd = c("M", "L", "L", "Z"),
+         coords = matrix(c(0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                         nrow = 4, byrow = TRUE)),
+    "#000000", 1, 1, 20)
+  expect_s3_class(closed, "polygon")
+  expect_equal(length(closed$x), 3)
+  expect_true(is.na(closed$gp$fill))
+  # Open and closed subpaths of one record are both drawn
+  both <- gridmicrotex:::build_stroke_grob(
+    list(cmd = c("M", "L", "L", "Z", "M", "L"),
+         coords = matrix(c(0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                           0, 20, 0, 0, 0, 0, 5, 20, 0, 0, 0, 0), nrow = 6, byrow = TRUE)),
+    "#000000", 1, 1, 30)
+  expect_equal(unname(vapply(both$children, function(k) class(k)[1], "")), c("polyline", "polygon"))
+  curve <- gridmicrotex:::build_stroke_grob(
+    list(cmd = c("M", "C"), coords = matrix(c(0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 3, 0), nrow = 2, byrow = TRUE)),
+    "#000000", 1, 1, 20)
+  expect_gt(length(curve$x), 10)
+})
+
+test_that("a tikzpicture is drawn as polylines of its stroked paths and shapes of its fills", {
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  kinds <- function(tex) {
+    g <- latex_grob(tex, input_mode = "document", render_mode = "path")
+    vapply(suppressMessages(grid::makeContent(g))$children, function(k) class(k)[1], "")
+  }
+  expect_equal(unname(kinds(r"(\begin{tikzpicture}\draw (0,0) -- (1,1);\end{tikzpicture})")), "polyline")
+  filled <- kinds(r"(\begin{tikzpicture}\filldraw[fill=red] (0,0) rectangle (1,1);\end{tikzpicture})")
+  expect_setequal(unname(filled), c("polygon", "pathgrob"))
+})

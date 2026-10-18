@@ -104,9 +104,21 @@
                             inherited = cur_ctx()))
       } else if (identical(tg$kind, "close") && length(open)) {
         close_div()
+      } else if (identical(tg$kind, "other")) {
+        # Any other raw block is read as HTML, and what it says is laid out
+        # as the markdown it is written as (R/markdown-html.R), its tags
+        # never typeset. A comment, a script and a stray </div> say
+        # nothing: they are dropped.
+        md2 <- .md_html_block_md(xml2::xml_text(nd))
+        if (nzchar(md2)) {
+          inner <- .md_parse_doc(md2, spans)
+          for (blk in .hb_nested(.md_blocks(xml2::xml_children(inner$doc),
+                                            inner$spans, base, style,
+                                            cur_ctx()))) {
+            emit(blk)
+          }
+        }
       }
-      # Any other raw block, and a stray </div>, is dropped rather than
-      # passed through: MicroTeX would typeset the markup.
       next
     }
 
@@ -186,19 +198,13 @@
   min(max(lvl, 1L), 6L)
 }
 
-# Code blocks are literal. MicroTeX has no verbatim environment, so each
-# source line becomes its own \texttt{} block and the stacker puts them
-# on separate rows.
+# Code blocks are literal: a fence's lines are set by the engine as one
+# Verbatim block (see .md_layout()), its tokens coloured by the commands
+# in it.
 #
-# Indentation is *not* preserved by that split -- MicroTeX collapses a
-# run of spaces inside one \text{} run, so the leading whitespace of a
-# line used to measure one space wide however deep it was. See
-# .hl_segments(), which breaks a line apart wherever spaces run two or
-# more deep.
-#
-# Tabs are expanded here rather than at emit time, because the classifier
-# works in character positions and would be thrown off by a later
-# substitution that changes the length of a line.
+# Tabs are expanded here rather than by the engine, because the
+# classifier works in character positions and would be thrown off by a
+# later substitution that changes the length of a line.
 .md_code_lines <- function(nd, spans = NULL) {
   # Math is masked out of the *whole* document before CommonMark parses
   # it, which cannot know about fences -- so a `$...$` written inside a
@@ -353,10 +359,10 @@
   spec <- paste0(prefix, "X")
   if (fixed && avail > 0 && ncol > 0) {
     # Each column costs its width plus the inter-column separation, which
-    # defaults to 1em. Subtract that share or the table overshoots the
-    # measure it was asked to fit into.
+    # defaults to 2 \tabcolsep, 1.2em. Subtract that share or the table
+    # overshoots the measure it was asked to fit into.
     gap_est <- .md_css_length(r_td[["padding-left"]], base, base,
-                              horizontal = TRUE) %||% base
+                              horizontal = TRUE) %||% (1.2 * base)
     per <- max(avail / ncol - gap_est, base)
     spec <- paste0(prefix, sprintf("p{%.2fpt}", per))
   }
@@ -729,24 +735,21 @@
       y <- y + m$h
 
     } else if (identical(blk$type, "code_block")) {
-      # Code must render in a monospace font. \texttt sets MicroTeX's
-      # style, but the text is drawn with the resolved system font, which
-      # is the sans body font unless told otherwise -- and in a
-      # proportional font "<-" comes out misshapen. The default style says
-      # so; a stylesheet may say otherwise.
-      #
-      # Lines advance by a fixed leading rather than by their measured
-      # height: a line with no descender measures shorter, and stacking
-      # on that would let the next line's ascenders collide with it.
-      code_lh <- (gp_blk$lineheight %||% 1.15) * sty$size
+      # The block is one Verbatim: the engine sets its lines a baselineskip
+      # apart (the style's line-height, 1.15 unless it says otherwise),
+      # spaces and indentation as typed, in the monospace font, and acts on
+      # the commands in them (commandchars): a token's \textcolor, and the
+      # block's emphasis around each line. It was a latex_grob a line,
+      # which took 13 times as long to draw 300 lines.
+      gp_code <- gp_blk
+      gp_code$lineheight <- gp_blk$lineheight %||% 1.15
       # NULL when the fence names no language, or one we have no grammar
-      # for; every line then renders plain, exactly as it used to.
+      # for; every line then renders plain.
       cls <- .hl_classes(blk$lines, blk$lang)
       if (is.null(cls)) cls <- vector("list", length(blk$lines))
       # A token is wrapped in \textcolor only when its class resolves to
       # a colour *different* from the block's own. An unstyled class
-      # therefore emits no markup at all, which is what keeps an
-      # unhighlighted block byte-identical to the old output.
+      # therefore emits no markup at all.
       base_col <- .md_resolve_color(res$color)
       seen <- list()
       colour <- function(k) {
@@ -759,13 +762,20 @@
         seen[[k]] <<- list(v = v)
         v
       }
-      for (li in seq_along(blk$lines)) {
-        tex <- wrap(.hl_code_tex(blk$lines[[li]], cls[[li]], colour))
-        m <- .md_measure(tex, 0, gp_blk)
-        add(.md_item(.md_run_grob(tex, indent_blk, y, 0, gp_blk),
-                     indent_blk, y, m$w, code_lh, align))
-        y <- y + code_lh
-      }
+      rows <- vapply(seq_along(blk$lines), function(li) {
+        row <- .hl_code_tex(blk$lines[[li]], cls[[li]], colour)
+        if (nzchar(row)) wrap(row) else row
+      }, character(1))
+      tex <- paste0("\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n",
+                    paste(rows, collapse = "\n"), "\n\\end{Verbatim}")
+      m <- .md_measure(tex, 0, gp_code)
+      # The block is as tall as its lines are, as CSS has it: a line box
+      # is the line-height, whatever the glyphs in it reach to (a block of
+      # blank lines, or of x's, is not shorter for it).
+      h <- max(m$h, length(rows) * gp_code$lineheight * sty$size)
+      add(.md_item(.md_run_grob(tex, indent_blk, y, 0, gp_code),
+                   indent_blk, y, m$w, h, align))
+      y <- y + h
 
     } else if (identical(blk$type, "table")) {
       # Content-sized already, from .md_blocks(). Only a fixed layout
@@ -915,9 +925,11 @@
         # Hanging indent: the marker sits at the current indent and the
         # item body is measured at the reduced width, so continuation
         # lines line up under the text rather than under the marker.
-        # This is the reason lists are stacked here instead of being
-        # handed to MicroTeX's itemize -- max_width does not reach into
-        # its cells.
+        # Lists are stacked here rather than handed to the engine's
+        # itemize because an item holds blocks with CSS boxes of their own
+        # (a code block's fill, a quote's bar), and the marker, its gap
+        # and the space between items are CSS too (`bullet`, `marker-gap`,
+        # `li { margin-top }`).
         body_indent <- indent_blk + mm$w + marker_gap
         inner <- .md_layout(blk$items[[j]], width, gp, fontsize,
                             indent = body_indent, first = TRUE,

@@ -112,7 +112,8 @@ Rcpp::List parse_latex_cpp(std::string tex,
                            std::string input_mode = "math",
                            int eq_start = 0,
                            Rcpp::Nullable<Rcpp::CharacterVector> label_keys = R_NilValue,
-                           Rcpp::Nullable<Rcpp::CharacterVector> label_values = R_NilValue) {
+                           Rcpp::Nullable<Rcpp::CharacterVector> label_values = R_NilValue,
+                           Rcpp::Nullable<Rcpp::CharacterVector> packages = R_NilValue) {
 
     if (!MicroTeX::isInited()) {
         Rcpp::stop("MicroTeX is not initialized. Call microtex_init() first.");
@@ -156,6 +157,23 @@ Rcpp::List parse_latex_cpp(std::string tex,
             }
         }
         front::setStartNumbering(std::move(start));
+    }
+
+    // The packages latex_options(packages = ) starts this input from. Used
+    // once by the parse; one that fails before reading them must not leave
+    // them for the next.
+    struct PackagesGuard {
+        ~PackagesGuard() { front::setStartPackages({}); }
+    } packages_guard;
+    {
+        std::vector<std::string> start;
+        if (packages.isNotNull()) {
+            const Rcpp::CharacterVector names(packages);
+            for (R_xlen_t i = 0; i < names.size(); i++) {
+                start.push_back(Rcpp::as<std::string>(names[i]));
+            }
+        }
+        front::setStartPackages(std::move(start));
     }
 
     // Decode foreground color
@@ -350,8 +368,12 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 font_file_col[i] = NA_STRING;
                 path_list[i] = R_NilValue;
                 break;
-            case DrawRecord::PATH: {
-                type_col[i] = "path";
+            case DrawRecord::PATH:
+            case DrawRecord::STROKE_PATH: {
+                // A filled path is a glyph or a shape; a stroked one a line
+                // of its own width, left open where it was not closed.
+                const bool stroke = rec.type == DrawRecord::STROKE_PATH;
+                type_col[i] = stroke ? "stroke_path" : "path";
                 x_col[i] = NA_REAL;
                 y_col[i] = NA_REAL;
                 glyph_col[i] = rec.path_glyph_id >= 0 ? rec.path_glyph_id : NA_INTEGER;
@@ -361,7 +383,7 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 y2_col[i] = NA_REAL;
                 w_col[i] = NA_REAL;
                 h_col[i] = NA_REAL;
-                lwd_col[i] = NA_REAL;
+                lwd_col[i] = stroke ? rec.line_width : NA_REAL;
 
                 // Encode path segments
                 int nseg = static_cast<int>(rec.path_segments.size());
@@ -382,7 +404,9 @@ Rcpp::List parse_latex_cpp(std::string tex,
                 }
                 path_list[i] = Rcpp::List::create(
                     Named("cmd") = seg_cmd,
-                    Named("coords") = seg_coords
+                    Named("coords") = seg_coords,
+                    Named("cap") = rec.cap,
+                    Named("join") = rec.join
                 );
                 text_col[i] = NA_STRING;
                 font_style_col[i] = NA_INTEGER;

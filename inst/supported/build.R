@@ -23,7 +23,9 @@
   r"(\usepackage{amsmath,amssymb,amscd,mathtools,cancel,bm,mathrsfs,stmaryrd,textcomp,xcolor,mathdots,amsthm})",
   r"(\usepackage[normalem]{ulem})",
   r"(\usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde})",
-  r"(\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing})")
+  r"(\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing,decorations.pathreplacing})",
+  r"(\usetikzlibrary{positioning,arrows.meta,shapes.geometric,calc,fit,matrix})",
+  r"(\usepackage{tcolorbox,multicol,alltt})")
 
 supported_tex <- function(path = "supported-functions.tex",
                           examples = system.file("supported/examples.tsv", package = "gridmicrotex")) {
@@ -57,7 +59,7 @@ supported_tex <- function(path = "supported-functions.tex",
     c(lines, cur)
   }
   small <- function(s) paste0("{\\small", s, "}")
-  is_display <- function(s) grepl(r"(^\\begin\{(align|alignat|gather|equation|multline|flalign|eqnarray)\*?\})", s) ||
+  is_display <- function(s) grepl(r"(^\\begin\{(align|alignat|gather|equation|multline|flalign|eqnarray|tcolorbox|multicols|quote|quotation|verse|alltt)\*?\})", s) ||
     grepl("\\tag", s, fixed = TRUE)
   display_tex <- function(s) if (grepl("\\tag", s, fixed = TRUE) && !grepl("^\\\\begin", s)) paste0("\\[", s, "\\]") else s
 
@@ -133,8 +135,9 @@ supported_tex <- function(path = "supported-functions.tex",
     intro <- c(
       "\\begin{center}\\Large\\textbf{What gridmicrotex draws}\\end{center}",
       "",
-      paste0("Each row is a LaTeX input and what the package makes of it, three to a line where they fit, in ",
-             "the order of KaTeX's list of supported functions, then what KaTeX does not have. A row is a ",
+      paste0("Each row is a LaTeX input and what the package makes of it, three to a line where they fit: ",
+             "accents, delimiters, operators, relations and symbols first, then further parts of LaTeX -- ",
+             "units, equations, tables, diagrams, TikZ pictures, boxes and columns. A row is a ",
              "test: it must be drawn with no warning. Where LaTeX has nothing to compare with, only the ",
              "name is listed."),
       "",
@@ -187,7 +190,7 @@ supported_tex <- function(path = "supported-functions.tex",
                                                                         max_width = width,
                                                                         gp = grid::gpar(fontsize = 10))$height,
                                            "bigpts", valueOnly = TRUE), error = function(e) 40)
-          block(c(small(paste(vapply(lines, verb, ""), collapse = " ")), "", display_tex(s)),
+          block(c(small(paste(vapply(lines, verb, ""), collapse = " \\\\ ")), "", display_tex(s)),
                 h + 12 * length(lines) + 34)
         }
       }

@@ -82,7 +82,9 @@ test_that("a pasted caption sits above its table, not beside it", {
 
   d <- latex_grob(snippet, input_mode = "mixed",
                   gp = grid::gpar(fontsize = 11))$layout_df
-  cap <- d[!is.na(d$text) & grepl("Model", d$text), ]
+  # The caption is "Table 1: " and its text; the label is where it starts.
+  cap <- d[!is.na(d$text) & grepl("^Table 1", d$text), ]
+  expect_equal(sum(grepl("Model", d$text)), 1L)
   rules <- d[d$type == "line", ]
   expect_equal(nrow(cap), 1L)
   # Above the top rule (y grows downward), at the same left edge.

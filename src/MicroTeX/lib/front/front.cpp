@@ -1,6 +1,7 @@
 #include "front/front.h"
 
 #include <cctype>
+#include <cstring>
 #include <utility>
 
 #include "core/formula.h"
@@ -17,15 +18,20 @@
 namespace microtex::front {
 
 Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bool lineBreaks,
-               bool paragraphs, std::uint32_t bodyStart, std::uint32_t bodyEnd, bool userMacros) {
+               bool paragraphs, std::uint32_t bodyStart, std::uint32_t bodyEnd, bool userMacros,
+               const std::vector<std::string>& packages) {
   ExpanderOptions eo;
   eo.prelude = true;
+  eo.packages = packages;
   eo.persistent = userMacros;
   eo.recover = true;
   eo.lex.blankLineIsPar = paragraphs;
   eo.isBuiltinCommand = [](const std::string& name) { return findCommand(name) != nullptr; };
   eo.isBuiltinEnvironment = [](const std::string& name) {
     return findEnvironment(name) != nullptr;
+  };
+  eo.isKnownName = [](const std::string& name) {
+    return Symbol::get(name.c_str()) != nullptr || Formula::isPredefined(name);
   };
   Expander expander(latex, std::move(eo), diagnostics);
   ParserOptions po;
@@ -49,6 +55,11 @@ Diagnostics& lastStore() {
   return last;
 }
 
+std::vector<std::string>& startPackagesStore() {
+  static std::vector<std::string> packages;
+  return packages;
+}
+
 /** A byte range of the input: [first, second). */
 using BodyRange = std::pair<std::uint32_t, std::uint32_t>;
 
@@ -57,15 +68,24 @@ using BodyRange = std::pair<std::uint32_t, std::uint32_t>;
 // starts there. An unclosed one runs to the end of the input; a \verb to the
 // end of its line.
 std::size_t verbatimEnd(const std::string& s, std::size_t i) {
-  static const std::string names[] = {"\\begin{verbatim}", "\\begin{verbatim*}"};
+  static const std::string names[] = {"\\begin{verbatim}", "\\begin{verbatim*}", "\\begin{lstlisting}",
+                                      "\\begin{minted}", "\\begin{Verbatim}", "\\begin{Verbatim*}", "\\begin{comment}"};
   for (const std::string& open : names) {
     if (s.compare(i, open.size(), open) != 0) continue;
     const std::string close = "\\end{" + open.substr(7);
     const std::size_t at = s.find(close, i + open.size());
     return at == std::string::npos ? s.size() : at + close.size();
   }
-  if (s.compare(i, 5, "\\verb") != 0) return i;
-  std::size_t j = i + 5;
+  // \verb, and fancyvrb's and listings' inline forms (without options before the delimiter).
+  std::size_t j = i;
+  for (const char* name : {"\\verb", "\\Verb", "\\lstinline"}) {
+    const std::size_t n = std::strlen(name);
+    if (s.compare(i, n, name) == 0) {
+      j = i + n;
+      break;
+    }
+  }
+  if (j == i) return i;
   if (j < s.size() && std::isalpha(static_cast<unsigned char>(s[j])) != 0) return i;  // \verbatim
   if (j < s.size() && s[j] == '*') j++;
   while (j < s.size() && s[j] == ' ') j++;
@@ -127,8 +147,10 @@ void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
   // drawn, as LaTeX does, and what follows \end{document} is not read.
   // Package settings a grob cannot honour say nothing about it.
   const BodyRange body = prose ? documentBody(latex) : BodyRange{0, UINT32_MAX};
+  std::vector<std::string> packages;
+  packages.swap(startPackagesStore());
   const Ast ast = parseLatex(latex, prose ? Mode::text : Mode::math, diags, mixed, document,
-                             body.first, body.second);
+                             body.first, body.second, true, packages);
   // A capacity ran out: what was read is not what the input means.
   if (const Diagnostic* e = diags.firstError()) throw ex_parse(e->message);
   lowerInto(ast, formula, diags, prose, document);
@@ -137,6 +159,10 @@ void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
 
 const Diagnostics& lastDiagnostics() {
   return lastStore();
+}
+
+void setStartPackages(std::vector<std::string> packages) {
+  startPackagesStore() = std::move(packages);
 }
 
 namespace {

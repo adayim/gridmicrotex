@@ -13,12 +13,17 @@ class_of <- function(line, lang, what) {
   unique(cls[at:(at + nchar(what) - 1L)])
 }
 
+# One code line as the block draws it: the body of a Verbatim.
+code_doc <- function(line, cls = NULL, colour = function(k) NULL) {
+  paste0("\\begin{Verbatim}[commandchars=\\\\\\{\\}]\n",
+         .hl_code_tex(line, cls, colour), "\n\\end{Verbatim}")
+}
+
 # Width of a code line in bigpts, as the emitter renders it.
 code_w <- function(line, cls = NULL) {
   # Its own device, or R opens a default one and leaves it open.
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  tex <- .hl_code_tex(line, cls, function(k) NULL)
-  d <- latex_dims(tex, input_mode = "math",
+  d <- latex_dims(code_doc(line, cls), input_mode = "document",
                   gp = grid::gpar(fontsize = 12, fontfamily = "mono"))
   as.numeric(grid::convertWidth(d$width, "bigpts"))
 }
@@ -71,7 +76,6 @@ grammar_file <- function(rules, lists = "", lang = "Toy", csens = "1",
 # --- indentation ------------------------------------------------------
 
 test_that("leading whitespace in a code block survives", {
-  # A run of spaces inside one \text{} collapses to one space.
   one_char <- code_w("xx") - code_w("x")
   base <- code_w("return 1")
   for (n in c(2L, 4L, 8L, 12L)) {
@@ -89,9 +93,8 @@ test_that("interior alignment is preserved, not just the left margin", {
   expect_equal(wide - narrow, 4 * one_char, tolerance = 0.5 * one_char)
 })
 
-test_that("code with no repeated spaces renders exactly as it did before", {
+test_that("a code line is as wide as the same text in the typewriter face", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # A single space between runs measures the same as one inside a run.
   for (line in c("x<-foo(1)", "a b", "if (x) y else z")) {
     expect_equal(code_w(line),
                  {
@@ -107,9 +110,12 @@ test_that("code with no repeated spaces renders exactly as it did before", {
 
 test_that("~ and ^ are literal characters, not accents", {
   # \~{} and \^{} are accents; a bare `~` is a non-breaking space.
+  parsed <- function(line) {
+    parse_latex_cpp(code_doc(line), text_size = 12, use_path = FALSE,
+                    input_mode = "document")
+  }
   drawn <- function(line) {
-    df <- parse_latex_cpp(.hl_code_tex(line, NULL, function(k) NULL),
-                          text_size = 12, use_path = FALSE)
+    df <- parsed(line)
     d <- df[df$type %in% c("text", "glyph"), ]
     paste0(ifelse(is.na(d$text), "<GLYPH>", d$text), collapse = "")
   }
@@ -117,15 +123,26 @@ test_that("~ and ^ are literal characters, not accents", {
     expect_identical(drawn(line), line, info = line)
   }
   # An accent is drawn as a separate glyph; a literal stays in the run.
-  df <- parse_latex_cpp(.hl_code_tex("y ~ x", NULL, function(k) NULL),
-                        text_size = 12, use_path = FALSE)
-  expect_equal(sum(df$type == "glyph"), 0L)
+  expect_equal(sum(parsed("y ~ x")$type == "glyph"), 0L)
   # And each occupies exactly one monospace cell, like any operator.
   expect_equal(code_w("y ~ x"), code_w("y - x"))
   expect_equal(code_w("a^b"), code_w("a-b"))
-  # The escaper is shared with prose.
-  expect_match(.md_to_tex("approx ~5"), "char126", fixed = TRUE)
+  # Prose spells them as text characters.
+  expect_match(.md_to_tex("approx ~5"), "textasciitilde", fixed = TRUE)
   expect_false(grepl("\\~{}", .md_to_tex("approx ~5"), fixed = TRUE))
+})
+
+test_that("a backslash and braces in code are drawn as typed", {
+  # They are what the commands of the block are made of, so they are
+  # escaped; each is one monospace cell, like any other character.
+  for (line in c("a\\b", "f <- function() {}", "{\\}", "\\\\n", "}{")) {
+    expect_equal(code_w(line), code_w(strrep("x", nchar(line))), info = line)
+    df <- parse_latex_cpp(code_doc(line), text_size = 12, use_path = FALSE,
+                          input_mode = "document")
+    d <- df[df$type %in% c("text", "glyph"), ]
+    expect_identical(paste0(ifelse(is.na(d$text), "<GLYPH>", d$text),
+                            collapse = ""), line, info = line)
+  }
 })
 
 test_that("nothing in a code block is interpreted as math or LaTeX", {
@@ -134,17 +151,19 @@ test_that("nothing in a code block is interpreted as math or LaTeX", {
   for (line in c("# see $E = mc^2$ here", "cost is $5 and $10",
                  "s <- \"$x^2$\"", "a $$ b")) {
     tex <- box_tex(paste0("~~~\n", line, "\n~~~\n"))
-    # Every dollar survives, escaped, so none can open math.
-    expect_equal(lengths(regmatches(tex, gregexpr("\\$", tex, fixed = TRUE))),
+    # Every dollar survives as typed, in the body of a Verbatim, which reads
+    # no math.
+    expect_equal(lengths(regmatches(tex, gregexpr("$", tex, fixed = TRUE))),
                  lengths(regmatches(line, gregexpr("$", line, fixed = TRUE))),
                  info = line)
+    expect_match(tex, "\\begin{Verbatim}", fixed = TRUE, all = FALSE)
     expect_false(grepl("\\text{}", tex, fixed = TRUE), info = line)
   }
   # The content itself is intact, not replaced by a sentinel index.
   expect_match(box_tex("~~~\n# see $E = mc^2$ here\n~~~\n"),
-               "E = mc\\char94{}2", fixed = TRUE)
+               "E = mc^2", fixed = TRUE)
   # And with a language, so the classifier sees the real source too.
-  expect_match(box_tex("~~~r\nx <- \"$a$\"\n~~~\n"), "\\$a\\$", fixed = TRUE)
+  expect_match(box_tex("~~~r\nx <- \"$a$\"\n~~~\n"), "\"$a$\"", fixed = TRUE)
   # Inline code spans too.
   expect_match(.md_to_tex("`$x$`"), "\\$x\\$", fixed = TRUE)
   # Prose outside a fence must still render real math, not a literal.
@@ -276,13 +295,15 @@ test_that("segments reproduce the source line exactly", {
   }
 })
 
-test_that("only runs of spaces are split, and no segment mixes classes", {
-  # A lone space is not split, to keep the number of draw records down.
-  expect_identical(.hl_segments("a   b", NULL)$text, c("a", " ", " ", " ", "b"))
-  expect_identical(.hl_segments("a b", NULL)$text, "a b")
+test_that("a line is split where the class changes, and no segment mixes classes", {
+  # Spaces are text like any other: the engine keeps them as typed.
+  expect_identical(.hl_segments("a   b", NULL)$text, "a   b")
   expect_identical(.hl_segments("a b c d", NULL)$text, "a b c d")
-  expect_identical(.hl_segments("  a", NULL)$text, c(" ", " ", "a"))
+  expect_identical(.hl_segments("  a", NULL)$text, "  a")
   expect_identical(.hl_segments(" ", NULL)$text, " ")
+  expect_identical(.hl_segments("aabbc", c("x", "x", "y", "y", "x"))$text,
+                   c("aa", "bb", "c"))
+  expect_identical(nrow(.hl_segments("", NULL)), 0L)
   cls <- hl("x <- 1  # hi", "r")
   seg <- .hl_segments("x <- 1  # hi", cls)
   expect_true(all(vapply(seq_len(nrow(seg)),
@@ -724,9 +745,9 @@ test_that("registering over a bundled name replaces it", {
 
 test_that("token colours reach the drawn layout", {
   cls <- .hl_classes("foo(1)  # hi", "r")[[1]]
-  tex <- .hl_code_tex("foo(1)  # hi", cls,
-                      function(k) unname(.MD_CODE_COLORS[k]))
-  df <- parse_latex_cpp(tex, text_size = 12, use_path = FALSE)
+  tex <- code_doc("foo(1)  # hi", cls, function(k) unname(.MD_CODE_COLORS[k]))
+  df <- parse_latex_cpp(tex, text_size = 12, use_path = FALSE,
+                        input_mode = "document")
   got <- unique(df$color)
   expect_true(.MD_CODE_COLORS[["fu"]] %in% got)  # foo
   expect_true(.MD_CODE_COLORS[["dv"]] %in% got)  # 1

@@ -54,12 +54,23 @@ test_that("TeX special characters in prose are escaped", {
   expect_match(.md_to_tex("x & y"),     "x \\& y",     fixed = TRUE)
   expect_match(.md_to_tex("no #1"),     "no \\#1",     fixed = TRUE)
   # `^` and `~` are the characters, not the accents \^{} and \~{}.
-  expect_match(.md_to_tex("2 ^ 3"),     "2 \\char94{} 3", fixed = TRUE)
+  expect_match(.md_to_tex("2 ^ 3"),     "2 \\textasciicircum{} 3", fixed = TRUE)
   expect_false(grepl("\\^{}", .md_to_tex("2 ^ 3"), fixed = TRUE))
-  expect_match(.md_to_tex("a ~ b"),     "\\char126{}", fixed = TRUE)
-  # There is no \textbackslash; \backslash is a math symbol.
-  expect_match(.md_to_tex("a \\ b"), "$\\backslash$", fixed = TRUE)
-  expect_false(grepl("textbackslash", .md_to_tex("a \\ b"), fixed = TRUE))
+  expect_match(.md_to_tex("a ~ b"),     "\\textasciitilde{}", fixed = TRUE)
+  expect_match(.md_to_tex("a \\ b"), "a \\textbackslash{} b", fixed = TRUE)
+  expect_false(grepl("backslash$", .md_to_tex("a \\ b"), fixed = TRUE))
+})
+
+test_that("the characters escaped in prose are drawn as one glyph each, with no warning", {
+  # \textbackslash and the two ASCII ones the escaper spells are the engine's.
+  pdf(NULL); on.exit(dev.off(), add = TRUE)
+  for (ch in c("\\", "~", "^")) {
+    tex <- .md_document(.md_escape_tex(paste0("a", ch, "b")))
+    df <- expect_no_warning(parse_latex_cpp(tex, text_size = 12, use_path = FALSE,
+                                            input_mode = "document"))
+    expect_identical(paste0(df$text[df$type == "text"], collapse = ""), paste0("a", ch, "b"),
+                     info = ch)
+  }
 })
 
 test_that("a lone dollar sign is literal, not an unclosed math span", {
@@ -244,21 +255,100 @@ test_that("visual: markdown document box", {
   })
 })
 
-test_that("a raw HTML block is dropped, not typeset", {
+test_that("a raw HTML block is read as HTML: its tags are not typeset, its text is", {
   md <- "Before\n\n<div class='x'>raw **html** block</div>\n\nAfter"
   tex <- .md_to_tex(md)
   expect_false(grepl("<div", tex, fixed = TRUE))
-  expect_false(grepl("**html**", tex, fixed = TRUE))
   expect_match(tex, "Before", fixed = TRUE)
   expect_match(tex, "After", fixed = TRUE)
+  # HTML does not read markdown: the asterisks are the text.
+  expect_match(tex, "raw **html** block", fixed = TRUE)
 
   # Both entry points must reach the same conclusion.
   types <- vapply(.md_parse_blocks(md), function(b) b$type, character(1))
-  expect_setequal(types, c("paragraph", "paragraph"))
+  expect_equal(types, c("paragraph", "div", "paragraph"))
 
   g <- markdown_grob(md)
-  expect_false(grepl("<div", paste(stats::na.omit(g$layout_df$text),
-                                   collapse = ""), fixed = TRUE))
+  shown <- paste(stats::na.omit(g$layout_df$text), collapse = "")
+  expect_false(grepl("<div", shown, fixed = TRUE))
+  expect_match(shown, "raw", fixed = TRUE)
+})
+
+# What GitHub READMEs write: a centred header, <details>, a table, lists.
+# Each is the markdown that says the same, so the blocks are the markdown's.
+test_that("raw HTML blocks become the blocks the markdown would be", {
+  types <- function(md) {
+    vapply(.md_parse_blocks(md), function(b) b$type, character(1))
+  }
+  # <p align=center> and <center> are a centred div; <h1> a heading.
+  b <- .md_parse_blocks("<h1 align=\"center\">Title</h1>\n<p align=\"center\">A <b>bold</b> line</p>")
+  expect_equal(vapply(b, function(x) x$type, character(1)), c("div", "div"))
+  expect_match(b[[1]]$style[["text-align"]], "center")
+  expect_equal(b[[1]]$blocks[[1]]$type, "heading")
+  expect_equal(types("<center>Old</center>"), "div")
+  # <details>: the summary is bold, the rest follows (the closing tag, in
+  # a block of its own, says nothing).
+  expect_equal(types("<details>\n<summary>Open</summary>\n\nText.\n\n</details>"),
+               c("paragraph", "paragraph"))
+  expect_match(.md_html_block_md("<details><summary>Open</summary>body</details>"),
+               "**Open**", fixed = TRUE)
+  # A table is a table, its header row and its alignment kept.
+  tb <- .md_html_block_md("<table><tr><th align=\"right\">A</th><th>B</th></tr><tr><td>1</td><td>x | y</td></tr></table>")
+  expect_equal(tb, "| A | B |\n| ---: | --- |\n| 1 | x \\| y |")
+  expect_equal(types(tb), "table")
+  # Lists, nested, an <ol>'s start; a heading; a rule; a quote; code.
+  expect_equal(.md_html_block_md("<ol start=\"3\"><li>c</li><li>d<ul><li>n</li></ul></li></ol>"),
+               "3. c\n4. d\n   - n")
+  # A table inside a cell is not a second copy of its rows; cells with no <tr> are a row.
+  expect_equal(.md_html_block_md("<table><tr><td><table><tr><td>in</td></tr></table></td><td>out</td></tr></table>"),
+               "| in | out |\n| --- | --- |")
+  expect_equal(.md_html_block_md("<table><th>h1</th><th>h2</th></table>"),
+               "| h1 | h2 |\n| --- | --- |")
+  expect_equal(.md_html_block_md("<h3>Three</h3>"), "### Three")
+  expect_equal(.md_html_block_md("<hr>"), "---")
+  expect_equal(.md_html_block_md("<blockquote>Said</blockquote>"), "> Said")
+  # (`<` is written `&lt;` as HTML has it: how a bare one is read depends on the libxml2.)
+  expect_equal(.md_html_block_md("<pre><code class=\"language-r\">x &lt;- 1\n</code></pre>"),
+               "```r\nx <- 1\n```")
+})
+
+test_that("raw HTML text is literal, and what says nothing is dropped", {
+  # Markdown is not read inside HTML, and nothing in the text can start a block.
+  expect_equal(.md_html_block_md("<p>2 * 3 and a_b and [x](y) and `t` and &lt;tag&gt;</p>"),
+               "2 \\* 3 and a\\_b and \\[x\\](y) and \\`t\\` and \\<tag\\>")
+  expect_equal(.md_html_block_md("<p>- item\n1. one\n# head</p>"), "\\- item 1. one \\# head")
+  # Comments, scripts, styles, empty elements.
+  for (h in c("<!-- c -->", "<script>x()</script>", "<style>p{}</style>",
+              "<p></p>", "<table><tr></tr></table>", "<div> </div>")) {
+    expect_equal(.md_html_block_md(h), "", info = h)
+  }
+  # Math stays math, and an inline tag the inline walker knows stays a tag.
+  md <- "<p>$E = mc^2$ and <sub>x</sub> and <span style=\"color: red\">r</span></p>"
+  masked <- .md_mask_math(md)
+  out <- .md_html_block_md(masked$text)
+  expect_match(out, .md_sentinel(1L), fixed = TRUE)
+  expect_match(out, "<sub>x</sub>", fixed = TRUE)
+  expect_match(out, "<span style=\"color: red\">r</span>", fixed = TRUE)
+  expect_no_warning(g <- markdown_box_grob(md))
+  expect_s3_class(g, "markdownbox")
+})
+
+test_that("an <img> in a raw HTML block that cannot be drawn is left out, with a warning", {
+  expect_warning(out <- .md_html_block_md("<p><img src=\"https://example.com/x.png\">Caption</p>"),
+                 "is left out")
+  expect_equal(out, "Caption")
+  # Not an error: a README's badges are URLs.
+  expect_warning(g <- markdown_box_grob("<p align=\"center\"><img src=\"no-such.png\"></p>\n\nafter"),
+                 "is left out")
+  expect_s3_class(g, "markdownbox")
+})
+
+test_that("an <img> in a raw HTML block that can be drawn is kept, with its size", {
+  skip_if_not_installed("png")
+  file <- tempfile(fileext = ".png")
+  png::writePNG(array(0.5, c(10, 20, 3)), file)
+  expect_match(.md_html_block_md(sprintf("<p><img src=\"%s\" width=\"40\" alt=\"x\"></p>", file)),
+               "width=\"40\"", fixed = TRUE)
 })
 
 # --- CommonMark coverage gaps ------------------------------------------
@@ -568,7 +658,7 @@ test_that("markup we do not interpret is dropped, and stays balanced", {
                '<span style="color:notacolor">x</span>')) {
     expect_equal(.md_to_tex(md), "x", label = md)
   }
-  # Block-level HTML is dropped whole.
+  # Block-level HTML: the tags are not typeset.
   tex <- .md_to_tex("Before\n\n<div>raw **html**</div>\n\nAfter")
   expect_false(grepl("<div", tex, fixed = TRUE))
   expect_match(tex, "Before", fixed = TRUE)

@@ -88,6 +88,9 @@ struct EnvSpec {
   /** Its cells or items are text when it is met in text, as in LaTeX
    *  (tabular, itemize); met in math, they are math, as they always were. */
   bool textInText = false;
+  /** Its cells after the first are text, whatever surrounds it: the explanation
+   *  column of the cases package's numcases. */
+  bool textAfterFirst = false;
 };
 
 /** The spec of an environment the engine builds, or nullptr. Environments
@@ -122,10 +125,17 @@ bool isNumberedEnvironment(const std::string& name);
  *  LaTeX's [h] placement does, apart from the paragraphs around it. */
 bool isFloatEnvironment(const std::string& name);
 
+/** An environment whose body is read as typed: verbatim, and the code of listings, minted and fancyvrb (set as
+ *  verbatim is; their options only change a look this package does not draw). A name ending in `*` shows spaces. */
+bool isVerbatimEnvironment(const std::string& name);
+
 /** A prelude environment of text blocks (abstract, thebibliography, proof): its
  *  expansion is transparent, as document's is, so a document sets the
  *  headings and paragraphs in it as its own. */
 bool isBlockEnvironment(const std::string& name);
+
+/** cleveref's \cref, \Cref, \crefrange, \Crefrange and hyperref's \autoref: references that name a kind. */
+bool isCrossReference(const std::string& name);
 
 /** \cite, and natbib's \citep, \citet and \citealp. */
 bool isCitation(const std::string& name);

@@ -120,17 +120,12 @@
   s <- gsub("([{}$&#_%])", "\\\\\\1", s)
   # `~` and `^` are NOT escaped to \~{} and \^{}: those are the tilde and
   # circumflex *accents*, which float above the line the way a diacritic
-  # does -- so `lm(y ~ x)` in a code block drew its tilde up at cap
-  # height, and prose `~5` did the same.
-  #
-  # Neither can be left bare either: `~` is a non-breaking space in LaTeX,
-  # so the character was lost, and `^` in text is drawn but warned about,
-  # as TeX refuses it there. Neither \textasciitilde nor \textasciicircum
-  # exists -- like \textbackslash they typeset their own letters.
-  # \char126 and \char94 are the spellings that work, and the empty group
-  # is required: \char126b swallows the `b`.
-  s <- gsub("~", "\\\\char126{}", s)
-  s <- gsub("^", "\\char94{}", s, fixed = TRUE)
+  # does -- so `lm(y ~ x)` drew its tilde up at cap height, and prose `~5`
+  # did the same. Neither can be left bare either: `~` is a non-breaking
+  # space in LaTeX, so the character was lost, and `^` in text is drawn but
+  # warned about, as TeX refuses it there. They are text characters.
+  s <- gsub("~", "\\\\textasciitilde{}", s)
+  s <- gsub("^", "\\textasciicircum{}", s, fixed = TRUE)
   # Quotes and dashes stay as CommonMark writes them (it curls nothing
   # without its `smart` extension), where TeX would make `--` a dash and
   # ' a curly quote. Only a hyphen next to another forms a dash.
@@ -140,10 +135,7 @@
   # CommonMark decodes &nbsp; to a real U+00A0, which is TeX's `~`: a space
   # no line breaks at. (After the `~` above, which is a character.)
   s <- gsub(.MD_NBSP, "~", s, fixed = TRUE)
-  # MicroTeX has no \textbackslash -- it would typeset those 13 letters
-  # literally. \backslash is the spelling that works, and it is a math
-  # symbol, so it goes in math, as LaTeX would have it.
-  gsub(.MD_ESC_BS, "$\\backslash$", s, fixed = TRUE)
+  gsub(.MD_ESC_BS, "\\textbackslash{}", s, fixed = TRUE)
 }
 
 # Render one markdown text node: the prose escaped, its math spans put
@@ -581,8 +573,9 @@
          "{", gsub("([{}])", "\\\\\\1", path), "}")
 }
 
-# An <img> alone on its line is an HTML *block* to CommonMark, and raw HTML
-# blocks are dropped -- but a browser draws this one, so it is kept. Returns
+# An <img> alone on its line is an HTML *block* to CommonMark. It is drawn as
+# an inline image is (any other raw block is read as HTML, R/markdown-html.R,
+# where an image that cannot be drawn is left out and not an error). Returns
 # the LaTeX its tags make, or NULL when the block holds anything else.
 .MD_IMG_TAG <- "<img\\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>"
 
@@ -871,8 +864,11 @@
 #
 # commonmark and xml2 are Imports, so they cannot be missing at run time
 # and are not guarded.
-.md_parse_doc <- function(md) {
-  masked <- .md_mask_math(md)
+.md_parse_doc <- function(md, spans = NULL) {
+  # `spans` given: `md` is already masked, with these spans -- markdown the
+  # converter of a raw HTML block wrote (R/markdown-html.R), whose math is
+  # still the sentinels of the document it came from.
+  masked <- if (is.null(spans)) .md_mask_math(md) else list(text = md, spans = spans)
   doc <- xml2::read_xml(
     # `footnotes` is a separate argument, not one of the five extensions.
     # With it, `[^1]` arrives as <fnref> and its definition as a <fn>
@@ -911,19 +907,25 @@
 # markdown_grob() reads in document mode (.md_document()).
 # markdown_box_grob() keeps block structure by stacking each block as its
 # own grob instead.
-.md_to_tex <- function(md, base = 20, style = NULL) {
-  parsed <- .md_parse_doc(md)
+.md_to_tex <- function(md, base = 20, style = NULL, spans = NULL) {
+  parsed <- .md_parse_doc(md, spans)
   blocks <- xml2::xml_children(parsed$doc)
   if (length(blocks) == 0L) return("")
   parts <- vapply(blocks, function(b) {
     nm <- xml2::xml_name(b)
     # An html_block holds raw markup as its text, so walking into it
-    # would typeset the tags -- and the markdown inside them, unparsed.
-    # Drop it, matching .md_blocks() on the block path, which would
-    # otherwise disagree about the same document. Only *inline* HTML
-    # (.md_html_tag) is interpreted -- and an <img> alone on its line.
+    # would typeset the tags. An <img> alone on its line is drawn; any
+    # other block is read as HTML and what it says is written as markdown
+    # (.md_html_block_md()), as .md_blocks() does on the block path, which
+    # would otherwise disagree about the same document. Only *inline* HTML
+    # (.md_html_tag) is interpreted inside a paragraph.
     if (identical(nm, "html_block")) {
-      return(.md_img_block(xml2::xml_text(b), parsed$spans, base, style) %||% "")
+      txt <- xml2::xml_text(b)
+      img <- .md_img_block(txt, parsed$spans, base, style)
+      if (!is.null(img)) return(img)
+      md2 <- .md_html_block_md(txt)
+      if (!nzchar(md2)) return("")
+      return(.hb_nested(.md_to_tex(md2, base, style, spans = parsed$spans)))
     }
     # A footnote definition needs a foot to sit at, and an inline label has
     # none: the marker still renders, the note itself is dropped. Only

@@ -6,6 +6,7 @@
 // tikz-cd's tikzcd, whose arrows are `\arrow[r, "f"]` commands inside the
 // cells they start from. Both fill a DiagramAtom (atom/diagram_atom.h).
 
+#include <algorithm>
 #include <cctype>
 #include <cstdlib>
 #include <functional>
@@ -84,7 +85,11 @@ inline std::string groupAt(const std::string& s, std::size_t& i) {
       return inner;
     }
   }
-  return "";
+  // A group left open runs to the end of the text, as TeX reads one at the end of its input. `i` is past it: a caller
+  // that reads group after group made no progress when it stayed, and `\node[` at the end of a picture hung.
+  const std::string rest = s.substr(std::min(i + 1, s.size()));
+  i = s.size();
+  return rest;
 }
 
 /** A number or a tikz size name to a size in em. */
@@ -267,19 +272,23 @@ inline void arrowOptions(CommandArgs& args, Warned& warned, const std::string& o
       continue;
     }
     if (name == "color" || name == "draw") {
+      color ink = 0;
       if (given == "none") {
         arrow.phantom = true;
-      } else if (ColorAtom::hasName(given) || (!given.empty() && given[0] == '#')) {
+      } else if (ColorAtom::parseColor(given, ink)) {
         arrow.hasColor = true;
-        arrow.ink = ColorAtom::getColor(given);
+        arrow.ink = ink;
       } else {
         warned.once("\\arrow: " + key + " is not a colour that is defined; it is ignored");
       }
       continue;
     }
-    if (ColorAtom::hasName(key)) {
+    // A key alone is a colour when it is a defined name or an xcolor mix; a
+    // word of hex digits or a number is a key, not a colour.
+    if (color ink = 0; (ColorAtom::hasName(key) || key.find('!') != std::string::npos) &&
+                       ColorAtom::parseColor(key, ink)) {
       arrow.hasColor = true;
-      arrow.ink = ColorAtom::getColor(key);
+      arrow.ink = ink;
       continue;
     }
     LabelSpec probe;

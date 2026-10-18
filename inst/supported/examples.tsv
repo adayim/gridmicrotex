@@ -930,33 +930,6 @@ Units	nolatex	\huge\rule{18mu}{18mu}
 Units	ok	\rule{10pt}{10pt}
 Units	nolatex	\scriptscriptstyle\rule{10pt}{10pt}
 Units	nolatex	\huge\rule{10pt}{10pt}
-Beyond KaTeX / More commands	nolatex	\euro
-Beyond KaTeX / More commands	ok	\idotsint
-Beyond KaTeX / More commands	ok	\iiiint
-Beyond KaTeX / More commands	ok	\text{\textsection\textparagraph\textcopyright\texttrademark}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{12345.6789}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.5e-4}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.2(3)e3}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\SI{9.81}{\meter\per\second\squared}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\qty{1.5}{\kilo\gram}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\si{kg.m.s^-2}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\ang{1;2;3}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\numrange{1}{10}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\SIrange{1}{5}{\volt}
-Beyond KaTeX / Numbers and units (a subset of siunitx)	ok	\numlist{1;2;3}
-Beyond KaTeX / Equations	ok	a = b \tag{1}
-Beyond KaTeX / Equations	ok	a = b \tag*{(*)}
-Beyond KaTeX / Equations	ok	\cancelto{0}{x}
-Beyond KaTeX / Equations	ok	\bigl\lvert x \bigr\rvert
-Beyond KaTeX / Equations	ok	\begin{dcases} x & x>0 \\ -x & \text{otherwise} \end{dcases}
-Beyond KaTeX / Equations	ok	\begin{subarray}{c} i<n \\ j<m \end{subarray}
-Beyond KaTeX / Equations	ok	\sqrt[\leftroot{-2}\uproot{2}n]{x}
-Beyond KaTeX / Tables	nolatex	\begin{array}{c:c} a & b \\ \hdashline c & d \end{array}
-Beyond KaTeX / Tables	ok	\begin{tabular}{|l|r|} \hline a & 1 \\ \hline b & 22 \\ \hline \end{tabular}
-Beyond KaTeX / Tables	ok	\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\ \verb|verbatim| \end{array}
-Beyond KaTeX / Commutative diagrams	ok	\begin{tikzcd} A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d, "h"] \\ C \arrow[r, hook, "k"'] & D \end{tikzcd}
-Beyond KaTeX / Commutative diagrams	ok	\begin{tikzcd}[column sep=large] A \arrow[r, "f", bend left] \arrow[r, "g"', bend right] & B \arrow[r, two heads, dashed] & C \end{tikzcd}
-Beyond KaTeX / Commutative diagrams	ok	\begin{CD} A @>f>> B \\ @VgVV @VVhV \\ C @>>k> D \end{CD}
 Extensions / mhchem	ok	\ce{H2O}
 Extensions / mhchem	ok	\ce{CO2 + C -> 2 CO}
 Extensions / mhchem	ok	\ce{SO4^2- + Ba^2+ -> BaSO4 v}
@@ -968,3 +941,46 @@ Extensions / mhchem	ok	\ce{CuSO4*5H2O}
 Extensions / mhchem	nolatex	\pu{1.5 mol/L}
 Extensions / mhchem	nolatex	\pu{123 kJ/mol}
 Extensions / mhchem	nolatex	\pu{1.2e-3 mol L-1}
+Further LaTeX / More commands	nolatex	\euro
+Further LaTeX / More commands	ok	\idotsint
+Further LaTeX / More commands	ok	\iiiint
+Further LaTeX / More commands	ok	\text{\textsection\textparagraph\textcopyright\texttrademark}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\num{12345.6789}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.5e-4}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\num{1.2(3)e3}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\SI{9.81}{\meter\per\second\squared}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\qty{1.5}{\kilo\gram}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\si{kg.m.s^-2}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\ang{1;2;3}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\numrange{1}{10}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\SIrange{1}{5}{\volt}
+Further LaTeX / Numbers and units (a subset of siunitx)	ok	\numlist{1;2;3}
+Further LaTeX / Equations	ok	a = b \tag{1}
+Further LaTeX / Equations	ok	a = b \tag*{(*)}
+Further LaTeX / Equations	ok	\cancelto{0}{x}
+Further LaTeX / Equations	ok	\bigl\lvert x \bigr\rvert
+Further LaTeX / Equations	ok	\begin{dcases} x & x>0 \\ -x & \text{otherwise} \end{dcases}
+Further LaTeX / Equations	ok	\begin{subarray}{c} i<n \\ j<m \end{subarray}
+Further LaTeX / Equations	ok	\sqrt[\leftroot{-2}\uproot{2}n]{x}
+Further LaTeX / Tables	nolatex	\begin{array}{c:c} a & b \\ \hdashline c & d \end{array}
+Further LaTeX / Tables	ok	\begin{tabular}{|l|r|} \hline a & 1 \\ \hline b & 22 \\ \hline \end{tabular}
+Further LaTeX / Tables	ok	\begin{array}{l} \textbf{Bold} \\ \textsc{Small caps} \\ \verb|verbatim| \end{array}
+Further LaTeX / Commutative diagrams	ok	\begin{tikzcd} A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[d, "h"] \\ C \arrow[r, hook, "k"'] & D \end{tikzcd}
+Further LaTeX / Commutative diagrams	ok	\begin{tikzcd}[column sep=large] A \arrow[r, "f", bend left] \arrow[r, "g"', bend right] & B \arrow[r, two heads, dashed] & C \end{tikzcd}
+Further LaTeX / Commutative diagrams	ok	\begin{CD} A @>f>> B \\ @VgVV @VVhV \\ C @>>k> D \end{CD}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}\draw[->, thick] (0,0) -- (2,1) node[right] {$f$}; \fill[red!70] (1,0.5) circle (2pt); \draw[blue, dashed] (0,0) arc (180:90:0.5);\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}[node distance=8mm, >=stealth] \node[draw, rounded corners] (a) {Read}; \node[draw, diamond, aspect=2, right=of a] (b) {Ok?}; \node[draw, fill=blue!10, right=of b] (c) {Fit}; \draw[->] (a) -- (b); \draw[->] (b) -- node[above] {yes} (c); \draw[->] (b) |- ++(0,-1) node[right] {no} -| (a);\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}\foreach \x/\c in {0/red,1/orange,2/green,3/blue} {\fill[\c] (\x*0.5,0) circle (0.2);}\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}\node[draw, ellipse] (a) at (0,0) {Ellipse}; \node[draw, circle, label=above:{$\alpha$}, pin=right:pin] (b) at (2.4,0) {B}; \draw[->] (a) to[bend left] (b); \draw[red] ($(a)!0.5!(b)$) circle (2pt);\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}[level distance=8mm, sibling distance=14mm] \node {root} child {node {a} child {node {c}} child {node {d}}} child {node {b}};\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}\matrix (m) [matrix of nodes, row sep=3mm, column sep=6mm] {$a$ & $b$ \\ $c$ & $d$ \\}; \draw[->] (m-1-1) -- (m-2-2); \draw[decorate, decoration={brace, amplitude=4pt}] (m-2-1.south west) -- (m-2-2.south east);\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}[scale=0.8]\draw[->] (0,0) -- (4.2,0); \draw[->] (0,0) -- (0,2.2); \draw[domain=0:4, smooth, samples=12, red, thick] plot (\x, {1+sin(\x r)}); \draw[blue] plot[const plot] coordinates {(0,0.3) (1,1.2) (2,0.6) (3,1.8)};\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}\node[regular polygon, regular polygon sides=6, draw, fill=blue!10] (h) {hex}; \node[star, star points=6, draw, fill=yellow!30, right=8mm of h] (s) {six}; \node[isosceles triangle, isosceles triangle apex angle=60, shape border rotate=90, draw, right=8mm of s] (t) {up}; \draw[->] (h.east) -- (s.west);\end{tikzpicture}
+Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}\draw (0,0) circle (1); \draw (1,0) circle (1); \begin{scope}\clip (0,0) circle (1); \fill[red!40] (1,0) circle (1);\end{scope}\end{tikzpicture}
+Further LaTeX / Boxes and columns	ok	\begin{tcolorbox}[title=A box] Text in a box, which is as wide as the line. \end{tcolorbox}
+Further LaTeX / Boxes and columns	ok	\begin{tcolorbox}[colback=yellow!15, colframe=blue!50!black, colbacktitle=blue!15, coltitle=black, title=Colours] A title band, a frame, and a body in colours of its own. \end{tcolorbox}
+Further LaTeX / Boxes and columns	ok	\begin{multicols}{2}[A header over both columns] One paragraph of some words that run on to a second line.\par Another, in the first column too.\par A third, which is balanced into the second.\par A fourth. \end{multicols}
+Further LaTeX / Boxes and columns	ok	\begin{quote} A short quotation, set in from both margins of the line. \end{quote}
+Further LaTeX / Boxes and columns	ok	\begin{quotation} A quotation's first paragraph, its first line indented.\par And a second paragraph, indented as the first is. \end{quotation}
+Further LaTeX / Boxes and columns	ok	\begin{verse} A line of verse \\ and a second line, long enough to wrap onto another line of the page, which is then set in against the first \end{verse}
+Further LaTeX / Boxes and columns	ok	\begin{alltt}Text as typed,  spaces   kept, with \textbf{bold} and \textcolor{red}{red} in it\end{alltt}

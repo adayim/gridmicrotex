@@ -6,7 +6,7 @@
 \alias{gridmicrotex-package}
 \title{gridmicrotex: Native 'LaTeX' Math Rendering for Grid Graphics}
 \description{
-Renders 'LaTeX' math equations as native R grid graphics objects (grobs) using the 'MicroTeX' 'C++' library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external 'LaTeX' installation required. Markdown labels and block documents that mix prose formatting with math are also rendered, for use with both 'grid' and 'ggplot2'.
+Renders 'LaTeX' math equations as native R grid graphics objects (grobs) using a fork of the 'MicroTeX' 'C++' library as the layout engine. Produces resolution-independent vector output that works on any R graphics device, with no external 'LaTeX' installation required. Markdown labels and block documents that mix prose formatting with math are also rendered, for use with both 'grid' and 'ggplot2'.
 }
 \seealso{
 Useful links:
@@ -22,7 +22,8 @@ Useful links:
 
 Other contributors:
 \itemize{
-  \item Nano Michael (Author of included 'MicroTeX' library) [copyright holder]
+  \item Nano Michael (Author of the 'MicroTeX' library that the included engine is forked from) [copyright holder]
+  \item  MicroTeX contributors (Contributors to the 'MicroTeX' library) [copyright holder]
   \item  Bundled math font authors (See inst/COPYRIGHTS for the full list of authors of the bundled math fonts.) [copyright holder]
 }
 

@@ -86,6 +86,13 @@ public:
   /** LaTeX's \arraystretch: the rows are this much further apart than their
    *  content makes them. */
   float _stretch = 1.f;
+  /** How the rows stand apart, when `\gmrows` said so for this array (split's
+   *  definition does): "jot", amsmath's alignments', or "sub", \substack's.
+   *  Else an array's. */
+  std::string _rows;
+  /** tabular[t] and tabular[b]: the baseline is the first row's or the last
+   *  row's, where [c] and none put it at the middle (on the math axis). */
+  char _vpos = 'c';
 
   ArrayFormula();
 

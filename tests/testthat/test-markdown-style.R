@@ -242,8 +242,12 @@ test_that("a div with blank lines around it becomes a container block", {
   expect_equal(vapply(d$blocks, function(x) x$type, character(1)),
                c("heading", "paragraph"))
 
-  # Without blank lines cmark gives one raw HTML block, which is dropped.
-  expect_length(.md_parse_blocks("<div class=\"n\">\n**b**\n</div>"), 0L)
+  # Without blank lines cmark gives one raw HTML block, which is read as
+  # HTML: the same div, holding its text (HTML does not read markdown).
+  w <- .md_parse_blocks("<div class=\"n\">\n**b**\n</div>")
+  expect_length(w, 1L)
+  expect_equal(w[[1]]$type, "div")
+  expect_equal(w[[1]]$class, "n")
 })
 
 test_that("divs nest, close themselves, and ignore stray markup", {
@@ -258,7 +262,7 @@ test_that("divs nest, close themselves, and ignore stray markup", {
   expect_equal(u[[1]]$type, "div")
   expect_length(u[[1]]$blocks, 2L)
 
-  # A stray close, and any other raw block, is dropped.
+  # A stray close, and a raw block with nothing in it, is dropped.
   expect_equal(vapply(.md_parse_blocks("x\n\n</div>\n\ny"),
                       function(b) b$type, character(1)),
                c("paragraph", "paragraph"))
@@ -384,10 +388,10 @@ test_that("emphasis inherits into quotes, list items and divs", {
 })
 
 test_that("emphasis applies to pre and to tables, as CSS says it should", {
-  # A bold `pre` is bold monospace (128 + 2 + 1).
+  # A bold `pre` is bold monospace (128 + 2).
   pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 131)
-  expect_equal(styles_of("```\ncode\n```"), 129)
+  expect_equal(styles_of("```\ncode\n```", "pre { font-weight: bold }"), 130)
+  expect_equal(styles_of("```\ncode\n```"), 128)
 
   # font-weight inherits from `table` into the cells.
   s <- styles_of("| a |\n|---|\n| 1 |", "table { font-weight: bold }")

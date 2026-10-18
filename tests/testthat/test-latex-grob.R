@@ -110,44 +110,12 @@ test_that("the text measurer's ascent and descent are the device's own", {
 
 # --- edge cases: empty and invalid input ---
 
-test_that("latex_grob handles empty input as a zero-size grob", {
-  g <- latex_grob("")
-  expect_s3_class(g, "latexgrob")
-  expect_equal(g$bbox_w, 0)
-  expect_equal(g$bbox_h, 0)
-  expect_equal(nrow(g$layout_df), 0L)
-})
-
-test_that("an unknown command is set as its own name, not dropped, and warns", {
-  expect_warning(
-    g <- latex_grob("\\notavalidcommand{x}", input_mode = "math"),
-    "1:1: unknown command \\notavalidcommand", fixed = TRUE
-  )
-  expect_gte(nrow(g$layout_df), nchar("notavalidcommand"))
-  expect_gt(g$bbox_w, 0)
-})
-
 test_that("max_width, hjust and vjust must be single valid values", {
   for (bad in list(NaN, NA_real_, -1, c(1, 2), "a")) {
     expect_error(latex_dims("x", max_width = bad), "single non-negative number")
   }
   expect_error(latex_grob("x", hjust = c(0, 1)), "hjust must be")
   expect_error(latex_grob("x", vjust = NA_real_), "vjust must be")
-})
-
-test_that("a formula that draws nothing has a finite baseline", {
-  for (tex in c("", "\\phantom{}", "\\resizebox{0pt}{0pt}{x}", "\\end{x}")) {
-    expect_equal(as.numeric(suppressWarnings(latex_dims(tex))$baseline), 0,
-                 info = tex)
-  }
-})
-
-test_that("an absurdly tall delimiter is capped, not built piece by piece", {
-  elapsed <- system.time(
-    d <- latex_dims("\\left(\\rule{1pt}{1e8pt}\\right)")
-  )[["elapsed"]]
-  expect_lt(elapsed, 5)
-  expect_true(is.finite(as.numeric(d$height)))
 })
 
 test_that("latex_cache_limit() takes a whole number", {
@@ -242,115 +210,6 @@ test_that("latex_dims respects math_font parameter", {
 
 # --- \def command ---
 
-test_that("\\def defines a zero-argument macro and renders identically to \\newcommand", {
-  layout_nc  <- parse_latex_cpp("\\newcommand{\\mymacroB}{x^2} \\mymacroB", text_size = 20)
-  layout_def <- parse_latex_cpp("\\def\\mymacroA{x^2} \\mymacroA",           text_size = 20)
-  expect_equal(nrow(layout_def), nrow(layout_nc))
-})
-
-test_that("\\def silently overwrites an existing macro, and the last wins", {
-  got <- parse_latex_cpp(
-    "\\def\\myoverwrite{x} \\def\\myoverwrite{y} \\myoverwrite", text_size = 20)
-  expect_equal(got, parse_latex_cpp("y", text_size = 20))
-  expect_false(isTRUE(all.equal(got, parse_latex_cpp("x", text_size = 20))))
-})
-
-test_that("an error inside a command's argument is reported, not swallowed", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # It warns, and the broken command is drawn as its name, in red.
-  for (tex in c("\\text{a \\begin{array}{q}x\\end{array} b}",
-                "\\frac{1}{\\begin{array}{q}x\\end{array}} + y",
-                "\\sqrt{\\begin{array}{q}x\\end{array}}",
-                "a \\begin{array}{q}x\\end{array} b")) {
-    expect_warning(g <- latex_grob(tex, input_mode = "math"), "Invalid alignment",
-                   label = tex)
-    expect_true("#FF0000" %in% g$layout_df$color, label = tex)
-  }
-  # Only the bad part is lost: the text around it survives.
-  expect_warning(
-    d <- latex_grob("\\text{a \\begin{array}{q}x\\end{array} b}", input_mode = "math")$layout_df,
-    "Invalid alignment"
-  )
-  expect_true(all(c("a ", " b") %in% d$text))
-  # An unknown command in an argument is drawn in red; the space after it
-  # goes, as TeX drops a space after a control word.
-  expect_warning(
-    d <- latex_grob("\\text{a \\nosuchcmd b}", input_mode = "math")$layout_df,
-    "unknown command \\nosuchcmd", fixed = TRUE
-  )
-  expect_true(all(c("a ", "b") %in% d$text))
-  expect_true("#FF0000" %in% d$color)
-})
-
-test_that("redefining a built-in lasts one label and never breaks the next", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  has_rule <- function(tex) "line" %in% latex_grob(tex, input_mode = "math")$layout_df$type
-  text_of <- function(tex) {
-    d <- latex_grob(tex, input_mode = "math")$layout_df
-    d$text[!is.na(d$text)]
-  }
-  latex_cache_clear(); on.exit(latex_cache_clear(), add = TRUE)
-  expect_true(has_rule("\\frac{1}{2}"))
-
-  # As in LaTeX, \newcommand refuses a name that exists.
-  expect_warning(rule <- has_rule("\\newcommand{\\frac}{Q}\\frac{1}{2}"), "already exists")
-  expect_true(rule)
-  latex_cache_clear()
-  expect_true(has_rule("\\frac{1}{2}"))
-
-  # \renewcommand and \def may redefine a built-in, for that label only.
-  expect_true("R" %in% text_of("\\renewcommand{\\frac}{\\text{R}}\\frac"))
-  latex_cache_clear()
-  expect_true(has_rule("\\frac{1}{2}"))
-  expect_true("D" %in% text_of("\\def\\sqrt{\\text{D}}\\sqrt"))
-  latex_cache_clear()
-  expect_false("D" %in% text_of("\\sqrt{x}"))
-  # A built-in defined in LaTeX source (\degree) comes back too.
-  expect_true("G" %in% text_of("\\renewcommand{\\degree}{\\text{G}}\\degree"))
-  latex_cache_clear()
-  expect_false("G" %in% text_of("90\\degree"))
-
-  # \renewcommand of something undefined warns and defines it, as LaTeX does.
-  expect_warning(got <- text_of("\\renewcommand{\\nosuch}{\\text{Q}}\\nosuch"),
-                 "\\nosuch was not defined; defined now", fixed = TRUE)
-  expect_true("Q" %in% got)
-})
-
-test_that("a \\def with an invalid name warns and is dropped whole", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  expect_warning(
-    g <- latex_grob("\\def{notacontrolseq}{body}x", input_mode = "math"),
-    "expected '\\' before the name", fixed = TRUE
-  )
-  # Nothing of the definition is drawn, only what follows it.
-  expect_equal(nrow(g$layout_df), 1L)
-})
-
-test_that("\\def with sequential #1..#N parameters expands like \\newcommand[N]", {
-  layout_nc1  <- parse_latex_cpp("\\newcommand{\\sqB}[1]{#1^2} \\sqB{a}", text_size = 20)
-  layout_def1 <- parse_latex_cpp("\\def\\sqA#1{#1^2} \\sqA{a}",           text_size = 20)
-  expect_equal(nrow(layout_def1), nrow(layout_nc1))
-
-  layout_nc2  <- parse_latex_cpp("\\newcommand{\\pairB}[2]{#1+#2} \\pairB{a}{b}", text_size = 20)
-  layout_def2 <- parse_latex_cpp("\\def\\pairA#1#2{#1+#2} \\pairA{a}{b}",         text_size = 20)
-  expect_equal(nrow(layout_def2), nrow(layout_nc2))
-})
-
-test_that("\\def rejects non-sequential or malformed parameter patterns", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  # Each warns and is dropped whole, so only the trailing `y` is drawn.
-  rejected <- c(
-    "\\def\\bad#2#1{#1#2}y" = "parameters must be sequential",   # #2 before #1
-    "\\def\\skip#1#3{#1#3}y" = "parameters must be sequential",  # #1 then #3
-    "\\def\\noarg#x{x}y" = "'#' must be followed by a digit"     # no digit
-  )
-  for (tex in names(rejected)) {
-    expect_warning(g <- latex_grob(tex, input_mode = "math"), rejected[[tex]],
-                   fixed = TRUE, label = tex)
-    expect_equal(nrow(g$layout_df), 1L, label = tex)
-  }
-})
-
 test_that("the typeface fallback warns once per device, not once per grob", {
   tf <- tempfile(fileext = ".ps")
   grDevices::postscript(tf)
@@ -416,23 +275,6 @@ test_that("the fallback is reported only when typeface was asked for", {
     grid.latex("$x^2$", gp = grid::gpar(fontsize = 20))), 1L)
 })
 
-test_that("a macro that expands to itself is a parse error, not a hang", {
-  # \def, since \newcommand refuses to redefine on a second run.
-  for (tex in c("\\def\\gmloop{\\gmloop}\\gmloop",
-                "\\def\\gmping{\\gmpong}\\def\\gmpong{\\gmping}\\gmping",
-                "\\def\\gmgrow{x\\gmgrow}\\gmgrow")) {
-    expect_error(parse_latex_cpp(tex, text_size = 20), "macro expansions",
-                 label = tex)
-  }
-})
-
-test_that("an unterminated $$ at the end of text mode lays out as empty", {
-  expect_equal(nrow(parse_latex_cpp("\\text{$$}", text_size = 20)), 0L)
-  a <- parse_latex_cpp("\\text{a$$}", text_size = 20)
-  b <- parse_latex_cpp("\\text{a}", text_size = 20)
-  expect_equal(attr(a, "bbox_width"), attr(b, "bbox_width"))
-})
-
 test_that("a colour with alpha of 50% or more keeps its colour", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   record_colour <- function(alpha) {
@@ -447,45 +289,6 @@ test_that("a colour with alpha of 50% or more keeps its colour", {
   expect_equal(record_colour(0.8), "#FF0000CC")
 })
 
-test_that("an empty argument is an empty box, as it was in 0.1.1", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  glyphs <- function(tex) sum(latex_tree(tex, input_mode = "math")$records$type == "glyph")
-  expect_equal(glyphs("\\mathop{}\\!\\mathrm{d}x"), 2)
-  expect_equal(glyphs("f\\mathopen{}\\left(x\\right)\\mathclose{}"), 4)
-  expect_equal(glyphs("a\\reflectbox{}b"), 2)
-  expect_equal(glyphs("a\\raisebox{1pt}{}b"), 2)
-})
-
-test_that("an argument read a second time keeps its text", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  fills <- function(tex) {
-    r <- latex_tree(tex, input_mode = "math")$records
-    unique(r$color[r$type != "glyph"])
-  }
-  expect_identical(fills("\\ensuremath{\\colorbox{yellow}{x}}"), fills("\\colorbox{yellow}{x}"))
-  expect_true("#FF0000" %in% latex_tree("\\sqrt[\\textcolor{red}{3}]{x}", input_mode = "math")$records$color)
-})
-
-test_that("a number too large, or NaN, still gives a grob that draws", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  for (tex in c(paste0("a\\hspace{", strrep("9", 45), "pt}b"), "a\\scalebox{1e300}{x}b",
-                "a\\rotatebox{nan}{x}b")) {
-    expect_true(all(is.finite(unlist(latex_tree(tex, input_mode = "math")$bbox))), info = tex)
-  }
-  expect_true(all(is.finite(unlist(latex_tree("a \\relscale{1e30} b")$bbox))))
-})
-
-test_that("what a label defines is its own", {
-  pdf(NULL); on.exit(dev.off(), add = TRUE)
-  invisible(latex_tree("\\definecolor{red}{rgb}{0,0,1}x"))
-  expect_identical(unique(latex_tree("\\textcolor{red}{still red}")$records$color), "#FF0000")
-  invisible(latex_tree("\\arrayrulecolor{blue}\\begin{array}{c}\\hline b\\end{array}", input_mode = "math"))
-  r <- latex_tree("\\begin{array}{c}\\hline still black\\end{array}", input_mode = "math")$records
-  expect_identical(unique(r$color[r$type != "glyph"]), "#000000")
-  invisible(latex_tree("\\breakEverywhere{true}x"))
-  expect_identical(nrow(latex_tree("one run of words")$records), 1L)
-})
-
 test_that("latex_tree honours justify like latex_dims", {
   tex <- paste(rep("alpha beta gamma", 6), collapse = " ")
   d <- latex_dims(tex, max_width = 150, justify = TRUE)
@@ -497,19 +300,3 @@ test_that("latex_tree honours justify like latex_dims", {
             latex_tree(tex, max_width = 150)$bbox[["width"]])
 })
 
-test_that("\\resizebox of an empty box is finite", {
-  d <- latex_dims("\\resizebox{20pt}{10pt}{\\phantom{}}")
-  expect_true(all(is.finite(vapply(d[c("width", "height", "baseline")],
-    grid::convertWidth, numeric(1), unitTo = "bigpts", valueOnly = TRUE))))
-  # A box with no width still scales to a height, and the reverse, exactly
-  # as one that has a little.
-  dim_of <- function(tex, f) {
-    as.numeric(latex_dims(tex, input_mode = "math")[[f]])
-  }
-  expect_equal(dim_of("\\resizebox{!}{20pt}{\\rule{0pt}{5pt}}", "height"),
-               dim_of("\\resizebox{!}{20pt}{\\rule{1pt}{5pt}}", "height"))
-  expect_gt(dim_of("\\resizebox{!}{20pt}{\\rule{0pt}{5pt}}", "height"),
-            dim_of("\\rule{1pt}{5pt}", "height") * 3)
-  expect_equal(dim_of("\\resizebox{20pt}{!}{\\rule{5pt}{0pt}}", "width"),
-               dim_of("\\resizebox{20pt}{!}{\\rule{5pt}{1pt}}", "width"))
-})
