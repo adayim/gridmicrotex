@@ -573,8 +573,9 @@
          "{", gsub("([{}])", "\\\\\\1", path), "}")
 }
 
-# An <img> alone on its line is an HTML *block* to CommonMark, and raw HTML
-# blocks are dropped -- but a browser draws this one, so it is kept. Returns
+# An <img> alone on its line is an HTML *block* to CommonMark. It is drawn as
+# an inline image is (any other raw block is read as HTML, R/markdown-html.R,
+# where an image that cannot be drawn is left out and not an error). Returns
 # the LaTeX its tags make, or NULL when the block holds anything else.
 .MD_IMG_TAG <- "<img\\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>"
 
@@ -863,8 +864,11 @@
 #
 # commonmark and xml2 are Imports, so they cannot be missing at run time
 # and are not guarded.
-.md_parse_doc <- function(md) {
-  masked <- .md_mask_math(md)
+.md_parse_doc <- function(md, spans = NULL) {
+  # `spans` given: `md` is already masked, with these spans -- markdown the
+  # converter of a raw HTML block wrote (R/markdown-html.R), whose math is
+  # still the sentinels of the document it came from.
+  masked <- if (is.null(spans)) .md_mask_math(md) else list(text = md, spans = spans)
   doc <- xml2::read_xml(
     # `footnotes` is a separate argument, not one of the five extensions.
     # With it, `[^1]` arrives as <fnref> and its definition as a <fn>
@@ -903,19 +907,25 @@
 # markdown_grob() reads in document mode (.md_document()).
 # markdown_box_grob() keeps block structure by stacking each block as its
 # own grob instead.
-.md_to_tex <- function(md, base = 20, style = NULL) {
-  parsed <- .md_parse_doc(md)
+.md_to_tex <- function(md, base = 20, style = NULL, spans = NULL) {
+  parsed <- .md_parse_doc(md, spans)
   blocks <- xml2::xml_children(parsed$doc)
   if (length(blocks) == 0L) return("")
   parts <- vapply(blocks, function(b) {
     nm <- xml2::xml_name(b)
     # An html_block holds raw markup as its text, so walking into it
-    # would typeset the tags -- and the markdown inside them, unparsed.
-    # Drop it, matching .md_blocks() on the block path, which would
-    # otherwise disagree about the same document. Only *inline* HTML
-    # (.md_html_tag) is interpreted -- and an <img> alone on its line.
+    # would typeset the tags. An <img> alone on its line is drawn; any
+    # other block is read as HTML and what it says is written as markdown
+    # (.md_html_block_md()), as .md_blocks() does on the block path, which
+    # would otherwise disagree about the same document. Only *inline* HTML
+    # (.md_html_tag) is interpreted inside a paragraph.
     if (identical(nm, "html_block")) {
-      return(.md_img_block(xml2::xml_text(b), parsed$spans, base, style) %||% "")
+      txt <- xml2::xml_text(b)
+      img <- .md_img_block(txt, parsed$spans, base, style)
+      if (!is.null(img)) return(img)
+      md2 <- .md_html_block_md(txt)
+      if (!nzchar(md2)) return("")
+      return(.hb_nested(.md_to_tex(md2, base, style, spans = parsed$spans)))
     }
     # A footnote definition needs a foot to sit at, and an inline label has
     # none: the marker still renders, the note itself is dropped. Only

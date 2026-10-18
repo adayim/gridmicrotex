@@ -980,3 +980,7 @@ Further LaTeX / TikZ pictures	ok	\begin{tikzpicture}\draw (0,0) circle (1); \dra
 Further LaTeX / Boxes and columns	ok	\begin{tcolorbox}[title=A box] Text in a box, which is as wide as the line. \end{tcolorbox}
 Further LaTeX / Boxes and columns	ok	\begin{tcolorbox}[colback=yellow!15, colframe=blue!50!black, colbacktitle=blue!15, coltitle=black, title=Colours] A title band, a frame, and a body in colours of its own. \end{tcolorbox}
 Further LaTeX / Boxes and columns	ok	\begin{multicols}{2}[A header over both columns] One paragraph of some words that run on to a second line.\par Another, in the first column too.\par A third, which is balanced into the second.\par A fourth. \end{multicols}
+Further LaTeX / Boxes and columns	ok	\begin{quote} A short quotation, set in from both margins of the line. \end{quote}
+Further LaTeX / Boxes and columns	ok	\begin{quotation} A quotation's first paragraph, its first line indented.\par And a second paragraph, indented as the first is. \end{quotation}
+Further LaTeX / Boxes and columns	ok	\begin{verse} A line of verse \\ and a second line, long enough to wrap onto another line of the page, which is then set in against the first \end{verse}
+Further LaTeX / Boxes and columns	ok	\begin{alltt}Text as typed,  spaces   kept, with \textbf{bold} and \textcolor{red}{red} in it\end{alltt}

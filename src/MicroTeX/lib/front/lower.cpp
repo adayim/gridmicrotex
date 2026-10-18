@@ -2194,6 +2194,8 @@ private:
     bool indentNext = false;
     /** Paragraphs are indented at all: a minipage sets \parindent to 0. */
     bool indents = true;
+    /** A verse: each `\\` starts a paragraph of its own. */
+    bool verse = false;
     /** Nothing has been set since a heading. LaTeX leaves the paragraph
      *  that follows one unindented, whether it comes straight after the
      *  heading or after a blank line. */
@@ -2440,6 +2442,9 @@ private:
       l.textBefore = false;
       // \parskip, when the input made it more than the nothing article has.
       if (l.drawn && l.gap.empty() && !Units::getDimen("\\parskip").isEmpty()) l.gap = "\\parskip";
+    } else if (l.verse && brk != kNoNode) {
+      // A verse's `\\` ends its paragraph (\@centercr is \par), so the next line is the first of one: outdented.
+      l.indentNext = l.indents;
     }
     l.afterBreak = true;
   }
@@ -2868,25 +2873,31 @@ private:
    *  LaTeX's minipage sets \parindent to 0. It starts between paragraphs,
    *  as a document does, so the line end after `\begin{minipage}{..}` is
    *  nothing, and its last paragraph drops the spaces that end it. */
-  sptr<Atom> subDocument(NodeId list, bool indents = false) {
+  sptr<Atom> subDocument(NodeId list, bool indents = false, bool verse = false) {
     Formula f;
     Label l(f);
     l.document = true;
     l.indents = indents;
     l.indentNext = indents;
+    l.verse = verse;
     l.afterBreak = true;
+    // A verse's paragraphs start 1.5em out of its margin (\itemindent = \listparindent = -1.5em).
+    LengthScope scope;
+    if (verse) nums().lengths.set("parindent", Dimen{-1.5f, UnitType::em});
     feedLines(l, list);
     finishLabel(l, f);
     return f._root;
   }
 
   /** \begin{quote}, quotation and verse: article's lists with no label, whose margins are \leftmargin (2.5em at the first
-   *  level) on both sides. A quotation indents the first line of each paragraph by \listparindent, 1.5em; a verse sets
-   *  its lines at `\\`, and (for want of a hanging indent) its wrapped lines are not set in. */
+   *  level) on both sides. A quotation indents the first line of each paragraph by \listparindent, 1.5em; a verse has a
+   *  left margin 1.5em deeper and its paragraphs -- each `\\` line, a blank line's stanza -- start 1.5em out of it, so a
+   *  line that wraps is set in against the first (pdflatex: 96bp, 111bp from a margin at 72). */
   sptr<Atom> quotation(NodeId id) {
-    sptr<Atom> body = subDocument(child(id, count(id) - 1), node(id).text == "quotation");
+    const bool verse = node(id).text == "verse";
+    sptr<Atom> body = subDocument(child(id, count(id) - 1), node(id).text == "quotation" || verse, verse);
     if (body == nullptr) return nullptr;
-    return sptrOf<IndentAtom>(body, 2.5f, 2.5f);
+    return sptrOf<IndentAtom>(body, verse ? 4.f : 2.5f, 2.5f);
   }
 
   /** \begin{minipage}[position][height][inner position]{width}: its

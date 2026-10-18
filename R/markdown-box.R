@@ -104,9 +104,21 @@
                             inherited = cur_ctx()))
       } else if (identical(tg$kind, "close") && length(open)) {
         close_div()
+      } else if (identical(tg$kind, "other")) {
+        # Any other raw block is read as HTML, and what it says is laid out
+        # as the markdown it is written as (R/markdown-html.R), its tags
+        # never typeset. A comment, a script and a stray </div> say
+        # nothing: they are dropped.
+        md2 <- .md_html_block_md(xml2::xml_text(nd))
+        if (nzchar(md2)) {
+          inner <- .md_parse_doc(md2, spans)
+          for (blk in .hb_nested(.md_blocks(xml2::xml_children(inner$doc),
+                                            inner$spans, base, style,
+                                            cur_ctx()))) {
+            emit(blk)
+          }
+        }
       }
-      # Any other raw block, and a stray </div>, is dropped rather than
-      # passed through: MicroTeX would typeset the markup.
       next
     }
 

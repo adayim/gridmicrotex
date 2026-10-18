@@ -25,7 +25,7 @@
   r"(\usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde})",
   r"(\usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing,decorations.pathreplacing})",
   r"(\usetikzlibrary{positioning,arrows.meta,shapes.geometric,calc,fit,matrix})",
-  r"(\usepackage{tcolorbox,multicol})")
+  r"(\usepackage{tcolorbox,multicol,alltt})")
 
 supported_tex <- function(path = "supported-functions.tex",
                           examples = system.file("supported/examples.tsv", package = "gridmicrotex")) {
@@ -59,7 +59,7 @@ supported_tex <- function(path = "supported-functions.tex",
     c(lines, cur)
   }
   small <- function(s) paste0("{\\small", s, "}")
-  is_display <- function(s) grepl(r"(^\\begin\{(align|alignat|gather|equation|multline|flalign|eqnarray|tcolorbox|multicols)\*?\})", s) ||
+  is_display <- function(s) grepl(r"(^\\begin\{(align|alignat|gather|equation|multline|flalign|eqnarray|tcolorbox|multicols|quote|quotation|verse|alltt)\*?\})", s) ||
     grepl("\\tag", s, fixed = TRUE)
   display_tex <- function(s) if (grepl("\\tag", s, fixed = TRUE) && !grepl("^\\\\begin", s)) paste0("\\[", s, "\\]") else s
 

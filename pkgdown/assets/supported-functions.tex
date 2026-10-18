@@ -7,7 +7,7 @@
 \usepackage[version=4]{mhchem}\usepackage{siunitx,undertilde}
 \usepackage{tikz-cd}\usetikzlibrary{decorations.pathmorphing,decorations.pathreplacing}
 \usetikzlibrary{positioning,arrows.meta,shapes.geometric,calc,fit,matrix}
-\usepackage{tcolorbox,multicol}
+\usepackage{tcolorbox,multicol,alltt}
 \begin{document}
 \begin{center}\Large\textbf{What gridmicrotex draws}\end{center}
 
@@ -1635,5 +1635,24 @@ $} \\[4pt]
 {\small\verb|\begin{multicols}{2}[A header over both columns] One paragraph| \\ \verb|of some words that run on to a second line.\par Another, in the| \\ \verb|first column too.\par A third, which is balanced into the| \\ \verb|second.\par A fourth. \end{multicols}|}
 
 \begin{multicols}{2}[A header over both columns] One paragraph of some words that run on to a second line.\par Another, in the first column too.\par A third, which is balanced into the second.\par A fourth. \end{multicols}
+
+{\small\verb|\begin{quote} A short quotation, set in from both margins of the| \\ \verb|line. \end{quote}|}
+
+\begin{quote} A short quotation, set in from both margins of the line. \end{quote}
+
+{\small\verb|\begin{quotation} A quotation's first paragraph, its first line| \\ \verb|indented.\par And a second paragraph, indented as the first is.| \\ \verb|\end{quotation}|}
+
+\begin{quotation} A quotation's first paragraph, its first line indented.\par And a second paragraph, indented as the first is. \end{quotation}
+
+{\small\verb|\begin{verse} A line of verse \\ and a second line, long enough| \\ \verb|to wrap onto another line of the page, which is then set in| \\ \verb|against the first \end{verse}|}
+
+\begin{verse} A line of verse \\ and a second line, long enough to wrap onto another line of the page, which is then set in against the first \end{verse}
+
+\newpage
+\subsection*{Further LaTeX / Boxes and columns (continued)}
+
+{\small\verb|\begin{alltt}Text as typed,  spaces   kept, with \textbf{bold}| \\ \verb|and \textcolor{red}{red} in it\end{alltt}|}
+
+\begin{alltt}Text as typed,  spaces   kept, with \textbf{bold} and \textcolor{red}{red} in it\end{alltt}
 
 \end{document}
