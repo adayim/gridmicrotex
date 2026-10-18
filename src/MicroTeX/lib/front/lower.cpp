@@ -142,7 +142,7 @@ struct Numbering {
     std::string where;
     std::string parent;
   };
-  std::map<std::string, Counter> counters{{"footnote", Counter()}};
+  std::map<std::string, Counter> counters{{"footnote", Counter()}, {"figure", Counter()}, {"table", Counter()}};
   /** The page notes so far, (mark, text as written): a document sets them after its body (finishNotes()). */
   std::vector<std::pair<std::string, std::string>> notes;
   /** What a \label names now, as \@currentlabel: the number of the last
@@ -2821,8 +2821,13 @@ private:
       } else if (x.kind == NodeKind::environment || isEnvironmentGroup(id)) {
         placeOnLine(l, id);
       } else if (!hasBreak(id)) {
+        const bool atLineStart = l.afterBreak;
         beforeProse(l);
         lowerItem(id, prose(l));
+        // `\label`, `\setlength`, `\definecolor` and the rest that draw nothing leave the line as it was: a space after
+        // one at the start of a paragraph is still the space after a break, which TeX ignores (it was drawn, and the
+        // text after `\section{S}\n\label{x}\n` stood a space in).
+        if (atLineStart && l.prose != nullptr && l.prose->_root == nullptr) l.afterBreak = true;
       } else {
         const auto pieces = piecesOf(id);
         for (std::size_t k = 0; k < pieces.size(); k++) {
@@ -3744,11 +3749,16 @@ private:
     resetCountersWithin(name);
   }
 
-  void resetCountersWithin(const std::string& parent) {
+  /** Every counter made `within` `parent`, and those within them, start again. Counters that are each other's parents
+   *  (`\newcounter{a}[a]`, which LaTeX accepts as a loop that never ends) are reset once: `seen` stops the recursion. */
+  void resetCountersWithin(const std::string& parent, std::set<std::string>* seen = nullptr) {
+    std::set<std::string> here;
+    if (seen == nullptr) seen = &here;
+    if (!seen->insert(parent).second) return;
     for (auto& entry : nums().counters) {
       if (entry.second.parent != parent) continue;
       entry.second.value = 0;
-      resetCountersWithin(entry.first);
+      resetCountersWithin(entry.first, seen);
     }
   }
 

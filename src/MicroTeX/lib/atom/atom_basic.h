@@ -130,6 +130,10 @@ public:
   sptr<Box> createBox(Env& env) override;
 };
 
+/** The colour the array rule colour command last set: a rule takes it when it is made, so a table can change colour between its rules
+ *  (it was read when the rules were drawn, and the last one coloured them all). transparent: the default. */
+inline thread_local color gArrayRuleColor = transparent;
+
 /** An atom representing a horizontal-line in array environment */
 class HlineAtom : public Atom {
 private:
@@ -150,7 +154,7 @@ private:
 public:
   HlineAtom() noexcept
       : _width(0), _shift(0), _thicknessScale(1.f),
-        _colStart(-1), _colEnd(-1), _color(transparent) {
+        _colStart(-1), _colEnd(-1), _color(gArrayRuleColor) {
     _type = AtomType::hline;
   }
 
@@ -161,6 +165,8 @@ public:
   inline void setShift(float s) { _shift = s; }
 
   inline void setColor(color c) { _color = c; }
+
+  inline color ruleColor() const { return _color; }
 
   inline void setThicknessScale(float s) { _thicknessScale = s; }
 

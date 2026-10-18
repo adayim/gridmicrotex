@@ -1,6 +1,9 @@
 #include "front/expander.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <deque>
 #include <iterator>
@@ -1419,6 +1422,80 @@ struct Expander::Impl {
     pushExpansion("\\ensuremath{" + out + "}", e.tok.span);
   }
 
+  /** The commands that take xcolor's optional colour model (`\textcolor[rgb]{.2,.4,.6}{x}`, colortbl's `\rowcolor[HTML]{EFEFEF}`). */
+  static bool isModelColourCommand(const std::string& n) {
+    static const std::unordered_set<std::string> names = {"textcolor", "color",  "colorbox",   "fcolorbox",
+                                                           "rowcolor",  "cellcolor", "columncolor", "pagecolor",
+                                                           "arrayrulecolor"};
+    return names.count(n) != 0;
+  }
+
+  /** A colour written in xcolor's model as the `#RRGGBB` every colour argument reads. Anything else is `spec` as it was. */
+  static std::string colourInModel(const std::string& model, const std::string& spec, std::string& problem) {
+    const std::string m = trim(model);
+    if (m == "named" || m.empty()) return spec;
+    std::string text = trim(spec);
+    if (m == "HTML") {
+      if (text.size() != 6 || text.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
+        problem = "HTML colour `" + text + "' is not six hexadecimal digits";
+        return spec;
+      }
+      for (char& c : text) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+      return "#" + text;
+    }
+    std::vector<double> v;
+    for (std::size_t from = 0; from <= text.size();) {
+      const std::size_t cut = text.find_first_of(",:", from);
+      const std::string part = trim(text.substr(from, cut == std::string::npos ? std::string::npos : cut - from));
+      char* end = nullptr;
+      const double x = std::strtod(part.c_str(), &end);
+      if (part.empty() || end != part.c_str() + part.size()) {
+        problem = "`" + text + "' is not a colour in the " + m + " model";
+        return spec;
+      }
+      v.push_back(x);
+      if (cut == std::string::npos) break;
+      from = cut + 1;
+    }
+    double r = 0, g = 0, b = 0;
+    if (m == "rgb" && v.size() == 3) {
+      r = v[0], g = v[1], b = v[2];
+    } else if (m == "RGB" && v.size() == 3) {
+      r = v[0] / 255.0, g = v[1] / 255.0, b = v[2] / 255.0;
+    } else if (m == "gray" && v.size() == 1) {
+      r = g = b = v[0];
+    } else if (m == "Gray" && v.size() == 1) {
+      r = g = b = v[0] / 15.0;
+    } else if (m == "cmyk" && v.size() == 4) {
+      r = (1 - v[0]) * (1 - v[3]), g = (1 - v[1]) * (1 - v[3]), b = (1 - v[2]) * (1 - v[3]);
+    } else {
+      problem = (m == "rgb" || m == "RGB" || m == "gray" || m == "Gray" || m == "cmyk")
+                  ? "`" + text + "' has the wrong number of components for the " + m + " model"
+                  : "the colour model `" + m + "' is not known";
+      return spec;
+    }
+    const auto byte = [](double x) { return static_cast<int>(std::lround(std::min(1.0, std::max(0.0, x)) * 255.0)); };
+    char buf[16];
+    std::snprintf(buf, sizeof buf, "#%02X%02X%02X", byte(r), byte(g), byte(b));
+    return buf;
+  }
+
+  /** `\textcolor[model]{spec}{text}` and kin: with a model, the colour is passed on as `#RRGGBB`; without, the command goes
+   *  through as it is. */
+  std::optional<bool> colourModelCommand(const ExpToken& e) {
+    ExpToken t = nextNonSpace();
+    const bool bracket = isChar(t, '[');
+    unread(std::move(t));
+    if (!bracket) return false;
+    const std::string model = readOptional().value_or(std::string());
+    const std::string name = e.tok.text, who = "\\" + name;
+    std::string problem, out = who;
+    for (int k = 0; k < (name == "fcolorbox" ? 2 : 1); k++) out += "{" + colourInModel(model, readArg(who), problem) + "}";
+    if (!problem.empty()) diags.warn(e.tok.span, who + ": " + problem);
+    pushExpansion(out, e.tok.span);
+    return true;
+  }
+
   static bool isSiunitx(const std::string& n) {
     static const char* names[] = {"num",      "si",      "SI",      "unit",    "qty",
                                   "ang",      "numrange", "SIrange", "qtyrange", "numlist",
@@ -1445,7 +1522,7 @@ struct Expander::Impl {
       "@ifpackageloaded", "NewDocumentCommand", "RenewDocumentCommand", "ProvideDocumentCommand",
       "DeclareDocumentCommand", "NewDocumentEnvironment", "RenewDocumentEnvironment",
       "ProvideDocumentEnvironment", "DeclareDocumentEnvironment"};
-    return names.count(n) != 0 || isSiunitx(n);
+    return names.count(n) != 0 || isSiunitx(n) || isModelColourCommand(n);
   }
 
   /** The conditionals: each reads a test and then one of two branches. */
@@ -2284,6 +2361,7 @@ struct Expander::Impl {
       siunitxCommand(e);
       return true;
     }
+    if (isModelColourCommand(name) && unshadowed()) return colourModelCommand(e);
     if (name == "newtheorem") {
       declareTheorem(e);
       return true;

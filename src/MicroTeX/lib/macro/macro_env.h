@@ -378,7 +378,10 @@ inline cmdmacro(newcolumntype) {
 
 inline cmdmacro(arrayrulecolor) {
   color c = colourArg(args, args.text(1));
-  if (!isTransparent(c)) MatrixAtom::LINE_COLOR = c;
+  if (!isTransparent(c)) {
+    MatrixAtom::LINE_COLOR = c;
+    gArrayRuleColor = c;
+  }
   return nullptr;
 }
 
@@ -575,6 +578,13 @@ inline std::vector<std::string> listParts(const std::string& item) {
   return parts;
 }
 
+// How deep the list being built is in other lists (a nested list is lowered while its outer one is): LaTeX's default
+// labels change with the level.
+inline int& listDepth() {
+  static thread_local int depth = 0;
+  return depth;
+}
+
 // Lay a list body out as rows, one per item: its marker, set right as
 // LaTeX sets labels, a quad, and its text in an X column, which takes the
 // rest of the text width and wraps to it (the whole line without a
@@ -636,7 +646,15 @@ inline sptr<Atom> listBuild(
     }
     if (first) row(mark, "");  // an empty item still has its marker
   }
-  const auto arr = args.alignmentOfText(s);
+  struct Deeper {
+    Deeper() { listDepth()++; }
+    ~Deeper() { listDepth()--; }
+  };
+  sptr<ArrayFormula> arr;
+  {
+    const Deeper inside;   // the lists in this one's items are lowered here
+    arr = args.alignmentOfText(s);
+  }
   arr->checkDimensions();
   if (columns == nullptr) columns = description ? "l@{\\quad}X" : "r@{\\quad}X";
   auto list = sptrOf<MatrixAtom>(args.isPartial(), arr, columns, false);
@@ -676,14 +694,19 @@ inline cmdmacro(tablenotesATATenv) {
 inline cmdmacro(itemizeATATenv) {
   std::string body = args.text(1);
   const std::string opt = listPeelOptional(body);
-  const std::string mark = opt.empty() ? "\\bullet" : opt;
+  // LaTeX's labels by level: a bullet, a bold en dash (\labelitemii is `\normalfont\bfseries\textendash`), an asterisk, a
+  // centred dot.
+  static const char* marks[] = {"\\bullet", "\\text{\\bfseries\\textendash}", "\\ast", "\\cdot"};
+  const std::string mark = opt.empty() ? marks[std::min(listDepth(), 3)] : opt;
   return listBuild(args, listSplitItems(body), [&](int) { return mark; });
 }
 
 inline cmdmacro(enumerateATATenv) {
   std::string body = args.text(1);
   std::string opt = listPeelOptional(body);
-  if (opt.empty()) opt = "\\arabic*.";
+  // LaTeX's labels by level: 1., (a), i., A.
+  static const char* labels[] = {"\\arabic*.", "(\\alph*)", "\\roman*.", "\\Alph*."};
+  if (opt.empty()) opt = labels[std::min(listDepth(), 3)];
   return listBuild(args, listSplitItems(body), [&](int n) {
     return "\\mathrm{" + listFormatLabel(opt, n) + "}";
   }, false, nullptr, false, std::string(), true);

@@ -7,6 +7,7 @@
 #include "atom/atom_basic.h"
 #include "atom/atom_font.h"
 #include "atom/atom_row.h"
+#include "atom/atom_vrow.h"
 #include "core/formula.h"
 #include "core/glue.h"
 #include "core/split.h"
@@ -39,6 +40,7 @@ void MatrixAtom::defineColumnSpecifier(const string& rep, const string& spe) {
 void MatrixAtom::resetDefinitions() {
   _colspeReplacement.clear();
   LINE_COLOR = transparent;
+  gArrayRuleColor = transparent;
 }
 
 namespace {
@@ -860,6 +862,12 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
   _tagReserve = tagWidth > 0 ? tagWidth + tagGap : 0.f;
   const bool centred = _matType == MatrixType::align || _matType == MatrixType::alignAt;
   const float leftShift = centred && env.textWidth() != POS_INF ? _tagReserve : 0.f;
+  // A display of align's kind (`equation` is one row of align): what TeX centres is the formula, the number apart; the
+  // matrix is as wide as the line, spread across it, and the formula is not.
+  if (centred) {
+    gDisplayFormulaWidth = matW;
+    gDisplayNumberWidth = tagWidth;
+  }
 
   // The horizontal separator's width
   vector<float> Hsep = getColumnSep(env, matW);
@@ -988,7 +996,7 @@ sptr<Box> MatrixAtom::createBoxInner(Env& env) {
 
         case AtomType::hline: {
           auto* at = (HlineAtom*)_matrix->_array[i][j].get();
-          at->setColor(LINE_COLOR);
+          if (isTransparent(at->ruleColor())) at->setColor(LINE_COLOR);   // its own colour, from when it was made
           if (i >= 1 && dynamic_cast<HlineAtom*>(_matrix->_array[i - 1][j].get()) != nullptr) {
             hb->add(sptrOf<StrutBox>(0.f, 2 * drt, 0.f, 0.f));
           }
@@ -1232,10 +1240,14 @@ sptr<Box> MultlineAtom::createBox(Env& env) {
   // A line of the measure's width, with the row's number or \tag flush at
   // its right end.
   const auto line = [&](size_t row, const sptr<Atom>& a, Alignment al) -> sptr<Box> {
-    auto box = sptrOf<HBox>(a->createBox(env), tw, al);
+    const sptr<Box> formula = a->createBox(env);
+    auto box = sptrOf<HBox>(formula, tw, al);
     const auto tag = _column->_rowTags.find(static_cast<int>(row));
     if (tag == _column->_rowTags.end() || tag->second == nullptr) return box;
     auto number = tag->second->createBox(env);
+    // (The number, and the formula it belongs to, for the display skips: see DisplayAtom.)
+    gDisplayFormulaWidth = formula->_width;
+    gDisplayNumberWidth = number->_width;
     auto both = sptrOf<HBox>();
     both->add(box);
     both->add(sptrOf<StrutBox>(-number->_width, 0.f, 0.f, 0.f));

@@ -12,6 +12,12 @@
 
 namespace microtex {
 
+/** The width of the formula of a numbered display, and of its number, as the layout of the display finds them: where the number
+ *  is laid out (a matrix or a multline with a tag) these are set, and DisplayAtom reads them right after, so that TeX's choice
+ *  of display skips -- by where the formula starts, not by the measure the number makes the row -- can be made. */
+inline thread_local float gDisplayFormulaWidth = -1.f;
+inline thread_local float gDisplayNumberWidth = 0.f;
+
 /** An atom representing a vertical row of other atoms. */
 class VRowAtom : public Atom {
 private:

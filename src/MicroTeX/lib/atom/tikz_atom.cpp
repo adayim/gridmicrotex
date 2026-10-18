@@ -5,6 +5,7 @@
 #include <functional>
 #include <limits>
 
+#include "atom/atom_basic.h"
 #include "box/box_single.h"
 #include "env/env.h"
 #include "env/units.h"
@@ -444,6 +445,12 @@ bool Layout::resolve(const Coord& c, const Style& st, P base, Where& out) {
       out.p = c.relative ? base + m.linear(v) : m.apply(v);
       return true;
     }
+    case Coord::Kind::cross: {
+      Where a, b;
+      if (!resolve(*c.first, st, base, a) || !resolve(*c.second, st, base, b)) return false;
+      out.p = c.xFromFirst ? P{a.p.x, b.p.y} : P{b.p.x, a.p.y};
+      return true;
+    }
     case Coord::Kind::node: {
       const auto it = _nodes.find(c.name);
       if (it == _nodes.end()) return false;
@@ -515,7 +522,8 @@ std::vector<P> Layout::flatten(const Sub& s, int steps) {
 
 void Layout::arcSegments(Sub& sub, P centre, double rx, double ry, double a0, double a1) {
   // Cubic arcs of at most 90 degrees, from angle a0 to a1 (degrees) on the ellipse.
-  const double span = a1 - a0;
+  // (At most ten turns: an arc of 36000000 degrees was 400000 curves and a minute of layout.)
+  const double span = std::min(3600.0, std::max(-3600.0, a1 - a0));
   const int n = std::max(1, static_cast<int>(std::ceil(std::fabs(span) / 90.0 - 1e-9)));
   const double step = radians(span / n);
   const double k = 4.0 / 3.0 * std::tan(step / 4.0);
@@ -986,7 +994,13 @@ void Layout::applyTips(const Style& st, std::vector<Sub>& subs, double lw, std::
 Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt, const FitBox* fit) const {
   Geom g;
   g.shape = st.shape.empty() ? "rectangle" : st.shape;
-  box = n.content != nullptr ? n.content->createBox(_env) : nullptr;
+  // The node's own `scale`: its text, inner separation and minimum size are that much larger; its line is not (pdfTeX: a
+  // scale=2 node of one letter is 24.197bp across, two of 11.899 and the line once).
+  const double sx = st.nodeScaleX, sy = st.nodeScaleY;
+  const bool scaled = sx != 1.0 || sy != 1.0;
+  box = n.content != nullptr ? (scaled ? sptrOf<ScaleAtom>(n.content, static_cast<float>(sx), static_cast<float>(sy))->createBox(_env)
+                                       : n.content->createBox(_env))
+                             : nullptr;
   // A fitted node's text box is the box of the points: that wide, that high.
   const double tw = fit ? fit->width : box ? box->_width : 0.0, th = fit ? fit->height : box ? box->_height : 0.0,
                td = fit ? 0.0 : box ? box->_depth : 0.0;
@@ -996,10 +1010,10 @@ Geom Layout::makeGeom(const Node& n, const Style& st, sptr<Box>& box, P& textAt,
     textAt = {0, 0};
     return g;
   }
-  const double ix = len(st.innerX, 0.3333 * _em), iy = len(st.innerY, 0.3333 * _em);
+  const double ix = sx * len(st.innerX, 0.3333 * _em), iy = sy * len(st.innerY, 0.3333 * _em);
   const double lw = len(st.lineWidth, 0.4 * _pt);
   g.outer = len(st.outerSep, 0.5 * lw);
-  const double minW = len(st.minWidth, 0.0), minH = len(st.minHeight, 0.0);
+  const double minW = sx * len(st.minWidth, 0.0), minH = sy * len(st.minHeight, 0.0);
   const double w0 = tw + 2 * ix, h0 = th + td + 2 * iy;
   if (g.shape == "circle") {
     const double r = std::max({0.5 * std::hypot(w0, h0), 0.5 * minW, 0.5 * minH});
@@ -1580,7 +1594,7 @@ void Layout::layoutNodeMatrix(const NodeMatrix& gm, const Style& st) {
   Node mn = gm.node;
   if (mn.name.empty()) mn.name = "\x01matrix";
   mn.content = sptrOf<FixedAtom>(static_cast<float>(width), static_cast<float>(height), 0.f);
-  P at{0, 0};
+  P at = matrixOf(st).apply(P{0, 0});   // the origin of its scope, shifted as the scope says
   bool given = false;
   if (mn.hasAt) {
     Where w;
@@ -1929,6 +1943,10 @@ void Layout::layoutPath(const PathItem& item) {
         lineTo(b);
         lineTo({a.x, b.y});
         cur.closed = true;
+        // A node on a rectangle (`rectangle node{x} (3,1)`, `rectangle (3,1) node[midway]{x}`) goes on its diagonal: half way
+        // is the centre.
+        segs[i] = {true, false, a, P(), P(), b};
+        lastSeg = static_cast<int>(i);
         at = b;
         nominal = b;
         break;
@@ -2092,6 +2110,33 @@ void Layout::layoutPath(const PathItem& item) {
     _regions[item.clipId] = region;
   }
 
+  // The picture holds a stroked path's line, half its width each side of the path (and an arrow tip's the same): pdfTeX,
+  // `\draw[line width=8pt] (0,0) -- (1,0)` is 8pt wider and 8pt taller than the path. The control points count, as ever.
+  const auto holdLine = [&](const Prim& p) {
+    if (!p.stroke) return;
+    double x0 = 1e30, x1 = -1e30, y0 = 1e30, y1 = -1e30;
+    const auto grow = [&](P q) {
+      x0 = std::min(x0, q.x);
+      x1 = std::max(x1, q.x);
+      y0 = std::min(y0, q.y);
+      y1 = std::max(y1, q.y);
+    };
+    for (const Sub& s : p.subs) {
+      grow(s.start);
+      for (const Seg& sg : s.segs) {
+        grow(sg.to);
+        if (sg.cubic) {
+          grow(sg.c1);
+          grow(sg.c2);
+        }
+      }
+    }
+    if (x0 > x1) return;
+    const double half = 0.5 * p.lw;
+    see(P{x0 - half, y0 - half});
+    see(P{x1 + half, y1 + half});
+  };
+
   if (!subs.empty() && (stroke || fill)) {
     Prim prim = primOf(st, stroke, fill);
     std::vector<Sub> drawn;
@@ -2104,9 +2149,13 @@ void Layout::layoutPath(const PathItem& item) {
     if (st.decorate && st.decoration == "brace") braces(drawn, st);
     if (stroke) applyTips(st, drawn, lw, extra);
     prim.subs = std::move(drawn);
+    holdLine(prim);
     _prims.push_back(std::move(prim));
   }
-  for (Prim& p : extra) _prims.push_back(std::move(p));
+  for (Prim& p : extra) {
+    holdLine(p);
+    _prims.push_back(std::move(p));
+  }
 
   // The nodes: those at a point of the path, and those on a segment of it.
   for (const Put& p : puts) {
@@ -2203,6 +2252,13 @@ sptr<Box> Layout::run() {
       double total = 0;
       for (double d : pattern) total += d;
       if (pts.size() < 2 || total <= 1e-9) return out;
+      // A pattern so fine that the line would be a hundred thousand dashes is a solid line (it took minutes, and no one can tell).
+      double pathLength = 0;
+      for (std::size_t i = 1; i < pts.size(); i++) pathLength += length(pts[i] - pts[i - 1]);
+      if (pathLength / total * static_cast<double>(pattern.size()) > 50000.0) {
+        out.push_back(pts);
+        return out;
+      }
       std::size_t k = 0;
       double into = std::fmod(std::max(0.0, phase), total);
       while (into >= pattern[k % pattern.size()]) {

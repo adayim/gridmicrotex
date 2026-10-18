@@ -26,12 +26,14 @@ struct CalcExpr;
 
 /** A point of a picture, as written: `(1,2)`, `(30:2cm)`, `(a)`, `(a.north)`, `+(1,0)`. */
 struct Coord {
-  enum class Kind { xy, polar, node, calc } kind = Kind::xy;
+  enum class Kind { xy, polar, node, calc, cross } kind = Kind::xy;
   Dimen x, y;                    // xy
   float angle = 0.f;             // polar: degrees
   Dimen r, r2;                   // polar: the radius, and the second one of an ellipse
   std::string name, anchor;      // node: its name, and the anchor after the dot
   std::shared_ptr<CalcExpr> calc;  // calc: `($ ... $)`
+  std::shared_ptr<Coord> first, second;  // cross: `(a |- b)` is the x of a and the y of b, `(a -| b)` the x of b and the y of a
+  bool xFromFirst = true;
   int relative = 0;              // 0 absolute, 1 `+` (the base stays), 2 `++` (the base moves)
 };
 
@@ -126,6 +128,7 @@ struct Style {
   std::optional<float> borderRotate;             // `shape border rotate=`, degrees
   std::optional<float> apexAngle;                // `isosceles triangle apex angle=`, degrees
   bool borderIncircle = false;                   // `shape border uses incircle` (pgf: false unless said)
+  float nodeScaleX = 1.f, nodeScaleY = 1.f;      // a node's own `scale`, `xscale`, `yscale`: the node, not where it is put
   // `\clip` and `clip`: the clip paths in force, by id (a PathItem's `clipId`); a scope ends them with its group.
   std::vector<int> clips;
   bool clipPath = false;                         // the `clip` option: the path is also a clip path

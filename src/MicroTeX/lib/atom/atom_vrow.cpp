@@ -212,9 +212,17 @@ sptr<Box> VRowAtom::createBox(Env& env) {
 }
 
 sptr<Box> DisplayAtom::createBox(Env& env) {
+  gDisplayFormulaWidth = -1.f;
   auto box = _base->createBox(env);
   const float width = env.textWidth();
   _innerWidth = std::min(box->_width, width);
+  if (gDisplayFormulaWidth >= 0.f && width != POS_INF) {
+    // A numbered display is centred by its formula: TeX puts it (z - w) / 2 from the left, and when that is under twice the
+    // number's width, (z - w - e) / 2, the number taking its room. The row is as wide as the line, the formula is not.
+    const float w = gDisplayFormulaWidth, e = gDisplayNumberWidth;
+    _innerWidth = (width - w) / 2 < 2 * e ? w + e : w;
+  }
+  gDisplayFormulaWidth = -1.f;
   if (width == POS_INF) return box;
   if (box->_width <= width) return sptrOf<HBox>(box, width, _align);
   // Too wide for the line: broken as any line is, and each line it makes
@@ -438,15 +446,45 @@ sptr<VBox> flowOf(const sptr<Box>& box) {
   return nullptr;
 }
 
+/** Whether a box is a column of lines or rows, or only holds one (so that it can be cut between its lines). */
+bool holdsLines(const sptr<Box>& box) {
+  if (const auto v = std::dynamic_pointer_cast<VBox>(box)) return v->_lines || v->_rows;
+  if (const auto h = std::dynamic_pointer_cast<HBox>(box)) {
+    sptr<Box> only;
+    for (const auto& child : h->_children) {
+      if (child->_height + child->_depth <= 0.f) continue;
+      if (only != nullptr) return false;
+      only = child;
+    }
+    return only != nullptr && holdsLines(only);
+  }
+  return false;
+}
+
 void columnLeaves(const sptr<Box>& box, std::vector<sptr<Box>>& out, std::set<const Box*>& gaps) {
   if (const sptr<VBox> list = flowOf(box); list != nullptr && !list->_children.empty()) {
     for (const auto& item : list->_children) out.push_back(item);
     return;
   }
+  // A paragraph's lines in a wrapper of their own (a row of the document): the lines are the leaves.
+  if (const auto h = std::dynamic_pointer_cast<HBox>(box); h != nullptr && holdsLines(box)) {
+    for (const auto& child : h->_children) {
+      if (child->_height + child->_depth > 0.f) {
+        columnLeaves(child, out, gaps);
+        return;
+      }
+    }
+  }
   const auto v = std::dynamic_pointer_cast<VBox>(box);
-  if (v != nullptr && (v->_lines || v->_rows) && !v->_children.empty()) {
+  // A box of paragraphs, a display and the gaps between them is a VBox with no flag of its own (the document's rows);
+  // it is cut between its parts when one of them is a column of lines, which a fraction's box has none of.
+  bool cuttable = v != nullptr && (v->_lines || v->_rows);
+  if (v != nullptr && !cuttable) {
+    for (const auto& child : v->_children) cuttable = cuttable || holdsLines(child);
+  }
+  if (v != nullptr && cuttable && !v->_children.empty()) {
     for (const auto& child : v->_children) {
-      if (v->_rows && !v->_lines && child->isSpace()) gaps.insert(child.get());
+      if (!v->_lines && child->isSpace()) gaps.insert(child.get());
       columnLeaves(child, out, gaps);
     }
   } else {

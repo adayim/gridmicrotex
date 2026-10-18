@@ -263,6 +263,23 @@ public:
 
   /** The picture: its options, then its statements. */
   void picture(std::string body) {
+    // The styles the input defined before the picture, which the parser puts in front of its text: read first, so that the
+    // picture's options (which come first in TikZ) may use them, and are still the first thing read as options.
+    // (They were put before `[scale=2]`, which then was not an option list: the picture was dropped.)
+    std::size_t from = 0;
+    for (;;) {
+      std::size_t j = from;
+      skipSpace(body, j);
+      if (body.compare(j, 8, "\\tikzset") != 0) break;
+      j += 8;
+      skipSpace(body, j);
+      if (j >= body.size() || body[j] != '{') break;
+      const std::string keys = groupAt(body, j);
+      Style ignored;
+      applyOptions(ignored, keys, false, 0);
+      from = j;
+    }
+    body.erase(0, from);
     const std::string options = listPeelOptional(body);
     Style root;
     root.draw = Paint();
@@ -495,8 +512,11 @@ private:
       if (colour(value, c)) st.textColor = c;
     } else if (key == "line width") {
       const Dimen d = dimen(value);
-      if (d.isValid()) st.lineWidth = d.unit == UnitType::cm && trim(value).find("cm") == std::string::npos
-                                        ? Dimen{d.val, UnitType::pt} : d;
+      if (d.isValid() && d.val < 0) {
+        warn("tikz: line width=" + value + " is negative: left out");   // grid would not draw it at all
+      } else if (d.isValid()) {
+        st.lineWidth = d.unit == UnitType::cm && trim(value).find("cm") == std::string::npos ? Dimen{d.val, UnitType::pt} : d;
+      }
     } else if (key == "ultra thin") {
       lineWidth(st, 0.1);
     } else if (key == "very thin") {
@@ -565,6 +585,21 @@ private:
                  : key == "yscale" ? XStep::Kind::yscale : XStep::Kind::rotate;
         s.v = static_cast<float>(v);
         st.transform.push_back(s);
+      }
+    } else if (key == "shift" && hasValue) {
+      // `shift={(1,2)}` (the braces were taken off), or `shift=(1,2)`: a move of everything after it.
+      const std::string v = trim(value);
+      std::size_t at = 0;
+      Coord c;
+      if (!v.empty() && v[0] == '(') c = coord(parenAt(v, at));
+      if (c.kind == Coord::Kind::xy && c.x.isValid() && c.y.isValid()) {
+        XStep s;
+        s.kind = XStep::Kind::shift;
+        s.dx = c.x;
+        s.dy = c.y;
+        st.transform.push_back(s);
+      } else {
+        warn("tikz: shift=" + value + " is not a point (x,y): left out");
       }
     } else if (key == "xshift" || key == "yshift") {
       XStep s;
@@ -878,6 +913,17 @@ private:
       c.kind = Coord::Kind::calc;
       c.calc = calcOf(s);
       return c;
+    }
+    // `(a |- b)` and `(a -| b)`: the corner the vertical line from one makes with the horizontal line from the other.
+    for (const char* op : {"|-", "-|"}) {
+      const auto cut = s.find(op);
+      if (cut != std::string::npos && cut > 0) {
+        c.kind = Coord::Kind::cross;
+        c.first = std::make_shared<Coord>(coord(s.substr(0, cut)));
+        c.second = std::make_shared<Coord>(coord(s.substr(cut + 2)));
+        c.xFromFirst = std::string(op) == "|-";
+        return c;
+      }
     }
     // `a:r`, an angle and a radius; not `cs:`.
     const auto colon = s.find(':');
@@ -1288,6 +1334,14 @@ private:
     path = replaceControl(path, "tikzparentnode", parentName);
     path = replaceControl(path, "tikzchildnode", cn.name);
     pathOps(e, path + " " + edgeText.substr(k), 0);
+    // A node of an edge from the parent is half way along it unless it says otherwise (pdfTeX), where a node after the last point
+    // of any other path is at that point.
+    for (Node& label : e.nodes) {
+      if (!label.posGiven) {
+        label.posGiven = true;
+        label.pos = 0.5f;
+      }
+    }
     _edges.push_back(std::move(e));
     c.node = std::move(cn);
   }
@@ -1398,8 +1452,14 @@ private:
         if (env == "scope") {
           Style child = scope;
           const std::string options = listPeelOptional(inner);
+          // Styles a scope defines (in its options, or with \tikzset in it) end with it, as a TeX group's work does:
+          // `every node/.style` in a scope's options was still in force after it.
+          const auto savedStyles = _styles;
+          const auto savedAppended = _appended;
           applyOptions(child, options, false, 0);
           run(inner, child, depth + 1);
+          _styles = savedStyles;
+          _appended = savedAppended;
         } else if (env == "pgfonlayer") {
           // `\begin{pgfonlayer}{background}`: the paths in it are drawn on that layer.
           std::size_t at = 0;
@@ -1815,6 +1875,12 @@ private:
       // \node[options] (name) at (coord) {text};
       i = 0;
       Node n = nodeOf(cmd == "coordinate", text, i, path.style, true, scope);
+      // (The picture item's own style is what puts the node: its own scale and rotation are taken out of it too.)
+      const std::size_t before = path.style.transform.size();
+      path.style.nodeScaleX = path.style.nodeScaleY = 1.f;
+      Style scratch = path.style;
+      takeNodeTransform(scratch, scope.transform.size());
+      if (scratch.transform.size() != before) path.style.transform = scratch.transform;
       readTree(n, scope, 1, text, i);
       path.isNode = true;
       path.nodes.push_back(std::move(n));
@@ -1871,6 +1937,12 @@ private:
               const Style& enclosing) {
     Node n;
     n.style = pathStyle;
+    // A `\node[options]` reads its options twice: as the options of its path, and here. The steps of the first reading are
+    // dropped, or `scale=2` was a scale of 4.
+    if (standalone && n.style.transform.size() > enclosing.transform.size()) {
+      n.style.transform.erase(n.style.transform.begin() + static_cast<std::ptrdiff_t>(enclosing.transform.size()),
+                              n.style.transform.end());
+    }
     n.style.labelSpecs.clear();  // the node's label= was read once already, as an option of its path
     n.ownFrom = standalone ? static_cast<std::size_t>(-1) : pathStyle.transform.size();
     // A node is not a path: what is drawn, filled or pointed is its own.
@@ -1937,7 +2009,27 @@ private:
     n.style.pinEdge = enclosing.pinEdge;
     for (const auto& spec : n.style.labelSpecs) n.labels.push_back(labelOf(spec.first, spec.second, n.style));
     n.style.labelSpecs.clear();
+    takeNodeTransform(n.style, standalone ? enclosing.transform.size() : pathStyle.transform.size());
     return n;
+  }
+
+  /** The `scale`, `xscale`, `yscale` and `rotate` a node was given are the node's own: pgf scales the node and leaves
+   *  where it is put (`at (2,1)`) to the picture and its scopes. They were steps of the coordinates, which moved the node
+   *  to (4,2) and left it its size. Steps from `from` on are the node's; `rotate` is said and not drawn. */
+  void takeNodeTransform(Style& st, std::size_t from) {
+    for (std::size_t k = std::min(from, st.transform.size()); k < st.transform.size();) {
+      const XStep s = st.transform[k];
+      if (s.kind == XStep::Kind::scale || s.kind == XStep::Kind::xscale || s.kind == XStep::Kind::yscale) {
+        if (s.kind != XStep::Kind::yscale) st.nodeScaleX *= s.v;
+        if (s.kind != XStep::Kind::xscale) st.nodeScaleY *= s.v;
+      } else if (s.kind == XStep::Kind::rotate) {
+        warn("tikz: rotating a node is not supported: it is drawn unrotated, where it is put");
+      } else {
+        k++;
+        continue;
+      }
+      st.transform.erase(st.transform.begin() + static_cast<std::ptrdiff_t>(k));
+    }
   }
 
   /** `label=[options]angle:text` and `pin=...`: the angle is a direction (`above`, `30`) and defaults to
@@ -2330,6 +2422,19 @@ private:
         skipSpace(t, i);
         if (t.compare(i, 2, "..") == 0) i += 2;
         skipSpace(t, i);
+        // Nodes written between the `..` and the point the curve ends at sit half way along it.
+        while (t.compare(i, 4, "node") == 0 && (i + 4 >= t.size() || std::isalnum(static_cast<unsigned char>(t[i + 4])) == 0)) {
+          i += 4;
+          Node between = nodeOf(false, t, i, path.style, false, path.style);
+          between.between = true;
+          path.nodes.push_back(std::move(between));
+          PathOp nodeOp;
+          nodeOp.kind = PathOp::Kind::node;
+          nodeOp.node = static_cast<int>(path.nodes.size()) - 1;
+          betweenNodes.push_back(nodeOp.node);
+          path.ops.push_back(std::move(nodeOp));
+          skipSpace(t, i);
+        }
         if (i < t.size() && t[i] == '+') {
           op.p.relative = 1;
           i++;
