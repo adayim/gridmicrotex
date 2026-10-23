@@ -195,8 +195,24 @@ struct SegInfo {
   bool valid = false;
   bool cubic = false;
   P from, c1, c2, to;
-  P at(double t) const { return cubic ? bezier(from, c1, c2, to, t) : from + (to - from) * t; }
+  // An arc (circle/ellipse/arc op): its own centre, radii and start/end angle (degrees), so `at`/
+  // `direction` follow the exact curve instead of approximating it with a single cubic between
+  // its endpoints (which, for a full circle, isn't even a single point to begin with).
+  bool isArc = false;
+  P centre;
+  double rx = 0, ry = 0, a0 = 0, a1 = 0;
+  P at(double t) const {
+    if (isArc) {
+      const double a = radians(a0 + (a1 - a0) * t);
+      return centre + P{rx * std::cos(a), ry * std::sin(a)};
+    }
+    return cubic ? bezier(from, c1, c2, to, t) : from + (to - from) * t;
+  }
   P direction(double t) const {
+    if (isArc) {
+      const double a = radians(a0 + (a1 - a0) * t);
+      return unit(P{-rx * std::sin(a), ry * std::cos(a)} * (a1 >= a0 ? 1.0 : -1.0));
+    }
     if (!cubic) return unit(to - from);
     const double h = 1e-3;
     return unit(at(std::min(1.0, t + h)) - at(std::max(0.0, t - h)));
@@ -1966,7 +1982,8 @@ void Layout::layoutPath(const PathItem& item) {
         const double rx = len(op.r) * rs;
         const double ry = (op.r2.isValid() ? len(op.r2) : len(op.r)) * rs;
         const P centre = at;
-        begin(centre + P{rx, 0});
+        const P start = centre + P{rx, 0};
+        begin(start);
         arcSegments(cur, centre, rx, ry, 0, 360);
         for (const Seg& g : cur.segs) {
           see(g.c1);
@@ -1974,6 +1991,8 @@ void Layout::layoutPath(const PathItem& item) {
           see(g.to);
         }
         cur.closed = true;
+        segs[i] = {true, false, start, {}, {}, start, true, centre, rx, ry, 0, 360};
+        lastSeg = static_cast<int>(i);
         at = centre;
         break;
       }
@@ -1990,7 +2009,10 @@ void Layout::layoutPath(const PathItem& item) {
           see(cur.segs[k].c2);
           see(cur.segs[k].to);
         }
-        at = centre + P{rx * std::cos(radians(op.a1)), ry * std::sin(radians(op.a1))};
+        const P end = centre + P{rx * std::cos(radians(op.a1)), ry * std::sin(radians(op.a1))};
+        segs[i] = {true, false, at, {}, {}, end, true, centre, rx, ry, op.a0, op.a1};
+        lastSeg = static_cast<int>(i);
+        at = end;
         nominal = at;
         break;
       }
