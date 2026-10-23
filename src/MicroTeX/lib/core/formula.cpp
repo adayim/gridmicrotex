@@ -78,9 +78,7 @@ void ArrayFormula::addCol() {
 void ArrayFormula::addCol(int n) {
   if (_row >= _array.size()) _array.resize(_row + 1);
   _array[_row].push_back(_root);
-  // n-1 placeholder nulls fill out the span, for n physical slots total -
-  // matching the n columns the caller claims.
-  for (int i = 1; i < n; i++) {
+  for (int i = 1; i < n - 1; i++) {
     _array[_row].push_back(nullptr);
   }
   _root = nullptr;
