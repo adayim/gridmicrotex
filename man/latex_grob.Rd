@@ -114,7 +114,10 @@ or \verb{\\scriptscriptstyle}.
 \item \code{fontfamily}: the font of text, such as \code{"serif"} or the name of any
 installed font. Math uses \code{math_font}. Bold and italic come from
 \verb{\\textbf\{\}} and \verb{\\textit\{\}}, not from \code{fontface}.
-\item \code{fontsize}, \code{cex}: the size is \code{fontsize * cex} points (default 20).
+\item \code{fontsize}, \code{cex}: the size is \code{fontsize * cex} points (default 20). A
+length in a TeX unit (\code{pt}, \code{bp}, \code{cm}, \code{mm}, \verb{in}) is the one of a
+LaTeX page set at 10pt and magnified to that size, so \verb{\\rule\{2cm\}\{1pt\}}
+and \verb{\\includegraphics[width=2cm]\{fig.png\}} double when the size does.
 \item \code{lineheight}: line spacing (default 1.2).
 }
 }

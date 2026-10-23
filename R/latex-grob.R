@@ -62,7 +62,10 @@
 #' * `fontfamily`: the font of text, such as `"serif"` or the name of any
 #'   installed font. Math uses `math_font`. Bold and italic come from
 #'   `\textbf{}` and `\textit{}`, not from `fontface`.
-#' * `fontsize`, `cex`: the size is `fontsize * cex` points (default 20).
+#' * `fontsize`, `cex`: the size is `fontsize * cex` points (default 20). A
+#'   length in a TeX unit (`pt`, `bp`, `cm`, `mm`, `in`) is the one of a
+#'   LaTeX page set at 10pt and magnified to that size, so `\rule{2cm}{1pt}`
+#'   and `\includegraphics[width=2cm]{fig.png}` double when the size does.
 #' * `lineheight`: line spacing (default 1.2).
 #'
 #' ## Errors

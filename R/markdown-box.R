@@ -364,7 +364,8 @@
     gap_est <- .md_css_length(r_td[["padding-left"]], base, base,
                               horizontal = TRUE) %||% (1.2 * base)
     per <- max(avail / ncol - gap_est, base)
-    spec <- paste0(prefix, sprintf("p{%.2fpt}", per))
+    # in px, the device's: this is a width worked out from the measure, not a length LaTeX would scale
+    spec <- paste0(prefix, sprintf("p{%.2fpx}", per))
   }
 
   # Vertical rules from a border on the cells, and the gap between
@@ -372,7 +373,7 @@
   # inter-column space entirely, so it is only emitted when asked for.
   vrule <- if (.md_css_border_drawn(r_td[["border-left"]], base)) "|" else ""
   gap <- .md_css_length(r_td[["padding-left"]], base, base, horizontal = TRUE)
-  sep <- if (!is.null(gap)) sprintf("@{\\hspace{%.2fpt}}", gap) else ""
+  sep <- if (!is.null(gap)) sprintf("@{\\hspace{%.2fpx}}", gap) else ""
   spec_str <- if (nzchar(vrule)) {
     paste0(vrule, paste(spec, collapse = paste0(vrule, sep)), vrule)
   } else if (nzchar(sep)) {

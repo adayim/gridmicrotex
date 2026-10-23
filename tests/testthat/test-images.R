@@ -17,24 +17,35 @@ mk_svg <- function(w_in = 3, h_in = 2) {
   f
 }
 
+# The size at which a grob is a LaTeX page of 10pt as it is (1em = 10 TeX points = 9.963 bp): there a length
+# written in a TeX unit is the big points of LaTeX's PDF. At any other size it is magnified by size / F0.
+F0 <- 10 * 72 / 72.27
+at_f0 <- grid::gpar(fontsize = F0)
+
 # Geometry only: the low-resolution warning has its own test.
-wid <- function(tex, ...) {
-  suppressWarnings(as.numeric(latex_dims(tex, input_mode = "math", ...)$width))
+wid <- function(tex, gp = at_f0, ...) {
+  suppressWarnings(as.numeric(latex_dims(tex, input_mode = "math", gp = gp, ...)$width))
 }
-hei <- function(tex, ...) {
-  suppressWarnings(as.numeric(latex_dims(tex, input_mode = "math", ...)$height))
+hei <- function(tex, gp = at_f0, ...) {
+  suppressWarnings(as.numeric(latex_dims(tex, input_mode = "math", gp = gp, ...)$height))
 }
 
 test_that("a length is read in every unit LaTeX writes one in", {
   bp <- gridmicrotex:::.tex_len_bp
-  expect_equal(bp("3in", 20, 0), 216)
-  expect_equal(bp("216bp", 20, 0), 216)
-  expect_equal(bp("72pt", 20, 0), 72 * 72 / 72.27)
-  expect_equal(bp("2.54cm", 20, 0), 72, tolerance = 1e-6)
-  expect_equal(bp("25.4mm", 20, 0), 72, tolerance = 1e-6)
+  # at F0 a TeX length is LaTeX's big points; px and em are the device's and the text's
+  expect_equal(bp("3in", F0, 0), 216)
+  expect_equal(bp("216bp", F0, 0), 216)
+  expect_equal(bp("72pt", F0, 0), 72 * 72 / 72.27)
+  expect_equal(bp("2.54cm", F0, 0), 72, tolerance = 1e-6)
+  expect_equal(bp("25.4mm", F0, 0), 72, tolerance = 1e-6)
   expect_equal(bp("96px", 20, 0), 72)
+  expect_equal(bp("96px", F0, 0), 72)
   expect_equal(bp("2em", 20, 0), 40)
-  expect_equal(bp("12", 20, 0), 12)      # bare number is big points
+  expect_equal(bp("12", F0, 0), 12)      # bare number is big points
+  # a TeX length is magnified with the font; a px one is not
+  expect_equal(bp("3in", 2 * F0, 0), 432)
+  expect_equal(bp("10pt", 20, 0), 20)    # a point is a tenth of the em
+  expect_equal(bp("1pc", 20, 0), 24)
 
   # \textwidth is max_width; without one it is unreadable.
   expect_equal(bp("\\textwidth", 20, 400), 400)
@@ -69,12 +80,16 @@ test_that("an image reserves a box of exactly the requested size", {
   expect_equal(wid(sprintf("\\includegraphics{%s}", f)), 300 * 72 / 96)
   expect_equal(hei(sprintf("\\includegraphics{%s}", f)), 200 * 72 / 96)
 
-  # Absolute, and independent of font size.
+  # It follows the font size, as a LaTeX page magnified to it; a width in px does not.
   for (fs in c(10, 40)) {
+    # (a render's size is whole pixels)
+    expect_lt(abs(wid(sprintf("\\includegraphics[width=3in]{%s}", f),
+                      gp = grid::gpar(fontsize = fs)) - 216 * fs / F0), 1, label = as.character(fs))
     expect_equal(
-      wid(sprintf("\\includegraphics[width=3in]{%s}", f),
-          gp = grid::gpar(fontsize = fs)), 216, info = fs)
+      wid(sprintf("\\includegraphics[width=96px]{%s}", f),
+          gp = grid::gpar(fontsize = fs)), 72, info = as.character(fs))
   }
+  expect_equal(wid(sprintf("\\includegraphics{%s}", f), gp = grid::gpar(fontsize = 2 * F0)), 2 * 300 * 72 / 96)
 
   # Aspect is kept when one side is given, not when both are, as in LaTeX.
   expect_equal(hei(sprintf("\\includegraphics[width=3in]{%s}", f)), 144)
@@ -85,7 +100,7 @@ test_that("an image reserves a box of exactly the requested size", {
 
   # It sits on the baseline: no depth, as in LaTeX.
   d <- latex_dims(sprintf("\\includegraphics[width=1in]{%s}", f),
-                  input_mode = "math")
+                  input_mode = "math", gp = at_f0)
   expect_equal(as.numeric(d$depth), 0)
 })
 
@@ -105,7 +120,7 @@ test_that("the record and the grob carry the file through", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png()
   g <- latex_grob(sprintf("\\includegraphics[width=1in]{%s}", f),
-                  input_mode = "math")
+                  input_mode = "math", gp = at_f0)
   d <- g$layout_df
   expect_true("image" %in% d$type)
   row <- d[d$type == "image", ]
@@ -269,7 +284,7 @@ test_that("an \\includegraphics inside a macro definition still resolves", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png()
   d <- latex_grob(sprintf("\\newcommand{\\fig}{\\includegraphics[width=1in]{%s}}x\\fig y", f),
-                  input_mode = "math")$layout_df
+                  input_mode = "math", gp = at_f0)$layout_df
   expect_true("image" %in% d$type)
 })
 
@@ -298,11 +313,11 @@ test_that("an \\includegraphics a macro makes, or a malformed one, is read like 
   skip_if_not_installed("ragg"); skip_if_not_installed("png")
   f <- mk_png()
   d <- latex_grob(sprintf("\\newcommand{\\fig}[1]{\\includegraphics[width=1in]{#1}}x\\fig{%s}y",
-                          f), input_mode = "math")$layout_df
+                          f), input_mode = "math", gp = at_f0)$layout_df
   expect_true("image" %in% d$type)
   define_macro("gmfig", sprintf("\\includegraphics[width=1in]{%s}", f))
   on.exit(clear_macros(), add = TRUE)
-  expect_true("image" %in% latex_grob("x\\gmfig y", input_mode = "math")$layout_df$type)
+  expect_true("image" %in% latex_grob("x\\gmfig y", input_mode = "math", gp = at_f0)$layout_df$type)
 })
 
 test_that("the layout cache notices a file that changed on disk", {
@@ -364,7 +379,7 @@ test_that("a macro parameter in an image path is not checked as a file name", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   # The build-time check reads unexpanded source, so it must skip `#1`.
   def <- "$\\newcommand{\\fig}[1]{\\includegraphics[width=1in]{#1}}$"
-  expect_true("image" %in% markdown_grob(paste0(def, " $\\fig{", mk_png(), "}$"))$layout_df$type)
+  expect_true("image" %in% markdown_grob(paste0(def, " $\\fig{", mk_png(), "}$"), gp = at_f0)$layout_df$type)
   expect_error(markdown_grob(paste0(def, " $\\fig{nope.png}$")), "file not found")
 })
 
@@ -492,7 +507,7 @@ test_that("\\textwidth without max_width keeps the figure at its own size", {
   tex <- sprintf("\\includegraphics[width=\\textwidth]{%s}", f)
   ws <- character(0)
   w <- withCallingHandlers(
-    suppressMessages(as.numeric(latex_dims(tex, input_mode = "math")$width)),
+    suppressMessages(as.numeric(latex_dims(tex, input_mode = "math", gp = at_f0)$width)),
     warning = function(cnd) {
       ws <<- c(ws, conditionMessage(cnd)); invokeRestart("muffleWarning") })
   expect_equal(w, 300 * 72 / 96)
@@ -619,7 +634,7 @@ test_that("a file that stops being readable after measuring is reported", {
   pdf(NULL); on.exit(dev.off(), add = TRUE)
   f <- mk_png(300, 200)
   g <- latex_grob(sprintf("\\includegraphics[width=1in]{%s}", f),
-                  input_mode = "math")
+                  input_mode = "math", gp = at_f0)
   unlink(f)
   expect_warning(grid::makeContent(g), "was readable when")
 

@@ -83,13 +83,13 @@ test_that("visual: math gallery", {
     place(380, 20, "continued fraction",
           "\\cfrac{1}{\\sqrt{2}+\n\\cfrac{1}{\\sqrt{2}+\n\\cfrac{1}{\\sqrt{2}+\\dotsb\n}}}",
           20)
-    place(380, 145, "overbrace and underbrace",
+    place(380, 165, "overbrace and underbrace",
           "\\rlap{\\overbrace{\\phantom{1 + a + b + \\cdots + z}}^{\\text{total + 1}}}\n1 + \\underbrace{a + b + \\cdots + z}_{\\text{total}}",
           20)
-    place(380, 235, "cancel variants",
+    place(380, 255, "cancel variants",
           "\\frac{a\\cancel{b}}{\\cancel{b}} = a;\n\\frac{a\\bcancel{b}}{\\bcancel{b}} = a;\n\\frac{a\\xcancel{b}}{\\xcancel{b}} = a;",
           20)
-    place(380, 290, "cases", paste0(
+    place(380, 310, "cases", paste0(
       "P_{r-j}=\\begin{cases}",
       "0& \\text{if $r-j$ is odd},\\\\",
       "r!\\,(-1)^{(r-j)/2}& \\text{if $r-j$ is even}.",

@@ -14,7 +14,8 @@
 #     \includegraphics[width=2cm]{fig.png}
 # as it meets one -- after macros are expanded, and never in a comment --
 # and gets the private, fully-resolved
-#     \gmgraphics{<hex>}{<width_bp>}{<height_bp>}
+#     \gmgraphics{<hex>}{<width>}{<height>}
+# both in device big points at the size of the text (see .tex_len_bp()).
 # which src/MicroTeX/lib/atom/image_atom.cpp turns into a box and an IMAGE draw record.
 
 # --- reference encoding ------------------------------------------------
@@ -45,10 +46,20 @@
 
 # --- units -------------------------------------------------------------
 
-# One LaTeX length -> big points. `\textwidth` / `\linewidth` have no page
-# to relate to in a grob, so they resolve against max_width; without one
-# they read as NA and the caller falls back to the file's own size, which
-# keeps the figure on the page. Returns NA when the length cannot be read.
+# The magnification of a grob: it is a LaTeX page set at 10pt (1em = 10 TeX
+# points = 10 * 72 / 72.27 bp) magnified to a font size of `fontsize` bp.
+.tex_magnification <- function(fontsize) fontsize / (10 * 72 / 72.27)
+
+# One LaTeX length -> device big points at the size of the text. A length in
+# a TeX unit (pt, bp, pc, in, cm, mm) is magnified with the font, as the
+# engine does for the lengths it reads itself (env/units.cpp), so
+# `width=2cm` is 2cm of the 10pt page the grob stands for; `px` is the
+# device's (markdown's `<img width="100">`) and `em`/`ex` already are the
+# text's size. `\textwidth` / `\linewidth` have no page
+# to relate to in a grob, so they resolve against max_width (the device's);
+# without one they read as NA and the caller falls back to the file's own
+# size, which keeps the figure on the page. Returns NA when the length
+# cannot be read.
 .REL_LEN <- "\\\\(?:text|line|column)width"
 
 .tex_len_bp <- function(s, fontsize, max_width) {
@@ -69,11 +80,11 @@
   if (length(m) != 3L) return(NA_real_)
   v <- suppressWarnings(as.numeric(m[2]))
   if (!is.finite(v)) return(NA_real_)
-  # Big points per unit. `pt` is TeX's 1/72.27in, `bp` the 1/72in this
-  # package works in; `px` follows the 96dpi screen convention used for
-  # intrinsic sizes. `ex` is approximated as half an em, as elsewhere.
-  # A bare number means big points. (Handled before switch(): an empty
-  # name is not legal there.)
+  # Big points per unit, before the magnification. `pt` is TeX's 1/72.27in,
+  # `bp` the 1/72in; `px` follows the 96dpi screen convention used for
+  # intrinsic sizes and is not magnified. `ex` is approximated as half an
+  # em, as elsewhere. A bare number means big points. (Handled before
+  # switch(): an empty name is not legal there.)
   unit <- tolower(m[3])
   per <- if (!nzchar(unit)) 1 else switch(unit,
     bp   = 1,
@@ -88,7 +99,7 @@
     NA_real_
   )
   if (is.na(per)) return(NA_real_)
-  v * per
+  if (unit %in% c("px", "em", "ex")) v * per else v * per * .tex_magnification(fontsize)
 }
 
 # --- intrinsic size ----------------------------------------------------
@@ -471,11 +482,15 @@
 
 .opt_flag <- function(v) !is.null(v) && !tolower(v) %in% c("false", "0", "off")
 
-# The final width/height in big points for one image.
+# The final width/height in device big points for one image. The file's own
+# size is a TeX length too (a bitmap is 96 dpi, an SVG has its own units), so
+# it is magnified with the font like `width=2cm`.
 .image_size_bp <- function(dims, opts, fontsize, max_width) {
   w <- .tex_len_bp(opts[["width"]] %||% "", fontsize, max_width)
   h <- .tex_len_bp(opts[["height"]] %||% "", fontsize, max_width)
   aspect <- dims$h / dims$w
+  mag <- .tex_magnification(fontsize)
+  dims$w <- dims$w * mag; dims$h <- dims$h * mag
   if (is.na(w) && is.na(h)) {
     w <- dims$w; h <- dims$h
   } else if (is.na(h)) {
@@ -688,7 +703,7 @@
   # A vector source has no effective resolution at all, which is precisely
   # the reason to prefer SVG.
   sized <- any(c("width", "height", "scale") %in% names(opts)) &&
-    !isTRUE(all.equal(size$w, dims$w))
+    !isTRUE(all.equal(size$w, dims$w * .tex_magnification(fontsize)))
   if (sized && !is.null(dims$px)) {
     dpi <- dims$px$w * 72 / size$w
     if (is.finite(dpi) && dpi < 150) {
