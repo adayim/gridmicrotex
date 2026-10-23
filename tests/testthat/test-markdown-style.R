@@ -573,8 +573,9 @@ test_that("table CSS compiles to the tabular primitives MicroTeX has", {
   expect_match(tbl_tex("td { border-left: 1px solid black }"),
                "{|X|>{\\raggedleft\\arraybackslash}X|}", fixed = TRUE)
   # Cell padding becomes the inter-column @{} material.
+  # (in px, the device's: a CSS length is not a TeX one, which would be magnified with the font)
   expect_match(tbl_tex("td { padding-left: 6pt }"),
-               "@{\\hspace{6.00pt}}", fixed = TRUE)
+               "@{\\hspace{6.00px}}", fixed = TRUE)
 })
 
 test_that("a border of none or zero draws nothing", {
@@ -662,7 +663,7 @@ test_that("inline box properties compile to MicroTeX primitives", {
   expect_equal(span_tex("visibility: hidden"), "\\phantom{hi}")
   expect_equal(span_tex("vertical-align: super"), "\\textsuperscript{hi}")
   expect_equal(span_tex("vertical-align: sub"), "\\textsubscript{hi}")
-  expect_equal(span_tex("vertical-align: 3pt"), "\\raisebox{3.00pt}{hi}")
+  expect_equal(span_tex("vertical-align: 3pt"), "\\raisebox{3.00px}{hi}")
   expect_equal(span_tex("transform: rotate(45deg)"), "\\rotatebox{45}{hi}")
   expect_equal(span_tex("transform: scaleX(-1)"), "\\reflectbox{hi}")
 

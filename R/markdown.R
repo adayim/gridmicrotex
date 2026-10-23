@@ -454,7 +454,7 @@
              else if (identical(val, "sub")) "\\textsubscript{"
              else {
                d <- .md_css_length(val_raw, base, base)
-               if (!is.null(d)) sprintf("\\raisebox{%.2fpt}{", d) else NULL
+               if (!is.null(d)) sprintf("\\raisebox{%.2fpx}{", d) else NULL
              }
       if (!is.null(cmd)) add(cmd)
     } else if (prop == "transform") {
