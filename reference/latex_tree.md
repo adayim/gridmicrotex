@@ -110,19 +110,19 @@ A list of class `"latex_tree"`:
 #> <latex_tree>
 #>   tex:         \frac{a}{b}
 #>   render_mode: typeface
-#>   bbox:        width=7.00  height=25.00  depth=9.00  baseline=0.63 (bigpts)
+#>   bbox:        width=12.00  height=25.00  depth=9.00  baseline=0.63 (bigpts)
 #>   records:     3
 #>     glyph      2
 #>     line       1
   head(tree$records)
-#>    type         x      y glyph font_size   color    x2     y2 width height rx
-#> 1 glyph 0.1890002  7.196  3628        14 #000000    NA     NA    NA     NA NA
-#> 2  line 0.0000000 10.596    NA        NA #000000 7.392 10.596    NA     NA NA
-#> 3 glyph 0.0000000 25.796  3629        14 #000000    NA     NA    NA     NA NA
-#>   ry  lwd text font_style rotation path codepoint
-#> 1 NA   NA <NA>         NA        0 NULL        NA
-#> 2 NA 1.32 <NA>         NA        0 NULL        NA
-#> 3 NA   NA <NA>         NA        0 NULL        NA
+#>    type     x      y glyph font_size   color    x2     y2 width height rx ry
+#> 1 glyph 2.477  7.224  2701        14 #000000    NA     NA    NA     NA NA NA
+#> 2  line 2.400 10.624    NA        NA #000000 10.38 10.624    NA     NA NA NA
+#> 3 glyph 2.400 25.824  2702        14 #000000    NA     NA    NA     NA NA NA
+#>    lwd text font_style rotation path codepoint
+#> 1   NA <NA>         NA        0 NULL        NA
+#> 2 1.32 <NA>         NA        0 NULL        NA
+#> 3   NA <NA>         NA        0 NULL        NA
 #>                                                             font_file
 #> 1 /home/runner/work/_temp/Library/gridmicrotex/fonts/LeteSansMath.otf
 #> 2                                                                <NA>

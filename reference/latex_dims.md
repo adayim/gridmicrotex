@@ -98,7 +98,7 @@ And `is_split`: `TRUE` if the text was wrapped over several lines.
 ``` r
 latex_dims(r"($\frac{a}{b}$)")
 #> $width
-#> [1] 7bigpts
+#> [1] 12bigpts
 #> 
 #> $height
 #> [1] 25bigpts
@@ -107,7 +107,7 @@ latex_dims(r"($\frac{a}{b}$)")
 #> [1] 9bigpts
 #> 
 #> $baseline
-#> [1] 9.36317294836044bigpts
+#> [1] 9.35305953025818bigpts
 #> 
 #> $is_split
 #> [1] FALSE

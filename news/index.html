@@ -50,12 +50,16 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="gridmicrotex-030">gridmicrotex 0.3.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-030"></a></h2>
-<ul><li>The bundled MicroTeX is now the <a href="https://github.com/adayim/MicroTeX" class="external-link">adayim fork</a>, version 0.1.0 (forked from <a href="https://github.com/NanoMichael/MicroTeX" class="external-link">NanoMichael/MicroTeX</a>), and LaTeX coverage is much broader.</li>
-<li>New <code><a href="../reference/load_sty.html">load_sty()</a></code> makes a <code>.sty</code> file of your own a package, and <code>latex_options(packages = )</code> loads packages before every label.</li>
-<li>Lines, displays and the rows of matrices, <code>align</code> and kin are now spaced as LaTeX spaces them, so documents and multi-line labels are taller by up to 10%; <code>\vspace</code> and <code>\bigskip</code> between lines add to the line spacing, as in LaTeX; text tables take LaTeX’s row height and booktabs’ rule spacing and are padded by <code>\tabcolsep</code>, as <code>\fbox</code> and <code>\colorbox</code> are by <code>\fboxsep</code>.</li>
-<li>A markdown code block is now one block of text, so it draws several times faster (300 lines: 0.64 s to 0.11 s), and a brace or backslash in code stands in the same column as the characters around it. The code that knitr and pandoc write is drawn as typed with its colours (<code>alltt</code>, <code>Verbatim[commandchars=]</code>, <code>tabsize=</code>, <code>\DefineVerbatimEnvironment</code>); <code>quote</code>, <code>quotation</code>, <code>verse</code> and the <code>comment</code> environment work.</li>
-<li>Markdown reads a raw HTML block as HTML, where it dropped it with its text: <code>&lt;p align="center"&gt;</code>, <code>&lt;center&gt;</code>, <code>&lt;details&gt;</code>, <code>&lt;table&gt;</code>, lists, headings and <code>&lt;blockquote&gt;</code> are drawn, so a README’s header and tables are.</li>
-<li>Bug fix: a colour such as <code>red!50</code> was drawn black, so <code>\rowcolor{gray!10}</code> painted a row black; an undefined colour now warns. Also fixed: <code>tablenotes</code>, <code>\makecell[tl]</code> and siunitx <code>S</code> columns failing, macros and dimensions read wrongly in a few cases, and a crash on <code>\[\tag{1}\]</code> at a width.</li>
+<ul><li>Bundled MicroTeX is now the <a href="https://github.com/adayim/MicroTeX" class="external-link">adayim fork</a> 0.1.0, with much broader LaTeX coverage.</li>
+<li>New <code><a href="../reference/load_sty.html">load_sty()</a></code> and <code>latex_options(packages = )</code> load LaTeX packages.</li>
+<li>Lengths in <code>pt</code>, <code>cm</code>, <code>mm</code>, <code>in</code> and image sizes now scale with the font size, as a magnified LaTeX page; <code>px</code> and <code>max_width</code> do not.</li>
+<li>Math is spaced as LuaLaTeX sets it: <code>\nulldelimiterspace</code> round fractions, script glyphs, italic correction, <code>aligned</code> struts, amsmath’s <code>\genfrac</code> and <code>cases</code>.</li>
+<li>Lines, displays, matrices, lists and tables are spaced as LaTeX spaces them, so documents are up to 10% taller.</li>
+<li>R’s regression tables read: dcolumn <code>D</code> columns, <code>^{***}</code> in siunitx <code>S</code> columns, <code>\num{&lt; 0.1}</code>.</li>
+<li>tikz-cd reads what its manual lists, including arrows.meta’s <code>Latex</code> and <code>Stealth</code>; what is left out warns.</li>
+<li>Markdown draws code blocks several times faster and reads raw HTML blocks (<code>&lt;p align&gt;</code>, <code>&lt;details&gt;</code>, <code>&lt;table&gt;</code>).</li>
+<li>Bug fixes: <code>red!50</code> drawn black, <code>p{}</code> first column rules, <code>\scalebox{2}[1]{x}</code>, rotated math in <code>typeface</code> mode, a crash on <code>\[\tag{1}\]</code>.</li>
+<li>Checked command by command against pdflatex for 45 packages; many commands now defined or corrected.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="gridmicrotex-020">gridmicrotex 0.2.0<a class="anchor" aria-label="anchor" href="#gridmicrotex-020"></a></h2><p class="text-muted">CRAN release: 2026-10-04</p>

@@ -207,7 +207,10 @@ or <code>\scriptscriptstyle</code>.</p>
 <li><p><code>fontfamily</code>: the font of text, such as <code>"serif"</code> or the name of any
 installed font. Math uses <code>math_font</code>. Bold and italic come from
 <code>\textbf{}</code> and <code>\textit{}</code>, not from <code>fontface</code>.</p></li>
-<li><p><code>fontsize</code>, <code>cex</code>: the size is <code>fontsize * cex</code> points (default 20).</p></li>
+<li><p><code>fontsize</code>, <code>cex</code>: the size is <code>fontsize * cex</code> points (default 20). A
+length in a TeX unit (<code>pt</code>, <code>bp</code>, <code>cm</code>, <code>mm</code>, <code>in</code>) is the one of a
+LaTeX page set at 10pt and magnified to that size, so <code>\rule{2cm}{1pt}</code>
+and <code>\includegraphics[width=2cm]{fig.png}</code> double when the size does.</p></li>
 <li><p><code>lineheight</code>: line spacing (default 1.2).</p></li>
 </ul></div>
 

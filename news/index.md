@@ -2,36 +2,30 @@
 
 ## gridmicrotex 0.3.0
 
-- The bundled MicroTeX is now the [adayim
-  fork](https://github.com/adayim/MicroTeX), version 0.1.0 (forked from
-  [NanoMichael/MicroTeX](https://github.com/NanoMichael/MicroTeX)), and
-  LaTeX coverage is much broader.
+- Bundled MicroTeX is now the [adayim
+  fork](https://github.com/adayim/MicroTeX) 0.1.0, with much broader
+  LaTeX coverage.
 - New
   [`load_sty()`](https://adayim.github.io/gridmicrotex/reference/load_sty.md)
-  makes a `.sty` file of your own a package, and
-  `latex_options(packages = )` loads packages before every label.
-- Lines, displays and the rows of matrices, `align` and kin are now
-  spaced as LaTeX spaces them, so documents and multi-line labels are
-  taller by up to 10%; `\vspace` and `\bigskip` between lines add to the
-  line spacing, as in LaTeX; text tables take LaTeX’s row height and
-  booktabs’ rule spacing and are padded by `\tabcolsep`, as `\fbox` and
-  `\colorbox` are by `\fboxsep`.
-- A markdown code block is now one block of text, so it draws several
-  times faster (300 lines: 0.64 s to 0.11 s), and a brace or backslash
-  in code stands in the same column as the characters around it. The
-  code that knitr and pandoc write is drawn as typed with its colours
-  (`alltt`, `Verbatim[commandchars=]`, `tabsize=`,
-  `\DefineVerbatimEnvironment`); `quote`, `quotation`, `verse` and the
-  `comment` environment work.
-- Markdown reads a raw HTML block as HTML, where it dropped it with its
-  text: `<p align="center">`, `<center>`, `<details>`, `<table>`, lists,
-  headings and `<blockquote>` are drawn, so a README’s header and tables
-  are.
-- Bug fix: a colour such as `red!50` was drawn black, so
-  `\rowcolor{gray!10}` painted a row black; an undefined colour now
-  warns. Also fixed: `tablenotes`, `\makecell[tl]` and siunitx `S`
-  columns failing, macros and dimensions read wrongly in a few cases,
-  and a crash on `\[\tag{1}\]` at a width.
+  and `latex_options(packages = )` load LaTeX packages.
+- Lengths in `pt`, `cm`, `mm`, `in` and image sizes now scale with the
+  font size, as a magnified LaTeX page; `px` and `max_width` do not.
+- Math is spaced as LuaLaTeX sets it: `\nulldelimiterspace` round
+  fractions, script glyphs, italic correction, `aligned` struts,
+  amsmath’s `\genfrac` and `cases`.
+- Lines, displays, matrices, lists and tables are spaced as LaTeX spaces
+  them, so documents are up to 10% taller.
+- R’s regression tables read: dcolumn `D` columns, `^{***}` in siunitx
+  `S` columns, `\num{< 0.1}`.
+- tikz-cd reads what its manual lists, including arrows.meta’s `Latex`
+  and `Stealth`; what is left out warns.
+- Markdown draws code blocks several times faster and reads raw HTML
+  blocks (`<p align>`, `<details>`, `<table>`).
+- Bug fixes: `red!50` drawn black, `p{}` first column rules,
+  `\scalebox{2}[1]{x}`, rotated math in `typeface` mode, a crash on
+  `\[\tag{1}\]`.
+- Checked command by command against pdflatex for 45 packages; many
+  commands now defined or corrected.
 
 ## gridmicrotex 0.2.0
 
