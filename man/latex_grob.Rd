@@ -134,16 +134,18 @@ an error.
 
 LaTeX from a document can be pasted as it is: the output of
 \code{knitr::kable()} or \code{xtable}, a \code{table} float, or a paper's body with
-\code{input_mode = "document"}. The preamble, \verb{\\maketitle} and \verb{\\label} draw
-nothing, and \verb{\\caption} is drawn where it is written. \verb{\\pageref} draws
-\verb{??}. \verb{\\cite} draws the number of its \verb{\\bibitem}; a \verb{\\ref}, \verb{\\eqref} or
-\verb{\\cite} that names nothing in the text draws \verb{??}, \verb{(??)} or \verb{[?]}, with
-a warning. A footnote is set where it is written, and equations
-are not numbered.
+\code{input_mode = "document"} (see \code{vignette("documents")}). The preamble
+and \verb{\\label} draw nothing, \verb{\\maketitle} sets the title block, and
+\verb{\\caption} is drawn where it is written. Equations are numbered, and
+\verb{\\ref}, \verb{\\eqref} and \verb{\\cref} refer to them. \verb{\\cite} draws the number of
+its \verb{\\bibitem}. A \verb{\\ref}, \verb{\\eqref} or \verb{\\cite} that names nothing in the
+text draws \verb{??}, \verb{(??)} or \verb{[?]}, with a warning, and \verb{\\pageref} draws
+\verb{??}. A footnote is set after the body of a document, and where it is
+written in a label.
 
-Not supported: \verb{\\tag}, \verb{\verb}, \verb{\\textsc}, switches such as \verb{\\bfseries}
-and \verb{\\itshape} (use \verb{\\textbf\{\}} and \verb{\\textit\{\}}, or \verb{\\bf} and \verb{\\it}),
-the \code{description} list, theorem environments and TikZ.
+A document is one piece with no pages, and a float is set where it is
+written. TikZ is drawn for \code{tikzpicture} and \code{tikzcd}, not all of it:
+see \code{vignette("getting-started")}.
 }
 
 \subsection{Images}{
