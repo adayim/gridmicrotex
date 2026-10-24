@@ -195,9 +195,9 @@ struct SegInfo {
   bool valid = false;
   bool cubic = false;
   P from, c1, c2, to;
-  // An arc (circle/ellipse/arc op): its own centre, radii and start/end angle (degrees), so `at`/
-  // `direction` follow the exact curve instead of approximating it with a single cubic between
-  // its endpoints (which, for a full circle, isn't even a single point to begin with).
+  // An `arc` op: its own centre, radii and start/end angle (degrees), so `at`/`direction` follow
+  // the exact curve rather than the straight line between its endpoints. (A circle or ellipse has
+  // no segment: TikZ puts its node at the centre.)
   bool isArc = false;
   P centre;
   double rx = 0, ry = 0, a0 = 0, a1 = 0;
@@ -1982,8 +1982,7 @@ void Layout::layoutPath(const PathItem& item) {
         const double rx = len(op.r) * rs;
         const double ry = (op.r2.isValid() ? len(op.r2) : len(op.r)) * rs;
         const P centre = at;
-        const P start = centre + P{rx, 0};
-        begin(start);
+        begin(centre + P{rx, 0});
         arcSegments(cur, centre, rx, ry, 0, 360);
         for (const Seg& g : cur.segs) {
           see(g.c1);
@@ -1991,8 +1990,7 @@ void Layout::layoutPath(const PathItem& item) {
           see(g.to);
         }
         cur.closed = true;
-        segs[i] = {true, false, start, {}, {}, start, true, centre, rx, ry, 0, 360};
-        lastSeg = static_cast<int>(i);
+        // A node on a circle or ellipse is at its centre whatever `pos` says (pdfTeX), so no segment is recorded.
         at = centre;
         break;
       }
