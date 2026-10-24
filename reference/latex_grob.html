@@ -230,15 +230,17 @@ an error.</p>
 
 <p>LaTeX from a document can be pasted as it is: the output of
 <code><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">knitr::kable()</a></code> or <code>xtable</code>, a <code>table</code> float, or a paper's body with
-<code>input_mode = "document"</code>. The preamble, <code>\maketitle</code> and <code>\label</code> draw
-nothing, and <code>\caption</code> is drawn where it is written. <code>\pageref</code> draws
-<code>??</code>. <code>\cite</code> draws the number of its <code>\bibitem</code>; a <code>\ref</code>, <code>\eqref</code> or
-<code>\cite</code> that names nothing in the text draws <code>??</code>, <code>(??)</code> or <code>[?]</code>, with
-a warning. A footnote is set where it is written, and equations
-are not numbered.</p>
-<p>Not supported: <code>\tag</code>, <code>\verb</code>, <code>\textsc</code>, switches such as <code>\bfseries</code>
-and <code>\itshape</code> (use <code>\textbf{}</code> and <code>\textit{}</code>, or <code>\bf</code> and <code>\it</code>),
-the <code>description</code> list, theorem environments and TikZ.</p>
+<code>input_mode = "document"</code> (see <code><a href="../articles/documents.html">vignette("documents")</a></code>). The preamble
+and <code>\label</code> draw nothing, <code>\maketitle</code> sets the title block, and
+<code>\caption</code> is drawn where it is written. Equations are numbered, and
+<code>\ref</code>, <code>\eqref</code> and <code>\cref</code> refer to them. <code>\cite</code> draws the number of
+its <code>\bibitem</code>. A <code>\ref</code>, <code>\eqref</code> or <code>\cite</code> that names nothing in the
+text draws <code>??</code>, <code>(??)</code> or <code>[?]</code>, with a warning, and <code>\pageref</code> draws
+<code>??</code>. A footnote is set after the body of a document, and where it is
+written in a label.</p>
+<p>A document is one piece with no pages, and a float is set where it is
+written. TikZ is drawn for <code>tikzpicture</code> and <code>tikzcd</code>, not all of it:
+see <code><a href="../articles/getting-started.html">vignette("getting-started")</a></code>.</p>
 </div>
 
 <div class="section">

@@ -494,8 +494,9 @@ grid.latex(r"($x^{2} + y_{i}$)", debug = TRUE)
 
 `tikzpicture` draws paths, nodes and arrows as TikZ does, with the
 `positioning`, `arrows.meta`, `calc` and `fit` libraries, shapes
-(`rectangle`, `circle`, `ellipse`, `diamond`, `rounded rectangle`),
-`label` and `pin`, `\foreach`, trees (`child`), `matrix of nodes` and
+(`rectangle`, `circle`, `ellipse`, `diamond`, `rounded rectangle`,
+`regular polygon`, `star`), `label` and `pin`, `\foreach`, `plot`,
+`\clip` to a convex region, trees (`child`), `matrix of nodes` and
 `brace` decorations:
 
 ``` r
@@ -522,9 +523,16 @@ grid.latex(flow, gp = gpar(fontsize = 11))
 ![](getting-started_files/figure-html/tikz-1.png)
 
 tikz-cd’s `tikzcd` and amscd’s `CD` draw commutative diagrams: objects
-in a grid joined by arrows. An arrow is written in the cell it leaves,
-with the direction it goes (`r`, `d`, `dr`, `rr`, …), a label in quotes
-(a prime puts it on the other side), and a style:
+in a grid joined by arrows. In `tikzcd` an arrow is written in the cell
+it leaves, with the direction it goes (`r`, `d`, `dr`, `rr`, …), a label
+in quotes (a prime puts it on the other side), and a style. Styles
+include `hook`, `tail`, `two heads`, `mapsto`, `dashed`, `dotted`,
+`Rightarrow`, `equal`, `harpoon`, `squiggly`, `bend left`,
+`shift right`, `crossing over`, `phantom` and a colour name; labels take
+`description`, `near start` and `near end`; and `row sep` and
+`column sep` set the spacing. `CD` writes its arrows between the objects
+instead. From left to right: a square with a dashed diagonal, two bent
+arrows, and the square again in `CD`:
 
 ``` r
 
@@ -532,36 +540,22 @@ sq <- r"(\begin{tikzcd}
 A \arrow[r, "f"] \arrow[d, "g"'] \arrow[dr, dashed] & B \arrow[d, "h"] \\
 C \arrow[r, hook, "k"'] & D
 \end{tikzcd})"
-grid.newpage()
-grid.latex(sq, x = 0.5, y = 0.5, gp = gpar(fontsize = 14))
-```
-
-![](getting-started_files/figure-html/tikzcd-1.png)
-
-Styles include `hook`, `tail`, `two heads`, `mapsto`, `dashed`,
-`dotted`, `Rightarrow`, `equal`, `harpoon`, `squiggly`, `bend left`,
-`shift right`, `crossing over`, `phantom` and a colour name; labels take
-`description`, `near start` and `near end`; and `row sep` and
-`column sep` set the spacing. `CD` writes its arrows between the objects
-instead:
-
-``` r
-
+bent <- r"(\begin{tikzcd}[column sep=large]
+A \arrow[r, "f", bend left] \arrow[r, "g"', bend right]
+  & B \arrow[r, two heads, mapsto] & C
+\end{tikzcd})"
 cd <- r"(\begin{CD}
 A @>f>> B \\
 @VgVV @VVhV \\
 C @>>k> D
 \end{CD})"
-bent <- r"(\begin{tikzcd}[column sep=large]
-A \arrow[r, "f", bend left] \arrow[r, "g"', bend right]
-  & B \arrow[r, two heads, mapsto] & C
-\end{tikzcd})"
 grid.newpage()
-grid.latex(cd, x = 0.2, y = 0.5, gp = gpar(fontsize = 14))
-grid.latex(bent, x = 0.68, y = 0.5, gp = gpar(fontsize = 14))
+grid.latex(sq,   x = 0.14, gp = gpar(fontsize = 14))
+grid.latex(bent, x = 0.50, gp = gpar(fontsize = 14))
+grid.latex(cd,   x = 0.87, gp = gpar(fontsize = 14))
 ```
 
-![](getting-started_files/figure-html/cd-1.png)
+![](getting-started_files/figure-html/tikzcd-1.png)
 
 ## Pasting LaTeX
 
@@ -591,7 +585,8 @@ and `build_supported()` write it, and its LaTeX file, wherever you ask.
 
 - Pages: `\pageref` draws `??`.
 - Automatic hyphenation, and the parts of TikZ that are not listed under
-  Diagrams (other shapes, `let`, shading, `\clip`, most decorations).
+  Diagrams (other shapes, `let`, shading, most decorations). Anything a
+  picture leaves out is drawn without it, with a warning.
 - `\usepackage` loads only the packages that come with gridmicrotex and
   files you give to
   [`load_sty()`](https://adayim.github.io/gridmicrotex/reference/load_sty.md);

@@ -175,16 +175,20 @@ error.
 LaTeX from a document can be pasted as it is: the output of
 [`knitr::kable()`](https://rdrr.io/pkg/knitr/man/kable.html) or
 `xtable`, a `table` float, or a paper's body with
-`input_mode = "document"`. The preamble, `\maketitle` and `\label` draw
-nothing, and `\caption` is drawn where it is written. `\pageref` draws
-`??`. `\cite` draws the number of its `\bibitem`; a `\ref`, `\eqref` or
-`\cite` that names nothing in the text draws `??`, `(??)` or `[?]`, with
-a warning. A footnote is set where it is written, and equations are not
-numbered.
+`input_mode = "document"` (see
+[`vignette("documents")`](https://adayim.github.io/gridmicrotex/articles/documents.md)).
+The preamble and `\label` draw nothing, `\maketitle` sets the title
+block, and `\caption` is drawn where it is written. Equations are
+numbered, and `\ref`, `\eqref` and `\cref` refer to them. `\cite` draws
+the number of its `\bibitem`. A `\ref`, `\eqref` or `\cite` that names
+nothing in the text draws `??`, `(??)` or `[?]`, with a warning, and
+`\pageref` draws `??`. A footnote is set after the body of a document,
+and where it is written in a label.
 
-Not supported: `\tag`, `\verb`, `\textsc`, switches such as `\bfseries`
-and `\itshape` (use `\textbf{}` and `\textit{}`, or `\bf` and `\it`),
-the `description` list, theorem environments and TikZ.
+A document is one piece with no pages, and a float is set where it is
+written. TikZ is drawn for `tikzpicture` and `tikzcd`, not all of it:
+see
+[`vignette("getting-started")`](https://adayim.github.io/gridmicrotex/articles/getting-started.md).
 
 ### Images
 

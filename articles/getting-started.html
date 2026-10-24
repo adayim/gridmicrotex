@@ -511,10 +511,11 @@ label:</p>
 with the <code>positioning</code>, <code>arrows.meta</code>,
 <code>calc</code> and <code>fit</code> libraries, shapes
 (<code>rectangle</code>, <code>circle</code>, <code>ellipse</code>,
-<code>diamond</code>, <code>rounded rectangle</code>),
-<code>label</code> and <code>pin</code>, <code>\foreach</code>, trees
-(<code>child</code>), <code>matrix of nodes</code> and
-<code>brace</code> decorations:</p>
+<code>diamond</code>, <code>rounded rectangle</code>,
+<code>regular polygon</code>, <code>star</code>), <code>label</code> and
+<code>pin</code>, <code>\foreach</code>, <code>plot</code>,
+<code>\clip</code> to a convex region, trees (<code>child</code>),
+<code>matrix of nodes</code> and <code>brace</code> decorations:</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">flow</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tikzpicture}[node distance = 9mm, &gt;=stealth,</span></span>
 <span><span class="st">    box/.style = {draw, rounded corners, minimum width = 18mm, minimum height = 7mm}]</span></span>
@@ -535,19 +536,11 @@ with the <code>positioning</code>, <code>arrows.meta</code>,
 <span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">flow</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="getting-started_files/figure-html/tikz-1.png" class="r-plt" alt="" width="75%"></p>
 <p>tikz-cd’s <code>tikzcd</code> and amscd’s <code>CD</code> draw
-commutative diagrams: objects in a grid joined by arrows. An arrow is
-written in the cell it leaves, with the direction it goes
-(<code>r</code>, <code>d</code>, <code>dr</code>, <code>rr</code>, …), a
-label in quotes (a prime puts it on the other side), and a style:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sq</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tikzcd}</span></span>
-<span><span class="st">A \arrow[r, "f"] \arrow[d, "g"'] \arrow[dr, dashed] &amp; B \arrow[d, "h"] \\</span></span>
-<span><span class="st">C \arrow[r, hook, "k"'] &amp; D</span></span>
-<span><span class="st">\end{tikzcd})"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">sq</span>, x <span class="op">=</span> <span class="fl">0.5</span>, y <span class="op">=</span> <span class="fl">0.5</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="getting-started_files/figure-html/tikzcd-1.png" class="r-plt" alt="" width="40%"></p>
-<p>Styles include <code>hook</code>, <code>tail</code>,
+commutative diagrams: objects in a grid joined by arrows. In
+<code>tikzcd</code> an arrow is written in the cell it leaves, with the
+direction it goes (<code>r</code>, <code>d</code>, <code>dr</code>,
+<code>rr</code>, …), a label in quotes (a prime puts it on the other
+side), and a style. Styles include <code>hook</code>, <code>tail</code>,
 <code>two heads</code>, <code>mapsto</code>, <code>dashed</code>,
 <code>dotted</code>, <code>Rightarrow</code>, <code>equal</code>,
 <code>harpoon</code>, <code>squiggly</code>, <code>bend left</code>,
@@ -556,21 +549,28 @@ label in quotes (a prime puts it on the other side), and a style:</p>
 <code>description</code>, <code>near start</code> and
 <code>near end</code>; and <code>row sep</code> and
 <code>column sep</code> set the spacing. <code>CD</code> writes its
-arrows between the objects instead:</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cd</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{CD}</span></span>
-<span><span class="st">A @&gt;f&gt;&gt; B \\</span></span>
-<span><span class="st">@VgVV @VVhV \\</span></span>
-<span><span class="st">C @&gt;&gt;k&gt; D</span></span>
-<span><span class="st">\end{CD})"</span></span>
+arrows between the objects instead. From left to right: a square with a
+dashed diagonal, two bent arrows, and the square again in
+<code>CD</code>:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">sq</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tikzcd}</span></span>
+<span><span class="st">A \arrow[r, "f"] \arrow[d, "g"'] \arrow[dr, dashed] &amp; B \arrow[d, "h"] \\</span></span>
+<span><span class="st">C \arrow[r, hook, "k"'] &amp; D</span></span>
+<span><span class="st">\end{tikzcd})"</span></span>
 <span><span class="va">bent</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{tikzcd}[column sep=large]</span></span>
 <span><span class="st">A \arrow[r, "f", bend left] \arrow[r, "g"', bend right]</span></span>
 <span><span class="st">  &amp; B \arrow[r, two heads, mapsto] &amp; C</span></span>
 <span><span class="st">\end{tikzcd})"</span></span>
+<span><span class="va">cd</span> <span class="op">&lt;-</span> <span class="st">r"(\begin{CD}</span></span>
+<span><span class="st">A @&gt;f&gt;&gt; B \\</span></span>
+<span><span class="st">@VgVV @VVhV \\</span></span>
+<span><span class="st">C @&gt;&gt;k&gt; D</span></span>
+<span><span class="st">\end{CD})"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">cd</span>, x <span class="op">=</span> <span class="fl">0.2</span>, y <span class="op">=</span> <span class="fl">0.5</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">bent</span>, x <span class="op">=</span> <span class="fl">0.68</span>, y <span class="op">=</span> <span class="fl">0.5</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="getting-started_files/figure-html/cd-1.png" class="r-plt" alt="" width="70%"></p>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">sq</span>,   x <span class="op">=</span> <span class="fl">0.14</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">bent</span>, x <span class="op">=</span> <span class="fl">0.50</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/latex_grob.html">grid.latex</a></span><span class="op">(</span><span class="va">cd</span>,   x <span class="op">=</span> <span class="fl">0.87</span>, gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">14</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/tikzcd-1.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level2">
 <h2 id="pasting-latex">Pasting LaTeX<a class="anchor" aria-label="anchor" href="#pasting-latex"></a>
@@ -579,7 +579,7 @@ arrows between the objects instead:</p>
 <code>xtable</code>, gt and tinytable can be pasted unchanged. A table
 is set to the <code>max_width</code> it is given, so a full-width
 kableExtra or gt table is drawn as it is:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu">knitr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/knitr/man/kable.html" class="external-link">kable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>, <span class="fl">3</span><span class="op">)</span>, format <span class="op">=</span> <span class="st">"latex"</span>,</span>
 <span>                    booktabs <span class="op">=</span> <span class="cn">TRUE</span>, digits <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -603,8 +603,9 @@ wherever you ask.</p>
 <ul>
 <li>Pages: <code>\pageref</code> draws <code>??</code>.</li>
 <li>Automatic hyphenation, and the parts of TikZ that are not listed
-under Diagrams (other shapes, <code>let</code>, shading,
-<code>\clip</code>, most decorations).</li>
+under Diagrams (other shapes, <code>let</code>, shading, most
+decorations). Anything a picture leaves out is drawn without it, with a
+warning.</li>
 <li>
 <code>\usepackage</code> loads only the packages that come with
 gridmicrotex and files you give to <code><a href="../reference/load_sty.html">load_sty()</a></code>; a package
