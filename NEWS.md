@@ -9,7 +9,9 @@
 - tikz-cd reads what its manual lists, including arrows.meta's `Latex` and `Stealth`; what is left out warns.
 - Markdown draws code blocks several times faster and reads raw HTML blocks (`<p align>`, `<details>`, `<table>`).
 - Markdown reads `H~2~O` and `x^2^` as sub- and superscripts, as pandoc and ggtext do.
-- Bug fixes: `red!50` drawn black, `p{}` first column rules, `\scalebox{2}[1]{x}`, rotated math in `typeface` mode, a crash on `\[\tag{1}\]`.
+- unicode-math's `\symbf`, `\symbfit` and the other `\sym…` names, `\mathup` and `\mathbfscr` are defined.
+- A letter in a font command is set as TeX sets a character: `\mathbb{R}^n`, `\mathrm{f}^2` and `\mathbf{X}^{-1}` had superscripts up to 0.9pt too high, and `\bm{\tau}` and `\mathbfit{\tau}` lacked their italic correction.
+- Bug fixes: `\bm{b}` and `\boldsymbol{b}` drawn upright instead of bold italic, `red!50` drawn black, `p{}` first column rules, `\scalebox{2}[1]{x}`, rotated math in `typeface` mode, a crash on `\[\tag{1}\]`.
 - Checked command by command against pdflatex for 45 packages; many commands now defined or corrected.
 
 # gridmicrotex 0.2.0
