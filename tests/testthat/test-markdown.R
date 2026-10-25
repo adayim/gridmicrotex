@@ -26,6 +26,43 @@ test_that("inline markdown maps onto the expected LaTeX commands", {
   expect_false(grepl("\\cancel", .md_to_tex("~~s~~"), fixed = TRUE))
 })
 
+test_that("~sub~ and ^sup^ are the sub- and superscripts of <sub> and <sup>", {
+  expect_match(.md_to_tex("H~2~O"), "\\textsubscript{2}", fixed = TRUE)
+  expect_identical(.md_to_tex("H~2~O"), .md_to_tex("H<sub>2</sub>O"))
+  expect_identical(.md_to_tex("32^nd^"), .md_to_tex("32<sup>nd</sup>"))
+  # Over emphasis and entities, as ggdiagram writes its labels.
+  expect_identical(
+    .md_to_tex("*b*~1~ *e~ij~* *X*~1*ij*~ *&lambda;*~21~ *i*~*X*~"),
+    .md_to_tex("*b*<sub>1</sub> *e<sub>ij</sub>* *X*<sub>1*ij*</sub> *&lambda;*<sub>21</sub> *i*<sub>*X*</sub>"))
+  # A space or a delimiter inside is escaped, and one kind may hold the other
+  # (pandoc: `P~a\ cat~` is P with "a cat" below).
+  expect_identical(.md_subsup("P~a\\ cat~ x^a\\~b^"), "P<sub>a&nbsp;cat</sub> x<sup>a\\~b</sup>")
+  expect_identical(.md_subsup("a^~b~^"), "a<sup><sub>b</sub></sup>")
+  expect_match(.md_to_tex("P~a\\ cat~"), "textsubscript{a~cat}", fixed = TRUE)
+  # Math inside is still math.
+  expect_identical(.md_to_tex("x~$a_b$~"), .md_to_tex("x<sub>$a_b$</sub>"))
+  expect_no_warning(markdown_box_grob("# H~2~O\n\n- *x*^2^ and *y*~1~"))
+})
+
+test_that("a tilde or caret that is not a pair of delimiters stays as typed", {
+  for (s in c("a ~ b ~ c", "cp ~/a ~/b", "lm(y ~ x)", "approx ~5", "2^10", "a^b",
+              "~~strike~~", "[^1] and [^2]", "[^a][^b]", "`H~2~O`", "``a`~b~``",
+              "https://x.org/~a/b~c", "[l](http://x/~a~)", "<span title=\"a~b~\">t</span>",
+              "\\~a\\~", "a\\^b\\^", "~~~\nx~1~\n~~~", "```r\nx^2^\n```")) {
+    expect_identical(.md_subsup(s), s, info = s)
+  }
+  expect_identical(.md_subsup("```\nH~2~O\n```\nH~2~O\n"),
+                   "```\nH~2~O\n```\nH<sub>2</sub>O\n")
+  # HTML text is literal, so a raw block's tilde and caret are not markup.
+  expect_equal(.md_html_block_md("<p>a^b^c d~e~f</p>"), "a\\^b\\^c d\\~e\\~f")
+  expect_false(grepl("textsubscript|textsuperscript", .md_to_tex("<p>a~b~c</p>")))
+  # The block ends at a blank line, and an inline tag does not start one.
+  expect_identical(.md_subsup("<div>\na~b~\n</div>\n\nH~2~O"),
+                   "<div>\na~b~\n</div>\n\nH<sub>2</sub>O")
+  expect_identical(.md_subsup("<span style=\"color:red\">x</span>~1~"),
+                   "<span style=\"color:red\">x</span><sub>1</sub>")
+})
+
 test_that("markdown becomes LaTeX text, read as a document", {
   # As pandoc writes it: prose is text, math keeps its delimiters, and the
   # paragraph is not indented.

@@ -51,7 +51,7 @@ inline HTML:
 | `<code>`, `<kbd>`, `<samp>`, `<tt>` | monospace |
 | `<u>`, `<ins>` | underline |
 | `<s>`, `<del>`, `<strike>` | strikethrough |
-| `<sub>`, `<sup>` | sub / superscript |
+| `<sub>`, `<sup>`, or `~x~`, `^x^` | sub / superscript |
 | `<mark>` | yellow highlight |
 | `<small>`, `<big>` | smaller / larger |
 | `<q>` | quotation marks |

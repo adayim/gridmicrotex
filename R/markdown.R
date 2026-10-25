@@ -79,6 +79,71 @@
   list(text = paste(out, collapse = ""), spans = keep)
 }
 
+# Pandoc's `~sub~` and `^sup^` (ggtext reads them too), written as the
+# <sub> and <sup> the inline walker already draws. As in pandoc the text
+# holds no whitespace (`P~a\ cat~` escapes it), so `a ~ b ~ c`, `~/x ~/y`
+# and `2^10` stay as typed;
+# `~~strike~~` is GFM's and `[^1]` a footnote. Code spans, raw tags, link
+# destinations and bare URLs match first, so they pass through, and the
+# lines of a fenced code block or a raw HTML block (text as HTML has it,
+# literal) are never looked at. Runs on the masked text, so a math span is
+# a sentinel here.
+.md_subsup <- function(text) {
+  if (!grepl("[~^]", text)) return(text)
+  # What starts an HTML block in CommonMark (its types 1, 2 and 6); it ends
+  # at a blank line, which is a little early for a <pre> or a comment.
+  html_start <- paste0(
+    "^ {0,3}<(/?(address|article|aside|base|basefont|blockquote|body|caption|",
+    "center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|",
+    "figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|",
+    "legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|",
+    "param|section|source|summary|table|tbody|td|tfoot|th|thead|title|tr|",
+    "track|ul)([ \t]|/?>|$)|(pre|script|style|textarea)([ \t>]|$)|!--)")
+  pat <- paste0(
+    "(`+).+?\\1|<[^<>]*>|\\]\\([^)]*\\)|https?://[^\\s<>)]+",
+    "|(?<![~\\\\])~(?!~)(?:[^\\s~\\\\]|\\\\.)+~(?!~)",
+    "|(?<![\\[\\\\])\\^(?!\\[)(?:[^\\s^\\\\]|\\\\.)+\\^")
+  convert <- function(s) {
+    m <- gregexpr(pat, s, perl = TRUE)
+    hit <- regmatches(s, m)[[1]]
+    if (!length(hit)) return(s)
+    first <- substr(hit, 1L, 1L)
+    mark <- first %in% c("~", "^")
+    # A space escaped by a backslash is part of the text (as pandoc has it),
+    # and the text may hold the other kind.
+    inner <- vapply(gsub("\\\\ ", "&nbsp;", substr(hit[mark], 2L, nchar(hit[mark]) - 1L)),
+                    convert, "", USE.NAMES = FALSE)
+    hit[mark] <- ifelse(first[mark] == "~", paste0("<sub>", inner, "</sub>"),
+                        paste0("<sup>", inner, "</sup>"))
+    regmatches(s, m) <- list(hit)
+    s
+  }
+  lines <- strsplit(text, "\n", fixed = TRUE)[[1]]
+  fence <- NULL
+  in_html <- FALSE
+  for (i in seq_along(lines)) {
+    f <- regmatches(lines[i], regexpr("^ {0,3}(`{3,}|~{3,})", lines[i]))
+    if (is.null(fence)) {
+      if (!nzchar(trimws(lines[i]))) in_html <- FALSE
+      else if (!in_html && !length(f)) {
+        in_html <- grepl(html_start, lines[i], ignore.case = TRUE, perl = TRUE)
+      }
+    }
+    if (length(f)) {
+      f <- trimws(f)
+      if (is.null(fence)) {
+        fence <- f
+      } else if (substr(f, 1L, 1L) == substr(fence, 1L, 1L) &&
+                 nchar(f) >= nchar(fence)) {
+        fence <- NULL
+      }
+    } else if (is.null(fence) && !in_html) {
+      lines[i] <- convert(lines[i])
+    }
+  }
+  paste0(paste(lines, collapse = "\n"), if (endsWith(text, "\n")) "\n")
+}
+
 # Index of the math span a node consists *entirely* of, or NA. Used to
 # promote a paragraph that is nothing but `$$...$$` to its own centred
 # block, the way every other markdown dialect lays out display math.
@@ -170,7 +235,8 @@
 # CommonMark's raw HTML, which GFM keeps, is therefore not a fallback for
 # these; it is the only conformant way to express them, and it is what
 # ggtext uses. cmark hands us each tag as its own `html_inline` node with
-# the raw text, so the walker can read them.
+# the raw text, so the walker can read them. (`~x~` and `^x^` are pandoc's,
+# and ggtext's: .md_subsup() writes them as <sub> and <sup> first.)
 #
 # Only the presentational subset below is interpreted. Everything else --
 # `<abbr>`, `<div>`, anything unrecognised -- keeps its current
@@ -873,7 +939,8 @@
     # `footnotes` is a separate argument, not one of the five extensions.
     # With it, `[^1]` arrives as <fnref> and its definition as a <fn>
     # block; without it both stay literal text.
-    commonmark::markdown_xml(masked$text, extensions = TRUE, footnotes = TRUE)
+    commonmark::markdown_xml(.md_subsup(masked$text), extensions = TRUE,
+                             footnotes = TRUE)
   )
   # Strip the CommonMark namespace so plain node names match.
   xml2::xml_ns_strip(doc)
@@ -973,7 +1040,7 @@
 #'   \code{<code>}, \code{<kbd>}, \code{<samp>}, \code{<tt>} \tab monospace \cr
 #'   \code{<u>}, \code{<ins>} \tab underline \cr
 #'   \code{<s>}, \code{<del>}, \code{<strike>} \tab strikethrough \cr
-#'   \code{<sub>}, \code{<sup>} \tab sub / superscript \cr
+#'   \code{<sub>}, \code{<sup>}, or \code{~x~}, \code{^x^} \tab sub / superscript \cr
 #'   \code{<mark>} \tab yellow highlight \cr
 #'   \code{<small>}, \code{<big>} \tab smaller / larger \cr
 #'   \code{<q>} \tab quotation marks \cr
@@ -987,6 +1054,9 @@
 #' are R colour names, CSS names, `#rgb`, `#rrggbb` or `rgb()`.
 #' `font-family` takes `serif`, `sans-serif`, `monospace`, an installed
 #' font, or a font named with [load_font()].
+#'
+#' As in pandoc, the text of `~x~` and `^x^` holds no spaces, unless each is
+#' escaped with a backslash: `P~a\ cat~`.
 #'
 #' Tags nest and can hold markdown and math. Other tags are dropped and
 #' their text kept. Links keep their text only. Images must be local PNG,
