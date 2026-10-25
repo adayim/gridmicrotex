@@ -8,6 +8,7 @@
 - R's regression tables read: dcolumn `D` columns, `^{***}` in siunitx `S` columns, `\num{< 0.1}`.
 - tikz-cd reads what its manual lists, including arrows.meta's `Latex` and `Stealth`; what is left out warns.
 - Markdown draws code blocks several times faster and reads raw HTML blocks (`<p align>`, `<details>`, `<table>`).
+- Markdown reads `H~2~O` and `x^2^` as sub- and superscripts, as pandoc and ggtext do.
 - Bug fixes: `red!50` drawn black, `p{}` first column rules, `\scalebox{2}[1]{x}`, rotated math in `typeface` mode, a crash on `\[\tag{1}\]`.
 - Checked command by command against pdflatex for 45 packages; many commands now defined or corrected.
 

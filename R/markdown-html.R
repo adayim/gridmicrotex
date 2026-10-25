@@ -66,7 +66,7 @@
 # a lone dollar is handled by the escaper that draws the text.)
 .hb_text <- function(s) {
   s <- gsub("[ \t\r\n]+", " ", s)
-  gsub("([\\\\`*_\\[\\]<>#|~&])", "\\\\\\1", s, perl = TRUE)
+  gsub("([\\\\`*_\\[\\]<>#|~^&])", "\\\\\\1", s, perl = TRUE)
 }
 
 # A paragraph that would read as something else -- "- x", "1. x", "+ x" --
