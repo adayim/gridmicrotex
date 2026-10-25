@@ -40,7 +40,7 @@ These HTML tags are supported:
 \code{<code>}, \code{<kbd>}, \code{<samp>}, \code{<tt>} \tab monospace \cr
 \code{<u>}, \code{<ins>} \tab underline \cr
 \code{<s>}, \code{<del>}, \code{<strike>} \tab strikethrough \cr
-\code{<sub>}, \code{<sup>} \tab sub / superscript \cr
+\code{<sub>}, \code{<sup>}, or \code{~x~}, \code{^x^} \tab sub / superscript \cr
 \code{<mark>} \tab yellow highlight \cr
 \code{<small>}, \code{<big>} \tab smaller / larger \cr
 \code{<q>} \tab quotation marks \cr
@@ -54,6 +54,9 @@ and \code{font-family}; other properties are ignored. Colours
 are R colour names, CSS names, \verb{#rgb}, \verb{#rrggbb} or \code{rgb()}.
 \code{font-family} takes \code{serif}, \code{sans-serif}, \code{monospace}, an installed
 font, or a font named with \code{\link[=load_font]{load_font()}}.
+
+As in pandoc, the text of \verb{~x~} and \verb{^x^} holds no spaces, unless each is
+escaped with a backslash: \verb{P~a\\ cat~}.
 
 Tags nest and can hold markdown and math. Other tags are dropped and
 their text kept. Links keep their text only. Images must be local PNG,
