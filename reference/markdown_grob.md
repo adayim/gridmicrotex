@@ -54,7 +54,7 @@ These HTML tags are supported:
 | `<code>`, `<kbd>`, `<samp>`, `<tt>`                    | monospace         |
 | `<u>`, `<ins>`                                         | underline         |
 | `<s>`, `<del>`, `<strike>`                             | strikethrough     |
-| `<sub>`, `<sup>`                                       | sub / superscript |
+| `<sub>`, `<sup>`, or `~x~`, `^x^`                      | sub / superscript |
 | `<mark>`                                               | yellow highlight  |
 | `<small>`, `<big>`                                     | smaller / larger  |
 | `<q>`                                                  | quotation marks   |
@@ -69,6 +69,9 @@ CSS names, `#rgb`, `#rrggbb` or
 `serif`, `sans-serif`, `monospace`, an installed font, or a font named
 with
 [`load_font()`](https://adayim.github.io/gridmicrotex/reference/load_font.md).
+
+As in pandoc, the text of `~x~` and `^x^` holds no spaces, unless each
+is escaped with a backslash: `P~a\ cat~`.
 
 Tags nest and can hold markdown and math. Other tags are dropped and
 their text kept. Links keep their text only. Images must be local PNG,

@@ -21,7 +21,10 @@
   and `Stealth`; what is left out warns.
 - Markdown draws code blocks several times faster and reads raw HTML
   blocks (`<p align>`, `<details>`, `<table>`).
-- Bug fixes: `red!50` drawn black, `p{}` first column rules,
+- Markdown reads `H~2~O` and `x^2^` as sub- and superscripts, as pandoc
+  do.
+- Bug fixes: `\bm{b}` and `\boldsymbol{b}` drawn upright instead of bold
+  italic, `red!50` drawn black, `p{}` first column rules,
   `\scalebox{2}[1]{x}`, rotated math in `typeface` mode, a crash on
   `\[\tag{1}\]`.
 - Checked command by command against pdflatex for 45 packages; many
