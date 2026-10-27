@@ -25,9 +25,19 @@ warning, with their line and column.
 \details{
 The file is read as LaTeX reads a package: \verb{\newcommand}, \verb{\renewcommand},
 \verb{\\def}, \verb{\\newenvironment}, \verb{\\DeclareMathOperator}, \verb{\\newtheorem} and the
-like define commands, and \code{@} may be used in a name. Registers, boxes and
-\verb{\\catcode} are not supported. A file edited after it was loaded is read
+like define commands, and \code{@} may be used in a name. Registers (\verb{\\newcount},
+\verb{\\newdimen}, \verb{\\newskip}, \verb{\\advance}, \verb{\\the}, \verb{\\ifdim}) and \verb{\\catcode} work;
+boxes are not supported. A file edited after it was loaded is read
 again the next time something is drawn.
+
+A package from a TeX distribution can be loaded the same way, from the
+file \verb{kpsewhich physics.sty} finds. \code{physics} (under another name than
+\code{"physics"}, which is the bundled one), \code{esdiff}, \code{centernot} and \code{tensor}
+(likewise) are known
+to run and set their commands as LaTeX does. Packages that use boxes
+(\verb{\\setbox}, \verb{\\hbox to}), fonts of their own
+(\code{stmaryrd}, \code{yhmath}, \code{upgreek}) or \code{expl3} code (\code{mathtools},
+\code{siunitx}) do not yet, and say so with a warning.
 }
 \examples{
 sty <- tempfile(fileext = ".sty")
