@@ -4,7 +4,7 @@
 - New `load_sty()` and `latex_options(packages = )` load LaTeX packages, including many of CTAN's own files (the real `physics.sty`, `esdiff`, `centernot` and `tensor` among them).
 - Math, lines, displays, matrices, lists and tables are spaced as LuaLaTeX and LaTeX space them, so documents are up to 10% taller; lengths in `pt`, `cm`, `mm` and `in` and image sizes scale with the font size.
 - tinytable's `tblr` tables, R's regression tables (dcolumn, siunitx `S` columns), tikz-cd and Markdown (faster code blocks, raw HTML blocks, `H~2~O`, `x^2^`) read more of what they are given.
-- Many bug fixes, among them `\bm` and `\boldsymbol` drawn upright, `\big` sizes, `\left...\right` delimiters too small for tall contents, braced groups and `\implies` spaced wrongly, and a crash on `\[\tag{1}\]`.
+- Many bug fixes, among them `\bm` and `\boldsymbol` drawn upright, `\big` sizes, `\left...\right` delimiters too small for tall contents, fractions in scripts and nested fractions too large, `\frac`, braced groups, `a:b`, `\implies` and `\dots` spaced wrongly, `\overbrace{a}` 18pt wide, accents widening their base, `\framebox[3cm]` too wide, `\fboxsep=0pt` ignored, and a crash on `\[\tag{1}\]`.
 
 # gridmicrotex 0.2.0
 
