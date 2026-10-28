@@ -8,6 +8,7 @@
 #include "front/diagnostics.h"
 #include "front/expander.h"
 #include "front/hooks.h"
+#include "front/lengths.h"
 #include "front/lower.h"
 #include "front/parser.h"
 #include "front/spec.h"
@@ -19,8 +20,9 @@ namespace microtex::front {
 
 Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bool lineBreaks,
                bool paragraphs, std::uint32_t bodyStart, std::uint32_t bodyEnd, bool userMacros,
-               const std::vector<std::string>& packages) {
+               const std::vector<std::string>& packages, std::shared_ptr<const UserScope> inherit) {
   ExpanderOptions eo;
+  eo.inherit = std::move(inherit);
   eo.prelude = true;
   eo.packages = packages;
   eo.persistent = userMacros;
@@ -33,6 +35,7 @@ Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bo
   eo.isKnownName = [](const std::string& name) {
     return Symbol::get(name.c_str()) != nullptr || Formula::isPredefined(name);
   };
+  eo.isLoweringLength = [](const std::string& name) { return Lengths::builtin(name); };
   Expander expander(latex, std::move(eo), diagnostics);
   ParserOptions po;
   po.startMode = mode;
@@ -45,6 +48,8 @@ Ast parseLatex(const std::string& latex, Mode mode, Diagnostics& diagnostics, bo
   };
   Ast ast;
   Parser(expander, ast, diagnostics, std::move(po)).parse();
+  ast.environmentKinds = expander.environmentKinds();
+  ast.declared = expander.declared();
   return ast;
 }
 
@@ -68,8 +73,12 @@ using BodyRange = std::pair<std::uint32_t, std::uint32_t>;
 // starts there. An unclosed one runs to the end of the input; a \verb to the
 // end of its line.
 std::size_t verbatimEnd(const std::string& s, std::size_t i) {
-  static const std::string names[] = {"\\begin{verbatim}", "\\begin{verbatim*}", "\\begin{lstlisting}",
-                                      "\\begin{minted}", "\\begin{Verbatim}", "\\begin{Verbatim*}", "\\begin{comment}"};
+  // The environments whose body is read as typed (spec.cpp); one whose commands act (alltt) ends a document as any does.
+  static const std::vector<std::string> names = [] {
+    std::vector<std::string> opens;
+    for (const std::string& name : verbatimEnvironmentNames()) opens.push_back("\\begin{" + name + "}");
+    return opens;
+  }();
   for (const std::string& open : names) {
     if (s.compare(i, open.size(), open) != 0) continue;
     const std::string close = "\\end{" + open.substr(7);
@@ -135,9 +144,28 @@ BodyRange documentBody(const std::string& s) {
 
 }  // namespace
 
+namespace {
+
+// Where warnLater() puts what it is told: the parse's own diagnostics while it runs (boxes made during the lowering), the
+// last parse's after.
+Diagnostics*& laterSink() {
+  static Diagnostics* sink = nullptr;
+  return sink;
+}
+
+}  // namespace
+
+void warnLater(const SourceSpan& at, const std::string& message) {
+  if (Diagnostics* d = laterSink() != nullptr ? laterSink() : &lastStore()) d->warnOnce(at, message);
+}
+
 void buildModern(const std::string& latex, InputMode mode, Formula& formula) {
   lastStore() = Diagnostics();
   Diagnostics diags;
+  struct Sink {
+    explicit Sink(Diagnostics* d) { laterSink() = d; }
+    ~Sink() { laterSink() = nullptr; }
+  } sink(&diags);
   const bool mixed = mode == InputMode::mixed;
   const bool document = mode == InputMode::document;
   // Both prose modes start in text and are laid out as rows; they differ in
@@ -197,6 +225,23 @@ void setFontResolver(FontResolver resolver) {
 
 const FontResolver& fontResolver() {
   return fontResolverStore();
+}
+
+namespace {
+
+BoxMeasurer& boxMeasurerStore() {
+  static BoxMeasurer measurer;
+  return measurer;
+}
+
+}  // namespace
+
+void setBoxMeasurer(BoxMeasurer measurer) {
+  boxMeasurerStore() = std::move(measurer);
+}
+
+const BoxMeasurer& boxMeasurer() {
+  return boxMeasurerStore();
 }
 
 }  // namespace microtex::front

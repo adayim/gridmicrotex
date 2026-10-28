@@ -204,7 +204,44 @@ public:
                  const sptr<Atom>& scriptScript)
       : _choice{display, text, script, scriptScript} {}
 
+  /** The choice is replaced by the list it picks before the spaces are set (tex.web 1151, 760), so it spaces as that list does:
+   *  as the text choice, the four being a list set in four styles (\mathpalette) and so of one kind. */
+  AtomType leftType() const override { return pick() == nullptr ? Atom::leftType() : pick()->leftType(); }
+
+  AtomType rightType() const override { return pick() == nullptr ? Atom::rightType() : pick()->rightType(); }
+
   sptr<Box> createBox(Env& env) override;
+
+private:
+  const sptr<Atom>& pick() const { return _choice[1] != nullptr ? _choice[1] : _choice[0]; }
+};
+
+/**
+ * amsmath's \dots: centred dots when a binary operator, a relation or a large operator follows (`x_1 + \dots + x_n`), dots on the
+ * baseline otherwise. The row it sits in picks (RowAtom::createBox), as it is the next atom that decides.
+ */
+class DotsAtom : public Atom {
+private:
+  sptr<Atom> _low, _centred;
+
+public:
+  DotsAtom() = delete;
+
+  DotsAtom(const sptr<Atom>& low, const sptr<Atom>& centred) : _low(low), _centred(centred) { _type = AtomType::inner; }
+
+  /** What stands for the dots when `next`, the atom after them (null for none), is known. */
+  const sptr<Atom>& pick(const sptr<Atom>& next) const {
+    if (next == nullptr) return _low;
+    const auto type = next->leftType();
+    const bool centred = type == AtomType::binaryOperator || type == AtomType::relation || type == AtomType::bigOperator;
+    return centred ? _centred : _low;
+  }
+
+  AtomType leftType() const override { return _low->leftType(); }
+
+  AtomType rightType() const override { return _low->rightType(); }
+
+  sptr<Box> createBox(Env& env) override { return _low->createBox(env); }
 };
 
 /** An atom representing long division */

@@ -21,7 +21,7 @@ const map<c32, string> Formula::_charToSymbol{
   {'!', "exclam"},
   {'?', "question"},
   {'|', "vert"},
-  {':', "colon"},
+  {':', "colonrel"},
   {'=', "equal"},
   {'>', "greater"},
   {'<', "less"},
@@ -32,7 +32,6 @@ map<string, string> Formula::_predefFormulaStrs{
   {" ",                "\\nbsp"},
   // region dots
   {"dotsc",            "\\ldots"},
-  {"dots",             "\\ldots"},
   {"dotsb",            "\\cdots"},
   {"dotso",            "\\ldots"},
   {"dotsi",            "\\!\\cdots"},
@@ -102,10 +101,6 @@ map<string, string> Formula::_predefFormulaStrs{
   {"hbar",             "\\hslash"},
   {"mathstrut",        "\\vphantom{(}"},
   {"micro",            "\\mu"},
-  {"rVert",            "\\Vert"},
-  {"lVert",            "\\Vert"},
-  {"lvert",            "\\vert"},
-  {"rvert",            "\\vert"},
   // endregion
   // region Greek
   {"Alpha",            "Α"},
