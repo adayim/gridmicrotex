@@ -4,31 +4,26 @@
 
 - Bundled MicroTeX is now the [adayim
   fork](https://github.com/adayim/MicroTeX) 0.1.0, with much broader
-  LaTeX coverage.
+  LaTeX coverage; commands were checked against pdflatex for 45
+  packages.
 - New
   [`load_sty()`](https://adayim.github.io/gridmicrotex/reference/load_sty.md)
-  and `latex_options(packages = )` load LaTeX packages.
-- Lengths in `pt`, `cm`, `mm`, `in` and image sizes now scale with the
-  font size, as a magnified LaTeX page; `px` and `max_width` do not.
-- Math is spaced as LuaLaTeX sets it: `\nulldelimiterspace` round
-  fractions, script glyphs, italic correction, `aligned` struts,
-  amsmath’s `\genfrac` and `cases`.
-- Lines, displays, matrices, lists and tables are spaced as LaTeX spaces
-  them, so documents are up to 10% taller.
-- R’s regression tables read: dcolumn `D` columns, `^{***}` in siunitx
-  `S` columns, `\num{< 0.1}`.
-- tikz-cd reads what its manual lists, including arrows.meta’s `Latex`
-  and `Stealth`; what is left out warns.
-- Markdown draws code blocks several times faster and reads raw HTML
-  blocks (`<p align>`, `<details>`, `<table>`).
-- Markdown reads `H~2~O` and `x^2^` as sub- and superscripts, as pandoc
-  do.
-- Bug fixes: `\bm{b}` and `\boldsymbol{b}` drawn upright instead of bold
-  italic, `red!50` drawn black, `p{}` first column rules,
-  `\scalebox{2}[1]{x}`, rotated math in `typeface` mode, a crash on
-  `\[\tag{1}\]`.
-- Checked command by command against pdflatex for 45 packages; many
-  commands now defined or corrected.
+  and `latex_options(packages = )` load LaTeX packages, including many
+  of CTAN’s own files (the real `physics.sty`, `esdiff`, `centernot` and
+  `tensor` among them).
+- Math, lines, displays, matrices, lists and tables are spaced as
+  LuaLaTeX and LaTeX space them, so documents are up to 10% taller;
+  lengths in `pt`, `cm`, `mm` and `in` and image sizes scale with the
+  font size.
+- tinytable’s `tblr` tables, R’s regression tables (dcolumn, siunitx `S`
+  columns), tikz-cd and Markdown (faster code blocks, raw HTML blocks,
+  `H~2~O`, `x^2^`) read more of what they are given.
+- Many bug fixes, among them `\bm` and `\boldsymbol` drawn upright,
+  `\big` sizes, `\left...\right` delimiters too small for tall contents,
+  fractions in scripts and nested fractions too large, `\frac`, braced
+  groups, `a:b`, `\implies` and `\dots` spaced wrongly, `\overbrace{a}`
+  18pt wide, accents widening their base, `\framebox[3cm]` too wide,
+  `\fboxsep=0pt` ignored, and a crash on `\[\tag{1}\]`.
 
 ## gridmicrotex 0.2.0
 

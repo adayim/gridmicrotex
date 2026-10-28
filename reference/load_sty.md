@@ -32,8 +32,18 @@ with their line and column.
 The file is read as LaTeX reads a package: `\newcommand`,
 `\renewcommand`, `\def`, `\newenvironment`, `\DeclareMathOperator`,
 `\newtheorem` and the like define commands, and `@` may be used in a
-name. Registers, boxes and `\catcode` are not supported. A file edited
-after it was loaded is read again the next time something is drawn.
+name. Registers (`\newcount`, `\newdimen`, `\newskip`, `\advance`,
+`\the`, `\ifdim`) and `\catcode` work; boxes are not supported. A file
+edited after it was loaded is read again the next time something is
+drawn.
+
+A package from a TeX distribution can be loaded the same way, from the
+file `kpsewhich physics.sty` finds. `physics` (under another name than
+`"physics"`, which is the bundled one), `esdiff`, `centernot` and
+`tensor` (likewise) are known to run and set their commands as LaTeX
+does. Packages that use boxes (`\setbox`, `\hbox to`), fonts of their
+own (`stmaryrd`, `yhmath`, `upgreek`) or `expl3` code (`mathtools`,
+`siunitx`) do not yet, and say so with a warning.
 
 ## See also
 
