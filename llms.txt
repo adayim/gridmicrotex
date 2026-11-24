@@ -1,6 +1,6 @@
 # gridmicrotex
 
-LaTeX math and markdown for R graphics: grid, base plots and ggplot2. No
+LaTeX and markdown for R graphics: grid, base plots and ggplot2. No
 LaTeX installation needed. Built on a
 [fork](https://github.com/adayim/MicroTeX) of the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
