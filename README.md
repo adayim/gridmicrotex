@@ -11,7 +11,7 @@ download](https://cranlogs.r-pkg.org/badges/grand-total/gridmicrotex)](https://c
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
-LaTeX math and markdown for R graphics: grid, base plots and ggplot2. No
+LaTeX and markdown for R graphics: grid, base plots and ggplot2. No
 LaTeX installation needed. Built on a
 [fork](https://github.com/adayim/MicroTeX) of the
 [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.

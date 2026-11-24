@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 [![codecov](https://codecov.io/gh/adayim/gridmicrotex/branch/main/graph/badge.svg?token=mzvaYDMPNc)](https://app.codecov.io/gh/adayim/gridmicrotex)
 <!-- badges: end -->
 
-LaTeX math and markdown for R graphics: grid, base plots and ggplot2.
+LaTeX and markdown for R graphics: grid, base plots and ggplot2.
 No LaTeX installation needed. Built on a [fork](https://github.com/adayim/MicroTeX)
 of the [MicroTeX](https://github.com/NanoMichael/MicroTeX) layout engine.
 
